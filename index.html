@@ -1,0 +1,986 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>BUSAN HAK PORT INFO</title>
+    
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-storage.js"></script>
+    
+    <link rel="icon" type="image/png" href="icon.png">
+    <link rel="apple-touch-icon" href="icon.png">
+
+    <style>
+        :root {
+            /* 라이트 모드 */
+            --primary-color: #003366;
+            --accent-color: #f39c12;
+            --bg-color: #f4f6f9;
+            --card-bg: #ffffff;
+            --text-color: #333;
+            --border-color: #eee;
+            --input-bg: #fff;
+            --nav-bg: #ffffff;
+            --nav-text: #666;
+            --nav-active: #003366;
+        }
+
+        /* 다크 모드 */
+        body.dark-mode {
+            --primary-color: #bbdefb;
+            --accent-color: #ffb74d;
+            --bg-color: #121212;
+            --card-bg: #1e1e1e;
+            --text-color: #e0e0e0;
+            --border-color: #333;
+            --input-bg: #2c2c2c;
+            --nav-bg: #1e1e1e;
+            --nav-text: #888;
+            --nav-active: #bbdefb;
+        }
+
+        body {
+            font-family: 'Noto Sans KR', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 0;
+            padding-bottom: 70px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        /* 헤더 스타일 (3D 텍스트 + 애니메이션) */
+        header {
+            width: 100%;
+            background-color: #003366;
+            color: white;
+            padding: 15px 0;
+            text-align: center;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            position: relative;
+            display: flex; justify-content: center; align-items: center;
+            z-index: 100;
+        }
+        
+        header h1 {
+            margin: 0;
+            font-size: 1.6rem;
+            letter-spacing: 2px;
+            font-weight: 800;
+            color: #ffffff;
+            text-shadow: 0 1px 0 #d4d4d4, 0 2px 0 #a8a8a8, 0 3px 5px rgba(0,0,0,0.4);
+            animation: subtleFloat 3s ease-in-out infinite alternate;
+        }
+        @keyframes subtleFloat {
+            0% { transform: translateY(0); text-shadow: 0 1px 0 #d4d4d4, 0 2px 0 #a8a8a8, 0 3px 5px rgba(0,0,0,0.4); }
+            100% { transform: translateY(-4px); text-shadow: 0 4px 0 #d4d4d4, 0 6px 0 #a8a8a8, 0 10px 10px rgba(0,0,0,0.3); }
+        }
+        
+        .theme-toggle {
+            position: absolute; right: 15px; top: 50%; transform: translateY(-50%);
+            background: none; border: none; font-size: 1.5rem; cursor: pointer; color: white;
+        }
+
+        /* 안전 배너 (반짝임 + 2버튼) */
+        .ticker-container {
+            width: 100%;
+            background-color: #ff9800;
+            color: #000;
+            height: 45px;
+            overflow: hidden;
+            position: relative;
+            display: flex; 
+            align-items: center;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            border-bottom: 1px solid #e65100;
+        }
+        .ticker-wrap {
+            width: 100%;
+            overflow: hidden;
+            padding-right: 90px;
+        }
+        .ticker-item {
+            display: inline-block;
+            white-space: nowrap;
+            padding-left: 100%;
+            font-weight: 900;
+            font-size: 1.0rem;
+            line-height: 45px;
+            animation: ticker-move 20s linear infinite, blink-text 1.5s infinite;
+        }
+        @keyframes blink-text {
+            0% { color: #000; text-shadow: none; }
+            50% { color: #d50000; text-shadow: 0 0 5px rgba(255,255,255,0.8); }
+            100% { color: #000; text-shadow: none; }
+        }
+        @keyframes ticker-move {
+            0% { transform: translate3d(0, 0, 0); }
+            100% { transform: translate3d(-100%, 0, 0); }
+        }
+        
+        /* 배너 버튼 그룹 */
+        .ticker-btn-group {
+            position: absolute; right: 0; top: 0; height: 100%;
+            display: flex;
+        }
+        .ticker-btn {
+            height: 45px; width: 45px;
+            background: rgba(0,0,0,0.1); border: none; cursor: pointer;
+            font-size: 1.2rem; color: #fff; 
+            display: flex; align-items: center; justify-content: center;
+            border-left: 1px solid rgba(255,255,255,0.2);
+        }
+        .ticker-btn:active { background: rgba(0,0,0,0.3); }
+
+        .container { width: 95%; max-width: 800px; margin: 20px auto; }
+        
+        .section-card {
+            background: var(--card-bg);
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            transition: background-color 0.3s;
+        }
+        
+        .section-title {
+            font-size: 1.1rem;
+            font-weight: bold;
+            color: var(--primary-color);
+            border-bottom: 2px solid var(--accent-color);
+            padding-bottom: 5px;
+            margin-bottom: 15px;
+            display: flex; justify-content: space-between; align-items: center;
+        }
+
+        .toggle-block {
+            width: 100%; padding: 15px; margin-bottom: 10px; border-radius: 8px;
+            font-weight: bold; font-size: 1.05rem; cursor: pointer; text-align: left;
+            display: flex; justify-content: space-between; align-items: center;
+            border: 1px solid rgba(0,0,0,0.05); box-sizing: border-box; color: #333;
+        }
+        .toggle-block::after { content: "▼"; font-size: 0.8rem; opacity: 0.6; }
+
+        .bg-khaki { background-color: #e6ee9c; color: #33691e; }
+        .bg-blue { background-color: #bbdefb; color: #0d47a1; }
+        .bg-green { background-color: #c8e6c9; color: #1b5e20; }
+        .bg-purple { background-color: #e1bee7; color: #4a148c; }
+
+        .hidden-content { display: none; padding: 10px 5px; animation: slideDown 0.3s ease-out; }
+        @keyframes slideDown { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
+
+        .btn-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 15px;}
+        .btn {
+            background-color: var(--card-bg); border: 1px solid var(--border-color); 
+            color: var(--text-color); border-radius: 4px; padding: 12px 0;
+            text-align: center; font-size: 0.85rem; text-decoration: none; font-weight: 600; cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .btn:hover { background-color: var(--primary-color); color: white; border-color: var(--primary-color); }
+
+        .board-form { background: var(--bg-color); padding: 15px; border-radius: 5px; margin-bottom: 15px; border: 1px solid var(--border-color); }
+        .board-input { 
+            width: 100%; padding: 10px; margin-bottom: 10px; 
+            border: 1px solid var(--border-color); border-radius: 4px; box-sizing: border-box; 
+            background-color: var(--input-bg); color: var(--text-color);
+        }
+        textarea.board-input { height: 80px; resize: vertical; }
+        .board-btn { background-color: #003366; color: white; border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer; font-size: 0.9rem; }
+        
+        .search-box { 
+            width: 100%; padding: 10px; margin-bottom: 15px; 
+            border: 2px solid var(--accent-color); border-radius: 5px; font-size: 0.95rem; box-sizing: border-box;
+            background-color: var(--input-bg); color: var(--text-color);
+        }
+        
+        .post-list { list-style: none; padding: 0; margin: 0; }
+        .post-item { 
+            border: 1px solid var(--border-color); border-radius: 5px; margin-bottom: 10px; 
+            background: var(--card-bg); overflow: hidden; 
+        }
+        .post-header { 
+            display: flex; justify-content: space-between; padding: 15px; cursor: pointer; 
+            background-color: var(--card-bg); align-items: center; border-bottom: 1px solid transparent;
+        }
+        .post-header:hover { background-color: rgba(0,0,0,0.02); }
+        
+        .post-title { font-weight: bold; color: var(--primary-color); font-size: 0.75rem; flex: 1; }
+        .post-cat { color: var(--accent-color); font-size: 0.75rem; margin-right: 5px; } 
+        .post-info { font-size: 0.7rem; color: #888; text-align: right; margin-left: 10px;}
+        
+        .delete-btn { background-color: #e53935; color: white; border: none; border-radius: 3px; padding: 3px 8px; font-size: 0.7rem; margin-left: 10px; cursor: pointer; z-index: 10; }
+        .photo-btn { background-color: #00897b; color: white; border: none; border-radius: 3px; padding: 3px 8px; font-size: 0.7rem; margin-left: 5px; cursor: pointer; z-index: 10; text-decoration: none;}
+        .download-btn { background-color: #2e7d32; color: white; border: none; border-radius: 3px; padding: 5px 10px; font-size: 0.75rem; margin-left: 10px; cursor: pointer; z-index: 10; text-decoration: none; }
+
+        .post-body-container { display: none; padding: 15px; border-top: 1px dashed var(--border-color); background-color: rgba(0,0,0,0.02); }
+        .post-content { white-space: pre-wrap; margin-bottom: 15px; line-height: 1.5; font-size: 0.9rem; color: var(--text-color);}
+        
+        .comment-section { background: var(--bg-color); padding: 10px; border-radius: 5px; border: 1px solid var(--border-color); }
+        .comment-input-area { display: flex; gap: 5px; margin-bottom: 10px; }
+        .comment-input { flex: 1; padding: 8px; border: 1px solid var(--border-color); border-radius: 4px; font-size: 0.85rem; background: var(--input-bg); color: var(--text-color); margin-right: 5px;}
+        .comment-btn { background: #6c757d; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 0.8rem; }
+        .comment-list { list-style: none; padding: 0; margin: 0; }
+        .comment-item { font-size: 0.85rem; border-bottom: 1px solid var(--border-color); padding: 8px 0; display: flex; justify-content: space-between; }
+        
+        .file-input-wrapper { margin-bottom: 10px; }
+        .file-item { padding: 15px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; }
+        .file-link { text-decoration: none; color: var(--text-color); font-weight: 500; display: flex; align-items: center; gap: 5px; flex: 1; overflow: hidden; white-space: nowrap; text-overflow: ellipsis;}
+        .file-link:hover { color: var(--primary-color); text-decoration: underline; }
+        .file-meta { font-size: 0.75rem; color: #999; margin-top: 2px;}
+        
+        .comm-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; }
+        .comm-btn { 
+            background-color: var(--card-bg); border: 1px solid var(--primary-color); color: var(--primary-color); 
+            padding: 15px 5px; text-align: center; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 0.95rem;
+            display: flex; flex-direction: column; justify-content: center; align-items: center; line-height: 1.3;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+        .comm-btn.active { background-color: var(--primary-color); color: white; }
+        
+        .notice-box { background-color: #fff3cd; color: #856404; padding: 10px; border-radius: 5px; font-size: 0.9rem; margin-bottom: 20px; border: 1px solid #ffeeba; }
+        
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.85); z-index: 2000; justify-content: center; align-items: center; }
+        .modal-content { background: var(--card-bg); padding: 10px; border-radius: 8px; max-width: 95%; max-height: 90%; display: flex; flex-direction: column; align-items: center; }
+        .modal-img { max-width: 100%; max-height: 70vh; border-radius: 5px; object-fit: contain; }
+        .modal-close-btn { margin-top: 15px; padding: 12px; background: #333; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 1rem; width: 100%; }
+
+        .pagination { display: flex; justify-content: center; gap: 5px; margin-top: 20px; }
+        .page-btn { background-color: var(--card-bg); border: 1px solid var(--border-color); padding: 5px 12px; cursor: pointer; border-radius: 4px; font-size: 0.9rem; color: var(--text-color); }
+        .page-btn.active { background-color: var(--primary-color); color: #fff; border-color: var(--primary-color); }
+        
+        .write-toggle-btn { width: 100%; padding: 12px; background-color: #546e7a; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; margin-bottom: 10px; font-size: 0.95rem;}
+        .ship-search-btn { display: block; width: 100%; padding: 12px; background: #0288D1; color: white; text-align: center; text-decoration: none; border-radius: 5px; font-weight: bold; margin-bottom: 10px; box-sizing: border-box; font-size: 0.95rem; cursor: pointer;}
+
+        .bottom-nav {
+            position: fixed; bottom: 0; left: 0; width: 100%; height: 60px;
+            background-color: var(--nav-bg); border-top: 1px solid var(--border-color);
+            display: flex; justify-content: space-around; align-items: center;
+            z-index: 1000; box-shadow: 0 -2px 10px rgba(0,0,0,0.05);
+        }
+        .nav-item {
+            flex: 1; text-align: center; color: var(--nav-text); text-decoration: none;
+            font-size: 0.75rem; display: flex; flex-direction: column; align-items: center; justify-content: center;
+            height: 100%; cursor: pointer;
+        }
+        .nav-item span { font-size: 1.2rem; margin-bottom: 3px; }
+        .nav-item:hover, .nav-item.active { color: var(--nav-active); font-weight: bold; }
+
+        /* 관리자 팝업 스타일 */
+        .admin-list { width: 100%; list-style: none; padding: 0; margin: 10px 0; text-align: left; }
+        .admin-item { display: flex; justify-content: space-between; padding: 8px; border-bottom: 1px solid #eee; align-items: center; }
+        .admin-del-btn { background: #e53935; color: white; border: none; border-radius: 3px; padding: 5px 10px; cursor: pointer; }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>BUSAN HAK PORT INFO</h1>
+        <button class="theme-toggle" onclick="toggleDarkMode()">🌙</button>
+    </header>
+
+    <div id="safetyTicker" class="ticker-container">
+        <div class="ticker-wrap">
+            <div id="tickerText" class="ticker-item">로딩 중...</div>
+        </div>
+        <div class="ticker-btn-group">
+            <button class="ticker-btn" onclick="updateBanner()">✏️</button>
+            <button class="ticker-btn" onclick="openBannerAdmin()">⚙️</button>
+        </div>
+    </div>
+
+    <div class="container">
+        
+        <div class="notice-box">
+            📢 <strong>Notice:</strong> 안전 공지 시인성 강화 (반짝임 효과)
+        </div>
+
+        <div id="section-community" class="section-card">
+            <div class="section-title">커뮤니티 & 자료실</div>
+            
+            <div class="comm-grid">
+                <div class="comm-btn" onclick="toggleView('noticeArea')">📢 공지사항</div>
+                <div class="comm-btn" onclick="toggleView('boardArea')">💬 익명 게시판<br><span style="font-size:0.9rem; font-weight:bold;">(고성방가)</span></div>
+                <div class="comm-btn" onclick="toggleView('fileArea')">💾 공유자료실</div>
+                <div class="comm-btn" onclick="toggleView('shipInfoArea')">🚢 선박 정보 공유</div>
+            </div>
+
+            <div id="noticeArea" class="hidden-content">
+                <div class="board-form" style="border: 2px solid #d32f2f; background-color: rgba(211, 47, 47, 0.05);">
+                    <p style="font-weight:bold; color:#d32f2f; margin-bottom:10px;">[📢 중요 공지사항 작성]</p>
+                    <p style="font-size:0.8rem; opacity:0.7; margin-bottom:10px;">※ 관리자 암호 입력 시에만 등록됩니다.</p>
+                    <input type="text" id="noticeTitle" class="board-input" placeholder="공지 제목">
+                    <input type="text" id="noticeName" class="board-input" placeholder="작성자 (예: 관리자)">
+                    <textarea id="noticeContent" class="board-input" placeholder="공지 내용..."></textarea>
+                    <div style="text-align: right;">
+                        <button class="board-btn" style="background-color:#d32f2f;" onclick="addNotice()">공지 등록</button>
+                    </div>
+                </div>
+                <ul id="noticeList" class="post-list">
+                    <li style="text-align:center; padding:20px; opacity:0.6;">로딩 중...</li>
+                </ul>
+            </div>
+            
+            <div id="boardArea" class="hidden-content">
+                <button class="write-toggle-btn" onclick="toggleWriteForm('boardWriteForm')">📝 글쓰기</button>
+                <div id="boardWriteForm" class="board-form" style="display: none;">
+                    <p style="font-weight:bold; color:var(--primary-color); margin-bottom:10px;">[익명 글쓰기]</p>
+                    <select id="inputCategory" class="board-input" style="margin-bottom:10px;">
+                        <option value="잡담">잡담</option>
+                        <option value="주절주절">주절주절</option>
+                        <option value="노조에 바란다">노조에 바란다</option>
+                        <option value="라싱업무">라싱업무</option>
+                        <option value="개선제안">개선제안</option>
+                    </select>
+                    <input type="text" id="inputTitle" class="board-input" placeholder="제목">
+                    <div>
+                        <input type="text" id="inputName" class="board-input" placeholder="작성자" style="width:48%; display:inline-block;">
+                        <input type="password" id="inputPw" class="board-input" placeholder="비번(삭제용)" style="width:48%; display:inline-block; margin-left:2%;">
+                    </div>
+                    <textarea id="inputContent" class="board-input" placeholder="내용 입력..."></textarea>
+                    <div style="text-align: right;">
+                        <button class="board-btn" onclick="addPost()">등록</button>
+                    </div>
+                </div>
+                <ul id="boardList" class="post-list">
+                    <li style="text-align:center; padding:20px; opacity:0.6;">로딩 중...</li>
+                </ul>
+                <div id="pagination" class="pagination"></div>
+            </div>
+
+            <div id="fileArea" class="hidden-content">
+                <input type="text" id="fileSearch" class="search-box" placeholder="🔍 자료 검색..." onkeyup="filterFiles()">
+                <div class="board-form">
+                    <p style="font-weight:bold; color:var(--primary-color); margin-bottom:10px;">[자료실 파일 업로드]</p>
+                    <input type="text" id="fileTitle" class="board-input" placeholder="파일 제목">
+                    <input type="text" id="fileUploader" class="board-input" placeholder="올린이">
+                    <input type="file" id="fileInput" class="board-input">
+                    <div style="text-align: right;">
+                        <button class="board-btn" onclick="uploadFile()">파일 업로드</button>
+                    </div>
+                    <div id="uploadProgress" style="color: blue; font-size: 0.8rem; margin-top: 5px; display: none;">업로드 중...</div>
+                </div>
+                <ul id="fileList" class="post-list">
+                    <li style="text-align:center; padding:20px; opacity:0.6;">로딩 중...</li>
+                </ul>
+                <div id="filePagination" class="pagination"></div>
+            </div>
+
+            <div id="shipInfoArea" class="hidden-content">
+                <button class="write-toggle-btn" style="background-color: #00897b;" onclick="toggleWriteForm('shipWriteForm')">🚢 선박 정보 업로드</button>
+                <a href="https://www.marinetraffic.com/" target="_blank" class="ship-search-btn">🔍 선박 위치 검색 (MarineTraffic)</a>
+
+                <div id="shipWriteForm" class="board-form" style="display: none; border-color: #00897b;">
+                    <p style="font-weight:bold; color:#00695c; margin-bottom:10px;">[선박 정보 공유]</p>
+                    <input type="text" id="shipName" class="board-input" placeholder="선박 이름 (중복 확인)">
+                    <input type="password" id="shipPw" class="board-input" placeholder="비밀번호(삭제용)" style="margin-bottom: 10px;">
+                    <input type="file" id="shipFileInput" class="board-input" accept="image/*">
+                    <textarea id="shipOnboard" class="board-input" placeholder="본선 작업 특징"></textarea>
+                    <textarea id="shipOnshore" class="board-input" placeholder="육상 작업 특징"></textarea>
+                    <div style="text-align: right;">
+                        <button class="board-btn" style="background-color: #00897b;" onclick="addShipInfo()">정보 등록</button>
+                    </div>
+                    <div id="shipUploadProgress" style="color: #00897b; font-size: 0.8rem; margin-top: 5px; display: none;">사진 업로드 중...</div>
+                </div>
+
+                <ul id="shipList" class="post-list">
+                    <li style="text-align:center; padding:20px; opacity:0.6;">로딩 중...</li>
+                </ul>
+                <div id="shipPagination" class="pagination"></div>
+            </div>
+        </div>
+
+        <div id="section-t3" class="section-card">
+            <div class="section-title">3항업</div>
+            <div class="toggle-block bg-green" onclick="toggleTerminal('hjnc')">한진 (HJNC)</div>
+            <div id="hjnc" class="hidden-content">
+                <div class="btn-grid">
+                    <a href="https://www.hjnc.co.kr/esvc/vessel/berthScheduleT" class="btn" target="_blank">선석 스케줄</a>
+                    <a href="https://www.hjnc.co.kr/esvc/vessel/berthScheduleG" class="btn" target="_blank">선석 차트</a>
+                    <a href="https://www.hjnc.co.kr/esvc/vessel/vesselStatus" class="btn" target="_blank">작업 현황</a>
+                </div>
+            </div>
+            <div class="toggle-block bg-green" onclick="toggleTerminal('dgt')">동원 (DGT)</div>
+            <div id="dgt" class="hidden-content">
+                <div class="btn-grid">
+                    <a href="https://www.dgtbusan.com/DGT/esvc/vessel/berthScheduleT" class="btn" target="_blank">선석 스케줄</a>
+                    <a href="https://www.dgtbusan.com/DGT/esvc/vessel/berthScheduleG" class="btn" target="_blank">선석 차트</a>
+                    <a href="https://www.dgtbusan.com/DGT/esvc/vessel/vesselStatus" class="btn" target="_blank">작업 현황</a>
+                </div>
+            </div>
+            <div class="toggle-block bg-green" onclick="toggleTerminal('bnct')">BNCT(고려)</div>
+            <div id="bnct" class="hidden-content">
+                <div class="btn-grid">
+                    <a href="https://info.bnctkorea.com/esvc/vessel/berthScheduleT" class="btn" target="_blank">선석 스케줄</a>
+                    <a href="https://info.bnctkorea.com/esvc/vessel/berthScheduleG" class="btn" target="_blank">선석 차트</a>
+                    <a href="https://info.bnctkorea.com/esvc/vessel/vesselStatus" class="btn" target="_blank">작업 현황</a>
+                </div>
+            </div>
+            <div class="toggle-block bg-green" onclick="toggleTerminal('bct')">BCT</div>
+            <div id="bct" class="hidden-content">
+                <div class="btn-grid">
+                    <a href="https://info.bct2-4.com/infoservice/index.html" class="btn" target="_blank">선석 스케줄</a>
+                    <a href="https://info.bct2-4.com/infoservice/index.html" class="btn" target="_blank">선석 차트</a>
+                    <a href="https://info.bct2-4.com/infoservice/index.html" class="btn" target="_blank">작업 현황</a>
+                </div>
+            </div>
+        </div>
+
+        <div id="section-t2" class="section-card">
+            <div class="section-title">2항업</div>
+            <div class="toggle-block bg-blue" onclick="toggleTerminal('pnc')">PNC (부산신항만)</div>
+            <div id="pnc" class="hidden-content">
+                <div class="btn-grid">
+                    <a href="https://svc.pncport.com/info/CMS/Ship/Info.pnc?mCode=MN014" class="btn" target="_blank">선석 스케줄</a>
+                    <a href="https://svc.pncport.com/info/CMS/Ship/ShipBerthC.pnc?mCode=MN019" class="btn" target="_blank">선석 차트</a>
+                    <a href="https://svc.pncport.com/info/CMS/Ship/ShipVslStatus.pnc?mCode=MN020" class="btn" target="_blank">작업 현황</a>
+                </div>
+                <div style="margin-top: 5px;">
+                    <button class="btn" style="width:100%; background-color:#fff3e0; color:#e65100; border:1px solid #ffcc80;" onclick="openBusSchedule()">🚌 PNC 셔틀버스 시간표</button>
+                </div>
+            </div>
+            <div class="toggle-block bg-blue" onclick="toggleTerminal('pnit')">PNIT (신항국제)</div>
+            <div id="pnit" class="hidden-content">
+                <div class="btn-grid">
+                    <a href="https://www.pnitl.com/infoservice/vessel/vslScheduleList.jsp" class="btn" target="_blank">선석 스케줄</a>
+                    <a href="https://www.pnitl.com/infoservice/vessel/vslScheduleChart.jsp" class="btn" target="_blank">선석 차트</a>
+                    <a href="https://www.pnitl.com/infoservice/vessel/vslWorkStatus.jsp" class="btn" target="_blank">작업 현황</a>
+                </div>
+            </div>
+            <div class="toggle-block bg-blue" onclick="toggleTerminal('hpnt')">현대 (HPNT)</div>
+            <div id="hpnt" class="hidden-content">
+                <div class="btn-grid">
+                    <a href="https://www.hpnt.co.kr/infoservice/vessel/vslScheduleList.jsp" class="btn" target="_blank">선석 스케줄</a>
+                    <a href="https://www.hpnt.co.kr/infoservice/vessel/vslScheduleChart.jsp" class="btn" target="_blank">선석 차트</a>
+                    <a href="https://www.hpnt.co.kr/infoservice/vessel/vslWorkStatus.jsp" class="btn" target="_blank">작업 현황</a>
+                </div>
+            </div>
+        </div>
+
+        <div id="section-t1" class="section-card">
+            <div class="section-title">1항업</div>
+            <div class="toggle-block bg-khaki" onclick="toggleTerminal('north-port')">북항 (North Port)</div>
+            <div id="north-port" class="hidden-content">
+                <div class="btn-grid">
+                    <a href="http://info.bptc.co.kr:9084/content/sw/frame/berth_status_text_frame_sw_kr.jsp?p_id=BETX_SH_KR&snb_num=2&snb_div=service" class="btn" target="_blank">감만 / 신선대</a>
+                    <a href="https://custom.hktl.com/jsp/T01/sunsuk.jsp" class="btn" target="_blank">허치슨</a>
+                    <a href="http://info.bptc.co.kr:9084/content/index.jsp#03" class="btn" target="_blank">동부 (DPCT)</a>
+                </div>
+            </div>
+        </div>
+
+        <div id="section-control" class="section-card">
+            <div class="section-title">관제상황 (도선/선박위치/날씨)</div>
+            <div class="toggle-block bg-purple" onclick="toggleTerminal('control')">관제 및 기상 정보</div>
+            <div id="control" class="hidden-content">
+                <div class="btn-grid">
+                    <a href="http://www.busanpilot.co.kr/popup/monitoring" class="btn" target="_blank">도선 시간</a>
+                    <a href="https://new.portmis.go.kr/" class="btn" target="_blank">PORT-MIS</a>
+                    <a href="https://www.marinetraffic.com/en/ais/home/centerx:-12.0/centery:25.0/zoom:4" class="btn" target="_blank">선박 위치</a>
+                    <a href="https://weather.naver.com/today/08440585" class="btn" target="_blank" style="color: #d32f2f;">☀️ 부산 날씨</a>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <nav class="bottom-nav">
+        <div class="nav-item" onclick="scrollToTop()">
+            <span>🏠</span>홈
+        </div>
+        <div class="nav-item" onclick="activateTab('boardArea')">
+            <span>💬</span>게시판
+        </div>
+        <div class="nav-item" onclick="activateTab('shipInfoArea')">
+            <span>🚢</span>선박정보
+        </div>
+        <div class="nav-item" onclick="activateTab('fileArea')">
+            <span>💾</span>자료실
+        </div>
+    </nav>
+
+    <div id="imageModal" class="modal-overlay" onclick="closeImageModal()">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <img id="modalImage" src="" alt="확대 이미지" class="modal-img">
+            <button class="modal-close-btn" onclick="closeImageModal()">닫기</button>
+        </div>
+    </div>
+
+    <div id="bannerAdminModal" class="modal-overlay">
+        <div class="modal-content">
+            <h3 style="color:#003366;">🚨 안전 배너 관리</h3>
+            <ul id="adminBannerList" class="admin-list"></ul>
+            <div style="width:100%; margin-top:10px; display:flex; justify-content:space-between;">
+                <button class="btn" style="width:48%; background:#e53935; color:white; border:none;" onclick="resetBannerMsg()">전체 초기화</button>
+                <button class="btn" style="width:48%;" onclick="document.getElementById('bannerAdminModal').style.display='none'">닫기</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // -----------------------------------------------------------
+        // API Key (주인님 설정)
+        // -----------------------------------------------------------
+        const firebaseConfig = {
+            apiKey: "AIzaSyBDXy5HcYW-IZQJ9ZDEivr_yi99AxhYme8",
+            authDomain: "my-app-d8527.firebaseapp.com",
+            projectId: "my-app-d8527",
+            storageBucket: "my-app-d8527.firebasestorage.app",
+            messagingSenderId: "667323279185",
+            appId: "1:667323279185:web:cff6184aaa82e08d345570",
+            measurementId: "G-HZQLF0L77P"
+        };
+
+        let db, storage;
+        let allPostsData = [], allShipsData = [], allFilesData = [];
+        let currentBoardPage = 1, currentShipPage = 1, currentFilePage = 1;
+        const postsPerPage = 5;
+        let currentBannerMsgs = []; // 현재 배너 데이터
+
+        try {
+            if (firebase.apps.length === 0) firebase.initializeApp(firebaseConfig);
+            db = firebase.firestore();
+            storage = firebase.storage();
+            loadPostsRealtime();
+            loadFilesRealtime();
+            loadNoticesRealtime();
+            loadShipsRealtime();
+            loadBanner(); 
+            
+            if(localStorage.getItem('theme') === 'dark') document.body.classList.add('dark-mode');
+        } catch (e) { console.error("Firebase Init Error:", e); }
+
+        // --- UI 기능 ---
+        function toggleDarkMode() {
+            document.body.classList.toggle('dark-mode');
+            localStorage.setItem('theme', document.body.classList.contains('dark-mode') ? 'dark' : 'light');
+        }
+
+        function scrollToTop() {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function activateTab(tabId) {
+            document.getElementById('section-community').scrollIntoView({ behavior: 'smooth' });
+            toggleView(tabId);
+        }
+
+        function toggleTerminal(id) {
+            const el = document.getElementById(id);
+            el.style.display = (el.style.display === "block") ? "none" : "block";
+        }
+
+        function toggleView(targetId) {
+            const all = ['noticeArea', 'boardArea', 'fileArea', 'shipInfoArea'];
+            all.forEach(id => document.getElementById(id).style.display = 'none');
+            document.getElementById(targetId).style.display = 'block';
+        }
+
+        function toggleWriteForm(id) {
+            const el = document.getElementById(id);
+            el.style.display = (el.style.display === "none") ? "block" : "none";
+        }
+
+        // --- 모달 기능 (버스시간표 + 선박사진 공용) ---
+        function openBusSchedule() {
+            showImageModal("https://firebasestorage.googleapis.com/v0/b/my-app-d8527.firebasestorage.app/o/archives%2F1769013796862_BandPhoto_2026_01_22_01_39_56.jpg?alt=media&token=a2e8f727-250a-41aa-855c-7b1f341d9048");
+        }
+        function showImageModal(src) {
+            document.getElementById("modalImage").src = src;
+            document.getElementById("imageModal").style.display = "flex";
+        }
+        function closeImageModal() {
+            document.getElementById("imageModal").style.display = "none";
+        }
+
+        // --- Firebase Logic: 안전 배너 (누구나 작성 + 밀어내기) ---
+        function loadBanner() {
+            db.collection('settings').doc('banner').onSnapshot(doc => {
+                if(doc.exists && doc.data().messages && doc.data().messages.length > 0) {
+                    currentBannerMsgs = doc.data().messages;
+                    // 번호 붙여서 한 줄로 만듦
+                    const fullText = currentBannerMsgs.map((msg, index) => `[${index+1}] ${msg}`).join(' 　/　 ');
+                    document.getElementById('tickerText').innerText = "🚨 " + fullText;
+                } else {
+                    currentBannerMsgs = [];
+                    document.getElementById('tickerText').innerText = "🚨 등록된 안전 공지가 없습니다. (클릭하여 작성)";
+                }
+            });
+        }
+
+        // 누구나 작성 (연필)
+        function updateBanner() {
+            // 암호 없이 누구나 입력 가능
+            const newText = prompt("안전 공지를 입력하세요 (새 글은 1번으로 등록됩니다):");
+            if (!newText || newText.trim() === "") return;
+
+            const bannerRef = db.collection('settings').doc('banner');
+
+            bannerRef.get().then((doc) => {
+                let messages = [];
+                if (doc.exists && doc.data().messages) {
+                    messages = doc.data().messages;
+                }
+                
+                // 새 메시지를 맨 앞에 추가
+                messages.unshift(newText);
+                
+                // 5개까지만 유지
+                if (messages.length > 5) {
+                    messages = messages.slice(0, 5);
+                }
+                
+                // 저장
+                bannerRef.set({ messages: messages });
+            });
+        }
+
+        // [NEW] 관리자 패널 열기 (톱니바퀴)
+        function openBannerAdmin() {
+            if(prompt("관리자 암호를 입력하세요") !== "0346") { alert("암호가 일치하지 않습니다."); return; }
+            renderAdminBannerList();
+            document.getElementById('bannerAdminModal').style.display = 'flex';
+        }
+
+        // [NEW] 관리자 패널 리스트 렌더링
+        function renderAdminBannerList() {
+            const list = document.getElementById('adminBannerList');
+            list.innerHTML = "";
+            if(currentBannerMsgs.length === 0) {
+                list.innerHTML = "<li>등록된 공지가 없습니다.</li>";
+                return;
+            }
+            currentBannerMsgs.forEach((msg, index) => {
+                const li = document.createElement('li');
+                li.className = 'admin-item';
+                li.innerHTML = `<span>[${index+1}] ${msg}</span> <button class="admin-del-btn" onclick="deleteBannerMsg(${index})">삭제</button>`;
+                list.appendChild(li);
+            });
+        }
+
+        // [NEW] 특정 공지 삭제
+        function deleteBannerMsg(index) {
+            if(!confirm("이 공지를 삭제하시겠습니까?")) return;
+            const newMsgs = [...currentBannerMsgs];
+            newMsgs.splice(index, 1);
+            db.collection('settings').doc('banner').set({ messages: newMsgs })
+                .then(() => renderAdminBannerList()); // 리스트 갱신
+        }
+
+        // [NEW] 전체 초기화
+        function resetBannerMsg() {
+            if(!confirm("정말 모든 공지를 삭제하시겠습니까?")) return;
+            db.collection('settings').doc('banner').set({ messages: [] })
+                .then(() => {
+                    renderAdminBannerList();
+                    alert("초기화 완료");
+                });
+        }
+
+        // 1. 선박 정보 (사진 추가)
+        function addShipInfo() {
+            const name = document.getElementById('shipName').value.trim();
+            const onboard = document.getElementById('shipOnboard').value;
+            const onshore = document.getElementById('shipOnshore').value;
+            const pw = document.getElementById('shipPw').value;
+            const fileInput = document.getElementById('shipFileInput');
+            const file = fileInput.files[0];
+
+            if (!name || !pw) { alert("선박 이름과 비밀번호는 필수입니다."); return; }
+
+            db.collection("ships").where("shipName", "==", name).get().then((querySnapshot) => {
+                if (!querySnapshot.empty) {
+                    alert("⚠️ 동일한 선박 이름이 이미 등록되어 있습니다.");
+                    return;
+                }
+                
+                if (file) {
+                    document.getElementById('shipUploadProgress').style.display = 'block';
+                    const fileName = 'ship_' + Date.now() + '_' + file.name;
+                    const ref = storage.ref('ships/' + fileName);
+                    ref.put(file).then(snapshot => snapshot.ref.getDownloadURL()).then(url => {
+                        saveShipToDb(name, onboard, onshore, pw, url);
+                    }).catch(err => {
+                        alert("사진 업로드 실패: " + err.message);
+                        document.getElementById('shipUploadProgress').style.display = 'none';
+                    });
+                } else {
+                    saveShipToDb(name, onboard, onshore, pw, null);
+                }
+            });
+        }
+
+        function saveShipToDb(name, onboard, onshore, pw, imgUrl) {
+            db.collection("ships").add({
+                shipName: name, onboardFeat: onboard, onshoreFeat: onshore, password: pw,
+                imageUrl: imgUrl, date: new Date().toLocaleString(),
+                timestamp: firebase.firestore.FieldValue.serverTimestamp()
+            }).then(() => {
+                alert("등록되었습니다.");
+                document.getElementById('shipName').value = '';
+                document.getElementById('shipOnboard').value = '';
+                document.getElementById('shipOnshore').value = '';
+                document.getElementById('shipPw').value = '';
+                document.getElementById('shipFileInput').value = '';
+                document.getElementById('shipUploadProgress').style.display = 'none';
+                toggleWriteForm('shipWriteForm');
+            });
+        }
+
+        function loadShipsRealtime() {
+            db.collection("ships").orderBy("shipName", "asc").onSnapshot(snapshot => {
+                allShipsData = [];
+                snapshot.forEach(doc => { let d = doc.data(); d.id = doc.id; allShipsData.push(d); });
+                renderShipPage(1);
+            });
+        }
+
+        function renderShipPage(page) {
+            currentShipPage = page;
+            const list = document.getElementById("shipList");
+            list.innerHTML = "";
+            
+            if (allShipsData.length === 0) {
+                list.innerHTML = '<li style="padding:20px; text-align:center; opacity:0.6;">등록된 정보가 없습니다.</li>';
+                document.getElementById("shipPagination").innerHTML = "";
+                return;
+            }
+
+            const start = (page - 1) * postsPerPage;
+            const end = start + postsPerPage;
+            const items = allShipsData.slice(start, end);
+
+            items.forEach(ship => {
+                let imgBtn = "";
+                if (ship.imageUrl) {
+                    imgBtn = `<button class="photo-btn" onclick="event.stopPropagation(); showImageModal('${ship.imageUrl}')">📷 사진</button>`;
+                }
+
+                const li = document.createElement("li");
+                li.className = "post-item";
+                li.innerHTML = `
+                    <div class="post-header" style="background-color:rgba(0, 137, 123, 0.1);" onclick="toggleContent('ship-${ship.id}')">
+                        <span class="post-title" style="color:#00695c;">🚢 ${ship.shipName}</span>
+                        <div>${imgBtn}</div>
+                        <span class="post-info" style="margin-left:5px;">▼</span>
+                        <button class="delete-btn" onclick="deleteShip('${ship.id}', '${ship.password}', event)">삭제</button>
+                    </div>
+                    <div id="ship-${ship.id}" class="post-body-container">
+                        <p><strong>[본선 작업 특징]</strong><br>${ship.onboardFeat || '-'}</p>
+                        <hr style="border:0; border-top:1px dashed #ccc; margin:10px 0;">
+                        <p><strong>[육상 작업 특징]</strong><br>${ship.onshoreFeat || '-'}</p>
+                    </div>`;
+                list.appendChild(li);
+            });
+            renderPagination("shipPagination", Math.ceil(allShipsData.length / postsPerPage), currentShipPage, renderShipPage);
+        }
+
+        function deleteShip(id, correctPw, event) {
+            event.stopPropagation();
+            const inputPw = prompt("비밀번호를 입력하세요");
+            if (inputPw === "0346" || inputPw === correctPw) {
+                if(confirm("삭제하시겠습니까?")) db.collection("ships").doc(id).delete().then(()=>alert("삭제됨"));
+            } else { alert("비밀번호 오류"); }
+        }
+
+        // 2. 익명 게시판
+        function addPost() {
+            const cat = document.getElementById('inputCategory').value;
+            const title = document.getElementById('inputTitle').value;
+            const name = document.getElementById('inputName').value;
+            const pw = document.getElementById('inputPw').value;
+            const content = document.getElementById('inputContent').value;
+            if(!title || !name || !pw || !content) { alert("모두 입력해주세요."); return; }
+            
+            db.collection("posts").add({
+                category: cat, title: title, name: name, password: pw, content: content,
+                date: new Date().toLocaleString(), timestamp: firebase.firestore.FieldValue.serverTimestamp(), comments: []
+            }).then(() => {
+                alert("등록됨");
+                document.getElementById('inputTitle').value = '';
+                document.getElementById('inputContent').value = '';
+                document.getElementById('inputPw').value = '';
+                toggleWriteForm('boardWriteForm');
+            });
+        }
+
+        function loadPostsRealtime() {
+            db.collection("posts").orderBy("timestamp", "desc").onSnapshot(snapshot => {
+                allPostsData = [];
+                snapshot.forEach(doc => { let d = doc.data(); d.id = doc.id; allPostsData.push(d); });
+                renderBoardPage(1);
+            });
+        }
+
+        function renderBoardPage(page) {
+            currentBoardPage = page;
+            const list = document.getElementById("boardList");
+            list.innerHTML = "";
+            if (allPostsData.length === 0) {
+                list.innerHTML = '<li style="padding:20px; text-align:center; opacity:0.6;">글이 없습니다.</li>';
+                document.getElementById("pagination").innerHTML = "";
+                return;
+            }
+            const start = (page - 1) * postsPerPage;
+            const end = start + postsPerPage;
+            const items = allPostsData.slice(start, end);
+
+            items.forEach(post => {
+                const commentsHtml = (post.comments || []).map(c => `<li class="comment-item"><span>↪ ${c.text}</span><span style="font-size:0.7rem; color:#888;">${c.time}</span></li>`).join('');
+                const cat = post.category || "잡담";
+                const li = document.createElement("li");
+                li.className = "post-item";
+                li.id = "post-" + post.id;
+                li.innerHTML = `
+                    <div class="post-header" onclick="toggleContent('body-${post.id}')">
+                        <span class="post-title"><span class="post-cat">[${cat}]</span> ${post.title}</span>
+                        <span class="post-info">${post.name}<br>${post.date.split('. ')[1]}.${post.date.split('. ')[2]}</span>
+                        <button class="delete-btn" onclick="deletePost('${post.id}', '${post.password}', event)">삭제</button>
+                    </div>
+                    <div id="body-${post.id}" class="post-body-container">
+                        <div class="post-content">${post.content}</div>
+                        <div class="comment-section">
+                            <ul class="comment-list" id="comment-list-${post.id}">${commentsHtml}</ul>
+                            <div class="comment-input-area" style="margin-top:10px;">
+                                <input type="text" id="comment-input-${post.id}" class="comment-input" placeholder="댓글">
+                                <button class="comment-btn" onclick="addComment('${post.id}')">등록</button>
+                            </div>
+                        </div>
+                    </div>`;
+                list.appendChild(li);
+            });
+            renderPagination("pagination", Math.ceil(allPostsData.length / postsPerPage), currentBoardPage, renderBoardPage);
+        }
+
+        function deletePost(postId, correctPw, event) {
+            event.stopPropagation();
+            const inputPw = prompt("비밀번호를 입력하세요");
+            if (inputPw === "0346" || inputPw === correctPw) {
+                if(confirm("삭제하시겠습니까?")) db.collection("posts").doc(postId).delete().then(()=>alert("삭제됨"));
+            } else { alert("비밀번호 오류"); }
+        }
+
+        function addComment(postId) {
+            const input = document.getElementById(`comment-input-${postId}`);
+            if (!input.value) return;
+            const newComment = { text: input.value, time: new Date().toLocaleTimeString() };
+            db.collection("posts").doc(postId).update({ comments: firebase.firestore.FieldValue.arrayUnion(newComment) }).then(() => input.value = '');
+        }
+
+        // 3. 자료실 (페이지 기능 추가)
+        function uploadFile() {
+            const file = document.getElementById('fileInput').files[0];
+            const title = document.getElementById('fileTitle').value;
+            const uploader = document.getElementById('fileUploader').value;
+            if(!file || !title) { alert("파일과 제목 입력 필요"); return; }
+            document.getElementById('uploadProgress').style.display = 'block';
+            const ref = storage.ref('archives/' + Date.now() + '_' + file.name);
+            ref.put(file).then(s => s.ref.getDownloadURL()).then(url => {
+                db.collection("archives").add({ title, uploader, fileName: file.name, fileUrl: url, date: new Date().toLocaleString(), timestamp: firebase.firestore.FieldValue.serverTimestamp() });
+                alert("완료");
+                document.getElementById('fileTitle').value = '';
+                document.getElementById('fileInput').value = '';
+                document.getElementById('uploadProgress').style.display = 'none';
+            });
+        }
+
+        function loadFilesRealtime() {
+            db.collection("archives").orderBy("timestamp", "desc").onSnapshot(snapshot => {
+                allFilesData = [];
+                snapshot.forEach(doc => { let d = doc.data(); d.id = doc.id; allFilesData.push(d); });
+                renderFilePage(1);
+            });
+        }
+
+        function renderFilePage(page) {
+            currentFilePage = page;
+            const list = document.getElementById("fileList");
+            list.innerHTML = "";
+            if (allFilesData.length === 0) {
+                list.innerHTML = '<li style="padding:20px; text-align:center; opacity:0.6;">자료 없음</li>';
+                document.getElementById("filePagination").innerHTML = "";
+                return;
+            }
+            const start = (page - 1) * postsPerPage;
+            const end = start + postsPerPage;
+            const items = allFilesData.slice(start, end);
+
+            items.forEach(f => {
+                const li = document.createElement("li");
+                li.className = "file-item";
+                li.innerHTML = `
+                    <div style="flex:1; overflow:hidden;">
+                        <a href="${f.fileUrl}" target="_blank" class="file-link">💾 ${f.title}</a>
+                        <div class="file-meta">${f.uploader} | ${f.date.split('. ')[1]}.${f.date.split('. ')[2]}</div>
+                    </div>
+                    <a href="${f.fileUrl}" target="_blank" download class="download-btn">다운</a>`;
+                list.appendChild(li);
+            });
+            renderPagination("filePagination", Math.ceil(allFilesData.length / postsPerPage), currentFilePage, renderFilePage);
+        }
+
+        function filterFiles() {
+            const filter = document.getElementById('fileSearch').value.toUpperCase();
+            const li = document.getElementById("fileList").getElementsByTagName('li');
+            for(let i=0; i<li.length; i++) {
+                li[i].style.display = (li[i].textContent.toUpperCase().indexOf(filter) > -1) ? "flex" : "none";
+            }
+        }
+
+        // 4. 공지사항
+        function addNotice() {
+            if(prompt("관리자 암호:") !== "0346") { alert("암호 오류"); return; }
+            const title = document.getElementById('noticeTitle').value;
+            const name = document.getElementById('noticeName').value;
+            const content = document.getElementById('noticeContent').value;
+            if(!title || !content) return;
+            db.collection("notices").add({ title, name, content, date: new Date().toLocaleString(), timestamp: firebase.firestore.FieldValue.serverTimestamp() })
+            .then(() => { alert("등록됨"); document.getElementById('noticeTitle').value = ''; document.getElementById('noticeContent').value = ''; });
+        }
+
+        function loadNoticesRealtime() {
+            db.collection("notices").orderBy("timestamp", "desc").onSnapshot(snapshot => {
+                const list = document.getElementById("noticeList");
+                list.innerHTML = "";
+                if(snapshot.empty) { list.innerHTML = '<li style="padding:20px; text-align:center; opacity:0.6;">공지 없음</li>'; return; }
+                snapshot.forEach(doc => {
+                    const n = doc.data();
+                    const li = document.createElement("li");
+                    li.className = "post-item notice-item";
+                    li.innerHTML = `<div class="post-header" onclick="toggleContent('n-${doc.id}')"><span class="post-title">📢 ${n.title}</span><span class="post-info">${n.date.split('. ')[1]}.${n.date.split('. ')[2]}</span><button class="delete-btn" onclick="deleteNotice('${doc.id}', event)">삭제</button></div><div id="n-${doc.id}" class="post-body-container"><div class="post-content" style="color:#d32f2f;">${n.content}</div></div>`;
+                    list.appendChild(li);
+                });
+            });
+        }
+
+        function deleteNotice(id, event) {
+            event.stopPropagation();
+            if(prompt("관리자 암호:") === "0346") db.collection("notices").doc(id).delete();
+        }
+
+        // 공통: 콘텐츠 토글
+        function toggleContent(id) {
+            const el = document.getElementById(id);
+            el.style.display = (el.style.display === "block") ? "none" : "block";
+        }
+
+        // 공통: 페이지네이션 렌더링
+        function renderPagination(elementId, totalPages, currentPage, renderFunc) {
+            const div = document.getElementById(elementId);
+            div.innerHTML = "";
+            for (let i = 1; i <= totalPages; i++) {
+                const btn = document.createElement("button");
+                btn.className = "page-btn";
+                if (i === currentPage) btn.classList.add("active");
+                btn.innerText = i;
+                btn.onclick = () => renderFunc(i);
+                div.appendChild(btn);
+            }
+        }
+    </script>
+</body>
+</html>
