@@ -575,9 +575,11 @@
         }
 
         function toggleView(targetId) {
+            const target = document.getElementById(targetId);
+            const isVisible = target.style.display === "block";
             const all = ['noticeArea', 'boardArea', 'fileArea', 'shipInfoArea'];
             all.forEach(id => document.getElementById(id).style.display = 'none');
-            document.getElementById(targetId).style.display = 'block';
+            if (!isVisible) target.style.display = 'block';
         }
 
         function toggleWriteForm(id) {
@@ -585,7 +587,7 @@
             el.style.display = (el.style.display === "none") ? "block" : "none";
         }
 
-        // --- 모달 기능 (버스시간표 + 선박사진 공용) ---
+        // --- 모달 기능 ---
         function openBusSchedule() {
             showImageModal("https://firebasestorage.googleapis.com/v0/b/my-app-d8527.firebasestorage.app/o/archives%2F1769013796862_BandPhoto_2026_01_22_01_39_56.jpg?alt=media&token=a2e8f727-250a-41aa-855c-7b1f341d9048");
         }
@@ -597,12 +599,11 @@
             document.getElementById("imageModal").style.display = "none";
         }
 
-        // --- Firebase Logic: 안전 배너 (누구나 작성 + 밀어내기) ---
+        // --- Firebase Logic: 안전 배너 ---
         function loadBanner() {
             db.collection('settings').doc('banner').onSnapshot(doc => {
                 if(doc.exists && doc.data().messages && doc.data().messages.length > 0) {
                     currentBannerMsgs = doc.data().messages;
-                    // 번호 붙여서 한 줄로 만듦
                     const fullText = currentBannerMsgs.map((msg, index) => `[${index+1}] ${msg}`).join(' 　/　 ');
                     document.getElementById('tickerText').innerText = "🚨 " + fullText;
                 } else {
@@ -614,34 +615,22 @@
 
         // 누구나 작성 (연필)
         function updateBanner() {
-            // 암호 없이 누구나 입력 가능
             const newText = prompt("안전 공지를 입력하세요 (새 글은 1번으로 등록됩니다):");
             if (!newText || newText.trim() === "") return;
 
             const bannerRef = db.collection('settings').doc('banner');
-
             bannerRef.get().then((doc) => {
                 let messages = [];
-                if (doc.exists && doc.data().messages) {
-                    messages = doc.data().messages;
-                }
-                
-                // 새 메시지를 맨 앞에 추가
-                messages.unshift(newText);
-                
-                // 5개까지만 유지
-                if (messages.length > 5) {
-                    messages = messages.slice(0, 5);
-                }
-                
-                // 저장
+                if (doc.exists && doc.data().messages) messages = doc.data().messages;
+                messages.unshift(newText); // 맨 앞 추가
+                if (messages.length > 5) messages = messages.slice(0, 5); // 5개 유지
                 bannerRef.set({ messages: messages });
             });
         }
 
         // [NEW] 관리자 패널 열기 (톱니바퀴)
         function openBannerAdmin() {
-            if(prompt("관리자 암호를 입력하세요") !== "0346") { alert("암호가 일치하지 않습니다."); return; }
+            if(prompt("관리자 암호를 입력하세요") !== "0346") { alert("암호 오류"); return; }
             renderAdminBannerList();
             document.getElementById('bannerAdminModal').style.display = 'flex';
         }
@@ -681,7 +670,7 @@
                 });
         }
 
-        // 1. 선박 정보 (사진 추가)
+        // 1. 선박 정보
         function addShipInfo() {
             const name = document.getElementById('shipName').value.trim();
             const onboard = document.getElementById('shipOnboard').value;
@@ -871,7 +860,7 @@
             db.collection("posts").doc(postId).update({ comments: firebase.firestore.FieldValue.arrayUnion(newComment) }).then(() => input.value = '');
         }
 
-        // 3. 자료실 (페이지 기능 추가)
+        // 3. 자료실
         function uploadFile() {
             const file = document.getElementById('fileInput').files[0];
             const title = document.getElementById('fileTitle').value;
