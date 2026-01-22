@@ -274,6 +274,26 @@
         .admin-list { width: 100%; list-style: none; padding: 0; margin: 10px 0; text-align: left; }
         .admin-item { display: flex; justify-content: space-between; padding: 8px; border-bottom: 1px solid #eee; align-items: center; }
         .admin-del-btn { background: #e53935; color: white; border: none; border-radius: 3px; padding: 5px 10px; cursor: pointer; }
+
+        /* [NEW] 커스텀 파일 업로드 버튼 스타일 */
+        .file-upload-label {
+            display: block;
+            width: 100%;
+            padding: 12px;
+            background-color: #e0f2f1; /* 은은한 민트색 */
+            border: 2px dashed #00897b;
+            border-radius: 5px;
+            text-align: center;
+            cursor: pointer;
+            color: #00695c;
+            font-weight: bold;
+            font-size: 0.9rem;
+            margin-bottom: 10px;
+            box-sizing: border-box;
+            transition: all 0.2s;
+        }
+        .file-upload-label:hover { background-color: #b2dfdb; }
+        #shipFileInput { display: none; } /* 기존 못생긴 파일 버튼 숨김 */
     </style>
 </head>
 <body>
@@ -378,7 +398,13 @@
                     <p style="font-weight:bold; color:#00695c; margin-bottom:10px;">[선박 정보 공유]</p>
                     <input type="text" id="shipName" class="board-input" placeholder="선박 이름 (중복 확인)">
                     <input type="password" id="shipPw" class="board-input" placeholder="비밀번호(삭제용)" style="margin-bottom: 10px;">
-                    <input type="file" id="shipFileInput" class="board-input" accept="image/*">
+                    
+                    <label for="shipFileInput" class="file-upload-label">
+                        📸 그림파일 선택 (여기를 클릭)
+                    </label>
+                    <input type="file" id="shipFileInput" accept="image/*" onchange="updateFileName(this)">
+                    <div id="fileNameDisplay" style="font-size: 0.8rem; color: #666; margin-bottom: 10px; text-align: center;">선택된 파일 없음</div>
+
                     <textarea id="shipOnboard" class="board-input" placeholder="본선 작업 특징"></textarea>
                     <textarea id="shipOnshore" class="board-input" placeholder="육상 작업 특징"></textarea>
                     <div style="text-align: right;">
@@ -599,6 +625,18 @@
             document.getElementById("imageModal").style.display = "none";
         }
 
+        // [NEW] 파일 선택 이름 업데이트
+        function updateFileName(input) {
+            const display = document.getElementById('fileNameDisplay');
+            if(input.files && input.files.length > 0) {
+                display.innerText = "✅ " + input.files[0].name;
+                display.style.color = "blue";
+            } else {
+                display.innerText = "선택된 파일 없음";
+                display.style.color = "#666";
+            }
+        }
+
         // --- Firebase Logic: 안전 배너 ---
         function loadBanner() {
             db.collection('settings').doc('banner').onSnapshot(doc => {
@@ -715,6 +753,7 @@
                 document.getElementById('shipOnshore').value = '';
                 document.getElementById('shipPw').value = '';
                 document.getElementById('shipFileInput').value = '';
+                document.getElementById('fileNameDisplay').innerText = "선택된 파일 없음";
                 document.getElementById('shipUploadProgress').style.display = 'none';
                 toggleWriteForm('shipWriteForm');
             });
