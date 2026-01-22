@@ -278,7 +278,10 @@
                             <option value="0.033">프리랜서 (3.3%)</option>
                             <option value="0.094">4대보험 약식 (약 9.4%)</option>
                         </select>
-                        <button class="action-btn bg-calc" style="margin-top:15px;" onclick="calculateWage()">🧮 계산하기</button>
+                        <div style="display:flex; gap:10px; margin-top:15px;">
+                            <button class="action-btn bg-calc" style="flex:2;" onclick="calculateWage()">🧮 계산하기</button>
+                            <button class="action-btn bg-cancel" style="flex:1; margin-top:0;" onclick="resetWageForm()">🔄 초기화</button>
+                        </div>
                         <div id="wageResultBox" class="wage-result-box hidden">
                             <div style="font-size:0.9rem; color:#666;">예상 월급 (세후)</div>
                             <div id="wageTotal" class="wage-total">0원</div>
@@ -493,7 +496,7 @@
             icon.classList.toggle('rotated');
         }
 
-        // [NEW] Toggle Function for Ship List Items (Click to expand)
+        // [NEW] Toggle Function for All List Items (Board, Notice, Ship)
         function toggleContent(id) {
             const el = document.getElementById(id);
             if (el.style.display === 'block') {
@@ -567,6 +570,21 @@
             
             // Scroll to result
             document.getElementById('wageResultBox').scrollIntoView({behavior:'smooth'});
+        }
+
+        function resetWageForm() {
+            document.getElementById('wageHourly').value = '10030';
+            document.getElementById('wageDayHours').value = '';
+            document.getElementById('wageNightHours').value = '';
+            document.getElementById('wageSkillTime').value = '';
+            document.getElementById('wageSkillRate').value = '';
+            document.getElementById('wageSignalTime').value = '';
+            document.getElementById('wageSignalRate').value = '';
+            document.getElementById('wageRainTime').value = '';
+            document.getElementById('wageRainRate').value = '';
+            document.getElementById('wageTaxType').selectedIndex = 0;
+            document.getElementById('wageResultBox').classList.add('hidden');
+            showToast("입력값이 초기화되었습니다.");
         }
 
         // --- Ship Info ---
@@ -743,7 +761,7 @@
             const items = allPostsData.slice((page-1)*postsPerPage, page*postsPerPage);
             items.forEach(p => {
                 const li = document.createElement("li"); li.className="post-item";
-                li.innerHTML = `<div class="post-header" onclick="toggleHidden('post-${p.id}')"><div class="post-main"><span style="color:var(--accent);font-size:0.8rem;">[${p.category}]</span> <span class="post-title" style="display:inline;">${p.title}</span><div class="post-meta">${p.name} | ${p.date.split(' ')[0]}</div></div><button class="mini-btn btn-del" onclick="deletePost('${p.id}', '${p.password}', event)">삭제</button></div><div id="post-${p.id}" class="post-body">${p.content}</div>`;
+                li.innerHTML = `<div class="post-header" onclick="toggleContent('post-${p.id}')" style="cursor:pointer;"><div class="post-main"><span style="color:var(--accent);font-size:0.8rem;">[${p.category}]</span> <span class="post-title" style="display:inline;">${p.title}</span><div class="post-meta">${p.name} | ${p.date.split(' ')[0]}</div></div><button class="mini-btn btn-del" onclick="deletePost('${p.id}', '${p.password}', event)">삭제</button></div><div id="post-${p.id}" class="post-body" style="display:none;">${p.content}</div>`;
                 list.appendChild(li);
             });
             renderPagination("pagination", Math.ceil(allPostsData.length/postsPerPage), currentBoardPage, renderBoardPage);
@@ -763,7 +781,7 @@
                 const l=document.getElementById("noticeList"); l.innerHTML="";
                 s.forEach(d => {
                     const n=d.data();
-                    l.innerHTML += `<li class="post-item"><div class="post-header" onclick="toggleHidden('n-${d.id}')"><span class="post-title" style="color:var(--danger)">📢 ${n.title}</span><div class="post-meta">${n.date.split(' ')[0]}</div><button class="mini-btn btn-del" onclick="delNotice('${d.id}', event)">삭제</button></div><div id="n-${d.id}" class="post-body">${n.content}</div></li>`;
+                    l.innerHTML += `<li class="post-item"><div class="post-header" onclick="toggleContent('n-${d.id}')" style="cursor:pointer;"><span class="post-title" style="color:var(--danger)">📢 ${n.title}</span><div class="post-meta">${n.date.split(' ')[0]}</div><button class="mini-btn btn-del" onclick="delNotice('${d.id}', event)">삭제</button></div><div id="n-${d.id}" class="post-body" style="display:none;">${n.content}</div></li>`;
                 });
             });
         }
