@@ -11,11 +11,11 @@
     
     <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6024353303588422" crossorigin="anonymous"></script>
 
-    <link rel="icon" type="image/png" sizes="32x32" href="icon.png?v=final2">
-    <link rel="icon" type="image/png" sizes="192x192" href="icon.png?v=final2">
-    <link rel="apple-touch-icon" sizes="180x180" href="icon.png?v=final2">
-    <link rel="shortcut icon" href="icon.png?v=final2">
-    <link rel="manifest" href="manifest.json?v=final2">
+    <link rel="icon" type="image/png" sizes="32x32" href="icon.png?v=final3">
+    <link rel="icon" type="image/png" sizes="192x192" href="icon.png?v=final3">
+    <link rel="apple-touch-icon" sizes="180x180" href="icon.png?v=final3">
+    <link rel="shortcut icon" href="icon.png?v=final3">
+    <link rel="manifest" href="manifest.json?v=final3">
 
     <meta name="theme-color" content="#2c3e50">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -248,10 +248,30 @@
                         <span class="wage-label">2. 근무 시간 (월 합계)</span>
                         <div class="wage-row"><label>☀️ 주간</label><input type="number" id="wageDayHours" class="input-field" placeholder="시간"><span class="wage-unit">H</span></div>
                         <div class="wage-row"><label>🌙 야간(1.5배)</label><input type="number" id="wageNightHours" class="input-field" placeholder="시간"><span class="wage-unit">H</span></div>
-                        <span class="wage-label">3. 현장 수당 (합계 금액)</span>
-                        <div class="wage-row"><label>🔧 기능공수당</label><input type="number" id="wageSkill" class="input-field" placeholder="금액"><span class="wage-unit">원</span></div>
-                        <div class="wage-row"><label>🏗️ 절맞이</label><input type="number" id="wageSignal" class="input-field" placeholder="금액"><span class="wage-unit">원</span></div>
-                        <div class="wage-row"><label>☔ 우천수당</label><input type="number" id="wageRain" class="input-field" placeholder="금액"><span class="wage-unit">원</span></div>
+                        
+                        <span class="wage-label">3. 현장 수당 (시간 × 단가)</span>
+                        <div class="wage-row">
+                            <label>🔧 기능공</label>
+                            <div style="display:flex; gap:5px; flex:1.5;">
+                                <input type="number" id="wageSkillTime" class="input-field" placeholder="시간" style="min-width:0; text-align:right;">
+                                <input type="number" id="wageSkillRate" class="input-field" placeholder="단가" style="min-width:0; text-align:right;">
+                            </div>
+                        </div>
+                        <div class="wage-row">
+                            <label>🏗️ 절맞이</label>
+                            <div style="display:flex; gap:5px; flex:1.5;">
+                                <input type="number" id="wageSignalTime" class="input-field" placeholder="시간" style="min-width:0; text-align:right;">
+                                <input type="number" id="wageSignalRate" class="input-field" placeholder="단가" style="min-width:0; text-align:right;">
+                            </div>
+                        </div>
+                        <div class="wage-row">
+                            <label>☔ 우천</label>
+                            <div style="display:flex; gap:5px; flex:1.5;">
+                                <input type="number" id="wageRainTime" class="input-field" placeholder="시간" style="min-width:0; text-align:right;">
+                                <input type="number" id="wageRainRate" class="input-field" placeholder="단가" style="min-width:0; text-align:right;">
+                            </div>
+                        </div>
+
                         <span class="wage-label">4. 세금/공제</span>
                         <select id="wageTaxType" class="input-field">
                             <option value="0">공제 없음 (0%)</option>
@@ -473,6 +493,16 @@
             icon.classList.toggle('rotated');
         }
 
+        // [NEW] Toggle Function for Ship List Items (Click to expand)
+        function toggleContent(id) {
+            const el = document.getElementById(id);
+            if (el.style.display === 'block') {
+                el.style.display = 'none';
+            } else {
+                el.style.display = 'block';
+            }
+        }
+
         function activateTab(targetId) {
             document.getElementById('section-community').scrollIntoView({behavior:'smooth'});
             // 커뮤니티 섹션이 접혀있다면 펼치기
@@ -508,9 +538,18 @@
             const dayHours = parseFloat(document.getElementById('wageDayHours').value) || 0;
             const nightHours = parseFloat(document.getElementById('wageNightHours').value) || 0;
             
-            const skillPay = parseFloat(document.getElementById('wageSkill').value) || 0;
-            const signalPay = parseFloat(document.getElementById('wageSignal').value) || 0;
-            const rainPay = parseFloat(document.getElementById('wageRain').value) || 0;
+            // 시간 * 단가 계산
+            const skillTime = parseFloat(document.getElementById('wageSkillTime').value) || 0;
+            const skillRate = parseFloat(document.getElementById('wageSkillRate').value) || 0;
+            const skillPay = skillTime * skillRate;
+
+            const signalTime = parseFloat(document.getElementById('wageSignalTime').value) || 0;
+            const signalRate = parseFloat(document.getElementById('wageSignalRate').value) || 0;
+            const signalPay = signalTime * signalRate;
+
+            const rainTime = parseFloat(document.getElementById('wageRainTime').value) || 0;
+            const rainRate = parseFloat(document.getElementById('wageRainRate').value) || 0;
+            const rainPay = rainTime * rainRate;
             
             const taxRate = parseFloat(document.getElementById('wageTaxType').value);
 
@@ -621,7 +660,19 @@
                 let imgBtn = s.imageUrl ? `<button class="mini-btn btn-photo" onclick="event.stopPropagation();showImageModal('${s.imageUrl}')">📷 사진</button>` : "";
                 const li = document.createElement("li");
                 li.className = "post-item";
-                li.innerHTML = `<div class="post-header" onclick="toggleHidden('ship-body-${s.id}')"><span class="post-title">🚢 ${s.shipName}</span><div class="post-actions">${imgBtn}<button class="mini-btn btn-edit" onclick="event.stopPropagation();editShip('${s.id}')">수정</button><button class="mini-btn btn-del" onclick="deleteShip('${s.id}', event)">삭제</button></div></div><div id="ship-body-${s.id}" class="post-body"><p><strong>[본선]</strong> ${s.onboardFeat || '-'}</p><p><strong>[육상]</strong> ${s.onshoreFeat || '-'}</p></div>`;
+                li.innerHTML = `
+                    <div class="post-header" onclick="toggleContent('ship-body-${s.id}')" style="cursor:pointer;">
+                        <span class="post-title">🚢 ${s.shipName}</span>
+                        <div class="post-actions">
+                            ${imgBtn}
+                            <button class="mini-btn btn-edit" onclick="event.stopPropagation();editShip('${s.id}')">수정</button>
+                            <button class="mini-btn btn-del" onclick="event.stopPropagation();deleteShip('${s.id}', event)">삭제</button>
+                        </div>
+                    </div>
+                    <div id="ship-body-${s.id}" class="post-body" style="display:none;">
+                        <p><strong>[본선 작업]</strong><br>${s.onboardFeat || '내용 없음'}</p>
+                        <p style="margin-top:10px;"><strong>[육상 작업]</strong><br>${s.onshoreFeat || '내용 없음'}</p>
+                    </div>`;
                 list.appendChild(li);
             });
             renderPagination("shipPagination", Math.ceil(allShipsData.length/postsPerPage), currentShipPage, renderShipPage);
