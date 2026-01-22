@@ -14,7 +14,6 @@
 
     <style>
         :root {
-            /* 라이트 모드 */
             --primary-color: #003366;
             --accent-color: #f39c12;
             --bg-color: #f4f6f9;
@@ -27,7 +26,6 @@
             --nav-active: #003366;
         }
 
-        /* 다크 모드 */
         body.dark-mode {
             --primary-color: #bbdefb;
             --accent-color: #ffb74d;
@@ -54,7 +52,7 @@
             transition: background-color 0.3s, color 0.3s;
         }
 
-        /* 헤더 스타일 (3D 텍스트 + 애니메이션) */
+        /* 헤더 스타일 (3D) */
         header {
             width: 100%;
             background-color: #003366;
@@ -86,7 +84,7 @@
             background: none; border: none; font-size: 1.5rem; cursor: pointer; color: white;
         }
 
-        /* 안전 배너 (반짝임 + 2버튼) */
+        /* 안전 배너 */
         .ticker-container {
             width: 100%;
             background-color: #ff9800;
@@ -123,7 +121,6 @@
             100% { transform: translate3d(-100%, 0, 0); }
         }
         
-        /* 배너 버튼 그룹 */
         .ticker-btn-group {
             position: absolute; right: 0; top: 0; height: 100%;
             display: flex;
@@ -213,7 +210,8 @@
         .post-cat { color: var(--accent-color); font-size: 0.75rem; margin-right: 5px; } 
         .post-info { font-size: 0.7rem; color: #888; text-align: right; margin-left: 10px;}
         
-        .delete-btn { background-color: #e53935; color: white; border: none; border-radius: 3px; padding: 3px 8px; font-size: 0.7rem; margin-left: 10px; cursor: pointer; z-index: 10; }
+        .delete-btn { background-color: #e53935; color: white; border: none; border-radius: 3px; padding: 3px 8px; font-size: 0.7rem; margin-left: 5px; cursor: pointer; z-index: 10; }
+        .edit-btn { background-color: #1976d2; color: white; border: none; border-radius: 3px; padding: 3px 8px; font-size: 0.7rem; margin-left: 5px; cursor: pointer; z-index: 10; }
         .photo-btn { background-color: #00897b; color: white; border: none; border-radius: 3px; padding: 3px 8px; font-size: 0.7rem; margin-left: 5px; cursor: pointer; z-index: 10; text-decoration: none;}
         .download-btn { background-color: #2e7d32; color: white; border: none; border-radius: 3px; padding: 5px 10px; font-size: 0.75rem; margin-left: 10px; cursor: pointer; z-index: 10; text-decoration: none; }
 
@@ -270,30 +268,20 @@
         .nav-item span { font-size: 1.2rem; margin-bottom: 3px; }
         .nav-item:hover, .nav-item.active { color: var(--nav-active); font-weight: bold; }
 
-        /* 관리자 팝업 스타일 */
+        /* 관리자 팝업 */
         .admin-list { width: 100%; list-style: none; padding: 0; margin: 10px 0; text-align: left; }
         .admin-item { display: flex; justify-content: space-between; padding: 8px; border-bottom: 1px solid #eee; align-items: center; }
         .admin-del-btn { background: #e53935; color: white; border: none; border-radius: 3px; padding: 5px 10px; cursor: pointer; }
 
-        /* [NEW] 커스텀 파일 업로드 버튼 스타일 */
+        /* 파일 업로드 버튼 */
         .file-upload-label {
-            display: block;
-            width: 100%;
-            padding: 12px;
-            background-color: #e0f2f1; /* 은은한 민트색 */
-            border: 2px dashed #00897b;
-            border-radius: 5px;
-            text-align: center;
-            cursor: pointer;
-            color: #00695c;
-            font-weight: bold;
-            font-size: 0.9rem;
-            margin-bottom: 10px;
-            box-sizing: border-box;
-            transition: all 0.2s;
+            display: block; width: 100%; padding: 12px;
+            background-color: #e0f2f1; border: 2px dashed #00897b; border-radius: 5px;
+            text-align: center; cursor: pointer; color: #00695c; font-weight: bold; font-size: 0.9rem;
+            margin-bottom: 10px; box-sizing: border-box; transition: all 0.2s;
         }
         .file-upload-label:hover { background-color: #b2dfdb; }
-        #shipFileInput { display: none; } /* 기존 못생긴 파일 버튼 숨김 */
+        #shipFileInput { display: none; } 
     </style>
 </head>
 <body>
@@ -316,7 +304,7 @@
     <div class="container">
         
         <div class="notice-box">
-            📢 <strong>Notice:</strong> 안전 공지 시인성 강화 (반짝임 효과)
+            📢 <strong>Tip:</strong> 선박 정보는 누구나 수정할 수 있습니다. (삭제는 관리자만)
         </div>
 
         <div id="section-community" class="section-card">
@@ -326,7 +314,10 @@
                 <div class="comm-btn" onclick="toggleView('noticeArea')">📢 공지사항</div>
                 <div class="comm-btn" onclick="toggleView('boardArea')">💬 익명 게시판<br><span style="font-size:0.9rem; font-weight:bold;">(고성방가)</span></div>
                 <div class="comm-btn" onclick="toggleView('fileArea')">💾 공유자료실</div>
-                <div class="comm-btn" onclick="toggleView('shipInfoArea')">🚢 선박 정보 공유</div>
+                <div class="comm-btn" onclick="toggleView('shipInfoArea')">
+                    🚢 선박 정보 공유<br>
+                    <span style="font-size:0.8rem; color:var(--text-color); opacity:0.7; font-weight:normal;">(누구나 수정 / 삭제는 관리자만)</span>
+                </div>
             </div>
 
             <div id="noticeArea" class="hidden-content">
@@ -396,8 +387,7 @@
 
                 <div id="shipWriteForm" class="board-form" style="display: none; border-color: #00897b;">
                     <p style="font-weight:bold; color:#00695c; margin-bottom:10px;">[선박 정보 공유]</p>
-                    <input type="text" id="shipName" class="board-input" placeholder="선박 이름 (중복 확인)">
-                    <input type="password" id="shipPw" class="board-input" placeholder="비밀번호(삭제용)" style="margin-bottom: 10px;">
+                    <input type="text" id="shipName" class="board-input" placeholder="선박 이름">
                     
                     <label for="shipFileInput" class="file-upload-label">
                         📸 그림파일 선택 (여기를 클릭)
@@ -408,7 +398,8 @@
                     <textarea id="shipOnboard" class="board-input" placeholder="본선 작업 특징"></textarea>
                     <textarea id="shipOnshore" class="board-input" placeholder="육상 작업 특징"></textarea>
                     <div style="text-align: right;">
-                        <button class="board-btn" style="background-color: #00897b;" onclick="addShipInfo()">정보 등록</button>
+                        <button id="shipSubmitBtn" class="board-btn" style="background-color: #00897b;" onclick="addShipInfo()">정보 등록</button>
+                        <button id="shipCancelBtn" class="board-btn" style="background-color: #999; display:none; margin-left:5px;" onclick="resetShipForm()">취소</button>
                     </div>
                     <div id="shipUploadProgress" style="color: #00897b; font-size: 0.8rem; margin-top: 5px; display: none;">사진 업로드 중...</div>
                 </div>
@@ -549,7 +540,7 @@
 
     <script>
         // -----------------------------------------------------------
-        // API Key (주인님 설정)
+        // API Key
         // -----------------------------------------------------------
         const firebaseConfig = {
             apiKey: "AIzaSyBDXy5HcYW-IZQJ9ZDEivr_yi99AxhYme8",
@@ -565,7 +556,8 @@
         let allPostsData = [], allShipsData = [], allFilesData = [];
         let currentBoardPage = 1, currentShipPage = 1, currentFilePage = 1;
         const postsPerPage = 5;
-        let currentBannerMsgs = []; // 현재 배너 데이터
+        let currentBannerMsgs = [];
+        let editingShipId = null;
 
         try {
             if (firebase.apps.length === 0) firebase.initializeApp(firebaseConfig);
@@ -576,7 +568,6 @@
             loadNoticesRealtime();
             loadShipsRealtime();
             loadBanner(); 
-            
             if(localStorage.getItem('theme') === 'dark') document.body.classList.add('dark-mode');
         } catch (e) { console.error("Firebase Init Error:", e); }
 
@@ -585,21 +576,15 @@
             document.body.classList.toggle('dark-mode');
             localStorage.setItem('theme', document.body.classList.contains('dark-mode') ? 'dark' : 'light');
         }
-
-        function scrollToTop() {
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-        }
-
+        function scrollToTop() { window.scrollTo({ top: 0, behavior: 'smooth' }); }
         function activateTab(tabId) {
             document.getElementById('section-community').scrollIntoView({ behavior: 'smooth' });
             toggleView(tabId);
         }
-
         function toggleTerminal(id) {
             const el = document.getElementById(id);
             el.style.display = (el.style.display === "block") ? "none" : "block";
         }
-
         function toggleView(targetId) {
             const target = document.getElementById(targetId);
             const isVisible = target.style.display === "block";
@@ -607,13 +592,10 @@
             all.forEach(id => document.getElementById(id).style.display = 'none');
             if (!isVisible) target.style.display = 'block';
         }
-
         function toggleWriteForm(id) {
             const el = document.getElementById(id);
             el.style.display = (el.style.display === "none") ? "block" : "none";
         }
-
-        // --- 모달 기능 ---
         function openBusSchedule() {
             showImageModal("https://firebasestorage.googleapis.com/v0/b/my-app-d8527.firebasestorage.app/o/archives%2F1769013796862_BandPhoto_2026_01_22_01_39_56.jpg?alt=media&token=a2e8f727-250a-41aa-855c-7b1f341d9048");
         }
@@ -621,11 +603,7 @@
             document.getElementById("modalImage").src = src;
             document.getElementById("imageModal").style.display = "flex";
         }
-        function closeImageModal() {
-            document.getElementById("imageModal").style.display = "none";
-        }
-
-        // [NEW] 파일 선택 이름 업데이트
+        function closeImageModal() { document.getElementById("imageModal").style.display = "none"; }
         function updateFileName(input) {
             const display = document.getElementById('fileNameDisplay');
             if(input.files && input.files.length > 0) {
@@ -637,126 +615,112 @@
             }
         }
 
-        // --- Firebase Logic: 안전 배너 ---
-        function loadBanner() {
-            db.collection('settings').doc('banner').onSnapshot(doc => {
-                if(doc.exists && doc.data().messages && doc.data().messages.length > 0) {
-                    currentBannerMsgs = doc.data().messages;
-                    const fullText = currentBannerMsgs.map((msg, index) => `[${index+1}] ${msg}`).join(' 　/　 ');
-                    document.getElementById('tickerText').innerText = "🚨 " + fullText;
-                } else {
-                    currentBannerMsgs = [];
-                    document.getElementById('tickerText').innerText = "🚨 등록된 안전 공지가 없습니다. (클릭하여 작성)";
-                }
-            });
+        // --- Firebase Logic ---
+
+        // 1. 선박 정보 (비밀번호 없음, 수정/삭제 가능)
+        function resetShipForm() {
+            editingShipId = null;
+            document.getElementById('shipName').value = '';
+            document.getElementById('shipOnboard').value = '';
+            document.getElementById('shipOnshore').value = '';
+            document.getElementById('shipFileInput').value = '';
+            document.getElementById('fileNameDisplay').innerText = "선택된 파일 없음";
+            document.getElementById('shipSubmitBtn').innerText = "정보 등록";
+            document.getElementById('shipCancelBtn').style.display = 'none';
+            document.getElementById('shipUploadProgress').style.display = 'none';
+            document.getElementById('shipWriteForm').style.display = 'none';
         }
 
-        // 누구나 작성 (연필)
-        function updateBanner() {
-            const newText = prompt("안전 공지를 입력하세요 (새 글은 1번으로 등록됩니다):");
-            if (!newText || newText.trim() === "") return;
+        function editShip(id) {
+            const ship = allShipsData.find(s => s.id === id);
+            if (!ship) return;
 
-            const bannerRef = db.collection('settings').doc('banner');
-            bannerRef.get().then((doc) => {
-                let messages = [];
-                if (doc.exists && doc.data().messages) messages = doc.data().messages;
-                messages.unshift(newText); // 맨 앞 추가
-                if (messages.length > 5) messages = messages.slice(0, 5); // 5개 유지
-                bannerRef.set({ messages: messages });
-            });
+            editingShipId = id;
+            document.getElementById('shipName').value = ship.shipName;
+            document.getElementById('shipOnboard').value = ship.onboardFeat;
+            document.getElementById('shipOnshore').value = ship.onshoreFeat;
+            
+            document.getElementById('shipWriteForm').style.display = 'block';
+            document.getElementById('shipSubmitBtn').innerText = "수정 완료";
+            document.getElementById('shipCancelBtn').style.display = 'inline-block';
+            
+            document.getElementById('shipWriteForm').scrollIntoView({ behavior: 'smooth' });
         }
 
-        // [NEW] 관리자 패널 열기 (톱니바퀴)
-        function openBannerAdmin() {
-            if(prompt("관리자 암호를 입력하세요") !== "0346") { alert("암호 오류"); return; }
-            renderAdminBannerList();
-            document.getElementById('bannerAdminModal').style.display = 'flex';
-        }
-
-        // [NEW] 관리자 패널 리스트 렌더링
-        function renderAdminBannerList() {
-            const list = document.getElementById('adminBannerList');
-            list.innerHTML = "";
-            if(currentBannerMsgs.length === 0) {
-                list.innerHTML = "<li>등록된 공지가 없습니다.</li>";
-                return;
-            }
-            currentBannerMsgs.forEach((msg, index) => {
-                const li = document.createElement('li');
-                li.className = 'admin-item';
-                li.innerHTML = `<span>[${index+1}] ${msg}</span> <button class="admin-del-btn" onclick="deleteBannerMsg(${index})">삭제</button>`;
-                list.appendChild(li);
-            });
-        }
-
-        // [NEW] 특정 공지 삭제
-        function deleteBannerMsg(index) {
-            if(!confirm("이 공지를 삭제하시겠습니까?")) return;
-            const newMsgs = [...currentBannerMsgs];
-            newMsgs.splice(index, 1);
-            db.collection('settings').doc('banner').set({ messages: newMsgs })
-                .then(() => renderAdminBannerList()); // 리스트 갱신
-        }
-
-        // [NEW] 전체 초기화
-        function resetBannerMsg() {
-            if(!confirm("정말 모든 공지를 삭제하시겠습니까?")) return;
-            db.collection('settings').doc('banner').set({ messages: [] })
-                .then(() => {
-                    renderAdminBannerList();
-                    alert("초기화 완료");
-                });
-        }
-
-        // 1. 선박 정보
         function addShipInfo() {
             const name = document.getElementById('shipName').value.trim();
             const onboard = document.getElementById('shipOnboard').value;
             const onshore = document.getElementById('shipOnshore').value;
-            const pw = document.getElementById('shipPw').value;
             const fileInput = document.getElementById('shipFileInput');
             const file = fileInput.files[0];
 
-            if (!name || !pw) { alert("선박 이름과 비밀번호는 필수입니다."); return; }
+            if (!name) { alert("선박 이름을 입력해주세요."); return; }
 
-            db.collection("ships").where("shipName", "==", name).get().then((querySnapshot) => {
-                if (!querySnapshot.empty) {
-                    alert("⚠️ 동일한 선박 이름이 이미 등록되어 있습니다.");
-                    return;
-                }
-                
-                if (file) {
-                    document.getElementById('shipUploadProgress').style.display = 'block';
-                    const fileName = 'ship_' + Date.now() + '_' + file.name;
-                    const ref = storage.ref('ships/' + fileName);
-                    ref.put(file).then(snapshot => snapshot.ref.getDownloadURL()).then(url => {
-                        saveShipToDb(name, onboard, onshore, pw, url);
-                    }).catch(err => {
-                        alert("사진 업로드 실패: " + err.message);
-                        document.getElementById('shipUploadProgress').style.display = 'none';
-                    });
+            if (editingShipId) {
+                processShipSave(name, onboard, onshore, file);
+            } else {
+                db.collection("ships").where("shipName", "==", name).get().then((querySnapshot) => {
+                    if (!querySnapshot.empty) {
+                        alert("⚠️ 동일한 선박 이름이 이미 등록되어 있습니다. 해당 선박을 찾아 '수정' 버튼을 눌러주세요.");
+                        return;
+                    }
+                    processShipSave(name, onboard, onshore, file);
+                });
+            }
+        }
+
+        function processShipSave(name, onboard, onshore, file) {
+            if (file) {
+                document.getElementById('shipUploadProgress').style.display = 'block';
+                const fileName = 'ship_' + Date.now() + '_' + file.name;
+                const ref = storage.ref('ships/' + fileName);
+                ref.put(file).then(snapshot => snapshot.ref.getDownloadURL()).then(url => {
+                    saveShipToDb(name, onboard, onshore, url);
+                }).catch(err => {
+                    alert("사진 업로드 실패: " + err.message);
+                    document.getElementById('shipUploadProgress').style.display = 'none';
+                });
+            } else {
+                if (editingShipId) {
+                     const original = allShipsData.find(s => s.id === editingShipId);
+                     saveShipToDb(name, onboard, onshore, original.imageUrl); 
                 } else {
-                    saveShipToDb(name, onboard, onshore, pw, null);
+                    saveShipToDb(name, onboard, onshore, null);
                 }
+            }
+        }
+
+        function saveShipToDb(name, onboard, onshore, imgUrl) {
+            const data = {
+                shipName: name, onboardFeat: onboard, onshoreFeat: onshore,
+                imageUrl: imgUrl, date: new Date().toLocaleString(),
+                timestamp: firebase.firestore.FieldValue.serverTimestamp()
+            };
+
+            let promise;
+            if (editingShipId) {
+                promise = db.collection("ships").doc(editingShipId).update(data);
+            } else {
+                promise = db.collection("ships").add(data);
+            }
+
+            promise.then(() => {
+                alert(editingShipId ? "수정되었습니다." : "등록되었습니다.");
+                resetShipForm();
             });
         }
 
-        function saveShipToDb(name, onboard, onshore, pw, imgUrl) {
-            db.collection("ships").add({
-                shipName: name, onboardFeat: onboard, onshoreFeat: onshore, password: pw,
-                imageUrl: imgUrl, date: new Date().toLocaleString(),
-                timestamp: firebase.firestore.FieldValue.serverTimestamp()
-            }).then(() => {
-                alert("등록되었습니다.");
-                document.getElementById('shipName').value = '';
-                document.getElementById('shipOnboard').value = '';
-                document.getElementById('shipOnshore').value = '';
-                document.getElementById('shipPw').value = '';
-                document.getElementById('shipFileInput').value = '';
-                document.getElementById('fileNameDisplay').innerText = "선택된 파일 없음";
-                document.getElementById('shipUploadProgress').style.display = 'none';
-                toggleWriteForm('shipWriteForm');
-            });
+        // [수정된 부분] 삭제 시 관리자 암호 확인
+        function deleteShip(id, event) {
+            event.stopPropagation();
+            const pw = prompt("관리자 암호를 입력하세요 (삭제 권한):");
+            if(pw === "0346") {
+                if(confirm("정말 삭제하시겠습니까?")) {
+                    db.collection("ships").doc(id).delete().then(()=>alert("삭제됨"));
+                }
+            } else {
+                alert("암호 오류: 삭제는 관리자만 가능합니다.");
+            }
         }
 
         function loadShipsRealtime() {
@@ -794,8 +758,9 @@
                     <div class="post-header" style="background-color:rgba(0, 137, 123, 0.1);" onclick="toggleContent('ship-${ship.id}')">
                         <span class="post-title" style="color:#00695c;">🚢 ${ship.shipName}</span>
                         <div>${imgBtn}</div>
+                        <button class="edit-btn" onclick="event.stopPropagation(); editShip('${ship.id}')">✏️ 수정</button>
+                        <button class="delete-btn" onclick="deleteShip('${ship.id}', event)">삭제</button>
                         <span class="post-info" style="margin-left:5px;">▼</span>
-                        <button class="delete-btn" onclick="deleteShip('${ship.id}', '${ship.password}', event)">삭제</button>
                     </div>
                     <div id="ship-${ship.id}" class="post-body-container">
                         <p><strong>[본선 작업 특징]</strong><br>${ship.onboardFeat || '-'}</p>
@@ -807,15 +772,59 @@
             renderPagination("shipPagination", Math.ceil(allShipsData.length / postsPerPage), currentShipPage, renderShipPage);
         }
 
-        function deleteShip(id, correctPw, event) {
-            event.stopPropagation();
-            const inputPw = prompt("비밀번호를 입력하세요");
-            if (inputPw === "0346" || inputPw === correctPw) {
-                if(confirm("삭제하시겠습니까?")) db.collection("ships").doc(id).delete().then(()=>alert("삭제됨"));
-            } else { alert("비밀번호 오류"); }
+        // --- 기타 로직 (배너, 게시판 등 기존 유지) ---
+        function loadBanner() {
+            db.collection('settings').doc('banner').onSnapshot(doc => {
+                if(doc.exists && doc.data().messages && doc.data().messages.length > 0) {
+                    currentBannerMsgs = doc.data().messages;
+                    const fullText = currentBannerMsgs.map((msg, index) => `[${index+1}] ${msg}`).join(' 　/　 ');
+                    document.getElementById('tickerText').innerText = "🚨 " + fullText;
+                } else {
+                    currentBannerMsgs = [];
+                    document.getElementById('tickerText').innerText = "🚨 등록된 안전 공지가 없습니다. (클릭하여 작성)";
+                }
+            });
+        }
+        function updateBanner() {
+            const newText = prompt("안전 공지를 입력하세요 (새 글은 1번으로 등록됩니다):");
+            if (!newText || newText.trim() === "") return;
+            const bannerRef = db.collection('settings').doc('banner');
+            bannerRef.get().then((doc) => {
+                let messages = [];
+                if (doc.exists && doc.data().messages) messages = doc.data().messages;
+                messages.unshift(newText); 
+                if (messages.length > 5) messages = messages.slice(0, 5); 
+                bannerRef.set({ messages: messages });
+            });
+        }
+        function openBannerAdmin() {
+            if(prompt("관리자 암호를 입력하세요") !== "0346") { alert("암호 오류"); return; }
+            renderAdminBannerList();
+            document.getElementById('bannerAdminModal').style.display = 'flex';
+        }
+        function renderAdminBannerList() {
+            const list = document.getElementById('adminBannerList');
+            list.innerHTML = "";
+            if(currentBannerMsgs.length === 0) { list.innerHTML = "<li>등록된 공지가 없습니다.</li>"; return; }
+            currentBannerMsgs.forEach((msg, index) => {
+                const li = document.createElement('li');
+                li.className = 'admin-item';
+                li.innerHTML = `<span>[${index+1}] ${msg}</span> <button class="admin-del-btn" onclick="deleteBannerMsg(${index})">삭제</button>`;
+                list.appendChild(li);
+            });
+        }
+        function deleteBannerMsg(index) {
+            if(!confirm("삭제하시겠습니까?")) return;
+            const newMsgs = [...currentBannerMsgs];
+            newMsgs.splice(index, 1);
+            db.collection('settings').doc('banner').set({ messages: newMsgs }).then(() => renderAdminBannerList());
+        }
+        function resetBannerMsg() {
+            if(!confirm("초기화하시겠습니까?")) return;
+            db.collection('settings').doc('banner').set({ messages: [] }).then(() => { renderAdminBannerList(); alert("초기화 완료"); });
         }
 
-        // 2. 익명 게시판
+        // 익명 게시판
         function addPost() {
             const cat = document.getElementById('inputCategory').value;
             const title = document.getElementById('inputTitle').value;
@@ -823,7 +832,6 @@
             const pw = document.getElementById('inputPw').value;
             const content = document.getElementById('inputContent').value;
             if(!title || !name || !pw || !content) { alert("모두 입력해주세요."); return; }
-            
             db.collection("posts").add({
                 category: cat, title: title, name: name, password: pw, content: content,
                 date: new Date().toLocaleString(), timestamp: firebase.firestore.FieldValue.serverTimestamp(), comments: []
@@ -835,7 +843,6 @@
                 toggleWriteForm('boardWriteForm');
             });
         }
-
         function loadPostsRealtime() {
             db.collection("posts").orderBy("timestamp", "desc").onSnapshot(snapshot => {
                 allPostsData = [];
@@ -843,47 +850,25 @@
                 renderBoardPage(1);
             });
         }
-
         function renderBoardPage(page) {
             currentBoardPage = page;
             const list = document.getElementById("boardList");
             list.innerHTML = "";
-            if (allPostsData.length === 0) {
-                list.innerHTML = '<li style="padding:20px; text-align:center; opacity:0.6;">글이 없습니다.</li>';
-                document.getElementById("pagination").innerHTML = "";
-                return;
-            }
+            if (allPostsData.length === 0) { list.innerHTML = '<li style="padding:20px; text-align:center; opacity:0.6;">글이 없습니다.</li>'; document.getElementById("pagination").innerHTML = ""; return; }
             const start = (page - 1) * postsPerPage;
             const end = start + postsPerPage;
             const items = allPostsData.slice(start, end);
-
             items.forEach(post => {
                 const commentsHtml = (post.comments || []).map(c => `<li class="comment-item"><span>↪ ${c.text}</span><span style="font-size:0.7rem; color:#888;">${c.time}</span></li>`).join('');
                 const cat = post.category || "잡담";
                 const li = document.createElement("li");
                 li.className = "post-item";
                 li.id = "post-" + post.id;
-                li.innerHTML = `
-                    <div class="post-header" onclick="toggleContent('body-${post.id}')">
-                        <span class="post-title"><span class="post-cat">[${cat}]</span> ${post.title}</span>
-                        <span class="post-info">${post.name}<br>${post.date.split('. ')[1]}.${post.date.split('. ')[2]}</span>
-                        <button class="delete-btn" onclick="deletePost('${post.id}', '${post.password}', event)">삭제</button>
-                    </div>
-                    <div id="body-${post.id}" class="post-body-container">
-                        <div class="post-content">${post.content}</div>
-                        <div class="comment-section">
-                            <ul class="comment-list" id="comment-list-${post.id}">${commentsHtml}</ul>
-                            <div class="comment-input-area" style="margin-top:10px;">
-                                <input type="text" id="comment-input-${post.id}" class="comment-input" placeholder="댓글">
-                                <button class="comment-btn" onclick="addComment('${post.id}')">등록</button>
-                            </div>
-                        </div>
-                    </div>`;
+                li.innerHTML = `<div class="post-header" onclick="toggleContent('body-${post.id}')"><span class="post-title"><span class="post-cat">[${cat}]</span> ${post.title}</span><span class="post-info">${post.name}<br>${post.date.split('. ')[1]}.${post.date.split('. ')[2]}</span><button class="delete-btn" onclick="deletePost('${post.id}', '${post.password}', event)">삭제</button></div><div id="body-${post.id}" class="post-body-container"><div class="post-content">${post.content}</div><div class="comment-section"><ul class="comment-list" id="comment-list-${post.id}">${commentsHtml}</ul><div class="comment-input-area" style="margin-top:10px;"><input type="text" id="comment-input-${post.id}" class="comment-input" placeholder="댓글"><button class="comment-btn" onclick="addComment('${post.id}')">등록</button></div></div></div>`;
                 list.appendChild(li);
             });
             renderPagination("pagination", Math.ceil(allPostsData.length / postsPerPage), currentBoardPage, renderBoardPage);
         }
-
         function deletePost(postId, correctPw, event) {
             event.stopPropagation();
             const inputPw = prompt("비밀번호를 입력하세요");
@@ -891,7 +876,6 @@
                 if(confirm("삭제하시겠습니까?")) db.collection("posts").doc(postId).delete().then(()=>alert("삭제됨"));
             } else { alert("비밀번호 오류"); }
         }
-
         function addComment(postId) {
             const input = document.getElementById(`comment-input-${postId}`);
             if (!input.value) return;
@@ -899,7 +883,7 @@
             db.collection("posts").doc(postId).update({ comments: firebase.firestore.FieldValue.arrayUnion(newComment) }).then(() => input.value = '');
         }
 
-        // 3. 자료실
+        // 자료실
         function uploadFile() {
             const file = document.getElementById('fileInput').files[0];
             const title = document.getElementById('fileTitle').value;
@@ -915,7 +899,6 @@
                 document.getElementById('uploadProgress').style.display = 'none';
             });
         }
-
         function loadFilesRealtime() {
             db.collection("archives").orderBy("timestamp", "desc").onSnapshot(snapshot => {
                 allFilesData = [];
@@ -923,43 +906,29 @@
                 renderFilePage(1);
             });
         }
-
         function renderFilePage(page) {
             currentFilePage = page;
             const list = document.getElementById("fileList");
             list.innerHTML = "";
-            if (allFilesData.length === 0) {
-                list.innerHTML = '<li style="padding:20px; text-align:center; opacity:0.6;">자료 없음</li>';
-                document.getElementById("filePagination").innerHTML = "";
-                return;
-            }
+            if (allFilesData.length === 0) { list.innerHTML = '<li style="padding:20px; text-align:center; opacity:0.6;">자료 없음</li>'; document.getElementById("filePagination").innerHTML = ""; return; }
             const start = (page - 1) * postsPerPage;
             const end = start + postsPerPage;
             const items = allFilesData.slice(start, end);
-
             items.forEach(f => {
                 const li = document.createElement("li");
                 li.className = "file-item";
-                li.innerHTML = `
-                    <div style="flex:1; overflow:hidden;">
-                        <a href="${f.fileUrl}" target="_blank" class="file-link">💾 ${f.title}</a>
-                        <div class="file-meta">${f.uploader} | ${f.date.split('. ')[1]}.${f.date.split('. ')[2]}</div>
-                    </div>
-                    <a href="${f.fileUrl}" target="_blank" download class="download-btn">다운</a>`;
+                li.innerHTML = `<div style="flex:1; overflow:hidden;"><a href="${f.fileUrl}" target="_blank" class="file-link">💾 ${f.title}</a><div class="file-meta">${f.uploader} | ${f.date.split('. ')[1]}.${f.date.split('. ')[2]}</div></div><a href="${f.fileUrl}" target="_blank" download class="download-btn">다운</a>`;
                 list.appendChild(li);
             });
             renderPagination("filePagination", Math.ceil(allFilesData.length / postsPerPage), currentFilePage, renderFilePage);
         }
-
         function filterFiles() {
             const filter = document.getElementById('fileSearch').value.toUpperCase();
             const li = document.getElementById("fileList").getElementsByTagName('li');
-            for(let i=0; i<li.length; i++) {
-                li[i].style.display = (li[i].textContent.toUpperCase().indexOf(filter) > -1) ? "flex" : "none";
-            }
+            for(let i=0; i<li.length; i++) { li[i].style.display = (li[i].textContent.toUpperCase().indexOf(filter) > -1) ? "flex" : "none"; }
         }
 
-        // 4. 공지사항
+        // 공지사항
         function addNotice() {
             if(prompt("관리자 암호:") !== "0346") { alert("암호 오류"); return; }
             const title = document.getElementById('noticeTitle').value;
@@ -969,7 +938,6 @@
             db.collection("notices").add({ title, name, content, date: new Date().toLocaleString(), timestamp: firebase.firestore.FieldValue.serverTimestamp() })
             .then(() => { alert("등록됨"); document.getElementById('noticeTitle').value = ''; document.getElementById('noticeContent').value = ''; });
         }
-
         function loadNoticesRealtime() {
             db.collection("notices").orderBy("timestamp", "desc").onSnapshot(snapshot => {
                 const list = document.getElementById("noticeList");
@@ -984,19 +952,16 @@
                 });
             });
         }
-
         function deleteNotice(id, event) {
             event.stopPropagation();
             if(prompt("관리자 암호:") === "0346") db.collection("notices").doc(id).delete();
         }
 
-        // 공통: 콘텐츠 토글
+        // 공통
         function toggleContent(id) {
             const el = document.getElementById(id);
             el.style.display = (el.style.display === "block") ? "none" : "block";
         }
-
-        // 공통: 페이지네이션 렌더링
         function renderPagination(elementId, totalPages, currentPage, renderFunc) {
             const div = document.getElementById(elementId);
             div.innerHTML = "";
