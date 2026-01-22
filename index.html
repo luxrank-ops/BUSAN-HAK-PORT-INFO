@@ -9,12 +9,13 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-storage.js"></script>
     
-    <link rel="icon" type="image/png" sizes="32x32" href="icon.png?v=final">
-    <link rel="icon" type="image/png" sizes="192x192" href="icon.png?v=final">
-    <link rel="apple-touch-icon" sizes="180x180" href="icon.png?v=final">
-    <link rel="shortcut icon" href="icon.png?v=final">
-    
-    <link rel="manifest" href="manifest.json?v=final">
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1060846766" crossorigin="anonymous"></script>
+
+    <link rel="icon" type="image/png" sizes="32x32" href="icon.png?v=final2">
+    <link rel="icon" type="image/png" sizes="192x192" href="icon.png?v=final2">
+    <link rel="apple-touch-icon" sizes="180x180" href="icon.png?v=final2">
+    <link rel="shortcut icon" href="icon.png?v=final2">
+    <link rel="manifest" href="manifest.json?v=final2">
 
     <meta name="theme-color" content="#2c3e50">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -114,6 +115,12 @@
         .preview-box img { max-width: 100px; border-radius: 4px; border: 1px solid var(--border); }
         .tag-cloud { display: flex; gap: 5px; flex-wrap: wrap; margin-bottom: 10px; }
         .tag-chip { background: var(--card-bg); border: 1px solid var(--border); padding: 4px 10px; border-radius: 15px; font-size: 0.75rem; cursor: pointer; color: var(--secondary); }
+
+        /* [광고 영역 스타일] */
+        .ad-placeholder {
+            background-color: var(--bg); border: 1px solid var(--border); border-radius: 8px;
+            padding: 10px; text-align: center; margin-bottom: 15px; overflow: hidden;
+        }
 
         #toast { visibility: hidden; min-width: 250px; background-color: #333; color: #fff; text-align: center; border-radius: 25px; padding: 16px; position: fixed; z-index: 2000; left: 50%; bottom: 80px; transform: translateX(-50%); font-size: 0.9rem; box-shadow: 0 4px 10px rgba(0,0,0,0.3); opacity: 0; transition: opacity 0.3s; }
         #toast.show { visibility: visible; opacity: 1; }
@@ -375,6 +382,19 @@
                     <a href="https://weather.naver.com/today/08440585" class="dash-btn" target="_blank" style="color:#e74c3c;"><span>☀️</span>부산<br>날씨</a>
                 </div>
             </div>
+        </div>
+
+        <div class="card" style="padding:10px; text-align:center;">
+            <div style="font-size:0.8rem; color:#aaa; margin-bottom:5px;">(광고) 서버 운영비로 사용됩니다.</div>
+            <ins class="adsbygoogle"
+                 style="display:block"
+                 data-ad-client="ca-pub-1060846766"
+                 data-ad-slot="1234567890"  
+                 data-ad-format="auto"
+                 data-full-width-responsive="true"></ins>
+            <script>
+                 (adsbygoogle = window.adsbygoogle || []).push({});
+            </script>
         </div>
     </div>
 
