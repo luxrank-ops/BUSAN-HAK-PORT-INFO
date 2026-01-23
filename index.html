@@ -2,18 +2,18 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>BUSAN HAK PORT INFO</title>
 
-<title>부산항 현장직 임금계산 · 근무일지 · 선박정보 웹앱</title>
-<meta name="description" content="부산항 현장 근로자를 위한 무료 임금계산기, 근무일지, 선박정보, 익명 커뮤니티 웹서비스">
-
-<!-- Firebase v8 -->
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="부산항 현장 근로자를 위한 임금 계산, 근무 기록, 정보 공유 웹앱">
 
 <!-- Google AdSense -->
 <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6024353303588422"
 crossorigin="anonymous"></script>
+
+<!-- Firebase v8 -->
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
 
 <style>
 body{
@@ -22,19 +22,12 @@ body{
   background:#f4f4f4;
 }
 header{
-  background:#111;
+  background:#0f172a;
   color:#fff;
-  padding:18px;
+  padding:20px;
 }
-header h1{
-  font-size:18px;
-  margin:0;
-}
-header p{
-  margin:6px 0 0;
-  font-size:13px;
-  color:#ccc;
-}
+header h1{margin:0;font-size:20px}
+header p{margin:6px 0 0;font-size:13px;color:#cbd5e1}
 main{
   max-width:900px;
   margin:auto;
@@ -42,58 +35,42 @@ main{
 }
 .card{
   background:#fff;
-  border-radius:8px;
   padding:16px;
+  border-radius:8px;
   margin-bottom:16px;
 }
 input,textarea,button{
   width:100%;
-  margin-top:8px;
   padding:10px;
-  font-size:14px;
+  margin-top:8px;
+  box-sizing:border-box;
 }
 textarea{min-height:90px}
 button{
-  background:#111;
+  background:#0f172a;
   color:#fff;
   border:none;
   border-radius:6px;
-  cursor:pointer;
+  font-weight:bold;
 }
-button:active{opacity:.8}
 .post{
   border-top:1px solid #eee;
-  padding-top:12px;
-  margin-top:12px;
+  padding-top:10px;
+  margin-top:10px;
 }
-footer{
-  text-align:center;
-  padding:20px;
-  font-size:13px;
-  color:#666;
-}
-footer a{
-  color:#444;
-  text-decoration:none;
-}
-.small{
+.notice{
   font-size:12px;
   color:#777;
 }
-#privacy{
-  display:none;
-  position:fixed;
-  inset:0;
-  background:#0008;
-  overflow:auto;
-  z-index:1000;
+footer{
+  text-align:center;
+  font-size:13px;
+  padding:20px;
+  color:#666;
 }
-#privacy .box{
-  background:#fff;
-  max-width:900px;
-  margin:40px auto;
-  padding:24px;
-  border-radius:10px;
+.policy{
+  font-size:13px;
+  line-height:1.7;
 }
 </style>
 </head>
@@ -101,115 +78,124 @@ footer a{
 <body>
 
 <header>
-  <h1>부산항 현장직 임금계산 · 근무일지 · 선박정보 웹앱</h1>
-  <p>부산항 현장 근로자를 위한 무료 업무 지원 웹서비스</p>
+  <h1>BUSAN HAK PORT INFO</h1>
+  <p>부산항 현장 근로자를 위한 무료 업무 지원 웹앱</p>
 </header>
 
 <main>
 
-<div class="card">
-  <h3>익명 게시판</h3>
+<!-- 게시판 -->
+<section class="card">
+  <h2>익명 게시판</h2>
+
   <input id="title" placeholder="제목">
   <input id="pw" type="password" placeholder="비밀번호 (삭제 시 사용)">
   <textarea id="content" placeholder="내용"></textarea>
-  <button onclick="addPost()">등록</button>
 
-  <p class="small" style="margin-top:10px">
-    부적절한 게시물은 <strong>luxrank@gmail.com</strong> 으로 신고해 주세요.
+  <button onclick="addPost()">글 등록</button>
+
+  <p class="notice">
+    부적절한 게시물은 <strong>luxrank@gmail.com</strong> 으로 신고해주세요.
   </p>
-</div>
+</section>
 
-<div id="postList"></div>
+<section id="postList" class="card">
+  <h3>최근 게시글</h3>
+</section>
+
+<!-- 개인정보처리방침 -->
+<section class="card policy">
+<h3>개인정보처리방침</h3>
+<p>
+본 웹앱은 서비스 제공을 위해 Firebase 및 Google AdSense를 사용합니다.
+</p>
+<ul>
+<li>수집 항목: 게시글 내용, 접속 로그(IP)</li>
+<li>수집 목적: 서비스 운영 및 부정 이용 방지</li>
+<li>광고: Google AdSense는 쿠키를 사용할 수 있습니다.</li>
+</ul>
+<p>문의: luxrank@gmail.com</p>
+</section>
+
+<!-- 이용약관 -->
+<section class="card policy">
+<h3>이용약관</h3>
+<ul>
+<li>게시물의 책임은 작성자 본인에게 있습니다.</li>
+<li>욕설·비방·불법 게시물은 삭제될 수 있습니다.</li>
+<li>운영자는 서비스 운영을 위해 게시물을 관리할 수 있습니다.</li>
+</ul>
+</section>
 
 </main>
 
 <footer>
-  <p>
-    <a href="#privacy" onclick="openPolicy()">개인정보처리방침 · 이용약관</a>
-  </p>
-  <p>문의: luxrank@gmail.com</p>
+<p>
+문의: luxrank@gmail.com<br>
+© BUSAN HAK PORT INFO
+</p>
 </footer>
 
-<!-- ================= 정책 페이지 (단독 URL 인식 가능) ================= -->
-<div id="privacy">
-  <div class="box">
-    <h2>개인정보처리방침</h2>
-    <p>
-      본 웹앱은 Firebase를 사용하여 익명 게시판 서비스를 제공합니다.
-      게시물 및 댓글 작성 시 내용과 접속 로그(IP)가 저장될 수 있습니다.
-    </p>
-    <ul>
-      <li>수집 목적: 서비스 제공, 부정 이용 방지</li>
-      <li>수집 항목: 게시글, 댓글, 접속 로그</li>
-      <li>광고: Google AdSense 쿠키 사용</li>
-      <li>문의: luxrank@gmail.com</li>
-    </ul>
-
-    <h2>이용약관</h2>
-    <ul>
-      <li>모든 게시물의 책임은 작성자 본인에게 있습니다.</li>
-      <li>욕설, 비방, 불법 게시물은 사전 통보 없이 삭제될 수 있습니다.</li>
-      <li>운영자는 서비스 운영 및 게시물 관리 권한을 가집니다.</li>
-    </ul>
-
-    <button style="margin-top:20px" onclick="closePolicy()">닫기</button>
-  </div>
-</div>
-
 <script>
-/* Firebase 설정 */
+/* 🔐 Firebase 설정 – 여기만 수정 */
 firebase.initializeApp({
-  apiKey: "YOUR_API_KEY",
-  projectId: "YOUR_PROJECT_ID"
+  apiKey: "여기에_API_KEY",
+  projectId: "여기에_PROJECT_ID"
 });
 const db = firebase.firestore();
 
 /* XSS 방어 */
 function escapeHTML(str=''){
-  return str.replace(/[&<>"']/g,m=>(
-    {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]
-  ));
+  return str.replace(/[&<>"']/g, m => ({
+    '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+  }[m]));
 }
 
 /* 게시글 등록 */
 function addPost(){
-  const t=title.value.trim();
-  const p=pw.value.trim();
-  const c=content.value.trim();
-  if(!t||!p||!c) return alert("모두 입력하세요");
+  const t = title.value.trim();
+  const p = pw.value.trim();
+  const c = content.value.trim();
+
+  if(!t || !p || !c){
+    alert("모든 항목을 입력하세요");
+    return;
+  }
 
   db.collection("posts").add({
-    title:escapeHTML(t),
-    content:escapeHTML(c),
-    password:p,
-    date:new Date().toLocaleString("ko-KR")
+    title: escapeHTML(t),
+    content: escapeHTML(c),
+    password: p,
+    createdAt: firebase.firestore.FieldValue.serverTimestamp()
   });
 
-  title.value=pw.value=content.value="";
+  title.value = pw.value = content.value = "";
   loadPosts();
 }
 
-/* 게시글 불러오기 (실시간 ❌) */
+/* 게시글 불러오기 */
 function loadPosts(){
-  postList.innerHTML="";
-  db.collection("posts").orderBy("date","desc").get().then(snap=>{
-    snap.forEach(d=>{
-      const div=document.createElement("div");
-      div.className="card post";
-      div.innerHTML=`<h4>${d.data().title}</h4><p>${d.data().content}</p>`;
-      postList.appendChild(div);
-    });
-  });
-}
-loadPosts();
+  postList.innerHTML = "<h3>최근 게시글</h3>";
 
-/* 정책 */
-function openPolicy(){
-  document.getElementById("privacy").style.display="block";
+  db.collection("posts")
+    .orderBy("createdAt","desc")
+    .limit(20)
+    .get()
+    .then(snapshot=>{
+      snapshot.forEach(doc=>{
+        const d = doc.data();
+        const div = document.createElement("div");
+        div.className = "post";
+        div.innerHTML = `
+          <h4>${d.title}</h4>
+          <p>${d.content}</p>
+        `;
+        postList.appendChild(div);
+      });
+    });
 }
-function closePolicy(){
-  document.getElementById("privacy").style.display="none";
-}
+
+loadPosts();
 </script>
 
 </body>
