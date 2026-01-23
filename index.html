@@ -63,7 +63,35 @@
     <ul id="fileList"></ul>
   </div>
 
-  <!-- 개인정보처리방침 (애드센스 필수) -->
+  <!-- 선박정보 -->
+  <div class="card">
+    <h2>🚢 선박정보</h2>
+    <input id="shipName" placeholder="선박명" />
+    <textarea id="shipInfo" rows="3" placeholder="작업 정보"></textarea>
+    <button onclick="addShip()">등록</button>
+    <ul id="shipList"></ul>
+  </div>
+
+  <!-- 근무일지 -->
+  <div class="card">
+    <h2>📒 근무일지</h2>
+    <input id="workDate" type="date" />
+    <input id="workHours" type="number" placeholder="근무시간" />
+    <textarea id="workMemo" rows="2" placeholder="메모"></textarea>
+    <button onclick="addWorklog()">저장</button>
+    <ul id="workList"></ul>
+  </div>
+
+  <!-- 임금 계산기 -->
+  <div class="card">
+    <h2>💰 임금 계산기</h2>
+    <input id="wage" type="number" placeholder="시급" />
+    <input id="hours" type="number" placeholder="근무시간" />
+    <button onclick="calcWage()">계산</button>
+    <p id="wageResult"></p>
+  </div>
+
+<!-- 개인정보처리방침 (애드센스 필수) -->
   <div class="card">
     <h2>개인정보처리방침</h2>
     <p style="font-size:.85rem;color:#374151">
@@ -78,14 +106,13 @@
   import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, serverTimestamp, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
 
   const firebaseConfig = {
-  apiKey: "AIzaSyBWFZr9TE9yybZJCJjEXSsv1YCpGkVb0kA",
-  authDomain: "busan-hak-port.firebaseapp.com",
-  projectId: "busan-hak-port",
-  storageBucket: "busan-hak-port.firebasestorage.app",
-  messagingSenderId: "616469111502",
-  appId: "1:616469111502:web:6f3c94b15e444e04c7669f",
-  measurementId: "G-QQ728TDFJ2"
-};
+    apiKey: "여기에_API_KEY",
+    authDomain: "여기에_PROJECT.firebaseapp.com",
+    projectId: "여기에_PROJECT_ID",
+    storageBucket: "여기에_PROJECT.appspot.com",
+    messagingSenderId: "여기에_SENDER_ID",
+    appId: "여기에_APP_ID"
+  };
 
   const app = initializeApp(firebaseConfig);
   const db = getFirestore(app);
@@ -125,6 +152,49 @@
 
 <script>
   if('serviceWorker'in navigator){navigator.serviceWorker.register('service-worker.js')}
+
+<script>
+function addShip(){
+  const name=shipName.value.trim();
+  const info=shipInfo.value.trim();
+  if(!name) return alert('선박명 입력');
+  addDoc(collection(db,'ships'),{name,info,createdAt:serverTimestamp()});
+  shipName.value=''; shipInfo.value='';
+}
+
+onSnapshot(collection(db,'ships'),snap=>{
+  shipList.innerHTML='';
+  snap.forEach(d=>{
+    const li=document.createElement('li');
+    li.textContent=`${d.data().name} - ${d.data().info}`;
+    shipList.appendChild(li);
+  });
+});
+
+function addWorklog(){
+  addDoc(collection(db,'worklogs'),{
+    date:workDate.value,
+    hours:workHours.value,
+    memo:workMemo.value,
+    createdAt:serverTimestamp()
+  });
+  workHours.value=''; workMemo.value='';
+}
+
+onSnapshot(collection(db,'worklogs'),snap=>{
+  workList.innerHTML='';
+  snap.forEach(d=>{
+    const li=document.createElement('li');
+    const x=d.data();
+    li.textContent=`${x.date} / ${x.hours}시간 / ${x.memo}`;
+    workList.appendChild(li);
+  });
+});
+
+function calcWage(){
+  const r=Number(wage.value)*Number(hours.value);
+  wageResult.textContent='총 급여: '+r.toLocaleString()+'원';
+}
 </script>
 </body>
 </html>
