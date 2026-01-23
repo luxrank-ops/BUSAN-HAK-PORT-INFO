@@ -4,119 +4,46 @@
   <meta charset="UTF-8" />
   <title>BUSAN HAK PORT</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="description" content="부산항 작업자 정보 공유 포털" />
+  <meta name="description" content="부산항 작업자 정보 공유 · 공지 · 게시판 · 자료실" />
 
-  <!-- 기본 스타일 -->
+  <!-- 애드센스 승인 필수 메타 -->
+  <meta name="robots" content="index,follow" />
+
+  <!-- PWA -->
+  <link rel="manifest" href="manifest.json" />
+  <meta name="theme-color" content="#2563eb" />
+
   <style>
     :root {
-      --primary: #2f6bdc;
-      --secondary: #f59e0b;
-      --bg: #f4f6f8;
-      --card: #ffffff;
-      --text: #1f2937;
-      --sub: #6b7280;
-      --danger: #dc2626;
+      --primary:#2563eb; --danger:#dc2626; --bg:#f4f6f8; --card:#fff; --sub:#6b7280;
     }
-    * { box-sizing: border-box; }
-    body {
-      margin: 0;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
-      background: var(--bg);
-      color: var(--text);
-    }
-    header {
-      background: linear-gradient(180deg, #3b82f6, #2563eb);
-      color: white;
-      text-align: center;
-      padding: 18px 10px;
-      font-size: 1.3rem;
-      font-weight: 700;
-    }
-    .banner {
-      background: var(--secondary);
-      color: #111;
-      padding: 8px 12px;
-      font-size: 0.9rem;
-      text-align: center;
-    }
-    .container {
-      max-width: 820px;
-      margin: 0 auto;
-      padding: 12px;
-    }
-    .card {
-      background: var(--card);
-      border-radius: 14px;
-      padding: 14px;
-      margin-bottom: 14px;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.04);
-    }
-    .menu-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 12px;
-    }
-    .menu-btn {
-      padding: 16px;
-      border-radius: 12px;
-      background: #f9fafb;
-      border: 1px solid #e5e7eb;
-      font-weight: 600;
-      text-align: left;
-    }
-    .menu-btn span { color: var(--sub); font-size: 0.8rem; }
-
-    h2 {
-      font-size: 1.05rem;
-      margin: 4px 0 10px;
-    }
-    input, textarea {
-      width: 100%;
-      padding: 10px;
-      border-radius: 8px;
-      border: 1px solid #d1d5db;
-      margin-bottom: 8px;
-      font-size: 0.9rem;
-    }
-    button {
-      background: var(--primary);
-      color: white;
-      border: none;
-      border-radius: 10px;
-      padding: 10px 14px;
-      font-size: 0.9rem;
-    }
-    ul { list-style: none; padding: 0; margin: 0; }
-    li {
-      padding: 12px 8px;
-      border-bottom: 1px solid #e5e7eb;
-    }
-    .post-title { font-weight: 700; }
-    .post-meta { font-size: 0.75rem; color: var(--sub); margin-top: 4px; }
+    *{box-sizing:border-box}
+    body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans KR",sans-serif;background:var(--bg)}
+    header{background:linear-gradient(180deg,#3b82f6,#2563eb);color:#fff;text-align:center;padding:18px;font-size:1.3rem;font-weight:700}
+    .container{max-width:900px;margin:auto;padding:12px}
+    .card{background:var(--card);border-radius:14px;padding:14px;margin-bottom:14px;box-shadow:0 4px 10px rgba(0,0,0,.04)}
+    h2{margin:4px 0 10px;font-size:1.05rem}
+    input,textarea{width:100%;padding:10px;border-radius:8px;border:1px solid #d1d5db;margin-bottom:8px}
+    button{background:var(--primary);color:#fff;border:none;border-radius:10px;padding:10px 14px}
+    ul{list-style:none;padding:0;margin:0}
+    li{padding:10px 0;border-bottom:1px solid #e5e7eb}
+    .meta{font-size:.75rem;color:var(--sub)}
+    .danger{background:var(--danger)}
   </style>
 </head>
 <body>
-
 <header>BUSAN HAK PORT</header>
-<div class="banner">부산항 현장 정보 · 작업자 커뮤니티</div>
-
 <div class="container">
 
-  <!-- 상단 메뉴 -->
+  <!-- 공지 -->
   <div class="card">
-    <div class="menu-grid">
-      <div class="menu-btn">📢 공지사항<br><span>운영 공지</span></div>
-      <div class="menu-btn">💬 익명게시판<br><span>자유 소통</span></div>
-      <div class="menu-btn">🚢 선박정보<br><span>입출항 정보</span></div>
-      <div class="menu-btn">📂 자료실<br><span>문서 공유</span></div>
-      <div class="menu-btn" style="border:1px solid var(--danger); color:var(--danger);">💰 임금 계산기</div>
-      <div class="menu-btn" style="border:1px solid var(--primary); color:var(--primary);">📅 스마트 근무일지</div>
-    </div>
+    <h2>📢 공지사항</h2>
+    <ul id="noticeList"></ul>
   </div>
 
   <!-- 글 작성 -->
   <div class="card">
-    <h2>글 작성</h2>
+    <h2>✍ 글 작성</h2>
     <input id="title" placeholder="제목" />
     <input id="name" placeholder="작성자" />
     <input id="password" type="password" placeholder="비밀번호" />
@@ -126,16 +53,29 @@
 
   <!-- 게시판 -->
   <div class="card">
-    <h2>게시판</h2>
+    <h2>💬 게시판</h2>
     <ul id="postList"></ul>
   </div>
 
+  <!-- 자료실 -->
+  <div class="card">
+    <h2>📂 자료실</h2>
+    <ul id="fileList"></ul>
+  </div>
+
+  <!-- 개인정보처리방침 (애드센스 필수) -->
+  <div class="card">
+    <h2>개인정보처리방침</h2>
+    <p style="font-size:.85rem;color:#374151">
+      본 사이트는 게시판 운영을 위해 최소한의 정보만을 수집하며,
+      수집된 정보는 목적 외 사용되지 않습니다.
+    </p>
+  </div>
 </div>
 
-<!-- Firebase v9 -->
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
-  import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
+  import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, serverTimestamp, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
 
   const firebaseConfig = {
   apiKey: "AIzaSyBWFZr9TE9yybZJCJjEXSsv1YCpGkVb0kA",
@@ -150,39 +90,41 @@
   const app = initializeApp(firebaseConfig);
   const db = getFirestore(app);
 
+  // 글 등록
   window.addPost = async () => {
-    const title = titleInput.value.trim();
-    const name = nameInput.value.trim();
-    const password = passwordInput.value.trim();
-    const content = contentInput.value.trim();
-
-    if (!title || !name || !password || !content) {
-      alert("모든 항목을 입력하세요");
-      return;
-    }
-
-    await addDoc(collection(db, "posts"), {
-      title,
-      name,
-      password,
-      content,
-      createdAt: serverTimestamp()
-    });
-
-    titleInput.value = nameInput.value = passwordInput.value = contentInput.value = "";
+    const t=title.value.trim(), n=name.value.trim(), p=password.value.trim(), c=content.value.trim();
+    if(!t||!n||!p||!c){alert('모두 입력');return}
+    await addDoc(collection(db,'posts'),{title:t,name:n,password:p,content:c,createdAt:serverTimestamp()});
+    title.value=name.value=password.value=content.value='';
   };
 
-  const q = query(collection(db, "posts"), orderBy("createdAt", "desc"));
-  onSnapshot(q, (snap) => {
-    postList.innerHTML = "";
-    snap.forEach(doc => {
-      const d = doc.data();
-      const li = document.createElement("li");
-      li.innerHTML = `<div class='post-title'>${d.title}</div><div>${d.content}</div><div class='post-meta'>${d.name}</div>`;
+  // 게시판 출력 + 삭제
+  onSnapshot(query(collection(db,'posts'),orderBy('createdAt','desc')),snap=>{
+    postList.innerHTML='';
+    snap.forEach(d=>{
+      const x=d.data();
+      const li=document.createElement('li');
+      li.innerHTML=`<b>${x.title}</b><div>${x.content}</div><div class='meta'>${x.name}</div><button class='danger'>삭제</button>`;
+      li.querySelector('button').onclick=()=>{if(prompt('비밀번호')===x.password)deleteDoc(doc(db,'posts',d.id))};
       postList.appendChild(li);
-    });
+    })
+  });
+
+  // 공지
+  onSnapshot(query(collection(db,'notices'),orderBy('createdAt','desc')),snap=>{
+    noticeList.innerHTML='';
+    snap.forEach(d=>{const x=d.data();noticeList.innerHTML+=`<li>📢 ${x.title}</li>`})
+  });
+
+  // 자료실 (텍스트 링크용)
+  onSnapshot(query(collection(db,'files'),orderBy('createdAt','desc')),snap=>{
+    fileList.innerHTML='';
+    snap.forEach(d=>{const x=d.data();fileList.innerHTML+=`<li><a href='${x.url}' target='_blank'>${x.title}</a></li>`})
   });
 </script>
 
+<script>
+  if('serviceWorker'in navigator){navigator.serviceWorker.register('service-worker.js')}
+</script>
 </body>
 </html>
