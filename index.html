@@ -14,7 +14,7 @@
     
     <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6024353303588422" crossorigin="anonymous"></script>
 
-    <link rel="icon" type="image/png" sizes="32x32" href="icon.png?v=guide_text_boost">
+    <link rel="icon" type="image/png" sizes="32x32" href="icon.png?v=ship_final_v2">
     <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.8/dist/web/static/pretendard.css" />
 
     <style>
@@ -121,7 +121,7 @@
         .post-item:last-child { border-bottom: none; }
         .post-header-row { padding: 15px 5px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; background: transparent; transition: background 0.1s; }
         .post-header-row:active { background: rgba(0,0,0,0.03); }
-        .post-title-text { font-weight: 700; font-size: 0.95rem; color: var(--text-main); display: flex; align-items: center; gap: 5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; margin-right: 10px; }
+        .post-title-text { font-weight: 700; font-size: 0.95rem; color: var(--text-main); display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; margin-right: 10px; }
         .post-meta-info { font-size: 0.75rem; color: var(--text-sub); white-space: nowrap; }
         .post-body-content { display: none; padding: 15px; background: rgba(0,0,0,0.02); border-top: 1px dashed var(--border); font-size: 0.95rem; line-height: 1.7; white-space: pre-wrap; color: var(--text-main); word-break: break-all; }
 
@@ -228,8 +228,8 @@
                     <div id="shipForm" class="hidden" style="margin-bottom:10px; background:rgba(0,0,0,0.02); padding:10px; border-radius:8px;">
                         <input type="text" id="shipName" class="input-field" placeholder="선박명 (필수)">
                         <input type="file" id="shipFileInput" class="input-field">
-                        <textarea id="shipOnboard" class="input-field textarea-field" placeholder="본선 작업 내용" style="height:60px;"></textarea>
-                        <textarea id="shipOnshore" class="input-field textarea-field" placeholder="육상 작업 내용" style="height:60px;"></textarea>
+                        <textarea id="shipOnboard" class="input-field textarea-field" placeholder="본선 작업" style="height:60px;"></textarea>
+                        <textarea id="shipOnshore" class="input-field textarea-field" placeholder="육상 작업" style="height:60px;"></textarea>
                         <button id="shipSubmitBtn" class="action-btn bg-submit" onclick="addShipInfo()">등록</button>
                     </div>
                     <ul id="shipList" class="post-list"></ul>
@@ -278,13 +278,13 @@
                     <span class="dash-title" style="color:var(--primary);">📅 스마트 근무일지(짝지기록)</span><span class="toggle-icon">▼</span>
                 </div>
                 <div id="workLogArea" class="dash-content">
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;"><button class="mini-btn" onclick="changeMonth(-1)">◀</button><span id="calMonthYear" style="font-weight:bold;"></span><button class="mini-btn" onclick="changeMonth(1)">▶</button></div>
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;"><button class="mini-btn" onclick="changeMonth(-1)" style="background:none; font-size:1.2rem; color:var(--text-main);">◀</button><span id="calMonthYear" style="font-weight:bold;"></span><button class="mini-btn" onclick="changeMonth(1)" style="background:none; font-size:1.2rem; color:var(--text-main);">▶</button></div>
                     <div id="calendarGrid" class="calendar-grid"></div>
                     <div id="dailyLogForm" class="hidden" style="margin-top:15px; padding:15px; background:rgba(0,0,0,0.03); border-radius:12px;">
                         <h4 style="margin:0 0 10px 0; color:var(--primary); display:flex; justify-content:space-between;"><span id="selectedDateText"></span><span id="dailyTotalDisplay" style="color:var(--danger);">0원</span></h4>
                         <div style="text-align:right; margin-bottom:8px;"><button class="mini-btn" style="background:var(--text-sub);" onclick="resetLogInputs()">🔄 입력 초기화</button></div>
                         <div class="wage-row"><label>주간</label><input type="number" id="logDayHours" class="input-field" placeholder="시간" step="0.5"></div>
-                        <div class="wage-row"><label>야간</label><input type="number" id="logNightHours" class="input-field" placeholder="시간" step="0.5"></div>
+                        <div class="wage-row"><label>야간/휴일</label><input type="number" id="logNightHours" class="input-field" placeholder="시간" step="0.5"></div>
                         <div style="border-top:1px dashed var(--border); margin:10px 0; padding-top:5px;">
                             <div class="wage-row"><label>🔧 기능공</label><input type="number" id="logSkillTime" class="input-field" placeholder="시간"><input type="number" id="logSkillRate" class="input-field" placeholder="단가"></div>
                             <div class="wage-row"><label>🏗️ 절맞이</label><input type="number" id="logSignalTime" class="input-field" placeholder="시간"><input type="number" id="logSignalRate" class="input-field" placeholder="단가"></div>
@@ -301,24 +301,26 @@
         <div class="card">
             <div class="section-header tap-effect" onclick="toggleSection('t3-content', this)"><span class="section-title">🏭 3항업 (신항 남측) <span class="toggle-icon">▼</span></span></div>
             <div id="t3-content" class="collapsible-content collapsed">
-                <div class="terminal-block"><div class="terminal-header tap-effect" onclick="toggleItemContent('term-hjnc')"><h4 class="terminal-title">한진신항만 (HJNC) <span class="toggle-icon">▼</span></h4></div><div id="term-hjnc" class="terminal-body"><div class="terminal-actions"><a href="https://www.hjnc.co.kr/esvc/vessel/berthScheduleT" target="_blank" class="terminal-btn">스케줄</a><a href="https://www.hjnc.co.kr/esvc/vessel/berthScheduleG" target="_blank" class="terminal-btn">차트</a><a href="https://www.hjnc.co.kr/esvc/vessel/vesselStatus" target="_blank" class="terminal-btn">현황</a></div></div></div>
-                <div class="terminal-block"><div class="terminal-header tap-effect" onclick="toggleItemContent('term-bnct')"><h4 class="terminal-title">부산신항컨테이너 (BNCT) <span class="toggle-icon">▼</span></h4></div><div id="term-bnct" class="terminal-body"><div class="terminal-actions"><a href="https://info.bnctkorea.com/esvc/vessel/berthScheduleT" target="_blank" class="terminal-btn">스케줄</a><a href="https://info.bnctkorea.com/esvc/vessel/berthScheduleG" target="_blank" class="terminal-btn">차트</a><a href="https://info.bnctkorea.com/esvc/vessel/vesselStatus" target="_blank" class="terminal-btn">현황</a></div></div></div>
+                <div class="terminal-block"><div class="terminal-header tap-effect" onclick="toggleContent('term-hjnc')"><h4 class="terminal-title">한진신항만 (HJNC) <span class="toggle-icon">▼</span></h4></div><div id="term-hjnc" class="terminal-body"><div class="terminal-actions"><a href="https://www.hjnc.co.kr/esvc/vessel/berthScheduleT" target="_blank" class="terminal-btn">스케줄</a><a href="https://www.hjnc.co.kr/esvc/vessel/berthScheduleG" target="_blank" class="terminal-btn">차트</a><a href="https://www.hjnc.co.kr/esvc/vessel/vesselStatus" target="_blank" class="terminal-btn">현황</a><a href="http://bayplan.hjnc.co.kr" target="_blank" class="terminal-btn btn-premium">🧩 BAY PLAN</a></div></div></div>
+                <div class="terminal-block"><div class="terminal-header tap-effect" onclick="toggleContent('term-dgt')"><h4 class="terminal-title">동원로엑스 (DGT) <span class="toggle-icon">▼</span></h4></div><div id="term-dgt" class="terminal-body"><div class="terminal-actions"><a href="https://www.dgtbusan.com/DGT/esvc/vessel/berthScheduleT" target="_blank" class="terminal-btn">스케줄</a><a href="https://www.dgtbusan.com/DGT/esvc/vessel/berthScheduleG" target="_blank" class="terminal-btn">차트</a><a href="https://www.dgtbusan.com/DGT/esvc/vessel/vesselStatus" target="_blank" class="terminal-btn">현황</a></div></div></div>
+                <div class="terminal-block"><div class="terminal-header tap-effect" onclick="toggleContent('term-bnct')"><h4 class="terminal-title">부산신항컨테이너 (BNCT) <span class="toggle-icon">▼</span></h4></div><div id="term-bnct" class="terminal-body"><div class="terminal-actions"><a href="https://info.bnctkorea.com/esvc/vessel/berthScheduleT" target="_blank" class="terminal-btn">스케줄</a><a href="https://info.bnctkorea.com/esvc/vessel/berthScheduleG" target="_blank" class="terminal-btn">차트</a><a href="https://info.bnctkorea.com/esvc/vessel/vesselStatus" target="_blank" class="terminal-btn">현황</a></div></div></div>
+                <div class="terminal-block"><div class="terminal-header tap-effect" onclick="toggleContent('term-bct')"><h4 class="terminal-title">부산컨테이너터미널 (BCT) <span class="toggle-icon">▼</span></h4></div><div id="term-bct" class="terminal-body"><div class="terminal-actions"><a href="https://info.bct2-4.com/infoservice/index.html" target="_blank" class="terminal-btn">스케줄</a><a href="https://info.bct2-4.com/infoservice/index.html" target="_blank" class="terminal-btn">차트</a><a href="https://info.bct2-4.com/infoservice/index.html" target="_blank" class="terminal-btn">현황</a></div></div></div>
             </div>
         </div>
-
         <div class="card">
             <div class="section-header tap-effect" onclick="toggleSection('t2-content', this)"><span class="section-title">🏭 2항업 (신항 북측) <span class="toggle-icon">▼</span></span></div>
             <div id="t2-content" class="collapsible-content collapsed">
-                <div class="terminal-block"><div class="terminal-header tap-effect" onclick="toggleItemContent('term-pnc')"><h4 class="terminal-title">부산신항만 (PNC) <span class="toggle-icon">▼</span></h4></div><div id="term-pnc" class="terminal-body"><div class="terminal-actions"><a href="https://svc.pncport.com/info/CMS/Ship/Info.pnc?mCode=MN014" target="_blank" class="terminal-btn">스케줄</a><a href="https://svc.pncport.com/info/CMS/Ship/ShipBerthC.pnc?mCode=MN019" target="_blank" class="terminal-btn">차트</a><a href="https://svc.pncport.com/info/CMS/Ship/ShipVslStatus.pnc?mCode=MN020" target="_blank" class="terminal-btn">현황</a></div><button class="action-btn" style="background:#f39c12; margin-top:5px;" onclick="openBusSchedule()">🚌 셔틀버스</button></div></div>
-                <div class="terminal-block"><div class="terminal-header tap-effect" onclick="toggleItemContent('term-pnit')"><h4 class="terminal-title">신항국제 (PNIT) <span class="toggle-icon">▼</span></h4></div><div id="term-pnit" class="terminal-body"><div class="terminal-actions"><a href="https://www.pnitl.com/infoservice/vessel/vslScheduleList.jsp" target="_blank" class="terminal-btn">스케줄</a><a href="https://www.pnitl.com/infoservice/vessel/vslScheduleChart.jsp" target="_blank" class="terminal-btn">차트</a><a href="https://www.pnitl.com/infoservice/vessel/vslWorkStatus.jsp" target="_blank" class="terminal-btn">현황</a></div></div></div>
+                <div class="terminal-block"><div class="terminal-header tap-effect" onclick="toggleContent('term-pnc')"><h4 class="terminal-title">부산신항만 (PNC) <span class="toggle-icon">▼</span></h4></div><div id="term-pnc" class="terminal-body"><div class="terminal-actions"><a href="https://svc.pncport.com/info/CMS/Ship/Info.pnc?mCode=MN014" target="_blank" class="terminal-btn">스케줄</a><a href="https://svc.pncport.com/info/CMS/Ship/ShipBerthC.pnc?mCode=MN019" target="_blank" class="terminal-btn">차트</a><a href="https://svc.pncport.com/info/CMS/Ship/ShipVslStatus.pnc?mCode=MN020" target="_blank" class="terminal-btn">현황</a></div><button class="action-btn" style="background:#f39c12; margin-top:8px; padding:10px;" onclick="openBusSchedule()">🚌 셔틀버스 시간표</button></div></div>
+                <div class="terminal-block"><div class="terminal-header tap-effect" onclick="toggleContent('term-pnit')"><h4 class="terminal-title">신항국제 (PNIT) <span class="toggle-icon">▼</span></h4></div><div id="term-pnit" class="terminal-body"><div class="terminal-actions"><a href="https://www.pnitl.com/infoservice/vessel/vslScheduleList.jsp" target="_blank" class="terminal-btn">스케줄</a><a href="https://www.pnitl.com/infoservice/vessel/vslScheduleChart.jsp" target="_blank" class="terminal-btn">차트</a><a href="https://www.pnitl.com/infoservice/vessel/vslWorkStatus.jsp" target="_blank" class="terminal-btn">현황</a></div></div></div>
+                <div class="terminal-block"><div class="terminal-header tap-effect" onclick="toggleContent('term-hpnt')"><h4 class="terminal-title">현대부산신항만 (HPNT) <span class="toggle-icon">▼</span></h4></div><div id="term-hpnt" class="terminal-body"><div class="terminal-actions"><a href="https://www.hpnt.co.kr/infoservice/vessel/vslScheduleList.jsp" target="_blank" class="terminal-btn">스케줄</a><a href="https://www.hpnt.co.kr/infoservice/vessel/vslScheduleChart.jsp" target="_blank" class="terminal-btn">차트</a><a href="https://www.hpnt.co.kr/infoservice/vessel/vslWorkStatus.jsp" target="_blank" class="terminal-btn">현황</a></div></div></div>
             </div>
         </div>
-
         <div class="card">
             <div class="section-header tap-effect" onclick="toggleSection('t1-content', this)"><span class="section-title">🏭 1항업 (북항) <span class="toggle-icon">▼</span></span></div>
             <div id="t1-content" class="collapsible-content collapsed">
-                <div class="terminal-block"><div class="terminal-header tap-effect" onclick="toggleItemContent('term-bptc')"><h4 class="terminal-title">북항 통합 (BPTC) <span class="toggle-icon">▼</span></h4></div><div id="term-bptc" class="terminal-body"><div class="terminal-actions"><a href="http://info.bptc.co.kr:9084/content/sw/frame/berth_status_text_frame_sw_kr.jsp?p_id=BETX_SH_KR&snb_num=2&snb_div=service" target="_blank" class="terminal-btn" style="grid-column:span 3;">🏗️ 감만/신선대 선석</a></div></div></div>
-                <div class="terminal-block"><div class="terminal-header tap-effect" onclick="toggleItemContent('term-hbct')"><h4 class="terminal-title">허치슨 (HBCT) <span class="toggle-icon">▼</span></h4></div><div id="term-hbct" class="terminal-body"><div class="terminal-actions"><a href="https://custom.hktl.com/jsp/T01/sunsuk.jsp" target="_blank" class="terminal-btn" style="grid-column:span 3;">⚓ 선석 정보</a></div></div></div>
+                <div class="terminal-block"><div class="terminal-header tap-effect" onclick="toggleContent('term-bptc')"><h4 class="terminal-title">북항 통합 (BPTC) <span class="toggle-icon">▼</span></h4></div><div id="term-bptc" class="terminal-body"><div class="terminal-actions"><a href="http://info.bptc.co.kr:9084/content/sw/frame/berth_status_text_frame_sw_kr.jsp?p_id=BETX_SH_KR&snb_num=2&snb_div=service" target="_blank" class="terminal-btn" style="grid-column:span 3;">🏗️ 감만/신선대 선석</a></div></div></div>
+                <div class="terminal-block"><div class="terminal-header tap-effect" onclick="toggleContent('term-hbct')"><h4 class="terminal-title">허치슨 (HBCT) <span class="toggle-icon">▼</span></h4></div><div id="term-hbct" class="terminal-body"><div class="terminal-actions"><a href="https://custom.hktl.com/jsp/T01/sunsuk.jsp" target="_blank" class="terminal-btn" style="grid-column:span 3;">⚓ 선석 정보</a></div></div></div>
+                <div class="terminal-block"><div class="terminal-header tap-effect" onclick="toggleContent('term-dpct')"><h4 class="terminal-title">동부 (DPCT) <span class="toggle-icon">▼</span></h4></div><div id="term-dpct" class="terminal-body"><div class="terminal-actions"><a href="http://info.bptc.co.kr:9084/content/index.jsp#03" target="_blank" class="terminal-btn" style="grid-column:span 3;">🚢 터미널 포털</a></div></div></div>
             </div>
         </div>
 
@@ -331,22 +333,12 @@
             <div class="section-header tap-effect" onclick="toggleSection('guide-content', this)"><span class="section-title">📘 이용가이드 <span class="toggle-icon rotated">▼</span></span></div>
             <div id="guide-content" class="collapsible-content">
                 <div class="guide-text">
-                    <h3>⚓ 부산항 현장직을 위한 필수 가이드</h3>
-                    <p>안녕하십니까, 부산항 현장 근로자 여러분. <strong>BUSAN HAK PORT INFO</strong>는 현장에서 땀 흘리시는 여러분의 노고를 조금이나마 덜어드리기 위해 제작된 통합 플랫폼입니다.</p>
-                    
-                    <h4>1. 2026년 임금 계산기 상세 활용법</h4>
-                    <p>2026년도 항운노조 및 현장직 표준 시급을 기준으로 설계되었습니다. 기본 시급과 근무 시간을 입력하면, 복잡한 야간(22:00~06:00) 및 휴일 1.5배 수당이 자동으로 합산됩니다. 또한, <strong>기능공, 절맞이, 우천 대기</strong> 등 현장에서 발생하는 특수 수당을 '시간 × 단가' 형태로 입력할 수 있어 정확한 일당 계산이 가능합니다. 세금 공제율(프리랜서 3.3% / 4대보험 9.4%)을 선택하여 실수령액을 미리 확인해 보세요.</p>
-                    
-                    <h4>2. 스마트 근무일지(짝지기록) 100% 활용하기</h4>
-                    <p>매일의 근무 내용을 달력에 기록하여 월별 총수입을 한눈에 파악할 수 있습니다. 특히 <strong>'짝지기록'</strong> 기능을 통해 그날 함께 작업한 동료의 사진이나 현장 상황을 사진으로 남겨두세요. 훗날 소중한 추억이 될 뿐만 아니라, 임금 체불 등 만약의 사태에 대비한 확실한 증빙 자료로 활용될 수 있습니다. 모든 데이터는 안전하게 보호됩니다.</p>
-                    
-                    <h4>3. 실시간 선박 및 터미널 정보</h4>
-                    <p>HJNC, PNC, BNCT 등 부산 신항 및 북항 주요 터미널의 선박 접안 스케줄을 각 터미널 사이트와 연동하여 제공합니다. <strong>'선박 위치 확인'</strong> 버튼을 누르면 마린트래픽(MarineTraffic) 지도로 연결되어 현재 배가 어디쯤 오고 있는지 실시간으로 볼 수 있습니다. 입항 지연 여부를 미리 확인하고 대기 시간을 줄이세요.</p>
-                    
-                    <h4>4. 현장 안전 수칙 및 커뮤니티</h4>
-                    <p>안전은 타협할 수 없는 최우선 가치입니다. 작업 전 안전모 턱끈 체결, 미끄럼 방지 안전화 착용을 생활화합시다. 라싱 작업 시 턴버클 해체 반동에 주의하시고, 크레인 및 야드 트랙터 이동 경로 내 보행을 금지합니다. 익명 게시판을 통해 동료들과 정보를 공유하고 서로의 안전을 챙겨주는 따뜻한 문화를 만들어갑시다.</p>
-                    
-                    <p style="margin-top:15px; font-size:0.85rem; color:var(--text-sub);">* 본 앱에서 제공하는 급여 계산 결과는 참고용이며, 실제 지급액과 차이가 있을 수 있습니다. 데이터 오류 발견 시 제보해 주시면 즉시 수정하겠습니다.</p>
+                    <h3>⚓ 부산항 현장직 가이드</h3>
+                    <p>BUSAN HAK PORT INFO는 현장 필수 앱입니다.</p>
+                    <h4>1. 2026년 임금 계산기</h4>
+                    <p>시급과 근무 시간을 입력하면 1.5배 수당이 자동 합산됩니다.</p>
+                    <h4>2. 스마트 근무일지(짝지기록)</h4>
+                    <p>매일 근무 기록과 사진을 남기세요.</p>
                 </div>
             </div>
         </div>
@@ -359,10 +351,7 @@
 
         <footer>
             <p>© 2024 BUSAN HAK PORT INFO. All rights reserved.</p>
-            <div style="margin-top:10px;">
-                <span class="footer-link" onclick="openPrivacy()">개인정보처리방침</span> | 
-                <span class="footer-link" onclick="alert('이용약관: 본 서비스는 현장 보조용이며 법적 효력이 없습니다.')">이용약관</span>
-            </div>
+            <div style="margin-top:10px;"><span class="footer-link" onclick="openPrivacy()">개인정보처리방침</span></div>
         </footer>
     </div>
 
@@ -400,26 +389,20 @@
             icon.classList.toggle('rotated');
             vibrate();
         }
-        function toggleItemContent(id) {
+        function toggleContent(id) {
             const el = document.getElementById(id);
-            el.classList.toggle('open'); // Using 'open' class specifically for content (posts, terminals)
-            el.classList.toggle('show'); // Also toggle 'show' for terminals to be safe
-            
             const header = el.previousElementSibling;
-            if(header) {
-                const icon = header.querySelector('.toggle-icon');
-                if(icon) {
-                     if (el.classList.contains('open') || el.classList.contains('show')) icon.classList.add('rotated');
-                     else icon.classList.remove('rotated');
-                }
-            }
+            const icon = header.querySelector('.toggle-icon');
+            if(el.style.display === 'block') { el.style.display = 'none'; if(icon) icon.classList.remove('rotated'); }
+            else { el.style.display = 'block'; if(icon) icon.classList.add('rotated'); }
             vibrate();
         }
-        // [Fixed: Force Toggle for Ships]
+        
+        // [FIX: FORCE TOGGLE FOR SHIPS]
         function toggleShipContent(id) {
             const el = document.getElementById(id);
-            // Directly check and set style to override any hidden classes
-            if (el.style.display === 'block') {
+            // 강제 스타일 주입으로 무조건 열고 닫히게 함
+            if(el.style.display === 'block') {
                 el.style.display = 'none';
                 const icon = el.previousElementSibling.querySelector('.toggle-icon');
                 if(icon) icon.classList.remove('rotated');
@@ -486,7 +469,7 @@
         function deleteComment(postId, commentId, realPw) { const inputPw = prompt("비밀번호:"); if (inputPw === realPw || inputPw === "0346") { db.collection('posts').doc(postId).collection('comments').doc(commentId).delete().then(() => showToast("삭제됨")); } else { showToast("비밀번호 불일치"); } }
 
         function loadAllData(){
-            db.collection("notices").orderBy("timestamp","desc").onSnapshot(s=>{const l=document.getElementById("noticeList");l.innerHTML="";s.forEach(d=>{const n=d.data();l.innerHTML+=`<li class="post-item tap-effect"><div class="post-header-row" onclick="toggleItemContent('n-${d.id}')"><span class="post-title-text" style="color:var(--danger)">📢 ${n.title}</span><span class="post-meta-info">${n.date}</span></div><div id="n-${d.id}" class="post-body-content">${n.content}<br><button class="mini-btn btn-del" onclick="delNotice('${d.id}',event)">삭제</button></div></li>`})});
+            db.collection("notices").orderBy("timestamp","desc").onSnapshot(s=>{const l=document.getElementById("noticeList");l.innerHTML="";s.forEach(d=>{const n=d.data();l.innerHTML+=`<li class="post-item tap-effect"><div class="post-header-row" onclick="toggleContent('n-${d.id}')"><span class="post-title-text" style="color:var(--danger)">📢 ${n.title}</span><span class="post-meta-info">${n.date}</span></div><div id="n-${d.id}" class="post-body-content">${n.content}<br><button class="mini-btn btn-del" onclick="delNotice('${d.id}',event)">삭제</button></div></li>`})});
             db.collection("posts").orderBy("timestamp","desc").onSnapshot(s=>{allPostsData=[];s.forEach(d=>{let o=d.data();o.id=d.id;allPostsData.push(o)});renderBoardPage(1)});
             
             // [FIX: Initial List View]
@@ -504,7 +487,7 @@
             allPostsData.slice((p-1)*postsPerPage, p*postsPerPage).forEach(x=>{
                 l.innerHTML+=`
                 <li class="post-item tap-effect">
-                    <div class="post-header-row" onclick="toggleItemContent('p-${x.id}')">
+                    <div class="post-header-row" onclick="toggleContent('p-${x.id}')">
                         <span class="post-title-text">[${x.category}] ${x.title}</span>
                         <span class="post-meta-info">${x.name} | ${x.date}</span>
                     </div>
@@ -521,7 +504,7 @@
             currentShipPage=p;const l=document.getElementById("shipList");l.innerHTML="";
             filteredShips.slice((p-1)*postsPerPage,p*postsPerPage).forEach(x=>{
                 let img=x.imageUrl?`<button class="mini-btn btn-photo" onclick="event.stopPropagation();showImageModal('${x.imageUrl}')">📷</button>`:"";
-                // Fixed: Added toggle-icon span and onclick handler using toggleShipContent
+                // Uses toggleShipContent for forced style toggle
                 l.innerHTML+=`
                 <li class="post-item tap-effect">
                     <div onclick="toggleShipContent('s-${x.id}')" style="display:flex;justify-content:space-between; padding:15px 5px; align-items:center;">
