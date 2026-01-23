@@ -362,7 +362,15 @@
     <div id="toast">알림</div><div id="imageModal" class="modal-overlay" onclick="closeImageModal()"><div class="modal-content" onclick="event.stopPropagation()"><img id="modalImage" class="modal-img"><button class="action-btn bg-cancel tap-effect" onclick="closeImageModal()" style="margin-top:15px;">닫기</button></div></div><div id="privacyModal" class="modal-overlay" onclick="document.getElementById('privacyModal').style.display='none'"><div class="modal-content" style="text-align:left;"><h3>🛡️ 개인정보처리방침</h3><p>정보 수집 목적...</p><button class="action-btn bg-cancel" onclick="document.getElementById('privacyModal').style.display='none'">닫기</button></div></div>
 
     <script>
-        const firebaseConfig = { apiKey: "AIzaSyBDXy5HcYW-IZQJ9ZDEivr_yi99AxhYme8", authDomain: "my-app-d8527.firebaseapp.com", projectId: "my-app-d8527", storageBucket: "my-app-d8527.firebasestorage.app", messagingSenderId: "667323279185", appId: "1:667323279185:web:cff6184aaa82e08d345570", measurementId: "G-HZQLF0L77P" };
+       const firebaseConfig = {
+  apiKey: "AIzaSyBWFZr9TE9yybZJCJjEXSsv1YCpGkVb0kA",
+  authDomain: "busan-hak-port.firebaseapp.com",
+  projectId: "busan-hak-port",
+  storageBucket: "busan-hak-port.firebasestorage.app",
+  messagingSenderId: "616469111502",
+  appId: "1:616469111502:web:6f3c94b15e444e04c7669f",
+  measurementId: "G-QQ728TDFJ2"
+};
         let db, storage, allPostsData=[], allShipsData=[], filteredShips=[], allFilesData=[], adminWorkLogs={};
         let currentBoardPage=1, currentShipPage=1, currentFilePage=1; const postsPerPage=5;
         let commentUnsubscribes = {};
@@ -557,3 +565,4 @@ if ("serviceWorker" in navigator) {
 </body>
 
 </html>
+
