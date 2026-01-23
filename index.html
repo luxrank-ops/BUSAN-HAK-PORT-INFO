@@ -14,7 +14,7 @@
     
     <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6024353303588422" crossorigin="anonymous"></script>
 
-    <link rel="icon" type="image/png" sizes="32x32" href="icon.png?v=ship_fix">
+    <link rel="icon" type="image/png" sizes="32x32" href="icon.png?v=ship_toggle_fix">
     <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.8/dist/web/static/pretendard.css" />
 
     <style>
@@ -121,7 +121,7 @@
         .post-item:last-child { border-bottom: none; }
         .post-header-row { padding: 15px 5px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; background: transparent; transition: background 0.1s; }
         .post-header-row:active { background: rgba(0,0,0,0.03); }
-        .post-title-text { font-weight: 700; font-size: 0.95rem; color: var(--text-main); display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; margin-right: 10px; }
+        .post-title-text { font-weight: 700; font-size: 0.95rem; color: var(--text-main); display: flex; align-items: center; gap: 5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; margin-right: 10px; }
         .post-meta-info { font-size: 0.75rem; color: var(--text-sub); white-space: nowrap; }
         .post-body-content { display: none; padding: 15px; background: rgba(0,0,0,0.02); border-top: 1px dashed var(--border); font-size: 0.95rem; line-height: 1.7; white-space: pre-wrap; color: var(--text-main); word-break: break-all; }
 
@@ -132,7 +132,7 @@
         .nav-icon { font-size: 1.4rem; margin-bottom: 2px; }
         
         .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 3000; justify-content: center; align-items: center; }
-        .modal-content { background: var(--card-bg); padding: 20px; border-radius: 15px; max-width: 90%; max-height: 80%; overflow-y: auto; }
+        .modal-content { background: var(--card-bg); padding: 20px; border-radius: 15px; max-width: 90%; max-height: 80%; overflow-y: auto; text-align: center; }
         .modal-img { max-width: 100%; border-radius: 5px; }
         
         .guide-text { line-height: 1.8; font-size: 0.9rem; text-align: left; color: var(--text-main); white-space: pre-wrap; }
@@ -141,7 +141,7 @@
         footer { text-align: center; padding: 40px 20px; color: var(--text-sub); font-size: 0.8rem; margin-bottom: 80px; border-top: 1px solid var(--border); }
         .footer-link { cursor: pointer; text-decoration: underline; margin: 0 8px; }
         
-        /* Calendar */
+        /* Calendar & Chips */
         .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; text-align: center; }
         .cal-day { padding: 8px 2px; border-radius: 8px; background: rgba(255,255,255,0.5); border: 1px solid var(--border); font-weight: 700; font-size: 0.85rem; }
         .cal-day.selected { background: var(--primary); color: white; border-color: var(--primary); }
@@ -422,7 +422,18 @@
             else { el.style.display = 'block'; if(icon) icon.classList.add('rotated'); }
             vibrate();
         }
-        function toggleHidden(id){document.getElementById(id).classList.toggle('hidden'); vibrate();}
+        // [Fixed: Toggle Hidden Class]
+        function toggleHidden(id){
+            const el = document.getElementById(id);
+            el.classList.toggle('hidden');
+            // If it's a ship list item, check icon rotation
+            const parent = el.parentElement;
+            const header = parent.querySelector('.post-header-row') || parent.querySelector('div[onclick]');
+            if(header){
+                const icon = header.querySelector('.toggle-icon'); // Assuming we add icons later if needed, but for now simple hidden toggle
+            }
+            vibrate();
+        }
         function vibrate(){if(navigator.vibrate)navigator.vibrate(15)}
         function showToast(m){const t=document.getElementById("toast");t.innerText=m;t.className="show";setTimeout(()=>t.className="",3000)}
         function toggleDarkMode(){document.body.classList.toggle('dark-mode');localStorage.setItem('theme',document.body.classList.contains('dark-mode')?'dark':'light');vibrate()}
@@ -440,14 +451,8 @@
         let cy, cm, selDate;
         function checkAdminAndOpenLog(headerEl){
             if(prompt("관리자 암호:")==="0346"){
-                const card = document.getElementById('log-card');
-                // Use toggleDashItem logic manually because onclick is on header
-                if (card.classList.contains('expanded')) {
-                    toggleDashItem('log-card'); // close
-                } else {
-                    toggleDashItem('log-card'); // open
-                    const n=new Date(); renderCalendar(n.getFullYear(),n.getMonth());
-                }
+                toggleDashItem('log-card');
+                const n=new Date(); renderCalendar(n.getFullYear(),n.getMonth());
             } else showToast("⛔ 접근 불가");
         }
         function renderCalendar(y,m){cy=y;cm=m;const dt=new Date(y,m,1);document.getElementById('calMonthYear').innerText=`${y}년 ${m+1}월`;const g=document.getElementById('calendarGrid');g.innerHTML='';['일','월','화','수','목','금','토'].forEach(d=>g.innerHTML+=`<div style="font-weight:bold;color:var(--text-sub);font-size:0.8rem;">${d}</div>`);for(let i=0;i<dt.getDay();i++)g.innerHTML+=`<div></div>`;const dim=new Date(y,m+1,0).getDate();db.collection("work_logs").where("date",">=",`${y}-${String(m+1).padStart(2,'0')}-01`).where("date","<=",`${y}-${String(m+1).padStart(2,'0')}-${dim}`).get().then(qs=>{adminWorkLogs={};let t=0;qs.forEach(d=>{adminWorkLogs[d.id]=d.data();t+=(d.data().totalPay||0)});document.getElementById('monthlyTotalDisplay').innerText=Math.floor(t).toLocaleString()+"원";for(let i=1;i<=dim;i++){const ds=`${y}-${String(m+1).padStart(2,'0')}-${String(i).padStart(2,'0')}`;const d=document.createElement('div');d.className='cal-day tap-effect';if(adminWorkLogs[ds])d.classList.add('has-data');d.innerHTML=`${i}<div class="cal-dot"></div>`;d.onclick=()=>selectDate(ds,d);g.appendChild(d)}})}
@@ -483,51 +488,61 @@
         function deleteComment(postId, commentId, realPw) { const inputPw = prompt("비밀번호:"); if (inputPw === realPw || inputPw === "0346") { db.collection('posts').doc(postId).collection('comments').doc(commentId).delete().then(() => showToast("삭제됨")); } else { showToast("비밀번호 불일치"); } }
 
         function loadAllData(){
-            db.collection("notices").orderBy("timestamp","desc").onSnapshot(s=>{const l=document.getElementById("noticeList");l.innerHTML="";s.forEach(d=>{const n=d.data();l.innerHTML+=`<li class="post-item tap-effect"><div class="post-header-row" onclick="toggleContent('n-${d.id}')"><span class="post-title-text" style="color:var(--danger)">📢 ${n.title}</span><span class="post-meta-info">${n.date}</span></div><div id="n-${d.id}" class="post-body-content">${n.content}<br><button class="mini-btn btn-del" onclick="delNotice('${d.id}',event)">삭제</button></div></li>`})});
+            db.collection("notices").orderBy("timestamp","desc").onSnapshot(s=>{const l=document.getElementById("noticeList");l.innerHTML="";s.forEach(d=>{const n=d.data();l.innerHTML+=`<li class="post-item tap-effect"><div class="post-header-row" onclick="toggleHidden('n-${d.id}')"><span class="post-title-text" style="color:var(--danger)">📢 ${n.title}</span><span class="post-meta-info">${n.date}</span></div><div id="n-${d.id}" class="post-body-content">${n.content}<br><button class="mini-btn btn-del" onclick="delNotice('${d.id}',event)">삭제</button></div></li>`})});
             db.collection("posts").orderBy("timestamp","desc").onSnapshot(s=>{allPostsData=[];s.forEach(d=>{let o=d.data();o.id=d.id;allPostsData.push(o)});renderBoardPage(1)});
-            db.collection("ships").orderBy("shipName","asc").onSnapshot(s=>{allShipsData=[];s.forEach(d=>{let o=d.data();o.id=d.id;allShipsData.push(o)});filterShips()});
+            db.collection("ships").orderBy("shipName","asc").onSnapshot(s=>{allShipsData=[];s.forEach(d=>{let o=d.data();o.id=d.id;allShipsData.push(o)});renderShipPage(1)});
             db.collection("archives").orderBy("timestamp","desc").onSnapshot(s=>{allFilesData=[];s.forEach(d=>{let o=d.data();o.id=d.id;allFilesData.push(o)});renderFilePage(1)});
         }
         function renderBoardPage(p){
             currentBoardPage=p; const l=document.getElementById("boardList"); l.innerHTML="";
             allPostsData.slice((p-1)*postsPerPage, p*postsPerPage).forEach(x=>{
-                l.innerHTML+=`<li class="post-item tap-effect"><div class="post-header-row" onclick="toggleContent('p-${x.id}')"><span class="post-title-text">[${x.category}] ${x.title}</span><span class="post-meta-info">${x.name} | ${x.date}</span></div><div id="p-${x.id}" class="post-body-content"><div style="margin-bottom:15px; white-space:pre-wrap;">${x.content}</div><div class="comment-section"><div id="cmt-list-${x.id}" class="comment-list"></div><div class="comment-form"><input id="cmt-name-${x.id}" class="comment-input-sm" placeholder="닉"><input id="cmt-pw-${x.id}" class="comment-input-sm" type="password" placeholder="비번"><input id="cmt-txt-${x.id}" class="comment-input-lg" placeholder="댓글..."><button class="comment-submit" onclick="addComment('${x.id}')">등록</button></div></div><div style="margin-top:10px; text-align:right;"><button class="mini-btn btn-del" onclick="deletePost('${x.id}','${x.password}',event)">글 삭제</button></div></div></li>`;
+                l.innerHTML+=`
+                <li class="post-item tap-effect">
+                    <div class="post-header-row" onclick="toggleHidden('p-${x.id}')">
+                        <span class="post-title-text">[${x.category}] ${x.title}</span>
+                        <span class="post-meta-info">${x.name} | ${x.date}</span>
+                    </div>
+                    <div id="p-${x.id}" class="post-body-content">
+                        <div style="margin-bottom:15px; white-space:pre-wrap;">${x.content}</div>
+                        <div class="comment-section"><div id="cmt-list-${x.id}" class="comment-list"></div><div class="comment-form"><input id="cmt-name-${x.id}" class="comment-input-sm" placeholder="닉"><input id="cmt-pw-${x.id}" class="comment-input-sm" type="password" placeholder="비번"><input id="cmt-txt-${x.id}" class="comment-input-lg" placeholder="댓글..."><button class="comment-submit" onclick="addComment('${x.id}')">등록</button></div></div><div style="margin-top:10px; text-align:right;"><button class="mini-btn btn-del" onclick="deletePost('${x.id}','${x.password}',event)">글 삭제</button></div>
+                    </div>
+                </li>`;
             });
             renderPagination("pagination",Math.ceil(allPostsData.length/postsPerPage),p,renderBoardPage);
             loadCommentsForPage();
         }
-        function renderShipPage(p){currentShipPage=p;const l=document.getElementById("shipList");l.innerHTML="";filteredShips.slice((p-1)*postsPerPage,p*postsPerPage).forEach(x=>{let img=x.imageUrl?`<button class="mini-btn btn-photo" onclick="event.stopPropagation();showImageModal('${x.imageUrl}')">📷</button>`:"";l.innerHTML+=`<li class="post-item tap-effect"><div onclick="toggleContent('s-${x.id}')" style="display:flex;justify-content:space-between; padding:15px 5px;"><span class="post-title" style="margin:0;">🚢 ${x.shipName}</span><div>${img}</div></div><div id="s-${x.id}" class="hidden" style="margin-top:5px;padding:10px;background:rgba(0,0,0,0.03);"><p><strong>[본선]</strong> ${x.onboardFeat||'-'}</p><p><strong>[육상]</strong> ${x.onshoreFeat||'-'}</p><button class="mini-btn btn-edit" onclick="editShip('${x.id}')">수정</button><button class="mini-btn btn-del" onclick="deleteShip('${x.id}',event)">삭제</button></div></li>`});renderPagination("shipPagination",Math.ceil(filteredShips.length/postsPerPage),p,renderShipPage)}
+        function renderShipPage(p){
+            currentShipPage=p;const l=document.getElementById("shipList");l.innerHTML="";
+            filteredShips.slice((p-1)*postsPerPage,p*postsPerPage).forEach(x=>{
+                let img=x.imageUrl?`<button class="mini-btn btn-photo" onclick="event.stopPropagation();showImageModal('${x.imageUrl}')">📷</button>`:"";
+                // Fixed: Added toggle-icon span and onclick handler using toggleHidden
+                l.innerHTML+=`
+                <li class="post-item tap-effect">
+                    <div onclick="toggleHidden('s-${x.id}')" style="display:flex;justify-content:space-between; padding:15px 5px; align-items:center;">
+                        <span class="post-title-text" style="margin:0;">🚢 ${x.shipName} <span class="toggle-icon" style="font-size:0.7rem; color:var(--text-sub); margin-left:5px;">▼</span></span>
+                        <div>${img}</div>
+                    </div>
+                    <div id="s-${x.id}" class="hidden" style="margin-top:5px;padding:10px;background:rgba(0,0,0,0.03);">
+                        <p><strong>[본선]</strong> ${x.onboardFeat||'-'}</p>
+                        <p><strong>[육상]</strong> ${x.onshoreFeat||'-'}</p>
+                        <button class="mini-btn btn-edit" onclick="editShip('${x.id}')">수정</button>
+                        <button class="mini-btn btn-del" onclick="deleteShip('${x.id}',event)">삭제</button>
+                    </div>
+                </li>`;
+            });
+            renderPagination("shipPagination",Math.ceil(filteredShips.length/postsPerPage),p,renderShipPage)
+        }
         function renderFilePage(p){currentFilePage=p;const l=document.getElementById("fileList");l.innerHTML="";allFilesData.slice((p-1)*postsPerPage,p*postsPerPage).forEach(x=>{l.innerHTML+=`<li class="post-item tap-effect" style="display:flex;justify-content:space-between; padding:15px 5px;"><div><a href="${x.fileUrl}" target="_blank" style="text-decoration:none;color:var(--text-main);font-weight:bold;">💾 ${x.title}</a></div></li>`});renderPagination("filePagination",Math.ceil(allFilesData.length/postsPerPage),p,renderFilePage)}
         function renderPagination(id,t,c,f){const el=document.getElementById(id);el.innerHTML="";for(let i=1;i<=t;i++){const s=document.createElement("span");s.className=`page-num ${i===c?'active':''} tap-effect`;s.innerText=i;s.onclick=()=>f(i);el.appendChild(s)}}
 
         function filterShips(){const q=document.getElementById('shipSearch').value.toUpperCase();filteredShips=allShipsData.filter(s=>s.shipName.toUpperCase().includes(q));renderShipPage(1);}
         function filterFiles(){const k=document.getElementById('fileSearch').value.toUpperCase();const l=document.getElementById('fileList').getElementsByTagName('li');for(let i=0;i<l.length;i++)l[i].style.display=l[i].innerText.toUpperCase().includes(k)?"":"none"}
 
-        function addPost(){
-            const t=document.getElementById('inputTitle').value,n=document.getElementById('inputName').value,p=document.getElementById('inputPw').value,c=document.getElementById('inputContent').value;
-            if(!t||!n||!p)return;
-            db.collection("posts").add({category:document.getElementById('inputCategory').value,title:t,name:n,password:p,content:c,date:new Date().toLocaleString('ko-KR'),timestamp:firebase.firestore.FieldValue.serverTimestamp()}).then(()=>{
-                showToast("완료");
-                // Clear inputs
-                document.getElementById('inputTitle').value = "";
-                document.getElementById('inputName').value = "";
-                document.getElementById('inputPw').value = "";
-                document.getElementById('inputContent').value = "";
-            });
-        }
+        function addPost(){const t=document.getElementById('inputTitle').value,n=document.getElementById('inputName').value,p=document.getElementById('inputPw').value,c=document.getElementById('inputContent').value;if(!t||!n||!p)return;db.collection("posts").add({category:document.getElementById('inputCategory').value,title:t,name:n,password:p,content:c,date:new Date().toLocaleString('ko-KR'),timestamp:firebase.firestore.FieldValue.serverTimestamp()}).then(()=>{showToast("완료");toggleHidden('boardForm')})}
         function deletePost(id,pw,e){e.stopPropagation();if(prompt("비번:")===pw||prompt("관리자?")==="0346")db.collection("posts").doc(id).delete()}
-        function addNotice(){
-            if(prompt("암호:")==="0346"){
-                db.collection("notices").add({title:document.getElementById('noticeTitle').value,content:document.getElementById('noticeContent').value,date:new Date().toLocaleString('ko-KR'),timestamp:firebase.firestore.FieldValue.serverTimestamp()}).then(()=>{
-                    showToast("완료");
-                    document.getElementById('noticeTitle').value = "";
-                    document.getElementById('noticeContent').value = "";
-                });
-            }
-        }
+        function addNotice(){if(prompt("암호:")==="0346")db.collection("notices").add({title:document.getElementById('noticeTitle').value,content:document.getElementById('noticeContent').value,date:new Date().toLocaleString('ko-KR'),timestamp:firebase.firestore.FieldValue.serverTimestamp()})}
         function delNotice(id,e){e.stopPropagation();if(prompt("암호:")==="0346")db.collection("notices").doc(id).delete()}
         function addShipInfo(){const n=document.getElementById('shipName').value;if(!n)return;const s=(u)=>{const d={shipName:n,onboardFeat:document.getElementById('shipOnboard').value,onshoreFeat:document.getElementById('shipOnshore').value,imageUrl:u,date:new Date().toLocaleString('ko-KR'),timestamp:firebase.firestore.FieldValue.serverTimestamp()};(editingShipId?db.collection("ships").doc(editingShipId).update(d):db.collection("ships").add(d)).then(()=>{showToast("완료");toggleHidden('shipForm');editingShipId=null;document.querySelectorAll('#shipForm input,#shipForm textarea').forEach(i=>i.value='')})};const f=document.getElementById('shipFileInput').files[0];if(f)storage.ref('ships/'+Date.now()+f.name).put(f).then(x=>x.ref.getDownloadURL()).then(u=>s(u));else s(editingShipId?allShipsData.find(x=>x.id===editingShipId).imageUrl:null)}
-        let editingShipId=null;
         function editShip(id){const x=allShipsData.find(s=>s.id===id);editingShipId=id;document.getElementById('shipName').value=x.shipName;document.getElementById('shipOnboard').value=x.onboardFeat;document.getElementById('shipOnshore').value=x.onshoreFeat;document.getElementById('shipForm').classList.remove('hidden');document.getElementById('shipSubmitBtn').innerText="수정 완료";document.getElementById('shipForm').scrollIntoView({behavior:'smooth'})}
         function deleteShip(id,e){e.stopPropagation();if(prompt("암호:")==="0346")db.collection("ships").doc(id).delete()}
         function uploadFile(){const f=document.getElementById('fileInput').files[0];if(!f)return;storage.ref('archives/'+Date.now()+f.name).put(f).then(s=>s.ref.getDownloadURL()).then(u=>{db.collection("archives").add({title:document.getElementById('fileTitle').value,uploader:document.getElementById('fileUploader').value,fileUrl:u,date:new Date().toLocaleString('ko-KR'),timestamp:firebase.firestore.FieldValue.serverTimestamp()});showToast("완료")})}
