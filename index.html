@@ -3,107 +3,186 @@
 <head>
   <meta charset="UTF-8" />
   <title>BUSAN HAK PORT</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="description" content="부산항 작업자 정보 공유 게시판" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="부산항 작업자 정보 공유 포털" />
+
+  <!-- 기본 스타일 -->
+  <style>
+    :root {
+      --primary: #2f6bdc;
+      --secondary: #f59e0b;
+      --bg: #f4f6f8;
+      --card: #ffffff;
+      --text: #1f2937;
+      --sub: #6b7280;
+      --danger: #dc2626;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+    }
+    header {
+      background: linear-gradient(180deg, #3b82f6, #2563eb);
+      color: white;
+      text-align: center;
+      padding: 18px 10px;
+      font-size: 1.3rem;
+      font-weight: 700;
+    }
+    .banner {
+      background: var(--secondary);
+      color: #111;
+      padding: 8px 12px;
+      font-size: 0.9rem;
+      text-align: center;
+    }
+    .container {
+      max-width: 820px;
+      margin: 0 auto;
+      padding: 12px;
+    }
+    .card {
+      background: var(--card);
+      border-radius: 14px;
+      padding: 14px;
+      margin-bottom: 14px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.04);
+    }
+    .menu-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+    .menu-btn {
+      padding: 16px;
+      border-radius: 12px;
+      background: #f9fafb;
+      border: 1px solid #e5e7eb;
+      font-weight: 600;
+      text-align: left;
+    }
+    .menu-btn span { color: var(--sub); font-size: 0.8rem; }
+
+    h2 {
+      font-size: 1.05rem;
+      margin: 4px 0 10px;
+    }
+    input, textarea {
+      width: 100%;
+      padding: 10px;
+      border-radius: 8px;
+      border: 1px solid #d1d5db;
+      margin-bottom: 8px;
+      font-size: 0.9rem;
+    }
+    button {
+      background: var(--primary);
+      color: white;
+      border: none;
+      border-radius: 10px;
+      padding: 10px 14px;
+      font-size: 0.9rem;
+    }
+    ul { list-style: none; padding: 0; margin: 0; }
+    li {
+      padding: 12px 8px;
+      border-bottom: 1px solid #e5e7eb;
+    }
+    .post-title { font-weight: 700; }
+    .post-meta { font-size: 0.75rem; color: var(--sub); margin-top: 4px; }
+  </style>
 </head>
-
 <body>
-  <h1>📢 BUSAN HAK PORT</h1>
 
-  <section>
+<header>BUSAN HAK PORT</header>
+<div class="banner">부산항 현장 정보 · 작업자 커뮤니티</div>
+
+<div class="container">
+
+  <!-- 상단 메뉴 -->
+  <div class="card">
+    <div class="menu-grid">
+      <div class="menu-btn">📢 공지사항<br><span>운영 공지</span></div>
+      <div class="menu-btn">💬 익명게시판<br><span>자유 소통</span></div>
+      <div class="menu-btn">🚢 선박정보<br><span>입출항 정보</span></div>
+      <div class="menu-btn">📂 자료실<br><span>문서 공유</span></div>
+      <div class="menu-btn" style="border:1px solid var(--danger); color:var(--danger);">💰 임금 계산기</div>
+      <div class="menu-btn" style="border:1px solid var(--primary); color:var(--primary);">📅 스마트 근무일지</div>
+    </div>
+  </div>
+
+  <!-- 글 작성 -->
+  <div class="card">
     <h2>글 작성</h2>
-    <input id="title" placeholder="제목" /><br /><br />
-    <input id="name" placeholder="작성자" /><br /><br />
-    <input id="password" type="password" placeholder="비밀번호" /><br /><br />
-    <textarea id="content" placeholder="내용"></textarea><br /><br />
+    <input id="title" placeholder="제목" />
+    <input id="name" placeholder="작성자" />
+    <input id="password" type="password" placeholder="비밀번호" />
+    <textarea id="content" rows="4" placeholder="내용"></textarea>
     <button onclick="addPost()">등록</button>
-  </section>
+  </div>
 
-  <hr />
-
-  <section>
+  <!-- 게시판 -->
+  <div class="card">
     <h2>게시판</h2>
     <ul id="postList"></ul>
-  </section>
+  </div>
 
-  <!-- Firebase v9 ONLY -->
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
-    import {
-      getFirestore,
-      collection,
-      addDoc,
-      onSnapshot,
-      query,
-      orderBy,
-      serverTimestamp
-    } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
+</div>
 
-    // 🔑 Firebase 설정 (콘솔에서 복사해서 채우기)
-    const firebaseConfig = {
-      apiKey: "여기에_API_KEY",
-      authDomain: "여기에_PROJECT.firebaseapp.com",
-      projectId: "여기에_PROJECT_ID",
-      storageBucket: "여기에_PROJECT.appspot.com",
-      messagingSenderId: "여기에_SENDER_ID",
-      appId: "여기에_APP_ID"
-    };
+<!-- Firebase v9 -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
+  import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
 
-    const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
+  const firebaseConfig = {
+  apiKey: "AIzaSyBWFZr9TE9yybZJCJjEXSsv1YCpGkVb0kA",
+  authDomain: "busan-hak-port.firebaseapp.com",
+  projectId: "busan-hak-port",
+  storageBucket: "busan-hak-port.firebasestorage.app",
+  messagingSenderId: "616469111502",
+  appId: "1:616469111502:web:6f3c94b15e444e04c7669f",
+  measurementId: "G-QQ728TDFJ2"
+};
 
-    // ✅ 글 등록
-    window.addPost = async () => {
-      const title = document.getElementById("title").value.trim();
-      const name = document.getElementById("name").value.trim();
-      const password = document.getElementById("password").value.trim();
-      const content = document.getElementById("content").value.trim();
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
 
-      if (!title || !name || !password || !content) {
-        alert("모든 항목을 입력하세요");
-        return;
-      }
+  window.addPost = async () => {
+    const title = titleInput.value.trim();
+    const name = nameInput.value.trim();
+    const password = passwordInput.value.trim();
+    const content = contentInput.value.trim();
 
-      await addDoc(collection(db, "posts"), {
-        title,
-        name,
-        password,
-        content,
-        createdAt: serverTimestamp()
-      });
-
-      document.getElementById("title").value = "";
-      document.getElementById("name").value = "";
-      document.getElementById("password").value = "";
-      document.getElementById("content").value = "";
-
-      alert("글 등록 완료");
-    };
-
-    // ✅ 게시글 실시간 로드
-    const q = query(collection(db, "posts"), orderBy("createdAt", "desc"));
-    onSnapshot(q, (snapshot) => {
-      const list = document.getElementById("postList");
-      list.innerHTML = "";
-      snapshot.forEach((doc) => {
-        const d = doc.data();
-        const li = document.createElement("li");
-        li.innerHTML = `
-          <strong>${d.title}</strong><br/>
-          ${d.content}<br/>
-          <small>${d.name}</small>
-          <hr/>
-        `;
-        list.appendChild(li);
-      });
-    });
-  </script>
-
-  <!-- PWA -->
-  <script>
-    if ("serviceWorker" in navigator) {
-      navigator.serviceWorker.register("service-worker.js");
+    if (!title || !name || !password || !content) {
+      alert("모든 항목을 입력하세요");
+      return;
     }
-  </script>
+
+    await addDoc(collection(db, "posts"), {
+      title,
+      name,
+      password,
+      content,
+      createdAt: serverTimestamp()
+    });
+
+    titleInput.value = nameInput.value = passwordInput.value = contentInput.value = "";
+  };
+
+  const q = query(collection(db, "posts"), orderBy("createdAt", "desc"));
+  onSnapshot(q, (snap) => {
+    postList.innerHTML = "";
+    snap.forEach(doc => {
+      const d = doc.data();
+      const li = document.createElement("li");
+      li.innerHTML = `<div class='post-title'>${d.title}</div><div>${d.content}</div><div class='post-meta'>${d.name}</div>`;
+      postList.appendChild(li);
+    });
+  });
+</script>
+
 </body>
 </html>
