@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     
-    <meta name="description" content="부산항 현장직 필수 앱. 임금계산기, 스마트 근무일지(짝지기록), 실시간 선박위치 및 스케줄 조회.">
+    <meta name="description" content="부산항 항운노조원 현장 필수 앱. 임금계산기, 스마트 근무일지, 익명게시판, 선박위치 조회.">
     <meta property="og:title" content="BUSAN HAK PORT INFO">
     <title>BUSAN HAK PORT INFO</title>
     
@@ -14,7 +14,7 @@
     
     <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6024353303588422" crossorigin="anonymous"></script>
 
-    <link rel="icon" type="image/png" sizes="32x32" href="icon.png?v=weather_grid">
+    <link rel="icon" type="image/png" sizes="32x32" href="icon.png?v=comment_v1">
     <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.8/dist/web/static/pretendard.css" />
 
     <style>
@@ -50,7 +50,7 @@
 
         .container { width: 96%; max-width: 600px; margin: 15px auto; }
         
-        /* [Main Grid Layout] */
+        /* [Grid & Card Layout] */
         .dash-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }
         .dash-card { 
             background: var(--card-bg); border-radius: 16px; 
@@ -67,7 +67,6 @@
         .dash-title { font-size: 1rem; font-weight: 800; color: var(--text-main); display: flex; align-items: center; gap: 6px; }
         .dash-content { display: none; padding: 15px; background: var(--card-bg); animation: fadeIn 0.3s; }
         
-        /* [Section Cards] */
         .card { background: var(--card-bg); border-radius: 16px; margin-bottom: 15px; box-shadow: var(--glass-shadow); border: var(--glass-border); overflow: hidden; }
         .section-header { display: flex; justify-content: space-between; align-items: center; padding: 15px; cursor: pointer; border-bottom: 1px solid var(--border); }
         .section-title { font-size: 1.1rem; font-weight: 800; display:flex; align-items:center; gap:8px; }
@@ -78,15 +77,19 @@
         .collapsible-content.collapsed { display: none; }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 
-        /* [Control Grid - NEW] */
-        .control-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-        .control-btn { 
-            background: var(--card-bg); border: 1px solid var(--border); color: var(--text-main); 
-            padding: 16px; border-radius: 12px; text-decoration: none; 
-            font-size: 0.95rem; font-weight: 700; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.02); transition: all 0.2s;
-        }
-        .control-btn:active { transform: scale(0.98); background: rgba(0,0,0,0.05); }
+        /* [Comment Styles - NEW] */
+        .comment-section { margin-top: 15px; border-top: 1px dashed var(--border); padding-top: 10px; background: rgba(0,0,0,0.015); border-radius: 8px; padding: 10px; }
+        .comment-list { margin-bottom: 10px; }
+        .comment-item { display: flex; justify-content: space-between; align-items: flex-start; font-size: 0.85rem; padding: 6px 0; border-bottom: 1px solid rgba(0,0,0,0.05); }
+        .comment-meta { font-weight: bold; color: var(--primary); margin-right: 5px; min-width: 60px; font-size: 0.8rem; }
+        .comment-text { flex: 1; color: var(--text-main); word-break: break-all; }
+        .comment-date { font-size: 0.7rem; color: var(--text-sub); margin-left: 5px; }
+        .comment-del-btn { background: none; border: none; color: var(--text-sub); cursor: pointer; font-size: 0.7rem; padding: 0 5px; }
+        
+        .comment-form { display: flex; gap: 5px; align-items: center; flex-wrap: wrap; margin-top: 5px; }
+        .comment-input-sm { width: 70px; padding: 8px; border: 1px solid var(--border); border-radius: 6px; font-size: 0.8rem; background: rgba(255,255,255,0.8); }
+        .comment-input-lg { flex: 1; padding: 8px; border: 1px solid var(--border); border-radius: 6px; font-size: 0.8rem; background: rgba(255,255,255,0.8); min-width: 120px; }
+        .comment-submit { padding: 8px 12px; background: var(--text-sub); color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 0.8rem; font-weight: bold; }
 
         /* [Elements] */
         .input-field { width: 100%; padding: 12px; margin-bottom: 8px; border: 1px solid var(--border); border-radius: 8px; background: rgba(255,255,255,0.6); color: var(--text-main); font-size: 0.95rem; }
@@ -283,6 +286,23 @@
         </div>
 
         <div class="card">
+            <div class="section-header tap-effect" onclick="toggleSection('control-content', this)"><span class="section-title">📡 관제 및 날씨 <span class="toggle-icon">▼</span></span></div>
+            <div id="control-content" class="collapsible-content collapsed"><div class="dashboard-grid"><a href="http://www.busanpilot.co.kr/popup/monitoring" class="dash-btn" target="_blank"><span>🛥️</span>도선<br>모니터</a><a href="https://new.portmis.go.kr/" class="dash-btn" target="_blank"><span>📑</span>PORT<br>MIS</a><a href="https://weather.naver.com/today/08440585" class="dash-btn" target="_blank" style="color:var(--danger);"><span>☀️</span>부산<br>날씨</a></div></div>
+        </div>
+
+        <div class="card">
+            <div class="section-header tap-effect" onclick="toggleSection('guide-content', this)"><span class="section-title">📘 이용가이드 <span class="toggle-icon rotated">▼</span></span></div>
+            <div id="guide-content" class="collapsible-content">
+                <div class="guide-text">
+                    <h3>⚓ 부산항 현장직 가이드</h3>
+                    <p>BUSAN HAK PORT INFO는 항운노조원 필수 앱입니다.</p>
+                    <h4>1. 2026년 임금 계산기</h4><p>시급과 근무 시간을 입력하면 1.5배 수당이 자동 합산됩니다.</p>
+                    <h4>2. 스마트 근무일지(짝지기록)</h4><p>매일 근무 기록과 사진을 남기세요.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
             <div class="section-header tap-effect" onclick="toggleSection('t3-content', this)"><span class="section-title">🏭 3항업 (신항 남측) <span class="toggle-icon">▼</span></span></div>
             <div id="t3-content" class="collapsible-content collapsed">
                 <div class="terminal-block"><div class="terminal-header tap-effect" onclick="toggleContent('term-hjnc')"><h4 class="terminal-title">한진신항만 (HJNC) <span class="toggle-icon">▼</span></h4></div><div id="term-hjnc" class="terminal-body"><div class="terminal-actions"><a href="https://www.hjnc.co.kr/esvc/vessel/berthScheduleT" target="_blank" class="terminal-btn">스케줄</a><a href="https://www.hjnc.co.kr/esvc/vessel/berthScheduleG" target="_blank" class="terminal-btn">차트</a><a href="https://www.hjnc.co.kr/esvc/vessel/vesselStatus" target="_blank" class="terminal-btn">현황</a><a href="http://bayplan.hjnc.co.kr" target="_blank" class="terminal-btn btn-premium">🧩 BAY PLAN</a></div></div></div>
@@ -308,38 +328,6 @@
             </div>
         </div>
 
-        <div class="card">
-            <div class="section-header tap-effect" onclick="toggleSection('control-content', this)"><span class="section-title">📡 관제 및 날씨 <span class="toggle-icon">▼</span></span></div>
-            <div id="control-content" class="collapsible-content collapsed">
-                <div class="control-grid">
-                    <a href="http://www.busanpilot.co.kr/popup/monitoring" class="control-btn" target="_blank">🛥️ 도선 모니터</a>
-                    <a href="https://new.portmis.go.kr/" class="control-btn" target="_blank">📑 PORT MIS</a>
-                    <a href="https://weather.naver.com/today/08440585" class="control-btn" target="_blank" style="grid-column: span 2; color:var(--danger);">☀️ 부산 날씨 확인</a>
-                </div>
-            </div>
-        </div>
-
-        <div class="card">
-            <div class="section-header tap-effect" onclick="toggleSection('guide-content', this)"><span class="section-title">📘 이용가이드 <span class="toggle-icon rotated">▼</span></span></div>
-            <div id="guide-content" class="collapsible-content">
-                <div class="guide-text">
-                    <h3>⚓ 부산항 현장직을 위한 필수 가이드</h3>
-                    <p>BUSAN HAK PORT INFO는 부산항 항운노조원 및 현장 근로자분들을 위한 통합 플랫폼입니다. 현장 업무의 효율성을 높이기 위해 제작되었습니다.</p>
-                    
-                    <h4>1. 2026년 임금 계산기</h4>
-                    <p>부산항 현장의 특수성을 반영하여 시급과 근무 시간을 입력하면 주간, 야간/휴일(1.5배) 수당이 자동 합산됩니다. 기능공, 절맞이, 우천 수당 등 다양한 변수를 적용할 수 있습니다.</p>
-                    
-                    <h4>2. 스마트 근무일지(짝지기록)</h4>
-                    <p>매일의 근무 내용을 달력에 기록하여 월별 예상 수령액을 한눈에 파악할 수 있습니다. 그날의 작업 내용과 현장 사진을 '짝지기록'으로 남겨보세요. 데이터는 안전하게 저장됩니다.</p>
-                    
-                    <h4>3. 현장 안전 수칙</h4>
-                    <p>항만 내 모든 작업 시 안전모, 안전화, 반사 조끼 착용은 필수입니다. 중장비 이동 경로에서의 보행 안전과 컨테이너 작업 시 낙하물 사고 예방에 각별히 유의하시기 바랍니다.</p>
-                    
-                    <p style="margin-top:15px; font-size:0.85rem; color:var(--text-sub);">* 본 앱에서 제공하는 급여 계산 결과는 참고용이며, 실제 지급액과 차이가 있을 수 있습니다.</p>
-                </div>
-            </div>
-        </div>
-
         <div class="card" style="padding:15px; text-align:center;">
             <div style="font-size:0.8rem; color:#aaa; margin-bottom:8px;">▼ SPONSORED</div>
             <ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-6024353303588422" data-ad-slot="1234567890" data-ad-format="auto" data-full-width-responsive="true"></ins>
@@ -348,10 +336,7 @@
 
         <footer>
             <p>© 2024 BUSAN HAK PORT INFO. All rights reserved.</p>
-            <div style="margin-top:10px;">
-                <span class="footer-link" onclick="openPrivacy()">개인정보처리방침</span> | 
-                <span class="footer-link" onclick="alert('이용약관: 본 서비스는 현장 보조용이며 법적 효력이 없습니다.')">이용약관</span>
-            </div>
+            <div style="margin-top:10px;"><span class="footer-link" onclick="openPrivacy()">개인정보처리방침</span></div>
         </footer>
     </div>
 
@@ -362,6 +347,7 @@
         const firebaseConfig = { apiKey: "AIzaSyBDXy5HcYW-IZQJ9ZDEivr_yi99AxhYme8", authDomain: "my-app-d8527.firebaseapp.com", projectId: "my-app-d8527", storageBucket: "my-app-d8527.firebasestorage.app", messagingSenderId: "667323279185", appId: "1:667323279185:web:cff6184aaa82e08d345570", measurementId: "G-HZQLF0L77P" };
         let db, storage, allPostsData=[], allShipsData=[], filteredShips=[], allFilesData=[], adminWorkLogs={};
         let currentBoardPage=1, currentShipPage=1, currentFilePage=1; const postsPerPage=5;
+        let postUnsub = null; // Listener reference
 
         try { if(firebase.apps.length===0) firebase.initializeApp(firebaseConfig); db=firebase.firestore(); storage=firebase.storage(); loadAllData(); loadBanner(); if(localStorage.getItem('theme')==='dark') document.body.classList.add('dark-mode'); } catch(e){}
 
@@ -438,18 +424,110 @@
         function changeMonth(d){renderCalendar(new Date(cy,cm+d,1).getFullYear(),new Date(cy,cm+d,1).getMonth());vibrate()}
         function selectDate(ds,el){document.querySelectorAll('.cal-day').forEach(d=>d.classList.remove('selected'));el.classList.add('selected');selDate=ds;document.getElementById('dailyLogForm').classList.remove('hidden');document.getElementById('selectedDateText').innerText=ds;const d=adminWorkLogs[ds]||{};document.getElementById('logDayHours').value=d.dayHours||'';document.getElementById('logNightHours').value=d.nightHours||'';document.getElementById('logSkillTime').value=d.skillTime||'';document.getElementById('logSkillRate').value=d.skillRate||'';document.getElementById('logSignalTime').value=d.signalTime||'';document.getElementById('logSignalRate').value=d.signalRate||'';document.getElementById('logRainTime').value=d.rainTime||'';document.getElementById('logRainRate').value=d.rainRate||'';document.getElementById('logMemo').value=d.memo||'';document.getElementById('logImagePreview').src=d.imageUrl||'';document.getElementById('logImageContainer').style.display=d.imageUrl?'block':'none';document.getElementById('dailyTotalDisplay').innerText=(d.totalPay||0).toLocaleString()+"원";vibrate()}
         function resetLogInputs(){document.querySelectorAll('#dailyLogForm input, #dailyLogForm textarea').forEach(i=>i.value=''); document.getElementById('logImagePreview').src=''; document.getElementById('logImageContainer').style.display='none'; vibrate();}
-        function previewLogImage(input){if(input.files && input.files[0]){const r = new FileReader(); r.onload = function(e){document.getElementById('logImagePreview').src=e.target.result; document.getElementById('logImageContainer').style.display='block';}; r.readAsDataURL(input.files[0]);}}
+        function previewLogImage(input){if(input.files && input.files[0]){const r = new FileReader(); r.onload = function(e){document.getElementById('logImagePreview').src=e.target.result; document.getElementById('logImagePreview').style.display='block';}; r.readAsDataURL(input.files[0]);}}
         function saveWorkLog(){if(!selDate)return;const h=10030,d=parseFloat(document.getElementById('logDayHours').value)||0,n=parseFloat(document.getElementById('logNightHours').value)||0,t=(d*h)+(n*h*1.5)+((parseFloat(document.getElementById('logSkillTime').value)||0)*(parseFloat(document.getElementById('logSkillRate').value)||0))+((parseFloat(document.getElementById('logSignalTime').value)||0)*(parseFloat(document.getElementById('logSignalRate').value)||0))+((parseFloat(document.getElementById('logRainTime').value)||0)*(parseFloat(document.getElementById('logRainRate').value)||0)),memo=document.getElementById('logMemo').value,file=document.getElementById('logImageInput').files[0];const saveData=(url)=>{const data={date:selDate,dayHours:d,nightHours:n,totalPay:t,memo:memo,imageUrl:url,skillTime:parseFloat(document.getElementById('logSkillTime').value)||0,skillRate:parseFloat(document.getElementById('logSkillRate').value)||0,signalTime:parseFloat(document.getElementById('logSignalTime').value)||0,signalRate:parseFloat(document.getElementById('logSignalRate').value)||0,rainTime:parseFloat(document.getElementById('logRainTime').value)||0,rainRate:parseFloat(document.getElementById('logRainRate').value)||0};db.collection("work_logs").doc(selDate).set(data).then(()=>{showToast("저장됨");renderCalendar(cy,cm)})};if(file){storage.ref('work_logs/'+selDate+'_'+file.name).put(file).then(s=>s.ref.getDownloadURL()).then(u=>saveData(u))}else{saveData(adminWorkLogs[selDate]?.imageUrl||null)}}
         function deleteWorkLog(){if(selDate&&confirm("삭제?"))db.collection("work_logs").doc(selDate).delete().then(()=>{showToast("삭제됨");renderCalendar(cy,cm)})}
 
+        // [COMMENT SYSTEM]
+        let commentUnsubscribes = {};
+
+        function loadCommentsForPage() {
+            // Unsubscribe existing listeners
+            Object.values(commentUnsubscribes).forEach(unsub => unsub());
+            commentUnsubscribes = {};
+
+            // Add listeners for current page posts
+            const currentPosts = allPostsData.slice((currentBoardPage-1)*postsPerPage, currentBoardPage*postsPerPage);
+            currentPosts.forEach(post => {
+                const unsub = db.collection('posts').doc(post.id).collection('comments').orderBy('timestamp', 'asc').onSnapshot(snapshot => {
+                    const listEl = document.getElementById(`cmt-list-${post.id}`);
+                    if (!listEl) return;
+                    listEl.innerHTML = "";
+                    snapshot.forEach(doc => {
+                        const c = doc.data();
+                        listEl.innerHTML += `
+                            <div class="comment-item">
+                                <span class="comment-meta">${c.name}</span>
+                                <span class="comment-text">${c.text}</span>
+                                <button class="comment-del-btn" onclick="deleteComment('${post.id}', '${doc.id}', '${c.password}')">×</button>
+                            </div>`;
+                    });
+                });
+                commentUnsubscribes[post.id] = unsub;
+            });
+        }
+
+        function addComment(postId) {
+            const name = document.getElementById(`cmt-name-${postId}`).value;
+            const pw = document.getElementById(`cmt-pw-${postId}`).value;
+            const text = document.getElementById(`cmt-txt-${postId}`).value;
+            if (!name || !pw || !text) { showToast("입력 확인"); return; }
+            
+            db.collection('posts').doc(postId).collection('comments').add({
+                name: name, password: pw, text: text,
+                timestamp: firebase.firestore.FieldValue.serverTimestamp()
+            }).then(() => {
+                document.getElementById(`cmt-txt-${postId}`).value = ""; // Clear text only
+                showToast("댓글 등록");
+            });
+        }
+
+        function deleteComment(postId, commentId, realPw) {
+            const inputPw = prompt("비밀번호:");
+            if (inputPw === realPw || inputPw === "0346") {
+                db.collection('posts').doc(postId).collection('comments').doc(commentId).delete().then(() => showToast("삭제됨"));
+            } else {
+                showToast("비밀번호 불일치");
+            }
+        }
+
+        // Data
         function loadAllData(){
-            db.collection("notices").orderBy("timestamp","desc").onSnapshot(s=>{const l=document.getElementById("noticeList");l.innerHTML="";s.forEach(d=>{const n=d.data();l.innerHTML+=`<li class="post-item tap-effect"><div onclick="toggleHidden('n-${d.id}')" style="display:flex;justify-content:space-between;"><span class="post-title" style="color:var(--danger)">📢 ${n.title}</span><div class="post-meta">${n.date}</div></div><div id="n-${d.id}" class="hidden" style="margin-top:10px;padding:10px;background:rgba(0,0,0,0.03);">${n.content}<br><button class="mini-btn btn-del" onclick="delNotice('${d.id}',event)">삭제</button></div></li>`})});
+            db.collection("notices").orderBy("timestamp","desc").onSnapshot(s=>{const l=document.getElementById("noticeList");l.innerHTML="";s.forEach(d=>{const n=d.data();l.innerHTML+=`<li class="post-item tap-effect"><div onclick="toggleContent('n-${d.id}')" style="display:flex;justify-content:space-between;"><span class="post-title" style="color:var(--danger)">📢 ${n.title}</span><div class="post-meta">${n.date}</div></div><div id="n-${d.id}" class="post-body">${n.content}<br><button class="mini-btn btn-del" onclick="delNotice('${d.id}',event)">삭제</button></div></li>`})});
             db.collection("posts").orderBy("timestamp","desc").onSnapshot(s=>{allPostsData=[];s.forEach(d=>{let o=d.data();o.id=d.id;allPostsData.push(o)});renderBoardPage(1)});
             db.collection("ships").orderBy("shipName","asc").onSnapshot(s=>{allShipsData=[];s.forEach(d=>{let o=d.data();o.id=d.id;allShipsData.push(o)});filterShips()});
             db.collection("archives").orderBy("timestamp","desc").onSnapshot(s=>{allFilesData=[];s.forEach(d=>{let o=d.data();o.id=d.id;allFilesData.push(o)});renderFilePage(1)});
         }
-        function renderBoardPage(p){currentBoardPage=p;const l=document.getElementById("boardList");l.innerHTML="";allPostsData.slice((p-1)*postsPerPage,p*postsPerPage).forEach(x=>{l.innerHTML+=`<li class="post-item tap-effect"><div onclick="toggleHidden('p-${x.id}')"><span class="post-title">[${x.category}] ${x.title}</span><div class="post-meta">${x.name} | ${x.date}</div></div><div id="p-${x.id}" class="hidden" style="margin-top:10px;padding:10px;background:rgba(0,0,0,0.03);">${x.content}<br><button class="mini-btn btn-del" onclick="deletePost('${x.id}','${x.password}',event)">삭제</button></div></li>`});renderPagination("pagination",Math.ceil(allPostsData.length/postsPerPage),p,renderBoardPage)}
-        function renderShipPage(p){currentShipPage=p;const l=document.getElementById("shipList");l.innerHTML="";filteredShips.slice((p-1)*postsPerPage,p*postsPerPage).forEach(x=>{let img=x.imageUrl?`<button class="mini-btn btn-photo" onclick="event.stopPropagation();showImageModal('${x.imageUrl}')">📷</button>`:"";l.innerHTML+=`<li class="post-item tap-effect"><div onclick="toggleHidden('s-${x.id}')" style="display:flex;justify-content:space-between;"><span class="post-title">🚢 ${x.shipName}</span><div>${img}</div></div><div id="s-${x.id}" class="hidden" style="margin-top:10px;padding:10px;background:rgba(0,0,0,0.03);"><p><strong>[본선]</strong> ${x.onboardFeat||'-'}</p><p><strong>[육상]</strong> ${x.onshoreFeat||'-'}</p><button class="mini-btn btn-edit" onclick="editShip('${x.id}')">수정</button><button class="mini-btn btn-del" onclick="deleteShip('${x.id}',event)">삭제</button></div></li>`});renderPagination("shipPagination",Math.ceil(filteredShips.length/postsPerPage),p,renderShipPage)}
+        
+        function renderBoardPage(p){
+            currentBoardPage=p;
+            const l=document.getElementById("boardList");
+            l.innerHTML="";
+            const pagePosts = allPostsData.slice((p-1)*postsPerPage, p*postsPerPage);
+            
+            pagePosts.forEach(x=>{
+                l.innerHTML+=`
+                <li class="post-item tap-effect">
+                    <div onclick="toggleContent('p-${x.id}')">
+                        <span class="post-title">[${x.category}] ${x.title}</span>
+                        <div class="post-meta">${x.name} | ${x.date}</div>
+                    </div>
+                    <div id="p-${x.id}" class="post-body">
+                        <div style="margin-bottom:15px; white-space:pre-wrap;">${x.content}</div>
+                        
+                        <div class="comment-section">
+                            <div id="cmt-list-${x.id}" class="comment-list"></div>
+                            <div class="comment-form">
+                                <input id="cmt-name-${x.id}" class="comment-input-sm" placeholder="닉">
+                                <input id="cmt-pw-${x.id}" class="comment-input-sm" type="password" placeholder="비번">
+                                <input id="cmt-txt-${x.id}" class="comment-input-lg" placeholder="댓글 내용...">
+                                <button class="comment-submit" onclick="addComment('${x.id}')">등록</button>
+                            </div>
+                        </div>
+
+                        <div style="margin-top:10px; text-align:right;">
+                            <button class="mini-btn btn-del" onclick="deletePost('${x.id}','${x.password}',event)">글 삭제</button>
+                        </div>
+                    </div>
+                </li>`;
+            });
+            renderPagination("pagination",Math.ceil(allPostsData.length/postsPerPage),p,renderBoardPage);
+            
+            // Load comments for the rendered posts
+            loadCommentsForPage();
+        }
+
+        function renderShipPage(p){currentShipPage=p;const l=document.getElementById("shipList");l.innerHTML="";filteredShips.slice((p-1)*postsPerPage,p*postsPerPage).forEach(x=>{let img=x.imageUrl?`<button class="mini-btn btn-photo" onclick="event.stopPropagation();showImageModal('${x.imageUrl}')">📷</button>`:"";l.innerHTML+=`<li class="post-item tap-effect"><div onclick="toggleContent('s-${x.id}')" style="display:flex;justify-content:space-between;"><span class="post-title">🚢 ${x.shipName}</span><div>${img}</div></div><div id="s-${x.id}" class="post-body"><p><strong>[본선]</strong> ${x.onboardFeat||'-'}</p><p><strong>[육상]</strong> ${x.onshoreFeat||'-'}</p><button class="mini-btn btn-edit" onclick="editShip('${x.id}')">수정</button><button class="mini-btn btn-del" onclick="deleteShip('${x.id}',event)">삭제</button></div></li>`});renderPagination("shipPagination",Math.ceil(filteredShips.length/postsPerPage),p,renderShipPage)}
         function renderFilePage(p){currentFilePage=p;const l=document.getElementById("fileList");l.innerHTML="";allFilesData.slice((p-1)*postsPerPage,p*postsPerPage).forEach(x=>{l.innerHTML+=`<li class="post-item tap-effect" style="display:flex;justify-content:space-between;"><div><a href="${x.fileUrl}" target="_blank" style="text-decoration:none;color:var(--text-main);font-weight:bold;">💾 ${x.title}</a></div></li>`});renderPagination("filePagination",Math.ceil(allFilesData.length/postsPerPage),p,renderFilePage)}
         function renderPagination(id,t,c,f){const el=document.getElementById(id);el.innerHTML="";for(let i=1;i<=t;i++){const s=document.createElement("span");s.className=`page-num ${i===c?'active':''} tap-effect`;s.innerText=i;s.onclick=()=>f(i);el.appendChild(s)}}
 
