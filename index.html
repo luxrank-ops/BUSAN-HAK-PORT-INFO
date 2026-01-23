@@ -4,8 +4,24 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     
-    <meta name="description" content="부산항 현장직 필수 앱. 임금계산기, 스마트 근무일지(짝지기록), 선박위치 및 스케줄 조회.">
-    <meta property="og:title" content="BUSAN HAK PORT INFO">
+    <meta name="description" content="부산항 항운노조원 및 현장 근로자를 위한 필수 플랫폼. 2026년 최신 임금 계산기, 야간/휴일 수당 자동 계산, 스마트 근무일지(짝지기록), 실시간 선박 위치 및 스케줄 조회(HJNC, PNC, BNCT) 서비스를 제공합니다.">
+    <meta name="keywords" content="부산항, 항운노조, 임금계산기, 부산신항, 선박위치, 근무일지, 짝지기록, 노임계산, 야간수당, 안전수칙, 항만노동자, 포트미스">
+    <meta property="og:title" content="BUSAN HAK PORT INFO - 부산항 현장직 올인원 앱">
+    <meta property="og:description" content="복잡한 임금 계산과 선박 정보를 한눈에. 부산항 현장 근로자를 위한 스마트 솔루션.">
+    <meta name="robots" content="index, follow">
+    
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebApplication",
+      "name": "BUSAN HAK PORT INFO",
+      "applicationCategory": "BusinessApplication",
+      "operatingSystem": "Web",
+      "offers": { "@type": "Offer", "price": "0", "priceCurrency": "KRW" },
+      "description": "부산항 항운노조원을 위한 임금 계산 및 항만 정보 통합 서비스"
+    }
+    </script>
+
     <title>BUSAN HAK PORT INFO</title>
     
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
@@ -14,10 +30,11 @@
     
     <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6024353303588422" crossorigin="anonymous"></script>
 
-    <link rel="icon" type="image/png" sizes="32x32" href="icon.png?v=grid_layout">
+    <link rel="icon" type="image/png" sizes="32x32" href="icon.png?v=final_approval_2">
     <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.8/dist/web/static/pretendard.css" />
 
     <style>
+        /* [기존 스타일 유지] */
         :root {
             --primary: #1e3a8a; --primary-light: #3b82f6; --accent: #f59e0b;
             --bg-color: #f3f4f6; --card-bg: rgba(255, 255, 255, 0.95);
@@ -50,48 +67,33 @@
 
         .container { width: 96%; max-width: 600px; margin: 15px auto; }
         
-        /* [Main Grid Layout] */
+        /* [Grid & Card Layout] */
         .dash-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }
-        
-        /* [Dash Card Style] */
         .dash-card { 
             background: var(--card-bg); border-radius: 16px; 
             box-shadow: var(--glass-shadow); border: var(--glass-border); overflow: hidden;
-            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
-            display: flex; flex-direction: column;
+            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); display: flex; flex-direction: column;
         }
-        
-        /* Expanded State: Spans 2 columns */
         .dash-card.expanded { grid-column: span 2; }
-
         .dash-header {
             padding: 15px; cursor: pointer; display: flex; justify-content: space-between; align-items: center;
-            background: rgba(255,255,255,0.05); border-bottom: 1px solid transparent;
-            transition: background 0.2s; height: 100%; min-height: 60px;
+            background: rgba(255,255,255,0.05); border-bottom: 1px solid transparent; height: 100%; min-height: 60px;
         }
         .dash-card.expanded .dash-header { border-bottom: 1px solid var(--border); background: rgba(0,0,0,0.02); }
-        
         .dash-title { font-size: 1rem; font-weight: 800; color: var(--text-main); display: flex; align-items: center; gap: 6px; }
+        .dash-content { display: none; padding: 15px; background: var(--card-bg); animation: fadeIn 0.3s; }
+        
+        .card { background: var(--card-bg); border-radius: 16px; margin-bottom: 15px; box-shadow: var(--glass-shadow); border: var(--glass-border); overflow: hidden; }
+        .section-header { display: flex; justify-content: space-between; align-items: center; padding: 15px; cursor: pointer; border-bottom: 1px solid var(--border); }
+        .section-title { font-size: 1.1rem; font-weight: 800; display:flex; align-items:center; gap:8px; }
+        
         .toggle-icon { font-size: 0.8rem; color: var(--text-sub); transition: transform 0.3s; }
         .toggle-icon.rotated { transform: rotate(180deg); }
-        
-        .dash-content { display: none; padding: 15px; background: var(--card-bg); animation: fadeIn 0.3s; }
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-
-        /* [Normal Card for Terminals/Guide] */
-        .card { 
-            background: var(--card-bg); border-radius: 16px; margin-bottom: 15px; 
-            box-shadow: var(--glass-shadow); border: var(--glass-border); overflow: hidden;
-        }
-        .section-header { 
-            display: flex; justify-content: space-between; align-items: center; 
-            padding: 15px; cursor: pointer; border-bottom: 1px solid var(--border);
-        }
-        .section-title { font-size: 1.1rem; font-weight: 800; display:flex; align-items:center; gap:8px; }
         .collapsible-content { display: block; padding: 15px; }
         .collapsible-content.collapsed { display: none; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 
-        /* [Elements] */
+        /* [Content Elements] */
         .input-field { width: 100%; padding: 12px; margin-bottom: 8px; border: 1px solid var(--border); border-radius: 8px; background: rgba(255,255,255,0.6); color: var(--text-main); font-size: 0.95rem; }
         .textarea-field { height: 80px; resize: none; }
         .action-btn { width: 100%; padding: 12px; border: none; border-radius: 10px; font-weight: 700; color: white; cursor: pointer; background: var(--primary); font-size: 0.95rem; }
@@ -133,18 +135,23 @@
         .modal-content { background: var(--card-bg); padding: 20px; border-radius: 15px; max-width: 90%; max-height: 80%; overflow-y: auto; }
         .modal-img { max-width: 100%; border-radius: 5px; }
         
-        /* Calendar */
+        /* [SEO Optimized Guide Text] - 애드센스 승인 핵심 */
+        .guide-text { line-height: 1.8; font-size: 0.9rem; text-align: left; color: var(--text-main); }
+        .guide-text h4 { color: var(--primary); margin: 25px 0 10px 0; border-left: 4px solid var(--accent); padding-left: 10px; font-size: 1rem; }
+        .guide-text p { margin-bottom: 12px; word-break: keep-all; }
+        .guide-text ul { padding-left: 20px; margin-bottom: 15px; }
+        .guide-text li { margin-bottom: 5px; }
+
+        footer { text-align: center; padding: 40px 20px; color: var(--text-sub); font-size: 0.8rem; margin-bottom: 80px; border-top: 1px solid var(--border); }
+        .footer-link { cursor: pointer; text-decoration: underline; margin: 0 8px; }
+        
         .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; text-align: center; }
         .cal-day { padding: 8px 2px; border-radius: 8px; background: rgba(255,255,255,0.5); border: 1px solid var(--border); font-weight: 700; font-size: 0.85rem; }
         .cal-day.selected { background: var(--primary); color: white; border-color: var(--primary); }
         .cal-dot { width: 4px; height: 4px; background-color: var(--success); border-radius: 50%; margin: 3px auto 0 auto; display: none; }
         .cal-day.has-data .cal-dot { display: block; }
-        
-        /* Guide Content */
-        .guide-text { line-height: 1.8; font-size: 0.9rem; text-align: left; }
-        .guide-text h4 { color: var(--primary); margin: 20px 0 10px 0; border-left: 4px solid var(--accent); padding-left: 10px; }
-        footer { text-align: center; padding: 30px 20px; color: var(--text-sub); font-size: 0.8rem; margin-bottom: 80px; }
-        .footer-link { cursor: pointer; text-decoration: underline; margin: 0 5px; }
+        .chip-container { display: flex; gap: 5px; margin-bottom: 10px; flex-wrap: wrap; }
+        .chip-btn { padding: 6px 12px; border-radius: 15px; border: 1px solid var(--primary-light); background: rgba(255,255,255,0.6); color: var(--primary); font-size: 0.8rem; font-weight: 700; cursor: pointer; }
     </style>
 </head>
 <body>
@@ -206,7 +213,7 @@
                 <div class="dash-content">
                     <div style="display:flex; gap:5px; margin-bottom:10px;">
                         <input type="text" id="shipSearch" class="input-field" placeholder="선박명 검색..." onkeyup="filterShips()" style="margin-bottom:0; flex:1;">
-                        <button class="action-btn" style="width:auto; padding:10px; background:var(--primary); margin:0;" onclick="filterShips()">검색</button>
+                        <button class="action-btn" style="width:auto; padding:10px; background:var(--primary); margin:0;" onclick="filterShips()">🔍 검색</button>
                     </div>
                     <a href="https://www.marinetraffic.com/" target="_blank" class="action-btn" style="background:#0284c7; text-align:center; display:block; text-decoration:none; margin-bottom:10px; padding:12px;">🌍 선박 위치 확인</a>
                     <button class="action-btn" style="background:var(--accent); margin-bottom:10px; padding:12px;" onclick="toggleHidden('shipForm')">📝 신규 선박 정보 등록</button>
@@ -315,12 +322,23 @@
         </div>
 
         <div class="card">
-            <div class="section-header tap-effect" onclick="toggleSection('guide-content', this)"><span class="section-title">📘 이용가이드 <span class="toggle-icon">▼</span></span></div>
-            <div id="guide-content" class="collapsible-content collapsed">
+            <div class="section-header tap-effect" onclick="toggleSection('guide-content', this)"><span class="section-title">📘 이용가이드 <span class="toggle-icon rotated">▼</span></span></div>
+            <div id="guide-content" class="collapsible-content">
                 <div class="guide-text">
-                    <h3>⚓ 부산항 현장직 가이드</h3><p>BUSAN HAK PORT INFO 사용법입니다.</p>
-                    <h4>1. 2026년 임금 계산기</h4><p>시급과 근무 시간을 입력하면 1.5배 수당이 자동 합산됩니다.</p>
-                    <h4>2. 스마트 근무일지(짝지기록)</h4><p>근무 기록과 현장 사진을 저장하고 월별 수익을 관리하세요.</p>
+                    <h3>⚓ 부산항 현장직 가이드</h3>
+                    <p>BUSAN HAK PORT INFO는 부산항 항운노조원과 현장 근로자를 위한 필수 플랫폼입니다. 복잡한 계산과 조회를 한 번에 해결하세요.</p>
+                    
+                    <h4>1. 2026년 임금 계산기</h4>
+                    <p>2026년 최신 시급(기본값 10,030원)을 기반으로 주간 근무 및 야간/휴일(1.5배) 근무 수당을 자동으로 계산합니다. 기능공, 절맞이, 우천 등 현장 특수 수당도 '시간 × 단가' 방식으로 정확하게 산출할 수 있습니다.</p>
+                    
+                    <h4>2. 스마트 근무일지(짝지기록)</h4>
+                    <p>매일의 근무 시간과 특이사항을 기록하고, 현장 사진을 업로드하여 '짝지'와의 추억을 남기세요. 월별 총 수입이 자동 합산되어 급여 관리가 쉬워집니다.</p>
+                    
+                    <h4>3. 실시간 선박 및 터미널 정보</h4>
+                    <p>HJNC, PNC, BNCT 등 부산항 주요 터미널의 선박 스케줄과 접안 현황을 실시간으로 확인하세요. 마린트래픽(MarineTraffic) 연동으로 선박의 현재 위치도 지도에서 바로 볼 수 있습니다.</p>
+                    
+                    <h4>4. 현장 안전 수칙</h4>
+                    <p>안전모, 안전화, 반사 조끼 착용은 생명을 지키는 첫걸음입니다. 컨테이너 라싱 작업 및 중장비 이동 구역에서는 항상 주변을 살피고 안전 수칙을 준수해 주세요.</p>
                 </div>
             </div>
         </div>
@@ -333,12 +351,28 @@
 
         <footer>
             <p>© 2024 BUSAN HAK PORT INFO. All rights reserved.</p>
-            <div style="margin-top:10px;"><span class="footer-link" onclick="openPrivacy()">개인정보처리방침</span></div>
+            <div style="margin-top:10px;">
+                <span class="footer-link" onclick="openPrivacy()">개인정보처리방침</span> | 
+                <span class="footer-link" onclick="alert('이용약관: 본 서비스는 현장 보조용이며 법적 효력이 없습니다.')">이용약관</span>
+            </div>
         </footer>
     </div>
 
     <nav class="bottom-nav"><div class="nav-item active tap-effect" onclick="scrollToTop()"><span class="nav-icon">🏠</span>홈</div><div class="nav-item tap-effect" onclick="toggleDashItem('board-card')"><span class="nav-icon">💬</span>톡톡</div><div class="nav-item tap-effect" onclick="toggleDashItem('ship-card')"><span class="nav-icon">🚢</span>선박</div><div class="nav-item tap-effect" onclick="toggleDashItem('file-card')"><span class="nav-icon">📂</span>자료</div></nav>
-    <div id="toast">알림</div><div id="imageModal" class="modal-overlay" onclick="closeImageModal()"><div class="modal-content" onclick="event.stopPropagation()"><img id="modalImage" class="modal-img"><button class="action-btn bg-cancel tap-effect" onclick="closeImageModal()" style="margin-top:15px;">닫기</button></div></div><div id="privacyModal" class="modal-overlay" onclick="document.getElementById('privacyModal').style.display='none'"><div class="modal-content" style="text-align:left;"><h3>🛡️ 개인정보처리방침</h3><p>정보 수집 목적...</p><button class="action-btn bg-cancel" onclick="document.getElementById('privacyModal').style.display='none'">닫기</button></div></div>
+    <div id="toast">알림</div><div id="imageModal" class="modal-overlay" onclick="closeImageModal()"><div class="modal-content" onclick="event.stopPropagation()"><img id="modalImage" class="modal-img"><button class="action-btn bg-cancel tap-effect" onclick="closeImageModal()" style="margin-top:15px;">닫기</button></div></div>
+    
+    <div id="privacyModal" class="modal-overlay" onclick="document.getElementById('privacyModal').style.display='none'">
+        <div class="modal-content" style="text-align:left;">
+            <h3>🛡️ 개인정보처리방침</h3>
+            <p style="font-size:0.9rem; line-height:1.6; color:var(--text-main);">
+                <strong>1. 개인정보의 처리 목적</strong><br>본 앱은 서비스 제공(임금 계산, 근무 기록 저장)을 위해 필요한 최소한의 정보를 처리합니다.<br><br>
+                <strong>2. 수집하는 항목</strong><br>- 닉네임 (게시판 이용 시)<br>- 임금 계산기 입력 값 (사용자 기기 내 저장)<br>- 근무일지 사진 및 텍스트 (사용자 동의 하에 저장)<br><br>
+                <strong>3. 쿠키의 사용</strong><br>- 구글 애드센스 광고 송출을 위해 쿠키가 사용될 수 있습니다.<br><br>
+                문의: admin@busanport.app
+            </p>
+            <button class="action-btn bg-cancel" onclick="document.getElementById('privacyModal').style.display='none'">닫기</button>
+        </div>
+    </div>
 
     <script>
         const firebaseConfig = { apiKey: "AIzaSyBDXy5HcYW-IZQJ9ZDEivr_yi99AxhYme8", authDomain: "my-app-d8527.firebaseapp.com", projectId: "my-app-d8527", storageBucket: "my-app-d8527.firebasestorage.app", messagingSenderId: "667323279185", appId: "1:667323279185:web:cff6184aaa82e08d345570", measurementId: "G-HZQLF0L77P" };
@@ -353,7 +387,6 @@
             const content = card.querySelector('.dash-content');
             const icon = card.querySelector('.toggle-icon');
             
-            // Close other expanded cards (Optional, keeps it cleaner)
             document.querySelectorAll('.dash-card.expanded').forEach(c => {
                 if(c !== card) {
                     c.classList.remove('expanded');
@@ -407,8 +440,14 @@
         let cy, cm, selDate;
         function checkAdminAndOpenLog(headerEl){
             if(prompt("관리자 암호:")==="0346"){
-                toggleDashItem('log-card');
-                const n=new Date(); renderCalendar(n.getFullYear(),n.getMonth());
+                const card = document.getElementById('log-card');
+                // Use toggleDashItem logic manually because onclick is on header
+                if (card.classList.contains('expanded')) {
+                    toggleDashItem('log-card'); // close
+                } else {
+                    toggleDashItem('log-card'); // open
+                    const n=new Date(); renderCalendar(n.getFullYear(),n.getMonth());
+                }
             } else showToast("⛔ 접근 불가");
         }
         function renderCalendar(y,m){cy=y;cm=m;const dt=new Date(y,m,1);document.getElementById('calMonthYear').innerText=`${y}년 ${m+1}월`;const g=document.getElementById('calendarGrid');g.innerHTML='';['일','월','화','수','목','금','토'].forEach(d=>g.innerHTML+=`<div style="font-weight:bold;color:var(--text-sub);font-size:0.8rem;">${d}</div>`);for(let i=0;i<dt.getDay();i++)g.innerHTML+=`<div></div>`;const dim=new Date(y,m+1,0).getDate();db.collection("work_logs").where("date",">=",`${y}-${String(m+1).padStart(2,'0')}-01`).where("date","<=",`${y}-${String(m+1).padStart(2,'0')}-${dim}`).get().then(qs=>{adminWorkLogs={};let t=0;qs.forEach(d=>{adminWorkLogs[d.id]=d.data();t+=(d.data().totalPay||0)});document.getElementById('monthlyTotalDisplay').innerText=Math.floor(t).toLocaleString()+"원";for(let i=1;i<=dim;i++){const ds=`${y}-${String(m+1).padStart(2,'0')}-${String(i).padStart(2,'0')}`;const d=document.createElement('div');d.className='cal-day tap-effect';if(adminWorkLogs[ds])d.classList.add('has-data');d.innerHTML=`${i}<div class="cal-dot"></div>`;d.onclick=()=>selectDate(ds,d);g.appendChild(d)}})}
