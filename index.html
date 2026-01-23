@@ -4,24 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     
-    <meta name="description" content="부산항 항운노조원 및 현장 근로자를 위한 필수 플랫폼. 2026년 최신 임금 계산기, 야간/휴일 수당 자동 계산, 스마트 근무일지(짝지기록), 실시간 선박 위치 및 스케줄 조회(HJNC, PNC, BNCT) 서비스를 제공합니다.">
-    <meta name="keywords" content="부산항, 항운노조, 임금계산기, 부산신항, 선박위치, 근무일지, 짝지기록, 노임계산, 야간수당, 안전수칙, 항만노동자, 포트미스">
-    <meta property="og:title" content="BUSAN HAK PORT INFO - 부산항 현장직 올인원 앱">
-    <meta property="og:description" content="복잡한 임금 계산과 선박 정보를 한눈에. 부산항 현장 근로자를 위한 스마트 솔루션.">
-    <meta name="robots" content="index, follow">
-    
-    <script type="application/ld+json">
-    {
-      "@context": "https://schema.org",
-      "@type": "WebApplication",
-      "name": "BUSAN HAK PORT INFO",
-      "applicationCategory": "BusinessApplication",
-      "operatingSystem": "Web",
-      "offers": { "@type": "Offer", "price": "0", "priceCurrency": "KRW" },
-      "description": "부산항 항운노조원을 위한 임금 계산 및 항만 정보 통합 서비스"
-    }
-    </script>
-
+    <meta name="description" content="부산항 현장직 필수 앱. 임금계산기, 스마트 근무일지(짝지기록), 실시간 선박위치 및 스케줄 조회.">
+    <meta property="og:title" content="BUSAN HAK PORT INFO">
     <title>BUSAN HAK PORT INFO</title>
     
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
@@ -30,11 +14,10 @@
     
     <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6024353303588422" crossorigin="anonymous"></script>
 
-    <link rel="icon" type="image/png" sizes="32x32" href="icon.png?v=final_approval_2">
+    <link rel="icon" type="image/png" sizes="32x32" href="icon.png?v=weather_grid">
     <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.8/dist/web/static/pretendard.css" />
 
     <style>
-        /* [기존 스타일 유지] */
         :root {
             --primary: #1e3a8a; --primary-light: #3b82f6; --accent: #f59e0b;
             --bg-color: #f3f4f6; --card-bg: rgba(255, 255, 255, 0.95);
@@ -67,12 +50,13 @@
 
         .container { width: 96%; max-width: 600px; margin: 15px auto; }
         
-        /* [Grid & Card Layout] */
+        /* [Main Grid Layout] */
         .dash-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }
         .dash-card { 
             background: var(--card-bg); border-radius: 16px; 
             box-shadow: var(--glass-shadow); border: var(--glass-border); overflow: hidden;
-            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); display: flex; flex-direction: column;
+            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+            display: flex; flex-direction: column;
         }
         .dash-card.expanded { grid-column: span 2; }
         .dash-header {
@@ -83,6 +67,7 @@
         .dash-title { font-size: 1rem; font-weight: 800; color: var(--text-main); display: flex; align-items: center; gap: 6px; }
         .dash-content { display: none; padding: 15px; background: var(--card-bg); animation: fadeIn 0.3s; }
         
+        /* [Section Cards] */
         .card { background: var(--card-bg); border-radius: 16px; margin-bottom: 15px; box-shadow: var(--glass-shadow); border: var(--glass-border); overflow: hidden; }
         .section-header { display: flex; justify-content: space-between; align-items: center; padding: 15px; cursor: pointer; border-bottom: 1px solid var(--border); }
         .section-title { font-size: 1.1rem; font-weight: 800; display:flex; align-items:center; gap:8px; }
@@ -93,7 +78,17 @@
         .collapsible-content.collapsed { display: none; }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 
-        /* [Content Elements] */
+        /* [Control Grid - NEW] */
+        .control-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .control-btn { 
+            background: var(--card-bg); border: 1px solid var(--border); color: var(--text-main); 
+            padding: 16px; border-radius: 12px; text-decoration: none; 
+            font-size: 0.95rem; font-weight: 700; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.02); transition: all 0.2s;
+        }
+        .control-btn:active { transform: scale(0.98); background: rgba(0,0,0,0.05); }
+
+        /* [Elements] */
         .input-field { width: 100%; padding: 12px; margin-bottom: 8px; border: 1px solid var(--border); border-radius: 8px; background: rgba(255,255,255,0.6); color: var(--text-main); font-size: 0.95rem; }
         .textarea-field { height: 80px; resize: none; }
         .action-btn { width: 100%; padding: 12px; border: none; border-radius: 10px; font-weight: 700; color: white; cursor: pointer; background: var(--primary); font-size: 0.95rem; }
@@ -135,13 +130,10 @@
         .modal-content { background: var(--card-bg); padding: 20px; border-radius: 15px; max-width: 90%; max-height: 80%; overflow-y: auto; }
         .modal-img { max-width: 100%; border-radius: 5px; }
         
-        /* [SEO Optimized Guide Text] - 애드센스 승인 핵심 */
         .guide-text { line-height: 1.8; font-size: 0.9rem; text-align: left; color: var(--text-main); }
         .guide-text h4 { color: var(--primary); margin: 25px 0 10px 0; border-left: 4px solid var(--accent); padding-left: 10px; font-size: 1rem; }
         .guide-text p { margin-bottom: 12px; word-break: keep-all; }
-        .guide-text ul { padding-left: 20px; margin-bottom: 15px; }
-        .guide-text li { margin-bottom: 5px; }
-
+        
         footer { text-align: center; padding: 40px 20px; color: var(--text-sub); font-size: 0.8rem; margin-bottom: 80px; border-top: 1px solid var(--border); }
         .footer-link { cursor: pointer; text-decoration: underline; margin: 0 8px; }
         
@@ -318,27 +310,32 @@
 
         <div class="card">
             <div class="section-header tap-effect" onclick="toggleSection('control-content', this)"><span class="section-title">📡 관제 및 날씨 <span class="toggle-icon">▼</span></span></div>
-            <div id="control-content" class="collapsible-content collapsed"><div class="dashboard-grid"><a href="http://www.busanpilot.co.kr/popup/monitoring" class="dash-btn" target="_blank"><span>🛥️</span>도선<br>모니터</a><a href="https://new.portmis.go.kr/" class="dash-btn" target="_blank"><span>📑</span>PORT<br>MIS</a><a href="https://weather.naver.com/today/08440585" class="dash-btn" target="_blank" style="color:var(--danger);"><span>☀️</span>부산<br>날씨</a></div></div>
+            <div id="control-content" class="collapsible-content collapsed">
+                <div class="control-grid">
+                    <a href="http://www.busanpilot.co.kr/popup/monitoring" class="control-btn" target="_blank">🛥️ 도선 모니터</a>
+                    <a href="https://new.portmis.go.kr/" class="control-btn" target="_blank">📑 PORT MIS</a>
+                    <a href="https://weather.naver.com/today/08440585" class="control-btn" target="_blank" style="grid-column: span 2; color:var(--danger);">☀️ 부산 날씨 확인</a>
+                </div>
+            </div>
         </div>
 
         <div class="card">
             <div class="section-header tap-effect" onclick="toggleSection('guide-content', this)"><span class="section-title">📘 이용가이드 <span class="toggle-icon rotated">▼</span></span></div>
             <div id="guide-content" class="collapsible-content">
                 <div class="guide-text">
-                    <h3>⚓ 부산항 현장직 가이드</h3>
-                    <p>BUSAN HAK PORT INFO는 부산항 항운노조원과 현장 근로자를 위한 필수 플랫폼입니다. 복잡한 계산과 조회를 한 번에 해결하세요.</p>
+                    <h3>⚓ 부산항 현장직을 위한 필수 가이드</h3>
+                    <p>BUSAN HAK PORT INFO는 부산항 항운노조원 및 현장 근로자분들을 위한 통합 플랫폼입니다. 현장 업무의 효율성을 높이기 위해 제작되었습니다.</p>
                     
                     <h4>1. 2026년 임금 계산기</h4>
-                    <p>2026년 최신 시급(기본값 10,030원)을 기반으로 주간 근무 및 야간/휴일(1.5배) 근무 수당을 자동으로 계산합니다. 기능공, 절맞이, 우천 등 현장 특수 수당도 '시간 × 단가' 방식으로 정확하게 산출할 수 있습니다.</p>
+                    <p>부산항 현장의 특수성을 반영하여 시급과 근무 시간을 입력하면 주간, 야간/휴일(1.5배) 수당이 자동 합산됩니다. 기능공, 절맞이, 우천 수당 등 다양한 변수를 적용할 수 있습니다.</p>
                     
                     <h4>2. 스마트 근무일지(짝지기록)</h4>
-                    <p>매일의 근무 시간과 특이사항을 기록하고, 현장 사진을 업로드하여 '짝지'와의 추억을 남기세요. 월별 총 수입이 자동 합산되어 급여 관리가 쉬워집니다.</p>
+                    <p>매일의 근무 내용을 달력에 기록하여 월별 예상 수령액을 한눈에 파악할 수 있습니다. 그날의 작업 내용과 현장 사진을 '짝지기록'으로 남겨보세요. 데이터는 안전하게 저장됩니다.</p>
                     
-                    <h4>3. 실시간 선박 및 터미널 정보</h4>
-                    <p>HJNC, PNC, BNCT 등 부산항 주요 터미널의 선박 스케줄과 접안 현황을 실시간으로 확인하세요. 마린트래픽(MarineTraffic) 연동으로 선박의 현재 위치도 지도에서 바로 볼 수 있습니다.</p>
+                    <h4>3. 현장 안전 수칙</h4>
+                    <p>항만 내 모든 작업 시 안전모, 안전화, 반사 조끼 착용은 필수입니다. 중장비 이동 경로에서의 보행 안전과 컨테이너 작업 시 낙하물 사고 예방에 각별히 유의하시기 바랍니다.</p>
                     
-                    <h4>4. 현장 안전 수칙</h4>
-                    <p>안전모, 안전화, 반사 조끼 착용은 생명을 지키는 첫걸음입니다. 컨테이너 라싱 작업 및 중장비 이동 구역에서는 항상 주변을 살피고 안전 수칙을 준수해 주세요.</p>
+                    <p style="margin-top:15px; font-size:0.85rem; color:var(--text-sub);">* 본 앱에서 제공하는 급여 계산 결과는 참고용이며, 실제 지급액과 차이가 있을 수 있습니다.</p>
                 </div>
             </div>
         </div>
@@ -359,20 +356,7 @@
     </div>
 
     <nav class="bottom-nav"><div class="nav-item active tap-effect" onclick="scrollToTop()"><span class="nav-icon">🏠</span>홈</div><div class="nav-item tap-effect" onclick="toggleDashItem('board-card')"><span class="nav-icon">💬</span>톡톡</div><div class="nav-item tap-effect" onclick="toggleDashItem('ship-card')"><span class="nav-icon">🚢</span>선박</div><div class="nav-item tap-effect" onclick="toggleDashItem('file-card')"><span class="nav-icon">📂</span>자료</div></nav>
-    <div id="toast">알림</div><div id="imageModal" class="modal-overlay" onclick="closeImageModal()"><div class="modal-content" onclick="event.stopPropagation()"><img id="modalImage" class="modal-img"><button class="action-btn bg-cancel tap-effect" onclick="closeImageModal()" style="margin-top:15px;">닫기</button></div></div>
-    
-    <div id="privacyModal" class="modal-overlay" onclick="document.getElementById('privacyModal').style.display='none'">
-        <div class="modal-content" style="text-align:left;">
-            <h3>🛡️ 개인정보처리방침</h3>
-            <p style="font-size:0.9rem; line-height:1.6; color:var(--text-main);">
-                <strong>1. 개인정보의 처리 목적</strong><br>본 앱은 서비스 제공(임금 계산, 근무 기록 저장)을 위해 필요한 최소한의 정보를 처리합니다.<br><br>
-                <strong>2. 수집하는 항목</strong><br>- 닉네임 (게시판 이용 시)<br>- 임금 계산기 입력 값 (사용자 기기 내 저장)<br>- 근무일지 사진 및 텍스트 (사용자 동의 하에 저장)<br><br>
-                <strong>3. 쿠키의 사용</strong><br>- 구글 애드센스 광고 송출을 위해 쿠키가 사용될 수 있습니다.<br><br>
-                문의: admin@busanport.app
-            </p>
-            <button class="action-btn bg-cancel" onclick="document.getElementById('privacyModal').style.display='none'">닫기</button>
-        </div>
-    </div>
+    <div id="toast">알림</div><div id="imageModal" class="modal-overlay" onclick="closeImageModal()"><div class="modal-content" onclick="event.stopPropagation()"><img id="modalImage" class="modal-img"><button class="action-btn bg-cancel tap-effect" onclick="closeImageModal()" style="margin-top:15px;">닫기</button></div></div><div id="privacyModal" class="modal-overlay" onclick="document.getElementById('privacyModal').style.display='none'"><div class="modal-content" style="text-align:left;"><h3>🛡️ 개인정보처리방침</h3><p>정보 수집 목적...</p><button class="action-btn bg-cancel" onclick="document.getElementById('privacyModal').style.display='none'">닫기</button></div></div>
 
     <script>
         const firebaseConfig = { apiKey: "AIzaSyBDXy5HcYW-IZQJ9ZDEivr_yi99AxhYme8", authDomain: "my-app-d8527.firebaseapp.com", projectId: "my-app-d8527", storageBucket: "my-app-d8527.firebasestorage.app", messagingSenderId: "667323279185", appId: "1:667323279185:web:cff6184aaa82e08d345570", measurementId: "G-HZQLF0L77P" };
@@ -454,7 +438,7 @@
         function changeMonth(d){renderCalendar(new Date(cy,cm+d,1).getFullYear(),new Date(cy,cm+d,1).getMonth());vibrate()}
         function selectDate(ds,el){document.querySelectorAll('.cal-day').forEach(d=>d.classList.remove('selected'));el.classList.add('selected');selDate=ds;document.getElementById('dailyLogForm').classList.remove('hidden');document.getElementById('selectedDateText').innerText=ds;const d=adminWorkLogs[ds]||{};document.getElementById('logDayHours').value=d.dayHours||'';document.getElementById('logNightHours').value=d.nightHours||'';document.getElementById('logSkillTime').value=d.skillTime||'';document.getElementById('logSkillRate').value=d.skillRate||'';document.getElementById('logSignalTime').value=d.signalTime||'';document.getElementById('logSignalRate').value=d.signalRate||'';document.getElementById('logRainTime').value=d.rainTime||'';document.getElementById('logRainRate').value=d.rainRate||'';document.getElementById('logMemo').value=d.memo||'';document.getElementById('logImagePreview').src=d.imageUrl||'';document.getElementById('logImageContainer').style.display=d.imageUrl?'block':'none';document.getElementById('dailyTotalDisplay').innerText=(d.totalPay||0).toLocaleString()+"원";vibrate()}
         function resetLogInputs(){document.querySelectorAll('#dailyLogForm input, #dailyLogForm textarea').forEach(i=>i.value=''); document.getElementById('logImagePreview').src=''; document.getElementById('logImageContainer').style.display='none'; vibrate();}
-        function previewLogImage(input){if(input.files && input.files[0]){const r = new FileReader(); r.onload = function(e){document.getElementById('logImagePreview').src=e.target.result; document.getElementById('logImagePreview').style.display='block';}; r.readAsDataURL(input.files[0]);}}
+        function previewLogImage(input){if(input.files && input.files[0]){const r = new FileReader(); r.onload = function(e){document.getElementById('logImagePreview').src=e.target.result; document.getElementById('logImageContainer').style.display='block';}; r.readAsDataURL(input.files[0]);}}
         function saveWorkLog(){if(!selDate)return;const h=10030,d=parseFloat(document.getElementById('logDayHours').value)||0,n=parseFloat(document.getElementById('logNightHours').value)||0,t=(d*h)+(n*h*1.5)+((parseFloat(document.getElementById('logSkillTime').value)||0)*(parseFloat(document.getElementById('logSkillRate').value)||0))+((parseFloat(document.getElementById('logSignalTime').value)||0)*(parseFloat(document.getElementById('logSignalRate').value)||0))+((parseFloat(document.getElementById('logRainTime').value)||0)*(parseFloat(document.getElementById('logRainRate').value)||0)),memo=document.getElementById('logMemo').value,file=document.getElementById('logImageInput').files[0];const saveData=(url)=>{const data={date:selDate,dayHours:d,nightHours:n,totalPay:t,memo:memo,imageUrl:url,skillTime:parseFloat(document.getElementById('logSkillTime').value)||0,skillRate:parseFloat(document.getElementById('logSkillRate').value)||0,signalTime:parseFloat(document.getElementById('logSignalTime').value)||0,signalRate:parseFloat(document.getElementById('logSignalRate').value)||0,rainTime:parseFloat(document.getElementById('logRainTime').value)||0,rainRate:parseFloat(document.getElementById('logRainRate').value)||0};db.collection("work_logs").doc(selDate).set(data).then(()=>{showToast("저장됨");renderCalendar(cy,cm)})};if(file){storage.ref('work_logs/'+selDate+'_'+file.name).put(file).then(s=>s.ref.getDownloadURL()).then(u=>saveData(u))}else{saveData(adminWorkLogs[selDate]?.imageUrl||null)}}
         function deleteWorkLog(){if(selDate&&confirm("삭제?"))db.collection("work_logs").doc(selDate).delete().then(()=>{showToast("삭제됨");renderCalendar(cy,cm)})}
 
