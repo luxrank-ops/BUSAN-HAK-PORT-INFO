@@ -1,6 +1,9 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
+    <link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#1e3a8a">
+
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     
@@ -545,5 +548,12 @@
         function showImageModal(s){document.getElementById("modalImage").src=s;document.getElementById("imageModal").style.display="flex"}
         function closeImageModal(){document.getElementById("imageModal").style.display="none"}
     </script>
+    <script>
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("service-worker.js");
+}
+</script>
+
 </body>
+
 </html>
