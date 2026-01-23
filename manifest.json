@@ -1,18 +1,19 @@
 {
-  "name": "BUSAN HAK PORT INFO",
-  "short_name": "BHP Info",
-  "start_url": "./index.html",
+  "name": "BUSAN HAK PORT",
+  "short_name": "HAK PORT",
+  "start_url": "/BUSAN-HAK-PORT-INFO/index.html",
   "display": "standalone",
-  "background_color": "#ffffff",
-  "theme_color": "#2c3e50",
+  "background_color": "#1e3a8a",
+  "theme_color": "#1e40af",
+  "orientation": "portrait",
   "icons": [
     {
-      "src": "icon.png",
+      "src": "/BUSAN-HAK-PORT-INFO/icons/icon-192.png",
       "sizes": "192x192",
       "type": "image/png"
     },
     {
-      "src": "icon.png",
+      "src": "/BUSAN-HAK-PORT-INFO/icons/icon-512.png",
       "sizes": "512x512",
       "type": "image/png"
     }
