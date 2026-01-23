@@ -1,200 +1,205 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-  <meta charset="UTF-8" />
-  <title>BUSAN HAK PORT</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="description" content="부산항 작업자 정보 공유 · 공지 · 게시판 · 자료실" />
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>항만 커뮤니티</title>
 
-  <!-- 애드센스 승인 필수 메타 -->
-  <meta name="robots" content="index,follow" />
+<meta name="description" content="항만 종사자를 위한 정보 공유 커뮤니티">
+<meta name="robots" content="index,follow">
 
-  <!-- PWA -->
-  <link rel="manifest" href="manifest.json" />
-  <meta name="theme-color" content="#2563eb" />
-
-  <style>
-    :root {
-      --primary:#2563eb; --danger:#dc2626; --bg:#f4f6f8; --card:#fff; --sub:#6b7280;
-    }
-    *{box-sizing:border-box}
-    body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans KR",sans-serif;background:var(--bg)}
-    header{background:linear-gradient(180deg,#3b82f6,#2563eb);color:#fff;text-align:center;padding:18px;font-size:1.3rem;font-weight:700}
-    .container{max-width:900px;margin:auto;padding:12px}
-    .card{background:var(--card);border-radius:14px;padding:14px;margin-bottom:14px;box-shadow:0 4px 10px rgba(0,0,0,.04)}
-    h2{margin:4px 0 10px;font-size:1.05rem}
-    input,textarea{width:100%;padding:10px;border-radius:8px;border:1px solid #d1d5db;margin-bottom:8px}
-    button{background:var(--primary);color:#fff;border:none;border-radius:10px;padding:10px 14px}
-    ul{list-style:none;padding:0;margin:0}
-    li{padding:10px 0;border-bottom:1px solid #e5e7eb}
-    .meta{font-size:.75rem;color:var(--sub)}
-    .danger{background:var(--danger)}
-  </style>
+<style>
+body{font-family:sans-serif;background:#f5f5f5;margin:0}
+.container{max-width:900px;margin:auto;padding:15px}
+.card{background:#fff;padding:15px;margin-bottom:15px;border-radius:8px}
+.post-item{border-bottom:1px solid #ddd;padding:10px 0}
+.post-header-row{display:flex;justify-content:space-between;cursor:pointer}
+.post-body-content{display:none;padding-top:10px}
+.page-num{margin:0 5px;cursor:pointer}
+.page-num.active{font-weight:bold}
+button{cursor:pointer}
+</style>
 </head>
+
 <body>
-<header>BUSAN HAK PORT</header>
 <div class="container">
 
-  <!-- 공지 -->
-  <div class="card">
-    <h2>📢 공지사항</h2>
-    <ul id="noticeList"></ul>
-  </div>
+<h2>📢 공지사항</h2>
+<ul id="noticeList"></ul>
 
-  <!-- 글 작성 -->
-  <div class="card">
-    <h2>✍ 글 작성</h2>
-    <input id="title" placeholder="제목" />
-    <input id="name" placeholder="작성자" />
-    <input id="password" type="password" placeholder="비밀번호" />
-    <textarea id="content" rows="4" placeholder="내용"></textarea>
-    <button onclick="addPost()">등록</button>
-  </div>
+<h2>📝 게시판</h2>
+<ul id="boardList"></ul>
+<div id="pagination"></div>
 
-  <!-- 게시판 -->
-  <div class="card">
-    <h2>💬 게시판</h2>
-    <ul id="postList"></ul>
-  </div>
+<h2>🚢 선박정보</h2>
+<input id="shipSearch" placeholder="선박 검색" onkeyup="filterShips()">
+<ul id="shipList"></ul>
+<div id="shipPagination"></div>
 
-  <!-- 자료실 -->
-  <div class="card">
-    <h2>📂 자료실</h2>
-    <ul id="fileList"></ul>
-  </div>
+<h2>💾 자료실</h2>
+<input id="fileSearch" placeholder="파일 검색" onkeyup="filterFiles()">
+<ul id="fileList"></ul>
+<div id="filePagination"></div>
 
-  <!-- 선박정보 -->
-  <div class="card">
-    <h2>🚢 선박정보</h2>
-    <input id="shipName" placeholder="선박명" />
-    <textarea id="shipInfo" rows="3" placeholder="작업 정보"></textarea>
-    <button onclick="addShip()">등록</button>
-    <ul id="shipList"></ul>
-  </div>
+<hr>
+<p>
+본 사이트는 항만 종사자를 위한 정보 공유 커뮤니티입니다.<br>
+문의: luxrank@gmail.com
+</p>
 
-  <!-- 근무일지 -->
-  <div class="card">
-    <h2>📒 근무일지</h2>
-    <input id="workDate" type="date" />
-    <input id="workHours" type="number" placeholder="근무시간" />
-    <textarea id="workMemo" rows="2" placeholder="메모"></textarea>
-    <button onclick="addWorklog()">저장</button>
-    <ul id="workList"></ul>
-  </div>
-
-  <!-- 임금 계산기 -->
-  <div class="card">
-    <h2>💰 임금 계산기</h2>
-    <input id="wage" type="number" placeholder="시급" />
-    <input id="hours" type="number" placeholder="근무시간" />
-    <button onclick="calcWage()">계산</button>
-    <p id="wageResult"></p>
-  </div>
-
-<!-- 개인정보처리방침 (애드센스 필수) -->
-  <div class="card">
-    <h2>개인정보처리방침</h2>
-    <p style="font-size:.85rem;color:#374151">
-      본 사이트는 게시판 운영을 위해 최소한의 정보만을 수집하며,
-      수집된 정보는 목적 외 사용되지 않습니다.
-    </p>
-  </div>
 </div>
 
-<script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
-  import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, serverTimestamp, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
-
-  const firebaseConfig = {
-    apiKey: "여기에_API_KEY",
-    authDomain: "여기에_PROJECT.firebaseapp.com",
-    projectId: "여기에_PROJECT_ID",
-    storageBucket: "여기에_PROJECT.appspot.com",
-    messagingSenderId: "여기에_SENDER_ID",
-    appId: "여기에_APP_ID"
-  };
-
-  const app = initializeApp(firebaseConfig);
-  const db = getFirestore(app);
-
-  // 글 등록
-  window.addPost = async () => {
-    const t=title.value.trim(), n=name.value.trim(), p=password.value.trim(), c=content.value.trim();
-    if(!t||!n||!p||!c){alert('모두 입력');return}
-    await addDoc(collection(db,'posts'),{title:t,name:n,password:p,content:c,createdAt:serverTimestamp()});
-    title.value=name.value=password.value=content.value='';
-  };
-
-  // 게시판 출력 + 삭제
-  onSnapshot(query(collection(db,'posts'),orderBy('createdAt','desc')),snap=>{
-    postList.innerHTML='';
-    snap.forEach(d=>{
-      const x=d.data();
-      const li=document.createElement('li');
-      li.innerHTML=`<b>${x.title}</b><div>${x.content}</div><div class='meta'>${x.name}</div><button class='danger'>삭제</button>`;
-      li.querySelector('button').onclick=()=>{if(prompt('비밀번호')===x.password)deleteDoc(doc(db,'posts',d.id))};
-      postList.appendChild(li);
-    })
-  });
-
-  // 공지
-  onSnapshot(query(collection(db,'notices'),orderBy('createdAt','desc')),snap=>{
-    noticeList.innerHTML='';
-    snap.forEach(d=>{const x=d.data();noticeList.innerHTML+=`<li>📢 ${x.title}</li>`})
-  });
-
-  // 자료실 (텍스트 링크용)
-  onSnapshot(query(collection(db,'files'),orderBy('createdAt','desc')),snap=>{
-    fileList.innerHTML='';
-    snap.forEach(d=>{const x=d.data();fileList.innerHTML+=`<li><a href='${x.url}' target='_blank'>${x.title}</a></li>`})
-  });
-</script>
+<!-- Firebase v8 -->
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
 
 <script>
-  if('serviceWorker'in navigator){navigator.serviceWorker.register('service-worker.js')}
-
-<script>
-function addShip(){
-  const name=shipName.value.trim();
-  const info=shipInfo.value.trim();
-  if(!name) return alert('선박명 입력');
-  addDoc(collection(db,'ships'),{name,info,createdAt:serverTimestamp()});
-  shipName.value=''; shipInfo.value='';
-}
-
-onSnapshot(collection(db,'ships'),snap=>{
-  shipList.innerHTML='';
-  snap.forEach(d=>{
-    const li=document.createElement('li');
-    li.textContent=`${d.data().name} - ${d.data().info}`;
-    shipList.appendChild(li);
-  });
+/* 🔥 Firebase 설정 (반드시 너 걸로 교체) */
+firebase.initializeApp({
+  apiKey: "API_KEY",
+  authDomain: "PROJECT.firebaseapp.com",
+  projectId: "PROJECT"
 });
 
-function addWorklog(){
-  addDoc(collection(db,'worklogs'),{
-    date:workDate.value,
-    hours:workHours.value,
-    memo:workMemo.value,
-    createdAt:serverTimestamp()
-  });
-  workHours.value=''; workMemo.value='';
+const db = firebase.firestore();
+
+/* 공통 변수 */
+let allPostsData=[], allShipsData=[], filteredShips=[], allFilesData=[];
+let postsPerPage=5, currentBoardPage=1, currentShipPage=1, currentFilePage=1;
+
+/* 토글 */
+function toggleContent(id){
+  const el=document.getElementById(id);
+  el.style.display = el.style.display==="block" ? "none":"block";
 }
 
-onSnapshot(collection(db,'worklogs'),snap=>{
-  workList.innerHTML='';
-  snap.forEach(d=>{
-    const li=document.createElement('li');
-    const x=d.data();
-    li.textContent=`${x.date} / ${x.hours}시간 / ${x.memo}`;
-    workList.appendChild(li);
-  });
-});
+/* 데이터 로드 */
+function loadAllData(){
 
-function calcWage(){
-  const r=Number(wage.value)*Number(hours.value);
-  wageResult.textContent='총 급여: '+r.toLocaleString()+'원';
+  db.collection("notices").orderBy("timestamp","desc")
+  .onSnapshot(s=>{
+    noticeList.innerHTML="";
+    s.forEach(d=>{
+      const n=d.data();
+      noticeList.innerHTML+=`
+        <li class="post-item">
+          <div class="post-header-row" onclick="toggleContent('n-${d.id}')">
+            <b>📢 ${n.title}</b><span>${n.date}</span>
+          </div>
+          <div id="n-${d.id}" class="post-body-content">${n.content}</div>
+        </li>`;
+    });
+  });
+
+  db.collection("posts").orderBy("timestamp","desc")
+  .onSnapshot(s=>{
+    allPostsData=[];
+    s.forEach(d=>{
+      let o=d.data(); o.id=d.id;
+      allPostsData.push(o);
+    });
+    renderBoardPage(1);
+  });
+
+  db.collection("ships").orderBy("timestamp","desc")
+  .onSnapshot(s=>{
+    allShipsData=[];
+    s.forEach(d=>{
+      let o=d.data(); o.id=d.id;
+      allShipsData.push(o);
+    });
+    filteredShips=[...allShipsData];
+    renderShipPage(1);
+  });
+
+  db.collection("archives").orderBy("timestamp","desc")
+  .onSnapshot(s=>{
+    allFilesData=[];
+    s.forEach(d=>{
+      let o=d.data(); o.id=d.id;
+      allFilesData.push(o);
+    });
+    renderFilePage(1);
+  });
 }
+
+/* 게시판 */
+function renderBoardPage(p){
+  currentBoardPage=p;
+  boardList.innerHTML="";
+  allPostsData.slice((p-1)*postsPerPage,p*postsPerPage)
+  .forEach(x=>{
+    boardList.innerHTML+=`
+      <li class="post-item">
+        <div class="post-header-row" onclick="toggleContent('p-${x.id}')">
+          <b>[${x.category}] ${x.title}</b>
+          <span>${x.name} | ${x.date}</span>
+        </div>
+        <div id="p-${x.id}" class="post-body-content">${x.content}</div>
+      </li>`;
+  });
+  renderPagination("pagination",Math.ceil(allPostsData.length/postsPerPage),p,renderBoardPage);
+}
+
+/* 선박 */
+function renderShipPage(p){
+  currentShipPage=p;
+  shipList.innerHTML="";
+  filteredShips.slice((p-1)*postsPerPage,p*postsPerPage)
+  .forEach(x=>{
+    shipList.innerHTML+=`
+      <li class="post-item">
+        <div onclick="toggleContent('s-${x.id}')">🚢 ${x.shipName}</div>
+        <div id="s-${x.id}" class="post-body-content">
+          <p>[본선] ${x.onboardFeat||'-'}</p>
+          <p>[육상] ${x.onshoreFeat||'-'}</p>
+        </div>
+      </li>`;
+  });
+  renderPagination("shipPagination",Math.ceil(filteredShips.length/postsPerPage),p,renderShipPage);
+}
+
+function filterShips(){
+  const q=shipSearch.value.toUpperCase();
+  filteredShips=allShipsData.filter(s=>s.shipName.toUpperCase().includes(q));
+  renderShipPage(1);
+}
+
+/* 자료실 */
+function renderFilePage(p){
+  currentFilePage=p;
+  fileList.innerHTML="";
+  allFilesData.slice((p-1)*postsPerPage,p*postsPerPage)
+  .forEach(x=>{
+    fileList.innerHTML+=`
+      <li class="post-item">
+        <a href="${x.fileUrl}" target="_blank">💾 ${x.title}</a>
+      </li>`;
+  });
+  renderPagination("filePagination",Math.ceil(allFilesData.length/postsPerPage),p,renderFilePage);
+}
+
+function filterFiles(){
+  const q=fileSearch.value.toUpperCase();
+  [...fileList.children].forEach(li=>{
+    li.style.display = li.innerText.toUpperCase().includes(q)?"":"none";
+  });
+}
+
+/* 페이지네이션 */
+function renderPagination(id,total,current,cb){
+  const el=document.getElementById(id);
+  el.innerHTML="";
+  for(let i=1;i<=total;i++){
+    const s=document.createElement("span");
+    s.className="page-num"+(i===current?" active":"");
+    s.innerText=i;
+    s.onclick=()=>cb(i);
+    el.appendChild(s);
+  }
+}
+
+loadAllData();
 </script>
 </body>
 </html>
