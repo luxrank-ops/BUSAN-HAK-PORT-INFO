@@ -4,10 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     
-    <meta name="description" content="부산항 현장직 필수 앱. 2026년 최신 임금계산기, 스마트 근무일지, 터미널별 선박스케줄, 작업 가이드, 용어집 완벽 제공.">
-    <meta name="keywords" content="부산항, 현장직, 임금계산, 근무일지, 선박스케줄, 갱, YT, QC, Lashing">
-    <meta property="og:title" content="부산항 현장직 앱 | 2026 임금계산 · 근무일지 · 선박스케줄">
-    <title>부산항 현장직 앱 | 2026 임금계산 · 근무일지 · 선박스케줄</title>
+    <meta name="description" content="부산항 현장직 필수 앱. 임금계산기, 스마트 근무일지(짝지기록), 선박위치 및 스케줄 조회.">
+    <meta property="og:title" content="BUSAN HAK PORT INFO">
+    <title>BUSAN HAK PORT INFO</title>
     
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
@@ -15,85 +14,143 @@
     
     <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6024353303588422" crossorigin="anonymous"></script>
 
-    <link rel="icon" type="image/png" sizes="32x32" href="icon.png?v=content_boost">
+    <link rel="icon" type="image/png" sizes="32x32" href="icon.png?v=ship_final_v3">
     <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.8/dist/web/static/pretendard.css" />
 
     <style>
-        /* [스타일 유지] */
-        :root { --primary: #1e3a8a; --primary-light: #3b82f6; --accent: #f59e0b; --bg-color: #f3f4f6; --card-bg: rgba(255, 255, 255, 0.95); --text-main: #1f2937; --text-sub: #6b7280; --border: rgba(229, 231, 235, 0.8); --danger: #ef4444; --success: #10b981; --glass-border: 1px solid rgba(255, 255, 255, 0.6); --glass-shadow: 0 2px 10px rgba(0,0,0,0.03); --blur: blur(12px); }
-        body.dark-mode { --primary: #60a5fa; --primary-light: #93c5fd; --accent: #fbbf24; --bg-color: #0f172a; --card-bg: rgba(30, 41, 59, 0.95); --text-main: #f3f4f6; --text-sub: #9ca3af; --border: rgba(55, 65, 81, 0.5); --glass-border: 1px solid rgba(255, 255, 255, 0.1); }
+        :root {
+            --primary: #1e3a8a; --primary-light: #3b82f6; --accent: #f59e0b;
+            --bg-color: #f3f4f6; --card-bg: rgba(255, 255, 255, 0.95);
+            --text-main: #1f2937; --text-sub: #6b7280;
+            --border: rgba(229, 231, 235, 0.8);
+            --danger: #ef4444; --success: #10b981;
+            --glass-border: 1px solid rgba(255, 255, 255, 0.6);
+            --glass-shadow: 0 2px 10px rgba(0,0,0,0.03);
+            --blur: blur(12px);
+        }
+        body.dark-mode {
+            --primary: #60a5fa; --primary-light: #93c5fd; --accent: #fbbf24;
+            --bg-color: #0f172a; --card-bg: rgba(30, 41, 59, 0.95);
+            --text-main: #f3f4f6; --text-sub: #9ca3af;
+            --border: rgba(55, 65, 81, 0.5);
+            --glass-border: 1px solid rgba(255, 255, 255, 0.1);
+        }
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; font-family: 'Pretendard', sans-serif; }
-        body { background-color: var(--bg-color); color: var(--text-main); margin: 0; padding: 0; padding-bottom: 100px; transition: background 0.3s ease; }
+        body { background-color: var(--bg-color); color: var(--text-main); margin: 0; padding: 0; padding-bottom: 90px; transition: background 0.3s ease; }
+
         .tap-effect { transition: transform 0.1s; } .tap-effect:active { transform: scale(0.98); }
-        header { background: linear-gradient(135deg, var(--primary), var(--primary-light)); color: white; padding: 14px 0; text-align: center; position: sticky; top: 0; z-index: 100; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+
+        header {
+            background: linear-gradient(135deg, var(--primary), var(--primary-light));
+            color: white; padding: 14px 0; text-align: center; position: sticky; top: 0; z-index: 100;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
         header h1 { margin: 0; font-size: 1.2rem; font-weight: 900; }
         .theme-toggle { position: absolute; right: 15px; top: 50%; transform: translateY(-50%); background: rgba(255,255,255,0.2); border: none; width: 30px; height: 30px; border-radius: 50%; font-size: 1.1rem; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+
         .container { width: 96%; max-width: 600px; margin: 15px auto; }
+        
+        /* [Main Grid Layout] */
         .dash-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }
-        .dash-card { background: var(--card-bg); border-radius: 16px; box-shadow: var(--glass-shadow); border: var(--glass-border); overflow: hidden; transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); display: flex; flex-direction: column; }
+        .dash-card { 
+            background: var(--card-bg); border-radius: 16px; 
+            box-shadow: var(--glass-shadow); border: var(--glass-border); overflow: hidden;
+            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+            display: flex; flex-direction: column;
+        }
         .dash-card.expanded { grid-column: span 2; }
-        .dash-header { padding: 15px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.05); border-bottom: 1px solid transparent; height: 100%; min-height: 60px; }
+
+        .dash-header {
+            padding: 15px; cursor: pointer; display: flex; justify-content: space-between; align-items: center;
+            background: rgba(255,255,255,0.05); border-bottom: 1px solid transparent; height: 100%; min-height: 60px;
+        }
         .dash-card.expanded .dash-header { border-bottom: 1px solid var(--border); background: rgba(0,0,0,0.02); }
         .dash-title { font-size: 1rem; font-weight: 800; color: var(--text-main); display: flex; align-items: center; gap: 6px; }
         .toggle-icon { font-size: 0.8rem; color: var(--text-sub); transition: transform 0.3s; }
         .toggle-icon.rotated { transform: rotate(180deg); }
         .dash-content { display: none; padding: 15px; background: var(--card-bg); animation: fadeIn 0.2s; }
+        
         .card { background: var(--card-bg); border-radius: 16px; margin-bottom: 15px; box-shadow: var(--glass-shadow); border: var(--glass-border); overflow: hidden; }
         .section-header { display: flex; justify-content: space-between; align-items: center; padding: 15px; cursor: pointer; border-bottom: 1px solid var(--border); }
         .section-title { font-size: 1.1rem; font-weight: 800; display:flex; align-items:center; gap:8px; }
         .collapsible-content { display: block; padding: 15px; }
         .collapsible-content.collapsed { display: none; }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+        /* [Control Grid] */
         .control-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-        .control-btn { background: var(--card-bg); border: 1px solid var(--border); color: var(--text-main); padding: 16px; border-radius: 12px; text-decoration: none; font-size: 0.95rem; font-weight: 700; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px; box-shadow: 0 2px 5px rgba(0,0,0,0.02); transition: all 0.2s; }
+        .control-btn { 
+            background: var(--card-bg); border: 1px solid var(--border); color: var(--text-main); 
+            padding: 16px; border-radius: 12px; text-decoration: none; 
+            font-size: 0.95rem; font-weight: 700; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.02); transition: all 0.2s;
+        }
         .control-btn:active { transform: scale(0.98); background: rgba(0,0,0,0.05); }
+
+        /* [Elements] */
         .input-field { width: 100%; padding: 12px; margin-bottom: 8px; border: 1px solid var(--border); border-radius: 8px; background: rgba(255,255,255,0.6); color: var(--text-main); font-size: 0.95rem; }
         .textarea-field { height: 80px; resize: none; }
         .action-btn { width: 100%; padding: 12px; border: none; border-radius: 10px; font-weight: 700; color: white; cursor: pointer; background: var(--primary); font-size: 0.95rem; }
         .bg-submit { background: var(--success); } .bg-calc { background: linear-gradient(135deg, #ef4444, #b91c1c); } .bg-cancel { background: var(--text-sub); }
+
         .terminal-block { background: rgba(0,0,0,0.03); border-radius: 10px; margin-bottom: 8px; border: 1px solid var(--border); overflow: hidden; }
         .terminal-header { padding: 12px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; font-weight: 700; font-size: 0.95rem; }
         .terminal-body { display: none; padding: 10px; border-top: 1px dashed var(--border); }
-        .terminal-body.show { display: block !important; }
         .terminal-actions { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; }
         .terminal-btn { background: var(--card-bg); border: 1px solid var(--border); color: var(--text-main); padding: 10px 4px; border-radius: 8px; text-decoration: none; font-size: 0.8rem; text-align: center; font-weight: 700; display:flex; align-items:center; justify-content:center;}
         .btn-premium { grid-column: span 3; background: linear-gradient(135deg, #fffbeb, #fef3c7); border: 1px solid #fcd34d; color: #92400e; margin-top: 5px; }
+
         .wage-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
         .wage-row label { flex: 1; font-weight: 600; font-size: 0.9rem; }
         .wage-result-box { background: linear-gradient(135deg, #fff7ed, #ffedd5); border: 2px solid var(--accent); border-radius: 12px; padding: 15px; text-align: center; margin-top: 15px; }
         .wage-total { font-size: 1.6rem; color: #c2410c; font-weight: 900; }
+
         .ticker-container { background: var(--accent); color: #000; font-weight: 700; height: 36px; display: flex; align-items: center; overflow: hidden; position: relative; font-size: 0.85rem; }
         .ticker-item { padding-left: 100%; animation: ticker 25s linear infinite; white-space: nowrap; }
         @keyframes ticker { 100% { transform: translate3d(-100%, 0, 0); } }
         .ticker-controls { position: absolute; right: 0; height: 100%; display: flex; background: rgba(255,255,255,0.3); backdrop-filter: blur(2px); }
         .ticker-btn { width: 36px; height: 100%; border: none; background: transparent; font-size: 1rem; cursor: pointer; }
+
         .hidden { display: none !important; }
         .mini-btn { padding: 4px 8px; font-size: 0.75rem; border-radius: 6px; border: none; cursor: pointer; color: white; margin-left: 5px; }
         .btn-del { background: var(--danger); } .btn-edit { background: var(--primary-light); }
+        
+        /* List Style */
         .post-list { list-style: none; padding: 0; margin: 0; }
         .post-item { border-bottom: 1px solid var(--border); }
         .post-item:last-child { border-bottom: none; }
         .post-header-row { padding: 15px 5px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; background: transparent; transition: background 0.1s; }
         .post-header-row:active { background: rgba(0,0,0,0.03); }
-        .post-title-text { font-weight: 700; font-size: 0.95rem; color: var(--text-main); display: flex; align-items: center; gap: 5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; margin-right: 10px; }
+        .post-title-text { font-weight: 700; font-size: 0.95rem; color: var(--text-main); display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; margin-right: 10px; }
         .post-meta-info { font-size: 0.75rem; color: var(--text-sub); white-space: nowrap; }
-        /* [SHIP CONTENT FORCE STYLE] */
-        .post-body-content { display: none; padding: 15px; background: rgba(0,0,0,0.02); border-top: 1px dashed var(--border); font-size: 0.95rem; line-height: 1.7; white-space: pre-wrap; color: var(--text-main); word-break: break-all; }
+        
+        /* [SHIP CONTENT FORCE STYLE] - JS로 직접 display 제어할 것이므로 여기서는 기본 스타일만 */
+        .post-body-content { 
+            display: none; 
+            padding: 15px; background: rgba(0,0,0,0.02); border-top: 1px dashed var(--border); 
+            font-size: 0.95rem; line-height: 1.7; white-space: pre-wrap; color: var(--text-main); word-break: break-all; 
+        }
+
         .bottom-nav { position: fixed; bottom: 0; left: 0; width: 100%; height: 65px; background: rgba(255,255,255,0.95); border-top: 1px solid var(--border); display: flex; justify-content: space-around; align-items: center; z-index: 1000; padding-bottom: env(safe-area-inset-bottom); }
         .dark-mode .bottom-nav { background: rgba(30, 41, 59, 0.95); }
         .nav-item { flex: 1; text-align: center; color: var(--text-sub); font-size: 0.7rem; cursor: pointer; display: flex; flex-direction: column; align-items: center; }
         .nav-item.active { color: var(--primary); font-weight: 800; }
         .nav-icon { font-size: 1.4rem; margin-bottom: 2px; }
+        
         .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 3000; justify-content: center; align-items: center; }
         .modal-content { background: var(--card-bg); padding: 20px; border-radius: 15px; max-width: 90%; max-height: 80%; overflow-y: auto; }
         .modal-img { max-width: 100%; border-radius: 5px; }
+        
         .guide-text { line-height: 1.8; font-size: 0.9rem; text-align: left; color: var(--text-main); white-space: pre-wrap; }
         .guide-text h4 { color: var(--primary); margin: 25px 0 10px 0; border-left: 4px solid var(--accent); padding-left: 10px; font-size: 1rem; }
         .glossary-item { margin-bottom: 10px; padding-bottom: 10px; border-bottom: 1px dashed var(--border); }
         .glossary-term { font-weight: 800; color: var(--primary); font-size: 0.9rem; }
         .glossary-desc { font-size: 0.85rem; color: var(--text-main); margin-top: 2px; }
+
         footer { text-align: center; padding: 40px 20px; color: var(--text-sub); font-size: 0.8rem; margin-bottom: 80px; border-top: 1px solid var(--border); }
         .footer-link { cursor: pointer; text-decoration: underline; margin: 0 8px; }
+        
+        /* Calendar & Chips */
         .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; text-align: center; }
         .cal-day { padding: 8px 2px; border-radius: 8px; background: rgba(255,255,255,0.5); border: 1px solid var(--border); font-weight: 700; font-size: 0.85rem; }
         .cal-day.selected { background: var(--primary); color: white; border-color: var(--primary); }
@@ -101,6 +158,8 @@
         .cal-day.has-data .cal-dot { display: block; }
         .chip-container { display: flex; gap: 5px; margin-bottom: 10px; flex-wrap: wrap; }
         .chip-btn { padding: 6px 12px; border-radius: 15px; border: 1px solid var(--primary-light); background: rgba(255,255,255,0.6); color: var(--primary); font-size: 0.8rem; font-weight: 700; cursor: pointer; }
+        
+        /* Comments */
         .comment-section { margin-top: 15px; border-top: 1px dashed var(--border); padding-top: 10px; background: rgba(0,0,0,0.015); border-radius: 8px; padding: 10px; }
         .comment-item { display: flex; justify-content: space-between; align-items: flex-start; font-size: 0.85rem; padding: 6px 0; border-bottom: 1px solid rgba(0,0,0,0.05); }
         .comment-meta { font-weight: bold; color: var(--primary); margin-right: 5px; min-width: 60px; font-size: 0.8rem; }
@@ -204,56 +263,6 @@
                 </div>
             </div>
 
-            <div id="port-knowledge-card" class="dash-card">
-                <div class="dash-header tap-effect" onclick="toggleDashItem('port-knowledge-card')">
-                    <span class="dash-title">⚓ 부산항 현장직 필수 지식</span><span class="toggle-icon">▼</span>
-                </div>
-                <div class="dash-content">
-                    <div class="guide-text">
-                        <h4>📊 2026년 부산항 근무 구조</h4>
-                        <p>부산항은 1·2·3항만으로 나뉘며, 각 터미널별로 작업 패턴이 다릅니다. 1항(북항)은 BPTC·HBCT, 2항(신항북측)은 PNC·PNIT·HPNT, 3항(신항남측)은 HJNC·BNCT가 운영합니다. 현장직은 갱(Gang) 단위로 운영되며, 1갱=20명 기준으로 QC(안벽크레인), YT(야드트랙터), Lashing(고박) 작업이 이뤄집니다.</p>
-                        <h4>💰 수당 체계</h4>
-                        <p>기본 시급 10,030원(2026 기준). 야간/휴일은 1.5배, 기능공(용접 등)은 시간당 추가 단가, 절맞이(신호수)는 별도 수당이 적용됩니다. 우천작업 시에도 별도 보상이 있어 총 수령액은 근무시간에 따라 20~40만원 수준입니다.</p>
-                        <h4>⏰ 교대 패턴</h4>
-                        <p>주로 6시간 교대(06:00-12:00, 12:00-18:00, 18:00-24:00, 24:00-06:00). 선박 스케줄에 따라 야간근무 빈도가 높으며, 연속 2교대 이상 시 휴게시간이 보장됩니다.</p>
-                    </div>
-                </div>
-            </div>
-
-            <div id="wage-guide-card" class="dash-card">
-                <div class="dash-header tap-effect" onclick="toggleDashItem('wage-guide-card')">
-                    <span class="dash-title">💰 임금계산 완벽 가이드</span><span class="toggle-icon">▼</span>
-                </div>
-                <div class="dash-content">
-                    <div class="guide-text">
-                        <h4>기본 계산법</h4>
-                        <p>주간: 시급 × 시간<br>야간/휴일: 시급 × 1.5 × 시간<br>기능공: 작업시간 × 단가(보통 2~3만원)<br>절맞이: 작업시간 × 단가(1.5~2만원)<br>우천: 작업시간 × 단가(5천~1만원)</p>
-                        <h4>실제 예시</h4>
-                        <p>08:00~18:00(10시간 주간) + 기능공 2시간(25,000원) = 100,300 + 50,000 = 150,300원<br>세후(9.4%) 약 136,000원 수령</p>
-                        <h4>주의사항</h4>
-                        <p>교대시간에 따라 주간/야간 구분 정확히 입력. 연속 야간근무 시 휴게시간 제외. 월말 청구 시 근무일지와 대조하세요.</p>
-                    </div>
-                </div>
-            </div>
-
-            <div id="terminal-guide-card" class="dash-card">
-                <div class="dash-header tap-effect" onclick="toggleDashItem('terminal-guide-card')">
-                    <span class="dash-title">🏭 터미널별 작업 특성</span><span class="toggle-icon">▼</span>
-                </div>
-                <div class="dash-content">
-                    <div class="guide-text">
-                        <h4>3항업 (HJNC·BNCT)</h4>
-                        <p>최신 설비, 컨테이너 초대형 선박 위주. Lashing 작업 빈도 높음. 셔틀버스 운영으로 접근성 좋음.</p>
-                        <h4>2항업 (PNC·PNIT·HPNT)</h4>
-                        <p>PNC 셔틀버스 필수. PNIT는 외국 선사 많아 영어 커뮤니케이션 빈번. HPNT는 자동화 야드 진행 중.</p>
-                        <h4>1항업 (BPTC·HBCT)</h4>
-                        <p>감만/신선대 선석 특화. HBCT는 Hutchison Ports 글로벌 네트워크. 노후 설비로 안전 주의 필요.</p>
-                        <h4>작업 팁</h4>
-                        <p>각 터미널별 스케줄 링크 활용. 선박 도착 2시간 전부터 작업 준비. 날씨 확인 후 우비·보온 장비 챙기기.</p>
-                    </div>
-                </div>
-            </div>
-
             <div id="wage-card" class="dash-card" style="border:1px solid var(--danger);">
                 <div class="dash-header tap-effect" onclick="toggleDashItem('wage-card')">
                     <span class="dash-title" style="color:var(--danger);">💰 임금 계산기</span><span class="toggle-icon">▼</span>
@@ -293,7 +302,6 @@
                         <div style="margin-top:10px; border-top:1px solid var(--border); padding-top:10px;"><label style="font-weight:bold; display:block; margin-bottom:5px;">📝 메모</label><textarea id="logMemo" class="input-field textarea-field" placeholder="내용..."></textarea><label style="font-weight:bold; display:block; margin-bottom:5px; margin-top:10px;">📷 사진</label><input type="file" id="logImageInput" class="input-field" accept="image/*" onchange="previewLogImage(this)"><img id="logImagePreview" style="max-width:100%; border-radius:10px; margin-top:5px; display:none;"></div>
                         <div style="display:flex; gap:8px; margin-top:15px;"><button class="action-btn bg-submit" onclick="saveWorkLog()">저장</button><button class="action-btn bg-cancel" style="background:var(--danger);" onclick="deleteWorkLog()">삭제</button></div>
                     </div>
-                    <div style="text-align:center; margin-top:15px; padding:10px; border:1px solid var(--primary); border-radius:10px;"><span style="font-size:0.8rem;">이번 달 총 예상 수령액</span><div id="monthlyTotalDisplay" style="font-size:1.5rem; font-weight:bold; color:var(--primary);">0원</div></div>
                 </div>
             </div>
         </div>
@@ -334,9 +342,8 @@
                 </div>
                 <div class="dash-content">
                     <div class="guide-text">
-                        <h4>왜 이 앱이 필요한가?</h4>
-                        <p>부산항 현장직은 선박 스케줄, 임금, 근무시간 관리가 생명입니다. 종이 근무일지는 분실 위험, 엑셀은 복잡. 이 앱은 오프라인에서도 동작하며 사진 첨부, 월별 자동 합계까지 지원합니다.</p>
-                        
+                        <h3>⚓ 부산항 현장직 가이드</h3>
+                        <p>BUSAN HAK PORT INFO는 현장 필수 앱입니다.</p>
                         <h4>1. 2026년 임금 계산기</h4>
                         <p>시급, 시간 입력 시 주간/야간/휴일 1.5배 수당 자동 계산.</p>
                         <h4>2. 스마트 근무일지</h4>
@@ -367,10 +374,7 @@
 
         <footer>
             <p>© 2024 BUSAN HAK PORT INFO. All rights reserved.</p>
-            <div style="margin-top:10px;">
-                <span class="footer-link" onclick="openPrivacy()">개인정보처리방침</span> | 
-                <span class="footer-link" onclick="alert('이용약관: 본 서비스는 현장 보조용이며 법적 효력이 없습니다.')">이용약관</span>
-            </div>
+            <div style="margin-top:10px;"><span class="footer-link" onclick="openPrivacy()">개인정보처리방침</span></div>
         </footer>
     </div>
 
@@ -450,7 +454,7 @@
                 const n=new Date(); renderCalendar(n.getFullYear(),n.getMonth());
             } else showToast("⛔ 접근 불가");
         }
-        function renderCalendar(y,m){cy=y;cm=m;const dt=new Date(y,m,1);document.getElementById('calMonthYear').innerText=${y}년 ${m+1}월;const g=document.getElementById('calendarGrid');g.innerHTML='';['일','월','화','수','목','금','토'].forEach(d=>g.innerHTML+=<div style="font-weight:bold;color:var(--text-sub);font-size:0.8rem;">${d}</div>);for(let i=0;i<dt.getDay();i++)g.innerHTML+=<div></div>;const dim=new Date(y,m+1,0).getDate();db.collection("work_logs").where("date",">=",${y}-${String(m+1).padStart(2,'0')}-01).where("date","<=",${y}-${String(m+1).padStart(2,'0')}-${dim}).get().then(qs=>{adminWorkLogs={};let t=0;qs.forEach(d=>{adminWorkLogs[d.id]=d.data();t+=(d.data().totalPay||0)});document.getElementById('monthlyTotalDisplay').innerText=Math.floor(t).toLocaleString()+"원";for(let i=1;i<=dim;i++){const ds=${y}-${String(m+1).padStart(2,'0')}-${String(i).padStart(2,'0')};const d=document.createElement('div');d.className='cal-day tap-effect';if(adminWorkLogs[ds])d.classList.add('has-data');d.innerHTML=${i}<div class="cal-dot"></div>;d.onclick=()=>selectDate(ds,d);g.appendChild(d)}})}
+        function renderCalendar(y,m){cy=y;cm=m;const dt=new Date(y,m,1);document.getElementById('calMonthYear').innerText=`${y}년 ${m+1}월`;const g=document.getElementById('calendarGrid');g.innerHTML='';['일','월','화','수','목','금','토'].forEach(d=>g.innerHTML+=`<div style="font-weight:bold;color:var(--text-sub);font-size:0.8rem;">${d}</div>`);for(let i=0;i<dt.getDay();i++)g.innerHTML+=`<div></div>`;const dim=new Date(y,m+1,0).getDate();db.collection("work_logs").where("date",">=",`${y}-${String(m+1).padStart(2,'0')}-01`).where("date","<=",`${y}-${String(m+1).padStart(2,'0')}-${dim}`).get().then(qs=>{adminWorkLogs={};let t=0;qs.forEach(d=>{adminWorkLogs[d.id]=d.data();t+=(d.data().totalPay||0)});document.getElementById('monthlyTotalDisplay').innerText=Math.floor(t).toLocaleString()+"원";for(let i=1;i<=dim;i++){const ds=`${y}-${String(m+1).padStart(2,'0')}-${String(i).padStart(2,'0')}`;const d=document.createElement('div');d.className='cal-day tap-effect';if(adminWorkLogs[ds])d.classList.add('has-data');d.innerHTML=`${i}<div class="cal-dot"></div>`;d.onclick=()=>selectDate(ds,d);g.appendChild(d)}})}
         function changeMonth(d){renderCalendar(new Date(cy,cm+d,1).getFullYear(),new Date(cy,cm+d,1).getMonth());vibrate()}
         function selectDate(ds,el){document.querySelectorAll('.cal-day').forEach(d=>d.classList.remove('selected'));el.classList.add('selected');selDate=ds;document.getElementById('dailyLogForm').classList.remove('hidden');document.getElementById('selectedDateText').innerText=ds;const d=adminWorkLogs[ds]||{};document.getElementById('logDayHours').value=d.dayHours||'';document.getElementById('logNightHours').value=d.nightHours||'';document.getElementById('logSkillTime').value=d.skillTime||'';document.getElementById('logSkillRate').value=d.skillRate||'';document.getElementById('logSignalTime').value=d.signalTime||'';document.getElementById('logSignalRate').value=d.signalRate||'';document.getElementById('logRainTime').value=d.rainTime||'';document.getElementById('logRainRate').value=d.rainRate||'';document.getElementById('logMemo').value=d.memo||'';document.getElementById('logImagePreview').src=d.imageUrl||'';document.getElementById('logImageContainer').style.display=d.imageUrl?'block':'none';document.getElementById('dailyTotalDisplay').innerText=(d.totalPay||0).toLocaleString()+"원";vibrate()}
         function resetLogInputs(){document.querySelectorAll('#dailyLogForm input, #dailyLogForm textarea').forEach(i=>i.value=''); document.getElementById('logImagePreview').src=''; document.getElementById('logImageContainer').style.display='none'; vibrate();}
@@ -464,26 +468,26 @@
             const currentPosts = allPostsData.slice((currentBoardPage-1)*postsPerPage, currentBoardPage*postsPerPage);
             currentPosts.forEach(post => {
                 const unsub = db.collection('posts').doc(post.id).collection('comments').orderBy('timestamp', 'asc').onSnapshot(snapshot => {
-                    const listEl = document.getElementById(cmt-list-${post.id});
+                    const listEl = document.getElementById(`cmt-list-${post.id}`);
                     if (!listEl) return;
                     listEl.innerHTML = "";
                     snapshot.forEach(doc => {
                         const c = doc.data();
-                        listEl.innerHTML += <div class="comment-item"><span class="comment-meta">${c.name}</span><span class="comment-text">${c.text}</span><button class="comment-del-btn" onclick="deleteComment('${post.id}', '${doc.id}', '${c.password}')">×</button></div>;
+                        listEl.innerHTML += `<div class="comment-item"><span class="comment-meta">${c.name}</span><span class="comment-text">${c.text}</span><button class="comment-del-btn" onclick="deleteComment('${post.id}', '${doc.id}', '${c.password}')">×</button></div>`;
                     });
                 });
                 commentUnsubscribes[post.id] = unsub;
             });
         }
         function addComment(postId) {
-            const name = document.getElementById(cmt-name-${postId}).value; const pw = document.getElementById(cmt-pw-${postId}).value; const text = document.getElementById(cmt-txt-${postId}).value;
+            const name = document.getElementById(`cmt-name-${postId}`).value; const pw = document.getElementById(`cmt-pw-${postId}`).value; const text = document.getElementById(`cmt-txt-${postId}`).value;
             if (!name || !pw || !text) { showToast("입력 확인"); return; }
-            db.collection('posts').doc(postId).collection('comments').add({ name: name, password: pw, text: text, timestamp: firebase.firestore.FieldValue.serverTimestamp() }).then(() => { document.getElementById(cmt-txt-${postId}).value = ""; showToast("댓글 등록"); });
+            db.collection('posts').doc(postId).collection('comments').add({ name: name, password: pw, text: text, timestamp: firebase.firestore.FieldValue.serverTimestamp() }).then(() => { document.getElementById(`cmt-txt-${postId}`).value = ""; showToast("댓글 등록"); });
         }
         function deleteComment(postId, commentId, realPw) { const inputPw = prompt("비밀번호:"); if (inputPw === realPw || inputPw === "0346") { db.collection('posts').doc(postId).collection('comments').doc(commentId).delete().then(() => showToast("삭제됨")); } else { showToast("비밀번호 불일치"); } }
 
         function loadAllData(){
-            db.collection("notices").orderBy("timestamp","desc").onSnapshot(s=>{const l=document.getElementById("noticeList");l.innerHTML="";s.forEach(d=>{const n=d.data();l.innerHTML+=<li class="post-item tap-effect"><div class="post-header-row" onclick="toggleContent('n-${d.id}')"><span class="post-title-text" style="color:var(--danger)">📢 ${n.title}</span><span class="post-meta-info">${n.date}</span></div><div id="n-${d.id}" class="post-body-content">${n.content}<br><button class="mini-btn btn-del" onclick="delNotice('${d.id}',event)">삭제</button></div></li>})});
+            db.collection("notices").orderBy("timestamp","desc").onSnapshot(s=>{const l=document.getElementById("noticeList");l.innerHTML="";s.forEach(d=>{const n=d.data();l.innerHTML+=`<li class="post-item tap-effect"><div class="post-header-row" onclick="toggleContent('n-${d.id}')"><span class="post-title-text" style="color:var(--danger)">📢 ${n.title}</span><span class="post-meta-info">${n.date}</span></div><div id="n-${d.id}" class="post-body-content">${n.content}<br><button class="mini-btn btn-del" onclick="delNotice('${d.id}',event)">삭제</button></div></li>`})});
             db.collection("posts").orderBy("timestamp","desc").onSnapshot(s=>{allPostsData=[];s.forEach(d=>{let o=d.data();o.id=d.id;allPostsData.push(o)});renderBoardPage(1)});
             
             // [FIX: Initial List View]
@@ -499,7 +503,7 @@
         function renderBoardPage(p){
             currentBoardPage=p; const l=document.getElementById("boardList"); l.innerHTML="";
             allPostsData.slice((p-1)*postsPerPage, p*postsPerPage).forEach(x=>{
-                l.innerHTML+=
+                l.innerHTML+=`
                 <li class="post-item tap-effect">
                     <div class="post-header-row" onclick="toggleContent('p-${x.id}')">
                         <span class="post-title-text">[${x.category}] ${x.title}</span>
@@ -509,7 +513,7 @@
                         <div style="margin-bottom:15px; white-space:pre-wrap;">${x.content}</div>
                         <div class="comment-section"><div id="cmt-list-${x.id}" class="comment-list"></div><div class="comment-form"><input id="cmt-name-${x.id}" class="comment-input-sm" placeholder="닉"><input id="cmt-pw-${x.id}" class="comment-input-sm" type="password" placeholder="비번"><input id="cmt-txt-${x.id}" class="comment-input-lg" placeholder="댓글..."><button class="comment-submit" onclick="addComment('${x.id}')">등록</button></div></div><div style="margin-top:10px; text-align:right;"><button class="mini-btn btn-del" onclick="deletePost('${x.id}','${x.password}',event)">글 삭제</button></div>
                     </div>
-                </li>;
+                </li>`;
             });
             renderPagination("pagination",Math.ceil(allPostsData.length/postsPerPage),p,renderBoardPage);
             loadCommentsForPage();
@@ -517,9 +521,9 @@
         function renderShipPage(p){
             currentShipPage=p;const l=document.getElementById("shipList");l.innerHTML="";
             filteredShips.slice((p-1)*postsPerPage,p*postsPerPage).forEach(x=>{
-                let img=x.imageUrl?<button class="mini-btn btn-photo" onclick="event.stopPropagation();showImageModal('${x.imageUrl}')">📷</button>:"";
+                let img=x.imageUrl?`<button class="mini-btn btn-photo" onclick="event.stopPropagation();showImageModal('${x.imageUrl}')">📷</button>`:"";
                 // Fixed: Added toggle-icon span and onclick handler using toggleShipContent
-                l.innerHTML+=
+                l.innerHTML+=`
                 <li class="post-item tap-effect">
                     <div onclick="toggleShipContent('s-${x.id}')" style="display:flex;justify-content:space-between; padding:15px 5px; align-items:center;">
                         <span class="post-title-text" style="margin:0;">🚢 ${x.shipName} <span class="toggle-icon" style="font-size:0.7rem; color:var(--text-sub); margin-left:5px;">▼</span></span>
@@ -531,12 +535,12 @@
                         <button class="mini-btn btn-edit" onclick="editShip('${x.id}')">수정</button>
                         <button class="mini-btn btn-del" onclick="deleteShip('${x.id}',event)">삭제</button>
                     </div>
-                </li>;
+                </li>`;
             });
             renderPagination("shipPagination",Math.ceil(filteredShips.length/postsPerPage),p,renderShipPage)
         }
-        function renderFilePage(p){currentFilePage=p;const l=document.getElementById("fileList");l.innerHTML="";allFilesData.slice((p-1)*postsPerPage,p*postsPerPage).forEach(x=>{l.innerHTML+=<li class="post-item tap-effect" style="display:flex;justify-content:space-between; padding:15px 5px;"><div><a href="${x.fileUrl}" target="_blank" style="text-decoration:none;color:var(--text-main);font-weight:bold;">💾 ${x.title}</a></div></li>});renderPagination("filePagination",Math.ceil(allFilesData.length/postsPerPage),p,renderFilePage)}
-        function renderPagination(id,t,c,f){const el=document.getElementById(id);el.innerHTML="";for(let i=1;i<=t;i++){const s=document.createElement("span");s.className=page-num ${i===c?'active':''} tap-effect;s.innerText=i;s.onclick=()=>f(i);el.appendChild(s)}}
+        function renderFilePage(p){currentFilePage=p;const l=document.getElementById("fileList");l.innerHTML="";allFilesData.slice((p-1)*postsPerPage,p*postsPerPage).forEach(x=>{l.innerHTML+=`<li class="post-item tap-effect" style="display:flex;justify-content:space-between; padding:15px 5px;"><div><a href="${x.fileUrl}" target="_blank" style="text-decoration:none;color:var(--text-main);font-weight:bold;">💾 ${x.title}</a></div></li>`});renderPagination("filePagination",Math.ceil(allFilesData.length/postsPerPage),p,renderFilePage)}
+        function renderPagination(id,t,c,f){const el=document.getElementById(id);el.innerHTML="";for(let i=1;i<=t;i++){const s=document.createElement("span");s.className=`page-num ${i===c?'active':''} tap-effect`;s.innerText=i;s.onclick=()=>f(i);el.appendChild(s)}}
 
         function filterShips(){const q=document.getElementById('shipSearch').value.toUpperCase();filteredShips=allShipsData.filter(s=>s.shipName.toUpperCase().includes(q));renderShipPage(1);}
         function filterFiles(){const k=document.getElementById('fileSearch').value.toUpperCase();const l=document.getElementById('fileList').getElementsByTagName('li');for(let i=0;i<l.length;i++)l[i].style.display=l[i].innerText.toUpperCase().includes(k)?"":"none"}
@@ -551,7 +555,7 @@
         function deleteShip(id,e){e.stopPropagation();if(prompt("암호:")==="0346")db.collection("ships").doc(id).delete()}
         function uploadFile(){const f=document.getElementById('fileInput').files[0];if(!f)return;storage.ref('archives/'+Date.now()+f.name).put(f).then(s=>s.ref.getDownloadURL()).then(u=>{db.collection("archives").add({title:document.getElementById('fileTitle').value,uploader:document.getElementById('fileUploader').value,fileUrl:u,date:new Date().toLocaleString('ko-KR'),timestamp:firebase.firestore.FieldValue.serverTimestamp()});showToast("완료")})}
         
-        function loadBanner(){db.collection('settings').doc('banner').onSnapshot(d=>{if(d.exists){const data=d.data();let msg="";if(data.adminMessage)msg+=🚨 ${data.adminMessage}   /   ;if(data.messages&&data.messages.length>0)msg+=data.messages.join("   /   ");if(!msg)msg="🚨 안전 제일! 오늘도 무사고!";document.getElementById('tickerText').innerText=msg}})}
+        function loadBanner(){db.collection('settings').doc('banner').onSnapshot(d=>{if(d.exists){const data=d.data();let msg="";if(data.adminMessage)msg+=`🚨 ${data.adminMessage}   /   `;if(data.messages&&data.messages.length>0)msg+=data.messages.join("   /   ");if(!msg)msg="🚨 안전 제일! 오늘도 무사고!";document.getElementById('tickerText').innerText=msg}})}
         function writeUserTicker(){const msg=prompt("안전 문구 입력 (누구나):");if(msg){db.collection('settings').doc('banner').get().then(doc=>{let msgs=doc.exists?(doc.data().messages||[]):[];msgs.unshift(msg);if(msgs.length>10)msgs=msgs.slice(0,10);db.collection('settings').doc('banner').set({messages:msgs},{merge:true})})}}
         function setAdminTicker(){if(prompt("관리자 암호:")==="0346"){const msg=prompt("고정 공지 입력:");if(msg)db.collection('settings').doc('banner').set({adminMessage:msg},{merge:true})}else showToast("⛔ 관리자만 가능")}
         function resetTicker(){if(prompt("관리자 암호:")==="0346"&&confirm("초기화?"))db.collection('settings').doc('banner').set({adminMessage:null,messages:[]})}
