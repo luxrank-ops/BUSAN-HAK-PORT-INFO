@@ -12,7 +12,7 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-storage.js"></script>
     <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6024353303588422" crossorigin="anonymous"></script>
 
-    <link rel="icon" type="image/png" sizes="32x32" href="icon.png?v=list_view_fix">
+    <link rel="icon" type="image/png" sizes="32x32" href="icon.png?v=restore_final">
     <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.8/dist/web/static/pretendard.css" />
 
     <style>
@@ -27,6 +27,7 @@
         .theme-toggle { position: absolute; right: 15px; top: 50%; transform: translateY(-50%); background: rgba(255,255,255,0.2); border: none; width: 30px; height: 30px; border-radius: 50%; font-size: 1.1rem; cursor: pointer; display: flex; align-items: center; justify-content: center; }
 
         .container { width: 96%; max-width: 600px; margin: 15px auto; }
+        
         .dash-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }
         .dash-card { background: var(--card-bg); border-radius: 16px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); border: 1px solid var(--border); overflow: hidden; display: flex; flex-direction: column; }
         .dash-card.expanded { grid-column: span 2; }
@@ -44,6 +45,7 @@
         .collapsible-content.collapsed { display: none !important; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
 
+        /* [List Style] */
         .post-list { list-style: none; padding: 0; margin: 0; }
         .post-item { border-bottom: 1px solid var(--border); }
         .post-item:last-child { border-bottom: none; }
@@ -51,7 +53,9 @@
         .post-title-text { font-weight: 700; font-size: 0.95rem; color: var(--text-main); flex: 1; margin-right: 10px; display:flex; align-items:center; gap:5px; }
         .post-meta-info { font-size: 0.75rem; color: var(--text-sub); white-space: nowrap; }
         .post-body-content { display: none; padding: 15px; background: rgba(0,0,0,0.02); border-top: 1px dashed var(--border); font-size: 0.95rem; line-height: 1.6; white-space: pre-wrap; color: var(--text-main); }
+        .post-body-content.open { display: block !important; }
 
+        /* Terminals */
         .terminal-block { border: 1px solid var(--border); border-radius: 10px; margin-bottom: 10px; overflow: hidden; background: rgba(0,0,0,0.02); }
         .terminal-header { padding: 12px 15px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; font-weight: 700; font-size: 0.95rem; }
         .terminal-body { display: none; padding: 15px; border-top: 1px solid var(--border); background: var(--card-bg); }
@@ -124,9 +128,7 @@
     </div>
 
     <div class="container">
-        
         <div class="dash-grid">
-            
             <div id="notice-card" class="dash-card">
                 <div class="dash-header tap-effect" onclick="toggleDashItem('notice-card')">
                     <span class="dash-title">📢 공지사항</span><span class="toggle-icon">▼</span>
@@ -170,7 +172,7 @@
                     </div>
                     <a href="https://www.marinetraffic.com/" target="_blank" class="action-btn" style="background:#0284c7; text-align:center; display:block; text-decoration:none; margin-bottom:10px;">🌍 선박 위치 확인</a>
                     <button class="action-btn" style="background:var(--accent); margin-bottom:10px;" onclick="toggleHidden('shipForm')">📝 선박 정보 검색 및 신규선박정보등록</button>
-                    <div id="shipForm" class="hidden" style="margin-bottom:10px; background:rgba(0,0,0,0.02); padding:10px; border-radius:8px;">
+                    <div id="shipForm" class="hidden" style="margin-bottom:10px;">
                         <input type="text" id="shipName" class="input-field" placeholder="선박명 (필수)">
                         <input type="file" id="shipFileInput" class="input-field">
                         <textarea id="shipOnboard" class="input-field textarea-field" placeholder="본선 작업 내용" style="height:60px;"></textarea>
@@ -303,20 +305,16 @@
 
         try { if(firebase.apps.length===0) firebase.initializeApp(firebaseConfig); db=firebase.firestore(); storage=firebase.storage(); loadAllData(); loadBanner(); if(localStorage.getItem('theme')==='dark') document.body.classList.add('dark-mode'); } catch(e){}
 
-        // [Toggle Logic]
+        // [Unified Toggle Logic]
         function toggleDashItem(id) {
             const card = document.getElementById(id);
             const content = card.querySelector('.dash-content');
             const icon = card.querySelector('.toggle-icon');
-            if (card.classList.contains('expanded')) {
-                card.classList.remove('expanded');
-                content.style.display = 'none';
-                icon.classList.remove('rotated');
-            } else {
-                card.classList.add('expanded');
-                content.style.display = 'block';
-                icon.classList.add('rotated');
-            }
+            document.querySelectorAll('.dash-card.expanded').forEach(c => {
+                if(c !== card) { c.classList.remove('expanded'); c.querySelector('.dash-content').style.display = 'none'; c.querySelector('.toggle-icon').classList.remove('rotated'); }
+            });
+            if (card.classList.contains('expanded')) { card.classList.remove('expanded'); content.style.display = 'none'; icon.classList.remove('rotated'); }
+            else { card.classList.add('expanded'); content.style.display = 'block'; icon.classList.add('rotated'); }
             vibrate();
         }
         function toggleSection(id, el) {
@@ -337,21 +335,6 @@
                      if (el.classList.contains('open') || el.classList.contains('show')) icon.classList.add('rotated');
                      else icon.classList.remove('rotated');
                 }
-            }
-            vibrate();
-        }
-        // [Fixed: Force Toggle for Ships]
-        function toggleShipContent(id) {
-            const el = document.getElementById(id);
-            // Directly check and set style to override any hidden classes
-            if (el.style.display === 'block') {
-                el.style.display = 'none';
-                const icon = el.previousElementSibling.querySelector('.toggle-icon');
-                if(icon) icon.classList.remove('rotated');
-            } else {
-                el.style.display = 'block';
-                const icon = el.previousElementSibling.querySelector('.toggle-icon');
-                if(icon) icon.classList.add('rotated');
             }
             vibrate();
         }
@@ -391,7 +374,6 @@
         function saveWorkLog(){if(!selDate)return;const h=10030,d=parseFloat(document.getElementById('logDayHours').value)||0,n=parseFloat(document.getElementById('logNightHours').value)||0,t=(d*h)+(n*h*1.5)+((parseFloat(document.getElementById('logSkillTime').value)||0)*(parseFloat(document.getElementById('logSkillRate').value)||0))+((parseFloat(document.getElementById('logSignalTime').value)||0)*(parseFloat(document.getElementById('logSignalRate').value)||0))+((parseFloat(document.getElementById('logRainTime').value)||0)*(parseFloat(document.getElementById('logRainRate').value)||0)),memo=document.getElementById('logMemo').value,file=document.getElementById('logImageInput').files[0];const saveData=(url)=>{const data={date:selDate,dayHours:d,nightHours:n,totalPay:t,memo:memo,imageUrl:url,skillTime:parseFloat(document.getElementById('logSkillTime').value)||0,skillRate:parseFloat(document.getElementById('logSkillRate').value)||0,signalTime:parseFloat(document.getElementById('logSignalTime').value)||0,signalRate:parseFloat(document.getElementById('logSignalRate').value)||0,rainTime:parseFloat(document.getElementById('logRainTime').value)||0,rainRate:parseFloat(document.getElementById('logRainRate').value)||0};db.collection("work_logs").doc(selDate).set(data).then(()=>{showToast("저장됨");renderCalendar(cy,cm)})};if(file){storage.ref('work_logs/'+selDate+'_'+file.name).put(file).then(s=>s.ref.getDownloadURL()).then(u=>saveData(u))}else{saveData(adminWorkLogs[selDate]?.imageUrl||null)}}
         function deleteWorkLog(){if(selDate&&confirm("삭제?"))db.collection("work_logs").doc(selDate).delete().then(()=>{showToast("삭제됨");renderCalendar(cy,cm)})}
 
-        // [Comment System]
         function loadCommentsForPage() {
             Object.values(commentUnsubscribes).forEach(unsub => unsub()); commentUnsubscribes = {};
             const currentPosts = allPostsData.slice((currentBoardPage-1)*postsPerPage, currentBoardPage*postsPerPage);
@@ -419,12 +401,11 @@
             db.collection("notices").orderBy("timestamp","desc").onSnapshot(s=>{const l=document.getElementById("noticeList");l.innerHTML="";s.forEach(d=>{const n=d.data();l.innerHTML+=`<li class="post-item tap-effect"><div class="post-header-row" onclick="toggleItemContent('n-${d.id}')"><span class="post-title-text" style="color:var(--danger)">📢 ${n.title}</span><span class="post-meta-info">${n.date}</span></div><div id="n-${d.id}" class="post-body-content">${n.content}<br><button class="mini-btn btn-del" onclick="delNotice('${d.id}',event)">삭제</button></div></li>`})});
             db.collection("posts").orderBy("timestamp","desc").onSnapshot(s=>{allPostsData=[];s.forEach(d=>{let o=d.data();o.id=d.id;allPostsData.push(o)});renderBoardPage(1)});
             
-            // [FIX: Force list population & Latest sort]
+            // [FIX: Initial List View]
             db.collection("ships").orderBy("timestamp","desc").onSnapshot(s=>{
                 allShipsData=[];
                 s.forEach(d=>{let o=d.data();o.id=d.id;allShipsData.push(o)});
-                // Initialize filteredShips with ALL data immediately so list is visible
-                filteredShips = allShipsData; 
+                filteredShips = allShipsData; // Force populate on load
                 renderShipPage(1);
             });
             
@@ -452,11 +433,11 @@
             currentShipPage=p;const l=document.getElementById("shipList");l.innerHTML="";
             filteredShips.slice((p-1)*postsPerPage,p*postsPerPage).forEach(x=>{
                 let img=x.imageUrl?`<button class="mini-btn btn-photo" onclick="event.stopPropagation();showImageModal('${x.imageUrl}')">📷</button>`:"";
-                // Fixed: Added toggle-icon span and onclick handler using toggleShipContent
+                // Uses toggleItemContent like other lists
                 l.innerHTML+=`
                 <li class="post-item tap-effect">
-                    <div onclick="toggleShipContent('s-${x.id}')" style="display:flex;justify-content:space-between; padding:15px 5px; align-items:center;">
-                        <span class="post-title-text" style="margin:0;">🚢 ${x.shipName} <span class="toggle-icon" style="font-size:0.7rem; color:var(--text-sub); margin-left:5px;">▼</span></span>
+                    <div class="post-header-row" onclick="toggleItemContent('s-${x.id}')">
+                        <span class="post-title-text" style="margin:0;">🚢 ${x.shipName}</span>
                         <div>${img}</div>
                     </div>
                     <div id="s-${x.id}" class="post-body-content">
