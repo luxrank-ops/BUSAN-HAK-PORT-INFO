@@ -436,7 +436,7 @@
                 const n=new Date(); renderCalendar(n.getFullYear(),n.getMonth());
             } else showToast("⛔ 접근 불가");
         }
-        function renderCalendar(y,m){cy=y;cm=m;const dt=new Date(y,m,1);document.getElementById('calMonthYear').innerText=${y}년 ${m+1}월;const g=document.getElementById('calendarGrid');g.innerHTML='';['일','월','화','수','목','금','토'].forEach(d=>g.innerHTML+=<div style="font-weight:bold;color:var(--text-sub);font-size:0.8rem;">${d}</div>);for(let i=0;i<dt.getDay();i++)g.innerHTML+=<div></div>;const dim=new Date(y,m+1,0).getDate();db.collection("work_logs").where("date",">=",${y}-${String(m+1).padStart(2,'0')}-01).where("date","<=",${y}-${String(m+1).padStart(2,'0')}-${dim}).get().then(qs=>{adminWorkLogs={};let t=0;qs.forEach(d=>{adminWorkLogs[d.id]=d.data();t+=(d.data().totalPay||0)});document.getElementById('monthlyTotalDisplay').innerText=Math.floor(t).toLocaleString()+"원";for(let i=1;i<=dim;i++){const ds=${y}-${String(m+1).padStart(2,'0')}-${String(i).padStart(2,'0')};const d=document.createElement('div');d.className='cal-day tap-effect';if(adminWorkLogs[ds])d.classList.add('has-data');d.innerHTML=${i}<div class="cal-dot"></div>;d.onclick=()=>selectDate(ds,d);g.appendChild(d)}})}
+        function renderCalendar(y,m){cy=y;cm=m;const dt=new Date(y,m,1);document.getElementById('calMonthYear').innerText=`${y}년 ${m+1}월`;const g=document.getElementById('calendarGrid');g.innerHTML='';['일','월','화','수','목','금','토'].forEach(d=>g.innerHTML+=`<div style="font-weight:bold;color:var(--text-sub);font-size:0.8rem;">${d}</div>`);for(let i=0;i<dt.getDay();i++)g.innerHTML+=`<div></div>`;const dim=new Date(y,m+1,0).getDate();db.collection("work_logs").where("date",">=",`${y}-${String(m+1).padStart(2,'0')}-01`).where("date","<=",`${y}-${String(m+1).padStart(2,'0')}-${dim}`).get().then(qs=>{adminWorkLogs={};let t=0;qs.forEach(d=>{adminWorkLogs[d.id]=d.data();t+=(d.data().totalPay||0)});document.getElementById('monthlyTotalDisplay').innerText=Math.floor(t).toLocaleString()+"원";for(let i=1;i<=dim;i++){const ds=`${y}-${String(m+1).padStart(2,'0')}-${String(i).padStart(2,'0')}`;const d=document.createElement('div');d.className='cal-day tap-effect';if(adminWorkLogs[ds])d.classList.add('has-data');d.innerHTML=`${i}<div class="cal-dot"></div>`;d.onclick=()=>selectDate(ds,d);g.appendChild(d)}})}
         function changeMonth(d){renderCalendar(new Date(cy,cm+d,1).getFullYear(),new Date(cy,cm+d,1).getMonth());vibrate()}
         function selectDate(ds,el){document.querySelectorAll('.cal-day').forEach(d=>d.classList.remove('selected'));el.classList.add('selected');selDate=ds;document.getElementById('dailyLogForm').classList.remove('hidden');document.getElementById('selectedDateText').innerText=ds;const d=adminWorkLogs[ds]||{};document.getElementById('logDayHours').value=d.dayHours||'';document.getElementById('logNightHours').value=d.nightHours||'';document.getElementById('logSkillTime').value=d.skillTime||'';document.getElementById('logSkillRate').value=d.skillRate||'';document.getElementById('logSignalTime').value=d.signalTime||'';document.getElementById('logSignalRate').value=d.signalRate||'';document.getElementById('logRainTime').value=d.rainTime||'';document.getElementById('logRainRate').value=d.rainRate||'';document.getElementById('logMemo').value=d.memo||'';document.getElementById('logImagePreview').src=d.imageUrl||'';document.getElementById('logImageContainer').style.display=d.imageUrl?'block':'none';document.getElementById('dailyTotalDisplay').innerText=(d.totalPay||0).toLocaleString()+"원";vibrate()}
         function resetLogInputs(){document.querySelectorAll('#dailyLogForm input, #dailyLogForm textarea').forEach(i=>i.value=''); document.getElementById('logImagePreview').src=''; document.getElementById('logImageContainer').style.display='none'; vibrate();}
@@ -450,26 +450,26 @@
             const currentPosts = allPostsData.slice((currentBoardPage-1)*postsPerPage, currentBoardPage*postsPerPage);
             currentPosts.forEach(post => {
                 const unsub = db.collection('posts').doc(post.id).collection('comments').orderBy('timestamp', 'asc').onSnapshot(snapshot => {
-                    const listEl = document.getElementById(cmt-list-${post.id});
+                    const listEl = document.getElementById(`cmt-list-${post.id}`);
                     if (!listEl) return;
                     listEl.innerHTML = "";
                     snapshot.forEach(doc => {
                         const c = doc.data();
-                        listEl.innerHTML += <div class="comment-item"><span class="comment-meta">${c.name}</span><span class="comment-text">${c.text}</span><button class="comment-del-btn" onclick="deleteComment('${post.id}', '${doc.id}', '${c.password}')">×</button></div>;
+                        listEl.innerHTML += `<div class="comment-item"><span class="comment-meta">${c.name}</span><span class="comment-text">${c.text}</span><button class="comment-del-btn" onclick="deleteComment('${post.id}', '${doc.id}', '${c.password}')">×</button></div>`;
                     });
                 });
                 commentUnsubscribes[post.id] = unsub;
             });
         }
         function addComment(postId) {
-            const name = document.getElementById(cmt-name-${postId}).value; const pw = document.getElementById(cmt-pw-${postId}).value; const text = document.getElementById(cmt-txt-${postId}).value;
+            const name = document.getElementById(`cmt-name-${postId}`).value; const pw = document.getElementById(`cmt-pw-${postId}`).value; const text = document.getElementById(`cmt-txt-${postId}`).value;
             if (!name || !pw || !text) { showToast("입력 확인"); return; }
-            db.collection('posts').doc(postId).collection('comments').add({ name: name, password: pw, text: text, timestamp: firebase.firestore.FieldValue.serverTimestamp() }).then(() => { document.getElementById(cmt-txt-${postId}).value = ""; showToast("댓글 등록"); });
+            db.collection('posts').doc(postId).collection('comments').add({ name: name, password: pw, text: text, timestamp: firebase.firestore.FieldValue.serverTimestamp() }).then(() => { document.getElementById(`cmt-txt-${postId}`).value = ""; showToast("댓글 등록"); });
         }
         function deleteComment(postId, commentId, realPw) { const inputPw = prompt("비밀번호:"); if (inputPw === realPw || inputPw === "0346") { db.collection('posts').doc(postId).collection('comments').doc(commentId).delete().then(() => showToast("삭제됨")); } else { showToast("비밀번호 불일치"); } }
 
         function loadAllData(){
-            db.collection("notices").orderBy("timestamp","desc").onSnapshot(s=>{const l=document.getElementById("noticeList");l.innerHTML="";s.forEach(d=>{const n=d.data();l.innerHTML+=<li class="post-item tap-effect"><div class="post-header-row" onclick="toggleContent('n-${d.id}')"><span class="post-title-text" style="color:var(--danger)">📢 ${n.title}</span><span class="post-meta-info">${n.date}</span></div><div id="n-${d.id}" class="post-body-content">${n.content}<br><button class="mini-btn btn-del" onclick="delNotice('${d.id}',event)">삭제</button></div></li>})});
+            db.collection("notices").orderBy("timestamp","desc").onSnapshot(s=>{const l=document.getElementById("noticeList");l.innerHTML="";s.forEach(d=>{const n=d.data();l.innerHTML+=`<li class="post-item tap-effect"><div class="post-header-row" onclick="toggleContent('n-${d.id}')"><span class="post-title-text" style="color:var(--danger)">📢 ${n.title}</span><span class="post-meta-info">${n.date}</span></div><div id="n-${d.id}" class="post-body-content">${n.content}<br><button class="mini-btn btn-del" onclick="delNotice('${d.id}',event)">삭제</button></div></li>`})});
             db.collection("posts").orderBy("timestamp","desc").onSnapshot(s=>{allPostsData=[];s.forEach(d=>{let o=d.data();o.id=d.id;allPostsData.push(o)});renderBoardPage(1)});
             
             // [FIX: Initial List View]
@@ -485,7 +485,7 @@
         function renderBoardPage(p){
             currentBoardPage=p; const l=document.getElementById("boardList"); l.innerHTML="";
             allPostsData.slice((p-1)*postsPerPage, p*postsPerPage).forEach(x=>{
-                l.innerHTML+=
+                l.innerHTML+=`
                 <li class="post-item tap-effect">
                     <div class="post-header-row" onclick="toggleContent('p-${x.id}')">
                         <span class="post-title-text">[${x.category}] ${x.title}</span>
@@ -495,7 +495,7 @@
                         <div style="margin-bottom:15px; white-space:pre-wrap;">${x.content}</div>
                         <div class="comment-section"><div id="cmt-list-${x.id}" class="comment-list"></div><div class="comment-form"><input id="cmt-name-${x.id}" class="comment-input-sm" placeholder="닉"><input id="cmt-pw-${x.id}" class="comment-input-sm" type="password" placeholder="비번"><input id="cmt-txt-${x.id}" class="comment-input-lg" placeholder="댓글..."><button class="comment-submit" onclick="addComment('${x.id}')">등록</button></div></div><div style="margin-top:10px; text-align:right;"><button class="mini-btn btn-del" onclick="deletePost('${x.id}','${x.password}',event)">글 삭제</button></div>
                     </div>
-                </li>;
+                </li>`;
             });
             renderPagination("pagination",Math.ceil(allPostsData.length/postsPerPage),p,renderBoardPage);
             loadCommentsForPage();
@@ -503,9 +503,9 @@
         function renderShipPage(p){
             currentShipPage=p;const l=document.getElementById("shipList");l.innerHTML="";
             filteredShips.slice((p-1)*postsPerPage,p*postsPerPage).forEach(x=>{
-                let img=x.imageUrl?<button class="mini-btn btn-photo" onclick="event.stopPropagation();showImageModal('${x.imageUrl}')">📷</button>:"";
+                let img=x.imageUrl?`<button class="mini-btn btn-photo" onclick="event.stopPropagation();showImageModal('${x.imageUrl}')">📷</button>`:"";
                 // Uses toggleShipContent for forced style toggle
-                l.innerHTML+=
+                l.innerHTML+=`
                 <li class="post-item tap-effect">
                     <div onclick="toggleShipContent('s-${x.id}')" style="display:flex;justify-content:space-between; padding:15px 5px; align-items:center;">
                         <span class="post-title-text" style="margin:0;">🚢 ${x.shipName} <span class="toggle-icon" style="font-size:0.7rem; color:var(--text-sub); margin-left:5px;">▼</span></span>
@@ -517,12 +517,12 @@
                         <button class="mini-btn btn-edit" onclick="editShip('${x.id}')">수정</button>
                         <button class="mini-btn btn-del" onclick="deleteShip('${x.id}',event)">삭제</button>
                     </div>
-                </li>;
+                </li>`;
             });
             renderPagination("shipPagination",Math.ceil(filteredShips.length/postsPerPage),p,renderShipPage)
         }
-        function renderFilePage(p){currentFilePage=p;const l=document.getElementById("fileList");l.innerHTML="";allFilesData.slice((p-1)*postsPerPage,p*postsPerPage).forEach(x=>{l.innerHTML+=<li class="post-item tap-effect" style="display:flex;justify-content:space-between; padding:15px 5px;"><div><a href="${x.fileUrl}" target="_blank" style="text-decoration:none;color:var(--text-main);font-weight:bold;">💾 ${x.title}</a></div></li>});renderPagination("filePagination",Math.ceil(allFilesData.length/postsPerPage),p,renderFilePage)}
-        function renderPagination(id,t,c,f){const el=document.getElementById(id);el.innerHTML="";for(let i=1;i<=t;i++){const s=document.createElement("span");s.className=page-num ${i===c?'active':''} tap-effect;s.innerText=i;s.onclick=()=>f(i);el.appendChild(s)}}
+        function renderFilePage(p){currentFilePage=p;const l=document.getElementById("fileList");l.innerHTML="";allFilesData.slice((p-1)*postsPerPage,p*postsPerPage).forEach(x=>{l.innerHTML+=`<li class="post-item tap-effect" style="display:flex;justify-content:space-between; padding:15px 5px;"><div><a href="${x.fileUrl}" target="_blank" style="text-decoration:none;color:var(--text-main);font-weight:bold;">💾 ${x.title}</a></div></li>`});renderPagination("filePagination",Math.ceil(allFilesData.length/postsPerPage),p,renderFilePage)}
+        function renderPagination(id,t,c,f){const el=document.getElementById(id);el.innerHTML="";for(let i=1;i<=t;i++){const s=document.createElement("span");s.className=`page-num ${i===c?'active':''} tap-effect`;s.innerText=i;s.onclick=()=>f(i);el.appendChild(s)}}
 
         function filterShips(){const q=document.getElementById('shipSearch').value.toUpperCase();filteredShips=allShipsData.filter(s=>s.shipName.toUpperCase().includes(q));renderShipPage(1);}
         function filterFiles(){const k=document.getElementById('fileSearch').value.toUpperCase();const l=document.getElementById('fileList').getElementsByTagName('li');for(let i=0;i<l.length;i++)l[i].style.display=l[i].innerText.toUpperCase().includes(k)?"":"none"}
@@ -537,7 +537,7 @@
         function deleteShip(id,e){e.stopPropagation();if(prompt("암호:")==="0346")db.collection("ships").doc(id).delete()}
         function uploadFile(){const f=document.getElementById('fileInput').files[0];if(!f)return;storage.ref('archives/'+Date.now()+f.name).put(f).then(s=>s.ref.getDownloadURL()).then(u=>{db.collection("archives").add({title:document.getElementById('fileTitle').value,uploader:document.getElementById('fileUploader').value,fileUrl:u,date:new Date().toLocaleString('ko-KR'),timestamp:firebase.firestore.FieldValue.serverTimestamp()});showToast("완료")})}
         
-        function loadBanner(){db.collection('settings').doc('banner').onSnapshot(d=>{if(d.exists){const data=d.data();let msg="";if(data.adminMessage)msg+=🚨 ${data.adminMessage}   /   ;if(data.messages&&data.messages.length>0)msg+=data.messages.join("   /   ");if(!msg)msg="🚨 안전 제일! 오늘도 무사고!";document.getElementById('tickerText').innerText=msg}})}
+        function loadBanner(){db.collection('settings').doc('banner').onSnapshot(d=>{if(d.exists){const data=d.data();let msg="";if(data.adminMessage)msg+=`🚨 ${data.adminMessage}   /   `;if(data.messages&&data.messages.length>0)msg+=data.messages.join("   /   ");if(!msg)msg="🚨 안전 제일! 오늘도 무사고!";document.getElementById('tickerText').innerText=msg}})}
         function writeUserTicker(){const msg=prompt("안전 문구 입력 (누구나):");if(msg){db.collection('settings').doc('banner').get().then(doc=>{let msgs=doc.exists?(doc.data().messages||[]):[];msgs.unshift(msg);if(msgs.length>10)msgs=msgs.slice(0,10);db.collection('settings').doc('banner').set({messages:msgs},{merge:true})})}}
         function setAdminTicker(){if(prompt("관리자 암호:")==="0346"){const msg=prompt("고정 공지 입력:");if(msg)db.collection('settings').doc('banner').set({adminMessage:msg},{merge:true})}else showToast("⛔ 관리자만 가능")}
         function resetTicker(){if(prompt("관리자 암호:")==="0346"&&confirm("초기화?"))db.collection('settings').doc('banner').set({adminMessage:null,messages:[]})}
