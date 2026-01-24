@@ -5,8 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     
     <meta name="description" content="부산항 현장직 필수 앱. 임금계산기, 스마트 근무일지(짝지기록), 선박위치 및 스케줄 조회.">
-    <meta property="og:title" content="BUSAN HAK PORT INFO">
-    <title>BUSAN HAK PORT INFO</title>
+    <meta name="keywords" content="부산항, 현장직, 임금계산, 근무일지, 선박스케줄, 갱, YT, QC, Lashing">
+    <meta property="og:title" content="부산항 현장직 앱 | 2026 임금계산 · 근무일지 · 선박스케줄">
+    <title>부산항 현장직 앱 | 2026 임금계산 · 근무일지 · 선박스케줄</title>
     
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
@@ -14,110 +15,59 @@
     
     <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6024353303588422" crossorigin="anonymous"></script>
 
-    <link rel="icon" type="image/png" sizes="32x32" href="icon.png?v=final_insert_v1">
+    <link rel="icon" type="image/png" sizes="32x32" href="icon.png?v=terminal_toggle_fix">
     <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.8/dist/web/static/pretendard.css" />
 
     <style>
-        :root {
-            --primary: #1e3a8a; --primary-light: #3b82f6; --accent: #f59e0b;
-            --bg-color: #f3f4f6; --card-bg: rgba(255, 255, 255, 0.95);
-            --text-main: #1f2937; --text-sub: #6b7280;
-            --border: rgba(229, 231, 235, 0.8);
-            --danger: #ef4444; --success: #10b981;
-            --glass-border: 1px solid rgba(255, 255, 255, 0.6);
-            --glass-shadow: 0 2px 10px rgba(0,0,0,0.03);
-            --blur: blur(12px);
-        }
-        body.dark-mode {
-            --primary: #60a5fa; --primary-light: #93c5fd; --accent: #fbbf24;
-            --bg-color: #0f172a; --card-bg: rgba(30, 41, 59, 0.95);
-            --text-main: #f3f4f6; --text-sub: #9ca3af;
-            --border: rgba(55, 65, 81, 0.5);
-            --glass-border: 1px solid rgba(255, 255, 255, 0.1);
-        }
+        :root { --primary: #1e3a8a; --primary-light: #3b82f6; --accent: #f59e0b; --bg-color: #f3f4f6; --card-bg: rgba(255, 255, 255, 0.95); --text-main: #1f2937; --text-sub: #6b7280; --border: rgba(229, 231, 235, 0.8); --danger: #ef4444; --success: #10b981; --glass-border: 1px solid rgba(255, 255, 255, 0.6); --glass-shadow: 0 2px 10px rgba(0,0,0,0.03); --blur: blur(12px); }
+        body.dark-mode { --primary: #60a5fa; --primary-light: #93c5fd; --accent: #fbbf24; --bg-color: #0f172a; --card-bg: rgba(30, 41, 59, 0.95); --text-main: #f3f4f6; --text-sub: #9ca3af; --border: rgba(55, 65, 81, 0.5); --glass-border: 1px solid rgba(255, 255, 255, 0.1); }
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; font-family: 'Pretendard', sans-serif; }
-        body { background-color: var(--bg-color); color: var(--text-main); margin: 0; padding: 0; padding-bottom: 90px; transition: background 0.3s ease; }
-
+        body { background-color: var(--bg-color); color: var(--text-main); margin: 0; padding: 0; padding-bottom: 100px; transition: background 0.3s ease; }
         .tap-effect { transition: transform 0.1s; } .tap-effect:active { transform: scale(0.98); }
-
-        header {
-            background: linear-gradient(135deg, var(--primary), var(--primary-light));
-            color: white; padding: 14px 0; text-align: center; position: sticky; top: 0; z-index: 100;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-        }
+        header { background: linear-gradient(135deg, var(--primary), var(--primary-light)); color: white; padding: 14px 0; text-align: center; position: sticky; top: 0; z-index: 100; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
         header h1 { margin: 0; font-size: 1.2rem; font-weight: 900; }
         .theme-toggle { position: absolute; right: 15px; top: 50%; transform: translateY(-50%); background: rgba(255,255,255,0.2); border: none; width: 30px; height: 30px; border-radius: 50%; font-size: 1.1rem; cursor: pointer; display: flex; align-items: center; justify-content: center; }
-
         .container { width: 96%; max-width: 600px; margin: 15px auto; }
-        
-        /* [Main Grid Layout] */
         .dash-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }
-        .dash-card { 
-            background: var(--card-bg); border-radius: 16px; 
-            box-shadow: var(--glass-shadow); border: var(--glass-border); overflow: hidden;
-            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
-            display: flex; flex-direction: column;
-        }
+        .dash-card { background: var(--card-bg); border-radius: 16px; box-shadow: var(--glass-shadow); border: var(--glass-border); overflow: hidden; transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); display: flex; flex-direction: column; }
         .dash-card.expanded { grid-column: span 2; }
-
-        .dash-header {
-            padding: 15px; cursor: pointer; display: flex; justify-content: space-between; align-items: center;
-            background: rgba(255,255,255,0.05); border-bottom: 1px solid transparent; height: 100%; min-height: 60px;
-        }
+        .dash-header { padding: 15px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.05); border-bottom: 1px solid transparent; height: 100%; min-height: 60px; }
         .dash-card.expanded .dash-header { border-bottom: 1px solid var(--border); background: rgba(0,0,0,0.02); }
         .dash-title { font-size: 1rem; font-weight: 800; color: var(--text-main); display: flex; align-items: center; gap: 6px; }
         .toggle-icon { font-size: 0.8rem; color: var(--text-sub); transition: transform 0.3s; }
         .toggle-icon.rotated { transform: rotate(180deg); }
         .dash-content { display: none; padding: 15px; background: var(--card-bg); animation: fadeIn 0.2s; }
-        
-        /* [Section Cards (Terminals, Weather)] */
         .card { background: var(--card-bg); border-radius: 16px; margin-bottom: 15px; box-shadow: var(--glass-shadow); border: var(--glass-border); overflow: hidden; }
         .section-header { display: flex; justify-content: space-between; align-items: center; padding: 15px; cursor: pointer; border-bottom: 1px solid var(--border); }
         .section-title { font-size: 1.1rem; font-weight: 800; display:flex; align-items:center; gap:8px; }
         .collapsible-content { display: block; padding: 15px; }
-        .collapsible-content.collapsed { display: none; }
+        .collapsible-content.collapsed { display: none !important; }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-
-        /* [Control Grid] */
         .control-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-        .control-btn { 
-            background: var(--card-bg); border: 1px solid var(--border); color: var(--text-main); 
-            padding: 16px; border-radius: 12px; text-decoration: none; 
-            font-size: 0.95rem; font-weight: 700; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.02); transition: all 0.2s;
-        }
+        .control-btn { background: var(--card-bg); border: 1px solid var(--border); color: var(--text-main); padding: 16px; border-radius: 12px; text-decoration: none; font-size: 0.95rem; font-weight: 700; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px; box-shadow: 0 2px 5px rgba(0,0,0,0.02); transition: all 0.2s; }
         .control-btn:active { transform: scale(0.98); background: rgba(0,0,0,0.05); }
-
-        /* [Elements] */
         .input-field { width: 100%; padding: 12px; margin-bottom: 8px; border: 1px solid var(--border); border-radius: 8px; background: rgba(255,255,255,0.6); color: var(--text-main); font-size: 0.95rem; }
         .textarea-field { height: 80px; resize: none; }
         .action-btn { width: 100%; padding: 12px; border: none; border-radius: 10px; font-weight: 700; color: white; cursor: pointer; background: var(--primary); font-size: 0.95rem; }
         .bg-submit { background: var(--success); } .bg-calc { background: linear-gradient(135deg, #ef4444, #b91c1c); } .bg-cancel { background: var(--text-sub); }
-
         .terminal-block { background: rgba(0,0,0,0.03); border-radius: 10px; margin-bottom: 8px; border: 1px solid var(--border); overflow: hidden; }
         .terminal-header { padding: 12px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; font-weight: 700; font-size: 0.95rem; }
         .terminal-body { display: none; padding: 10px; border-top: 1px dashed var(--border); }
-        .terminal-body.show { display: block !important; }
         .terminal-actions { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; }
         .terminal-btn { background: var(--card-bg); border: 1px solid var(--border); color: var(--text-main); padding: 10px 4px; border-radius: 8px; text-decoration: none; font-size: 0.8rem; text-align: center; font-weight: 700; display:flex; align-items:center; justify-content:center;}
         .btn-premium { grid-column: span 3; background: linear-gradient(135deg, #fffbeb, #fef3c7); border: 1px solid #fcd34d; color: #92400e; margin-top: 5px; }
-
         .wage-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
         .wage-row label { flex: 1; font-weight: 600; font-size: 0.9rem; }
         .wage-result-box { background: linear-gradient(135deg, #fff7ed, #ffedd5); border: 2px solid var(--accent); border-radius: 12px; padding: 15px; text-align: center; margin-top: 15px; }
         .wage-total { font-size: 1.6rem; color: #c2410c; font-weight: 900; }
-
         .ticker-container { background: var(--accent); color: #000; font-weight: 700; height: 36px; display: flex; align-items: center; overflow: hidden; position: relative; font-size: 0.85rem; }
         .ticker-item { padding-left: 100%; animation: ticker 25s linear infinite; white-space: nowrap; }
         @keyframes ticker { 100% { transform: translate3d(-100%, 0, 0); } }
         .ticker-controls { position: absolute; right: 0; height: 100%; display: flex; background: rgba(255,255,255,0.3); backdrop-filter: blur(2px); }
         .ticker-btn { width: 36px; height: 100%; border: none; background: transparent; font-size: 1rem; cursor: pointer; }
-
         .hidden { display: none !important; }
         .mini-btn { padding: 4px 8px; font-size: 0.75rem; border-radius: 6px; border: none; cursor: pointer; color: white; margin-left: 5px; }
         .btn-del { background: var(--danger); } .btn-edit { background: var(--primary-light); }
-        
-        /* List Style */
         .post-list { list-style: none; padding: 0; margin: 0; }
         .post-item { border-bottom: 1px solid var(--border); }
         .post-item:last-child { border-bottom: none; }
@@ -125,34 +75,23 @@
         .post-header-row:active { background: rgba(0,0,0,0.03); }
         .post-title-text { font-weight: 700; font-size: 0.95rem; color: var(--text-main); display: flex; align-items: center; gap: 5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; margin-right: 10px; }
         .post-meta-info { font-size: 0.75rem; color: var(--text-sub); white-space: nowrap; }
-        
-        /* [SHIP CONTENT FORCE STYLE] */
-        .post-body-content { 
-            display: none; 
-            padding: 15px; background: rgba(0,0,0,0.02); border-top: 1px dashed var(--border); 
-            font-size: 0.95rem; line-height: 1.7; white-space: pre-wrap; color: var(--text-main); word-break: break-all; 
-        }
-
+        /* [FORCE STYLE] */
+        .post-body-content { display: none; padding: 15px; background: rgba(0,0,0,0.02); border-top: 1px dashed var(--border); font-size: 0.95rem; line-height: 1.7; white-space: pre-wrap; color: var(--text-main); word-break: break-all; }
         .bottom-nav { position: fixed; bottom: 0; left: 0; width: 100%; height: 65px; background: rgba(255,255,255,0.95); border-top: 1px solid var(--border); display: flex; justify-content: space-around; align-items: center; z-index: 1000; padding-bottom: env(safe-area-inset-bottom); }
         .dark-mode .bottom-nav { background: rgba(30, 41, 59, 0.95); }
         .nav-item { flex: 1; text-align: center; color: var(--text-sub); font-size: 0.7rem; cursor: pointer; display: flex; flex-direction: column; align-items: center; }
         .nav-item.active { color: var(--primary); font-weight: 800; }
         .nav-icon { font-size: 1.4rem; margin-bottom: 2px; }
-        
         .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 3000; justify-content: center; align-items: center; }
         .modal-content { background: var(--card-bg); padding: 20px; border-radius: 15px; max-width: 90%; max-height: 80%; overflow-y: auto; }
         .modal-img { max-width: 100%; border-radius: 5px; }
-        
         .guide-text { line-height: 1.8; font-size: 0.9rem; text-align: left; color: var(--text-main); white-space: pre-wrap; }
         .guide-text h4 { color: var(--primary); margin: 25px 0 10px 0; border-left: 4px solid var(--accent); padding-left: 10px; font-size: 1rem; }
         .glossary-item { margin-bottom: 10px; padding-bottom: 10px; border-bottom: 1px dashed var(--border); }
         .glossary-term { font-weight: 800; color: var(--primary); font-size: 0.9rem; }
         .glossary-desc { font-size: 0.85rem; color: var(--text-main); margin-top: 2px; }
-
         footer { text-align: center; padding: 40px 20px; color: var(--text-sub); font-size: 0.8rem; margin-bottom: 80px; border-top: 1px solid var(--border); }
         .footer-link { cursor: pointer; text-decoration: underline; margin: 0 8px; }
-        
-        /* Calendar & Chips */
         .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; text-align: center; }
         .cal-day { padding: 8px 2px; border-radius: 8px; background: rgba(255,255,255,0.5); border: 1px solid var(--border); font-weight: 700; font-size: 0.85rem; }
         .cal-day.selected { background: var(--primary); color: white; border-color: var(--primary); }
@@ -160,8 +99,6 @@
         .cal-day.has-data .cal-dot { display: block; }
         .chip-container { display: flex; gap: 5px; margin-bottom: 10px; flex-wrap: wrap; }
         .chip-btn { padding: 6px 12px; border-radius: 15px; border: 1px solid var(--primary-light); background: rgba(255,255,255,0.6); color: var(--primary); font-size: 0.8rem; font-weight: 700; cursor: pointer; }
-        
-        /* Comments */
         .comment-section { margin-top: 15px; border-top: 1px dashed var(--border); padding-top: 10px; background: rgba(0,0,0,0.015); border-radius: 8px; padding: 10px; }
         .comment-item { display: flex; justify-content: space-between; align-items: flex-start; font-size: 0.85rem; padding: 6px 0; border-bottom: 1px solid rgba(0,0,0,0.05); }
         .comment-meta { font-weight: bold; color: var(--primary); margin-right: 5px; min-width: 60px; font-size: 0.8rem; }
@@ -362,7 +299,7 @@
         <div class="card">
             <div class="section-header tap-effect" onclick="toggleSection('t3-content', this)"><span class="section-title">🏭 3항업 (신항 남측) <span class="toggle-icon">▼</span></span></div>
             <div id="t3-content" class="collapsible-content collapsed">
-                <div class="terminal-block"><div class="terminal-header tap-effect" onclick="toggleContent('term-hjnc')"><h4 class="terminal-title">한진신항만 (HJNC) <span class="toggle-icon">▼</span></h4></div><div id="term-hjnc" class="terminal-body"><div class="terminal-actions"><a href="https://www.hjnc.co.kr/esvc/vessel/berthScheduleT" target="_blank" class="terminal-btn">스케줄</a><a href="https://www.hjnc.co.kr/esvc/vessel/berthScheduleG" target="_blank" class="terminal-btn">차트</a><a href="https://www.hjnc.co.kr/esvc/vessel/vesselStatus" target="_blank" class="terminal-btn">현황</a></div></div></div>
+                <div class="terminal-block"><div class="terminal-header tap-effect" onclick="toggleContent('term-hjnc')"><h4 class="terminal-title">한진신항만 (HJNC) <span class="toggle-icon">▼</span></h4></div><div id="term-hjnc" class="terminal-body"><div class="terminal-actions"><a href="https://www.hjnc.co.kr/esvc/vessel/berthScheduleT" target="_blank" class="terminal-btn">스케줄</a><a href="https://www.hjnc.co.kr/esvc/vessel/berthScheduleG" target="_blank" class="terminal-btn">차트</a><a href="https://www.hjnc.co.kr/esvc/vessel/vesselStatus" target="_blank" class="terminal-btn">현황</a><a href="http://bayplan.hjnc.co.kr" target="_blank" class="terminal-btn btn-premium">🧩 BAY PLAN</a></div></div></div>
                 <div class="terminal-block"><div class="terminal-header tap-effect" onclick="toggleContent('term-dgt')"><h4 class="terminal-title">동원로엑스 (DGT) <span class="toggle-icon">▼</span></h4></div><div id="term-dgt" class="terminal-body"><div class="terminal-actions"><a href="https://www.dgtbusan.com/DGT/esvc/vessel/berthScheduleT" target="_blank" class="terminal-btn">스케줄</a><a href="https://www.dgtbusan.com/DGT/esvc/vessel/berthScheduleG" target="_blank" class="terminal-btn">차트</a><a href="https://www.dgtbusan.com/DGT/esvc/vessel/vesselStatus" target="_blank" class="terminal-btn">현황</a></div></div></div>
                 <div class="terminal-block"><div class="terminal-header tap-effect" onclick="toggleContent('term-bnct')"><h4 class="terminal-title">부산신항컨테이너 (BNCT) <span class="toggle-icon">▼</span></h4></div><div id="term-bnct" class="terminal-body"><div class="terminal-actions"><a href="https://info.bnctkorea.com/esvc/vessel/berthScheduleT" target="_blank" class="terminal-btn">스케줄</a><a href="https://info.bnctkorea.com/esvc/vessel/berthScheduleG" target="_blank" class="terminal-btn">차트</a><a href="https://info.bnctkorea.com/esvc/vessel/vesselStatus" target="_blank" class="terminal-btn">현황</a></div></div></div>
                 <div class="terminal-block"><div class="terminal-header tap-effect" onclick="toggleContent('term-bct')"><h4 class="terminal-title">부산컨테이너터미널 (BCT) <span class="toggle-icon">▼</span></h4></div><div id="term-bct" class="terminal-body"><div class="terminal-actions"><a href="https://info.bct2-4.com/infoservice/index.html" target="_blank" class="terminal-btn">스케줄</a><a href="https://info.bct2-4.com/infoservice/index.html" target="_blank" class="terminal-btn">차트</a><a href="https://info.bct2-4.com/infoservice/index.html" target="_blank" class="terminal-btn">현황</a></div></div></div>
@@ -372,7 +309,7 @@
         <div class="card">
             <div class="section-header tap-effect" onclick="toggleSection('t2-content', this)"><span class="section-title">🏭 2항업 (신항 북측) <span class="toggle-icon">▼</span></span></div>
             <div id="t2-content" class="collapsible-content collapsed">
-                <div class="terminal-block"><div class="terminal-header tap-effect" onclick="toggleContent('term-pnc')"><h4 class="terminal-title">부산신항만 (PNC) <span class="toggle-icon">▼</span></h4></div><div id="term-pnc" class="terminal-body"><div class="terminal-actions"><a href="https://svc.pncport.com/info/CMS/Ship/Info.pnc?mCode=MN014" target="_blank" class="terminal-btn">스케줄</a><a href="https://svc.pncport.com/info/CMS/Ship/ShipBerthC.pnc?mCode=MN019" target="_blank" class="terminal-btn">차트</a><a href="https://svc.pncport.com/info/CMS/Ship/ShipVslStatus.pnc?mCode=MN020" target="_blank" class="terminal-btn">현황</a></div><button class="action-btn" style="background:#f39c12; margin-top:5px;" onclick="openBusSchedule()">🚌 셔틀버스</button></div></div>
+                <div class="terminal-block"><div class="terminal-header tap-effect" onclick="toggleContent('term-pnc')"><h4 class="terminal-title">부산신항만 (PNC) <span class="toggle-icon">▼</span></h4></div><div id="term-pnc" class="terminal-body"><div class="terminal-actions"><a href="https://svc.pncport.com/info/CMS/Ship/Info.pnc?mCode=MN014" target="_blank" class="terminal-btn">스케줄</a><a href="https://svc.pncport.com/info/CMS/Ship/ShipBerthC.pnc?mCode=MN019" target="_blank" class="terminal-btn">차트</a><a href="https://svc.pncport.com/info/CMS/Ship/ShipVslStatus.pnc?mCode=MN020" target="_blank" class="terminal-btn">현황</a></div><button class="action-btn" style="background:#f39c12; margin-top:8px; padding:10px;" onclick="openBusSchedule()">🚌 셔틀버스 시간표</button></div></div>
                 <div class="terminal-block"><div class="terminal-header tap-effect" onclick="toggleContent('term-pnit')"><h4 class="terminal-title">신항국제 (PNIT) <span class="toggle-icon">▼</span></h4></div><div id="term-pnit" class="terminal-body"><div class="terminal-actions"><a href="https://www.pnitl.com/infoservice/vessel/vslScheduleList.jsp" target="_blank" class="terminal-btn">스케줄</a><a href="https://www.pnitl.com/infoservice/vessel/vslScheduleChart.jsp" target="_blank" class="terminal-btn">차트</a><a href="https://www.pnitl.com/infoservice/vessel/vslWorkStatus.jsp" target="_blank" class="terminal-btn">현황</a></div></div></div>
                 <div class="terminal-block"><div class="terminal-header tap-effect" onclick="toggleContent('term-hpnt')"><h4 class="terminal-title">현대부산신항만 (HPNT) <span class="toggle-icon">▼</span></h4></div><div id="term-hpnt" class="terminal-body"><div class="terminal-actions"><a href="https://www.hpnt.co.kr/infoservice/vessel/vslScheduleList.jsp" target="_blank" class="terminal-btn">스케줄</a><a href="https://www.hpnt.co.kr/infoservice/vessel/vslScheduleChart.jsp" target="_blank" class="terminal-btn">차트</a><a href="https://www.hpnt.co.kr/infoservice/vessel/vslWorkStatus.jsp" target="_blank" class="terminal-btn">현황</a></div></div></div>
             </div>
@@ -488,22 +425,33 @@
             icon.classList.toggle('rotated');
             vibrate();
         }
-        function toggleItemContent(id) {
+        function toggleContent(id) {
             const el = document.getElementById(id);
-            el.classList.toggle('open'); el.classList.toggle('show');
-            const header = el.previousElementSibling;
-            if(header) {
-                const icon = header.querySelector('.toggle-icon');
-                if(icon) { if (el.classList.contains('open') || el.classList.contains('show')) icon.classList.add('rotated'); else icon.classList.remove('rotated'); }
+            // Strong toggle logic to ensure display: block
+            if(el.style.display === 'block') {
+                el.style.display = 'none';
+                const header = el.previousElementSibling;
+                if(header) {
+                     const icon = header.querySelector('.toggle-icon');
+                     if(icon) icon.classList.remove('rotated');
+                }
+            } else {
+                el.style.display = 'block';
+                const header = el.previousElementSibling;
+                if(header) {
+                     const icon = header.querySelector('.toggle-icon');
+                     if(icon) icon.classList.add('rotated');
+                }
             }
             vibrate();
         }
+        // Alias for compatibility
+        function toggleItemContent(id) { toggleContent(id); }
+        
         function toggleShipContent(id) {
-            const el = document.getElementById(id);
-            if(el.style.display === 'block') { el.style.display = 'none'; const icon = el.previousElementSibling.querySelector('.toggle-icon'); if(icon) icon.classList.remove('rotated'); } 
-            else { el.style.display = 'block'; const icon = el.previousElementSibling.querySelector('.toggle-icon'); if(icon) icon.classList.add('rotated'); }
-            vibrate();
+            toggleContent(id); // Use the unified strong toggle
         }
+
         function toggleHidden(id){document.getElementById(id).classList.toggle('hidden'); vibrate();}
         function vibrate(){if(navigator.vibrate)navigator.vibrate(15)}
         function showToast(m){const t=document.getElementById("toast");t.innerText=m;t.className="show";setTimeout(()=>t.className="",3000)}
