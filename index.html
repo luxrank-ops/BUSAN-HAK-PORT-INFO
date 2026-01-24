@@ -14,7 +14,7 @@
     
     <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6024353303588422" crossorigin="anonymous"></script>
 
-    <link rel="icon" type="image/png" sizes="32x32" href="icon.png?v=fixed_final_v5">
+    <link rel="icon" type="image/png" sizes="32x32" href="icon.png?v=fixed_v7">
     <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.8/dist/web/static/pretendard.css" />
 
     <style>
@@ -221,6 +221,34 @@
                     <div id="wageResultBox" class="hidden wage-result-box"><div style="font-size:0.8rem; color:var(--text-sub);">예상 수령액</div><div id="wageTotal" class="wage-total">0원</div></div>
                 </div>
             </div>
+            
+            <div class="card" style="border-left: 5px solid #3b82f6;">
+                <div class="section-header tap-effect" onclick="toggleSection('t3-content', this)"><span class="section-title">⛴️ 3항업 (신항 남측) <span class="toggle-icon">▼</span></span></div>
+                <div id="t3-content" class="collapsible-content collapsed">
+                    <div class="terminal-block"><div class="terminal-header tap-effect" onclick="toggleContent('term-hjnc')"><h4 class="terminal-title">한진신항만 (HJNC) <span class="toggle-icon">▼</span></h4></div><div id="term-hjnc" class="terminal-body"><div class="terminal-actions"><a href="https://www.hjnc.co.kr/esvc/vessel/berthScheduleT" target="_blank" class="terminal-btn">스케줄</a><a href="https://www.hjnc.co.kr/esvc/vessel/berthScheduleG" target="_blank" class="terminal-btn">차트</a><a href="https://www.hjnc.co.kr/esvc/vessel/vesselStatus" target="_blank" class="terminal-btn">현황</a><a href="http://bayplan.hjnc.co.kr" target="_blank" class="terminal-btn btn-premium">🧩 BAY PLAN</a></div></div></div>
+                    <div class="terminal-block"><div class="terminal-header tap-effect" onclick="toggleContent('term-dgt')"><h4 class="terminal-title">동원로엑스 (DGT) <span class="toggle-icon">▼</span></h4></div><div id="term-dgt" class="terminal-body"><div class="terminal-actions"><a href="https://www.dgtbusan.com/DGT/esvc/vessel/berthScheduleT" target="_blank" class="terminal-btn">스케줄</a><a href="https://www.dgtbusan.com/DGT/esvc/vessel/berthScheduleG" target="_blank" class="terminal-btn">차트</a><a href="https://www.dgtbusan.com/DGT/esvc/vessel/vesselStatus" target="_blank" class="terminal-btn">현황</a></div></div></div>
+                    <div class="terminal-block"><div class="terminal-header tap-effect" onclick="toggleContent('term-bnct')"><h4 class="terminal-title">부산신항컨테이너 (BNCT) <span class="toggle-icon">▼</span></h4></div><div id="term-bnct" class="terminal-body"><div class="terminal-actions"><a href="https://info.bnctkorea.com/esvc/vessel/berthScheduleT" target="_blank" class="terminal-btn">스케줄</a><a href="https://info.bnctkorea.com/esvc/vessel/berthScheduleG" target="_blank" class="terminal-btn">차트</a><a href="https://info.bnctkorea.com/esvc/vessel/vesselStatus" target="_blank" class="terminal-btn">현황</a></div></div></div>
+                    <div class="terminal-block"><div class="terminal-header tap-effect" onclick="toggleContent('term-bct')"><h4 class="terminal-title">부산컨테이너터미널 (BCT) <span class="toggle-icon">▼</span></h4></div><div id="term-bct" class="terminal-body"><div class="terminal-actions"><a href="https://info.bct2-4.com/infoservice/index.html" target="_blank" class="terminal-btn">스케줄</a><a href="https://info.bct2-4.com/infoservice/index.html" target="_blank" class="terminal-btn">차트</a><a href="https://info.bct2-4.com/infoservice/index.html" target="_blank" class="terminal-btn">현황</a></div></div></div>
+                </div>
+            </div>
+
+            <div class="card" style="border-left: 5px solid #10b981;">
+                <div class="section-header tap-effect" onclick="toggleSection('t2-content', this)"><span class="section-title">🏗️ 2항업 (신항 북측) <span class="toggle-icon">▼</span></span></div>
+                <div id="t2-content" class="collapsible-content collapsed">
+                    <div class="terminal-block"><div class="terminal-header tap-effect" onclick="toggleContent('term-pnc')"><h4 class="terminal-title">부산신항만 (PNC) <span class="toggle-icon">▼</span></h4></div><div id="term-pnc" class="terminal-body"><div class="terminal-actions"><a href="https://svc.pncport.com/info/CMS/Ship/Info.pnc?mCode=MN014" target="_blank" class="terminal-btn">스케줄</a><a href="https://svc.pncport.com/info/CMS/Ship/ShipBerthC.pnc?mCode=MN019" target="_blank" class="terminal-btn">차트</a><a href="https://svc.pncport.com/info/CMS/Ship/ShipVslStatus.pnc?mCode=MN020" target="_blank" class="terminal-btn">현황</a></div><button class="action-btn" style="background:#f39c12; margin-top:8px; padding:10px;" onclick="openBusSchedule()">🚌 셔틀버스 시간표</button></div></div>
+                    <div class="terminal-block"><div class="terminal-header tap-effect" onclick="toggleContent('term-pnit')"><h4 class="terminal-title">신항국제 (PNIT) <span class="toggle-icon">▼</span></h4></div><div id="term-pnit" class="terminal-body"><div class="terminal-actions"><a href="https://www.pnitl.com/infoservice/vessel/vslScheduleList.jsp" target="_blank" class="terminal-btn">스케줄</a><a href="https://www.pnitl.com/infoservice/vessel/vslScheduleChart.jsp" target="_blank" class="terminal-btn">차트</a><a href="https://www.pnitl.com/infoservice/vessel/vslWorkStatus.jsp" target="_blank" class="terminal-btn">현황</a></div></div></div>
+                    <div class="terminal-block"><div class="terminal-header tap-effect" onclick="toggleContent('term-hpnt')"><h4 class="terminal-title">현대부산신항만 (HPNT) <span class="toggle-icon">▼</span></h4></div><div id="term-hpnt" class="terminal-body"><div class="terminal-actions"><a href="https://www.hpnt.co.kr/infoservice/vessel/vslScheduleList.jsp" target="_blank" class="terminal-btn">스케줄</a><a href="https://www.hpnt.co.kr/infoservice/vessel/vslScheduleChart.jsp" target="_blank" class="terminal-btn">차트</a><a href="https://www.hpnt.co.kr/infoservice/vessel/vslWorkStatus.jsp" target="_blank" class="terminal-btn">현황</a></div></div></div>
+                </div>
+            </div>
+
+            <div class="card" style="border-left: 5px solid #f97316;">
+                <div class="section-header tap-effect" onclick="toggleSection('t1-content', this)"><span class="section-title">⚓ 1항업 (북항) <span class="toggle-icon">▼</span></span></div>
+                <div id="t1-content" class="collapsible-content collapsed">
+                    <div class="terminal-block"><div class="terminal-header tap-effect" onclick="toggleContent('term-bptc')"><h4 class="terminal-title">북항 통합 (BPTC) <span class="toggle-icon">▼</span></h4></div><div id="term-bptc" class="terminal-body"><div class="terminal-actions"><a href="http://info.bptc.co.kr:9084/content/sw/frame/berth_status_text_frame_sw_kr.jsp?p_id=BETX_SH_KR&snb_num=2&snb_div=service" target="_blank" class="terminal-btn" style="grid-column:span 3;">🏗️ 감만/신선대 선석</a></div></div></div>
+                    <div class="terminal-block"><div class="terminal-header tap-effect" onclick="toggleContent('term-hbct')"><h4 class="terminal-title">허치슨 (HBCT) <span class="toggle-icon">▼</span></h4></div><div id="term-hbct" class="terminal-body"><div class="terminal-actions"><a href="https://custom.hktl.com/jsp/T01/sunsuk.jsp" target="_blank" class="terminal-btn" style="grid-column:span 3;">⚓ 선석 정보</a></div></div></div>
+                    <div class="terminal-block"><div class="terminal-header tap-effect" onclick="toggleContent('term-dpct')"><h4 class="terminal-title">동부 (DPCT) <span class="toggle-icon">▼</span></h4></div><div id="term-dpct" class="terminal-body"><div class="terminal-actions"><a href="http://info.bptc.co.kr:9084/content/index.jsp#03" target="_blank" class="terminal-btn" style="grid-column:span 3;">🚢 터미널 포털</a></div></div></div>
+                </div>
+            </div>
 
             <div id="log-card" class="dash-card" style="border:1px solid var(--primary);">
                 <div class="dash-header tap-effect" onclick="checkAdminAndOpenLog('log-card')">
@@ -247,31 +275,53 @@
             </div>
         </div>
 
-        <div class="card" style="border-left: 5px solid #3b82f6;">
-            <div class="section-header tap-effect" onclick="toggleSection('t3-content', this)"><span class="section-title">🏗️ 3항업 (신항 남측) <span class="toggle-icon">▼</span></span></div>
-            <div id="t3-content" class="collapsible-content collapsed">
-                <div class="terminal-block"><div class="terminal-header tap-effect" onclick="toggleContent('term-hjnc')"><h4 class="terminal-title">한진신항만 (HJNC) <span class="toggle-icon">▼</span></h4></div><div id="term-hjnc" class="terminal-body"><div class="terminal-actions"><a href="https://www.hjnc.co.kr/esvc/vessel/berthScheduleT" target="_blank" class="terminal-btn">스케줄</a><a href="https://www.hjnc.co.kr/esvc/vessel/berthScheduleG" target="_blank" class="terminal-btn">차트</a><a href="https://www.hjnc.co.kr/esvc/vessel/vesselStatus" target="_blank" class="terminal-btn">현황</a><a href="http://bayplan.hjnc.co.kr" target="_blank" class="terminal-btn btn-premium">🧩 BAY PLAN</a></div></div></div>
-                <div class="terminal-block"><div class="terminal-header tap-effect" onclick="toggleContent('term-dgt')"><h4 class="terminal-title">동원로엑스 (DGT) <span class="toggle-icon">▼</span></h4></div><div id="term-dgt" class="terminal-body"><div class="terminal-actions"><a href="https://www.dgtbusan.com/DGT/esvc/vessel/berthScheduleT" target="_blank" class="terminal-btn">스케줄</a><a href="https://www.dgtbusan.com/DGT/esvc/vessel/berthScheduleG" target="_blank" class="terminal-btn">차트</a><a href="https://www.dgtbusan.com/DGT/esvc/vessel/vesselStatus" target="_blank" class="terminal-btn">현황</a></div></div></div>
-                <div class="terminal-block"><div class="terminal-header tap-effect" onclick="toggleContent('term-bnct')"><h4 class="terminal-title">부산신항컨테이너 (BNCT) <span class="toggle-icon">▼</span></h4></div><div id="term-bnct" class="terminal-body"><div class="terminal-actions"><a href="https://info.bnctkorea.com/esvc/vessel/berthScheduleT" target="_blank" class="terminal-btn">스케줄</a><a href="https://info.bnctkorea.com/esvc/vessel/berthScheduleG" target="_blank" class="terminal-btn">차트</a><a href="https://info.bnctkorea.com/esvc/vessel/vesselStatus" target="_blank" class="terminal-btn">현황</a></div></div></div>
-                <div class="terminal-block"><div class="terminal-header tap-effect" onclick="toggleContent('term-bct')"><h4 class="terminal-title">부산컨테이너터미널 (BCT) <span class="toggle-icon">▼</span></h4></div><div id="term-bct" class="terminal-body"><div class="terminal-actions"><a href="https://info.bct2-4.com/infoservice/index.html" target="_blank" class="terminal-btn">스케줄</a><a href="https://info.bct2-4.com/infoservice/index.html" target="_blank" class="terminal-btn">차트</a><a href="https://info.bct2-4.com/infoservice/index.html" target="_blank" class="terminal-btn">현황</a></div></div></div>
+        <div id="port-knowledge-card" class="dash-card">
+            <div class="dash-header tap-effect" onclick="toggleDashItem('port-knowledge-card')">
+                <span class="dash-title">⚓ 부산항 현장직 필수 지식</span><span class="toggle-icon">▼</span>
+            </div>
+            <div class="dash-content">
+                <div class="guide-text">
+                    <h4>📊 2026년 부산항 근무 구조</h4>
+                    <p>부산항은 1·2·3항만으로 나뉘며, 각 터미널별로 작업 패턴이 다릅니다. 1항(북항)은 BPTC·HBCT, 2항(신항북측)은 PNC·PNIT·HPNT, 3항(신항남측)은 HJNC·BNCT가 운영합니다. 현장직은 갱(Gang) 단위로 운영되며, 1갱=20명 기준으로 QC(안벽크레인), YT(야드트랙터), Lashing(고박) 작업이 이뤄집니다.</p>
+                    <h4>💰 수당 체계</h4>
+                    <p>기본 시급 10,030원(2026 기준). 야간/휴일은 1.5배, 기능공(용접 등)은 시간당 추가 단가, 절맞이(신호수)는 별도 수당이 적용됩니다. 우천작업 시에도 별도 보상이 있어 총 수령액은 근무시간에 따라 20~40만원 수준입니다.</p>
+                    <h4>⏰ 교대 패턴</h4>
+                    <p>주로 6시간 교대(06:00-12:00, 12:00-18:00, 18:00-24:00, 24:00-06:00). 선박 스케줄에 따라 야간근무 빈도가 높으며, 연속 2교대 이상 시 휴게시간이 보장됩니다.</p>
+                </div>
             </div>
         </div>
 
-        <div class="card" style="border-left: 5px solid #10b981;">
-            <div class="section-header tap-effect" onclick="toggleSection('t2-content', this)"><span class="section-title">⚓ 2항업 (신항 북측) <span class="toggle-icon">▼</span></span></div>
-            <div id="t2-content" class="collapsible-content collapsed">
-                <div class="terminal-block"><div class="terminal-header tap-effect" onclick="toggleContent('term-pnc')"><h4 class="terminal-title">부산신항만 (PNC) <span class="toggle-icon">▼</span></h4></div><div id="term-pnc" class="terminal-body"><div class="terminal-actions"><a href="https://svc.pncport.com/info/CMS/Ship/Info.pnc?mCode=MN014" target="_blank" class="terminal-btn">스케줄</a><a href="https://svc.pncport.com/info/CMS/Ship/ShipBerthC.pnc?mCode=MN019" target="_blank" class="terminal-btn">차트</a><a href="https://svc.pncport.com/info/CMS/Ship/ShipVslStatus.pnc?mCode=MN020" target="_blank" class="terminal-btn">현황</a></div><button class="action-btn" style="background:#f39c12; margin-top:8px; padding:10px;" onclick="openBusSchedule()">🚌 셔틀버스 시간표</button></div></div>
-                <div class="terminal-block"><div class="terminal-header tap-effect" onclick="toggleContent('term-pnit')"><h4 class="terminal-title">신항국제 (PNIT) <span class="toggle-icon">▼</span></h4></div><div id="term-pnit" class="terminal-body"><div class="terminal-actions"><a href="https://www.pnitl.com/infoservice/vessel/vslScheduleList.jsp" target="_blank" class="terminal-btn">스케줄</a><a href="https://www.pnitl.com/infoservice/vessel/vslScheduleChart.jsp" target="_blank" class="terminal-btn">차트</a><a href="https://www.pnitl.com/infoservice/vessel/vslWorkStatus.jsp" target="_blank" class="terminal-btn">현황</a></div></div></div>
-                <div class="terminal-block"><div class="terminal-header tap-effect" onclick="toggleContent('term-hpnt')"><h4 class="terminal-title">현대부산신항만 (HPNT) <span class="toggle-icon">▼</span></h4></div><div id="term-hpnt" class="terminal-body"><div class="terminal-actions"><a href="https://www.hpnt.co.kr/infoservice/vessel/vslScheduleList.jsp" target="_blank" class="terminal-btn">스케줄</a><a href="https://www.hpnt.co.kr/infoservice/vessel/vslScheduleChart.jsp" target="_blank" class="terminal-btn">차트</a><a href="https://www.hpnt.co.kr/infoservice/vessel/vslWorkStatus.jsp" target="_blank" class="terminal-btn">현황</a></div></div></div>
+        <div id="wage-guide-card" class="dash-card">
+            <div class="dash-header tap-effect" onclick="toggleDashItem('wage-guide-card')">
+                <span class="dash-title">💰 임금계산 완벽 가이드</span><span class="toggle-icon">▼</span>
+            </div>
+            <div class="dash-content">
+                <div class="guide-text">
+                    <h4>기본 계산법</h4>
+                    <p>주간: 시급 × 시간<br>야간/휴일: 시급 × 1.5 × 시간<br>기능공: 작업시간 × 단가(보통 2~3만원)<br>절맞이: 작업시간 × 단가(1.5~2만원)<br>우천: 작업시간 × 단가(5천~1만원)</p>
+                    <h4>실제 예시</h4>
+                    <p>08:00~18:00(10시간 주간) + 기능공 2시간(25,000원) = 100,300 + 50,000 = 150,300원<br>세후(9.4%) 약 136,000원 수령</p>
+                    <h4>주의사항</h4>
+                    <p>교대시간에 따라 주간/야간 구분 정확히 입력. 연속 야간근무 시 휴게시간 제외. 월말 청구 시 근무일지와 대조하세요.</p>
+                </div>
             </div>
         </div>
 
-        <div class="card" style="border-left: 5px solid #f97316;">
-            <div class="section-header tap-effect" onclick="toggleSection('t1-content', this)"><span class="section-title">🛳️ 1항업 (북항) <span class="toggle-icon">▼</span></span></div>
-            <div id="t1-content" class="collapsible-content collapsed">
-                <div class="terminal-block"><div class="terminal-header tap-effect" onclick="toggleContent('term-bptc')"><h4 class="terminal-title">북항 통합 (BPTC) <span class="toggle-icon">▼</span></h4></div><div id="term-bptc" class="terminal-body"><div class="terminal-actions"><a href="http://info.bptc.co.kr:9084/content/sw/frame/berth_status_text_frame_sw_kr.jsp?p_id=BETX_SH_KR&snb_num=2&snb_div=service" target="_blank" class="terminal-btn" style="grid-column:span 3;">🏗️ 감만/신선대 선석</a></div></div></div>
-                <div class="terminal-block"><div class="terminal-header tap-effect" onclick="toggleContent('term-hbct')"><h4 class="terminal-title">허치슨 (HBCT) <span class="toggle-icon">▼</span></h4></div><div id="term-hbct" class="terminal-body"><div class="terminal-actions"><a href="https://custom.hktl.com/jsp/T01/sunsuk.jsp" target="_blank" class="terminal-btn" style="grid-column:span 3;">⚓ 선석 정보</a></div></div></div>
-                <div class="terminal-block"><div class="terminal-header tap-effect" onclick="toggleContent('term-dpct')"><h4 class="terminal-title">동부 (DPCT) <span class="toggle-icon">▼</span></h4></div><div id="term-dpct" class="terminal-body"><div class="terminal-actions"><a href="http://info.bptc.co.kr:9084/content/index.jsp#03" target="_blank" class="terminal-btn" style="grid-column:span 3;">🚢 터미널 포털</a></div></div></div>
+        <div id="terminal-guide-card" class="dash-card">
+            <div class="dash-header tap-effect" onclick="toggleDashItem('terminal-guide-card')">
+                <span class="dash-title">🏭 터미널별 작업 특성</span><span class="toggle-icon">▼</span>
+            </div>
+            <div class="dash-content">
+                <div class="guide-text">
+                    <h4>3항업 (HJNC·BNCT)</h4>
+                    <p>최신 설비, 컨테이너 초대형 선박 위주. Lashing 작업 빈도 높음. 셔틀버스 운영으로 접근성 좋음.</p>
+                    <h4>2항업 (PNC·PNIT·HPNT)</h4>
+                    <p>PNC 셔틀버스 필수. PNIT는 외국 선사 많아 영어 커뮤니케이션 빈번. HPNT는 자동화 야드 진행 중.</p>
+                    <h4>1항업 (BPTC·HBCT)</h4>
+                    <p>감만/신선대 선석 특화. HBCT는 Hutchison Ports 글로벌 네트워크. 노후 설비로 안전 주의 필요.</p>
+                    <h4>작업 팁</h4>
+                    <p>각 터미널별 스케줄 링크 활용. 선박 도착 2시간 전부터 작업 준비. 날씨 확인 후 우비·보온 장비 챙기기.</p>
+                </div>
             </div>
         </div>
 
@@ -378,31 +428,18 @@
         }
         function toggleContent(id) {
             const el = document.getElementById(id);
-            // Strong toggle to ensure visibility
-            if(el.style.display === 'block') {
-                el.style.setProperty('display', 'none', 'important');
-                const header = el.previousElementSibling;
-                if(header) {
-                     const icon = header.querySelector('.toggle-icon');
-                     if(icon) icon.classList.remove('rotated');
-                }
-            } else {
-                el.style.setProperty('display', 'block', 'important');
-                const header = el.previousElementSibling;
-                if(header) {
-                     const icon = header.querySelector('.toggle-icon');
-                     if(icon) icon.classList.add('rotated');
-                }
-            }
+            const header = el.previousElementSibling;
+            const icon = header.querySelector('.toggle-icon');
+            if(el.style.display === 'block') { el.style.display = 'none'; if(icon) icon.classList.remove('rotated'); }
+            else { el.style.display = 'block'; if(icon) icon.classList.add('rotated'); }
             vibrate();
         }
-        // Alias for compatibility
-        function toggleItemContent(id) { toggleContent(id); }
-        
         function toggleShipContent(id) {
-            toggleContent(id); // Use the unified strong toggle
+            const el = document.getElementById(id);
+            if(el.style.display === 'block') { el.style.display = 'none'; const icon = el.previousElementSibling.querySelector('.toggle-icon'); if(icon) icon.classList.remove('rotated'); } 
+            else { el.style.display = 'block'; const icon = el.previousElementSibling.querySelector('.toggle-icon'); if(icon) icon.classList.add('rotated'); }
+            vibrate();
         }
-
         function toggleHidden(id){document.getElementById(id).classList.toggle('hidden'); vibrate();}
         function vibrate(){if(navigator.vibrate)navigator.vibrate(15)}
         function showToast(m){const t=document.getElementById("toast");t.innerText=m;t.className="show";setTimeout(()=>t.className="",3000)}
@@ -522,13 +559,7 @@
         function addComment(postId){
             const name=document.getElementById(`cmt-name-${postId}`).value; const pw=document.getElementById(`cmt-pw-${postId}`).value; const text=document.getElementById(`cmt-txt-${postId}`).value;
             if(!name||!pw||!text){showToast("입력 확인");return;}
-            db.collection('posts').doc(postId).collection('comments').add({name:escapeHtml(name),password:pw,text:escapeHtml(text),timestamp:firebase.firestore.FieldValue.serverTimestamp()})
-            .then(()=>{
-                document.getElementById(`cmt-txt-${postId}`).value="";
-                showToast("댓글 등록");
-                // 3. Comment input cleared
-            })
-            .catch(err => alert("댓글 오류: " + err));
+            db.collection('posts').doc(postId).collection('comments').add({name:escapeHtml(name),password:pw,text:escapeHtml(text),timestamp:firebase.firestore.FieldValue.serverTimestamp()}).then(()=>{document.getElementById(`cmt-txt-${postId}`).value=""; document.getElementById(`cmt-name-${postId}`).value=""; document.getElementById(`cmt-pw-${postId}`).value=""; showToast("댓글 등록");});
         }
         async function deleteComment(postId,commentId,realPw){
             const inputPw=prompt("비밀번호:"); if(inputPw===realPw||(await verifyAdmin())){db.collection('posts').doc(postId).collection('comments').doc(commentId).delete().then(()=>showToast("삭제됨"))}else{showToast("비밀번호 불일치")}
@@ -540,15 +571,7 @@
         function loadAllData(){
             db.collection("notices").orderBy("timestamp","desc").onSnapshot(s=>{const l=document.getElementById("noticeList");l.innerHTML="";s.forEach(d=>{const n=d.data();l.innerHTML+=`<li class="post-item tap-effect"><div class="post-header-row" onclick="toggleContent('n-${d.id}')"><span class="post-title-text" style="color:var(--danger)">📢 ${escapeHtml(n.title)}</span><span class="post-meta-info">${n.date}</span></div><div id="n-${d.id}" class="post-body-content">${escapeHtml(n.content)}<br><button class="mini-btn btn-del" onclick="delNotice('${d.id}',event)">삭제</button></div></li>`})});
             db.collection("posts").orderBy("timestamp","desc").onSnapshot(s=>{allPostsData=[];s.forEach(d=>{let o=d.data();o.id=d.id;allPostsData.push(o)});renderBoardPage(1)});
-            
-            // [FIX: Initial List View]
-            db.collection("ships").orderBy("timestamp","desc").onSnapshot(s=>{
-                allShipsData=[];
-                s.forEach(d=>{let o=d.data();o.id=d.id;allShipsData.push(o)});
-                filteredShips = allShipsData; // Force populate on load
-                renderShipPage(1);
-            });
-            
+            db.collection("ships").orderBy("timestamp","desc").onSnapshot(s=>{allShipsData=[];s.forEach(d=>{let o=d.data();o.id=d.id;allShipsData.push(o)});filteredShips=allShipsData; renderShipPage(1);});
             db.collection("archives").orderBy("timestamp","desc").onSnapshot(s=>{allFilesData=[];s.forEach(d=>{let o=d.data();o.id=d.id;allFilesData.push(o)});renderFilePage(1)});
         }
         function renderBoardPage(p){
@@ -565,83 +588,49 @@
             currentShipPage=p;const l=document.getElementById("shipList");l.innerHTML=""; const frag=document.createDocumentFragment();
             filteredShips.slice((p-1)*postsPerPage,p*postsPerPage).forEach(x=>{
                 let img=x.imageUrl?`<button class="mini-btn btn-photo" onclick="event.stopPropagation();showImageModal('${x.imageUrl}')">📷</button>`:"";
-                // Fixed: Added toggle-icon span and onclick handler using toggleShipContent
                 const li=document.createElement('li'); li.className='post-item tap-effect';
                 li.innerHTML=`<div onclick="toggleShipContent('s-${x.id}')" style="display:flex;justify-content:space-between; padding:15px 5px; align-items:center;"><span class="post-title-text" style="margin:0;">🚢 ${escapeHtml(x.shipName)} <span class="toggle-icon" style="font-size:0.7rem; color:var(--text-sub); margin-left:5px;">▼</span></span><div>${img}</div></div><div id="s-${x.id}" class="post-body-content"><p><strong>[본선]</strong> ${escapeHtml(x.onboardFeat)||'-'}</p><p><strong>[육상]</strong> ${escapeHtml(x.onshoreFeat)||'-'}</p><button class="mini-btn btn-edit" onclick="editShip('${x.id}', event)">수정</button><button class="mini-btn btn-del" onclick="deleteShip('${x.id}',event)">삭제</button></div>`;
                 frag.appendChild(li);
             });
-            l.appendChild(frag); renderPagination("shipPagination",Math.ceil(filteredShips.length/postsPerPage),p,renderShipPage)
+            l.appendChild(frag); renderPagination("shipPagination",Math.ceil(filteredShips.length/postsPerPage),p,renderShipPage);
         }
-        function renderFilePage(p){currentFilePage=p;const l=document.getElementById("fileList");l.innerHTML=""; const frag=document.createDocumentFragment();
-        allFilesData.slice((p-1)*postsPerPage,p*postsPerPage).forEach(x=>{const li=document.createElement('li');li.className='post-item tap-effect';li.innerHTML=`<div style="display:flex;justify-content:space-between; padding:15px 5px;"><div><a href="${x.fileUrl}" target="_blank" style="text-decoration:none;color:var(--text-main);font-weight:bold;">💾 ${escapeHtml(x.title)}</a></div></div>`;frag.appendChild(li);});
-        l.appendChild(frag); renderPagination("filePagination",Math.ceil(allFilesData.length/postsPerPage),p,renderFilePage)}
+        function renderFilePage(p){
+            currentFilePage=p;const l=document.getElementById("fileList");l.innerHTML=""; const frag=document.createDocumentFragment();
+            allFilesData.slice((p-1)*postsPerPage,p*postsPerPage).forEach(x=>{
+                const li=document.createElement('li'); li.className='post-item tap-effect';
+                li.innerHTML=`<div style="display:flex;justify-content:space-between; padding:15px 5px;"><div><a href="${x.fileUrl}" target="_blank" style="text-decoration:none;color:var(--text-main);font-weight:bold;">💾 ${escapeHtml(x.title)}</a></div></div>`;
+                frag.appendChild(li);
+            });
+            l.appendChild(frag); renderPagination("filePagination",Math.ceil(allFilesData.length/postsPerPage),p,renderFilePage);
+        }
         function renderPagination(id,t,c,f){const el=document.getElementById(id);el.innerHTML="";for(let i=1;i<=t;i++){const s=document.createElement("span");s.className=`page-num ${i===c?'active':''} tap-effect`;s.innerText=i;s.onclick=()=>f(i);el.appendChild(s)}}
 
         function filterShips(){const q=document.getElementById('shipSearch').value.toUpperCase();filteredShips=allShipsData.filter(s=>s.shipName.toUpperCase().includes(q));renderShipPage(1);}
         function filterFiles(){const k=document.getElementById('fileSearch').value.toUpperCase();const l=document.getElementById('fileList').getElementsByTagName('li');for(let i=0;i<l.length;i++)l[i].style.display=l[i].innerText.toUpperCase().includes(k)?"":"none"}
 
         function addPost(){
-            const t=document.getElementById('inputTitle').value, n=document.getElementById('inputName').value, p=document.getElementById('inputPw').value, c=document.getElementById('inputContent').value;
-            if(!t||!p||!c){showToast("내용을 입력하세요");return;}
-            let finalName = n;
-            if(!finalName) finalName = "익명-" + Math.floor(1000 + Math.random() * 9000);
-
-            db.collection("posts").add({
-                category:document.getElementById('inputCategory').value,
-                title:escapeHtml(t),
-                name:escapeHtml(finalName),
-                password:p,
-                content:escapeHtml(c),
-                date:new Date().toLocaleString('ko-KR'),
-                timestamp:firebase.firestore.FieldValue.serverTimestamp()
-            }).then(()=>{
-                showToast("완료");
-                toggleHidden('boardForm');
-                // 4. & 5. Post Input Cleared
-                document.getElementById('inputTitle').value = "";
-                document.getElementById('inputName').value = "";
-                document.getElementById('inputPw').value = "";
-                document.getElementById('inputContent').value = "";
-            });
+            const t=document.getElementById('inputTitle').value,n=document.getElementById('inputName').value,p=document.getElementById('inputPw').value,c=document.getElementById('inputContent').value;
+            if(!t||!p||!c){showToast("내용 입력하세요");return;}
+            let finalName=n; if(!finalName) finalName="익명-"+Math.floor(1000+Math.random()*9000);
+            db.collection("posts").add({category:document.getElementById('inputCategory').value,title:escapeHtml(t),name:escapeHtml(finalName),password:p,content:escapeHtml(c),date:new Date().toLocaleString('ko-KR'),timestamp:firebase.firestore.FieldValue.serverTimestamp()})
+            .then(()=>{showToast("완료");document.getElementById('inputTitle').value='';document.getElementById('inputName').value='';document.getElementById('inputPw').value='';document.getElementById('inputContent').value='';toggleHidden('boardForm')});
         }
         async function deletePost(id,pw,e){e.stopPropagation();const inputPw=prompt("비밀번호:"); if(inputPw===pw||(await verifyAdmin())) db.collection("posts").doc(id).delete()}
-        
         async function addNotice(){
             if(await verifyAdmin()){
                 db.collection("notices").add({title:document.getElementById('noticeTitle').value,content:document.getElementById('noticeContent').value,date:new Date().toLocaleString('ko-KR'),timestamp:firebase.firestore.FieldValue.serverTimestamp()})
-                .then(()=>{
-                    showToast("공지 등록 완료");
-                    // 2. & 5. Notice Input Cleared
-                    document.getElementById('noticeTitle').value='';
-                    document.getElementById('noticeContent').value='';
-                });
+                .then(()=>{showToast("공지 등록 완료");document.getElementById('noticeTitle').value='';document.getElementById('noticeContent').value='';});
             }
         }
-        // 1. Notice Delete Fix
-        async function delNotice(id,e){
-            e.stopPropagation();
-            if(await verifyAdmin()){
-                if(confirm("정말 삭제하시겠습니까?")){
-                    db.collection("notices").doc(id).delete().then(()=>showToast("공지 삭제됨"));
-                }
-            }
-        }
+        async function delNotice(id,e){e.stopPropagation();if(await verifyAdmin() && confirm("삭제하시겠습니까?"))db.collection("notices").doc(id).delete().then(()=>showToast("공지 삭제됨"));}
         
-        // [INSERTION 3: Updated addShipInfo]
         function addShipInfo(){
-            const n=document.getElementById('shipName').value;
-            if(!n){alert("선박명 필수");return}
+            const n=document.getElementById('shipName').value; if(!n){alert("선박명 필수");return}
             const s=(u)=>{
                 const d={shipName:n,onboardFeat:document.getElementById('shipOnboard').value,onshoreFeat:document.getElementById('shipOnshore').value,imageUrl:u,date:new Date().toLocaleString('ko-KR'),timestamp:firebase.firestore.FieldValue.serverTimestamp()};
                 (editingShipId?db.collection("ships").doc(editingShipId).update(d):db.collection("ships").add(d)).then(()=>{
-                    showToast("완료");
-                    toggleHidden('shipForm');
-                    editingShipId=null;
-                    document.getElementById('shipSubmitBtn').innerText="등록"; // Reset button text
-                    // 7. Ship Input Cleared
-                    document.querySelectorAll('#shipForm input,#shipForm textarea').forEach(i=>i.value=''); 
-                    document.getElementById('shipSearch').value = ''; 
-                    filterShips(); 
+                    showToast("완료");toggleHidden('shipForm');editingShipId=null;document.getElementById('shipSubmitBtn').innerText="등록";
+                    document.querySelectorAll('#shipForm input,#shipForm textarea').forEach(i=>i.value=''); document.getElementById('shipSearch').value=''; filterShips(); 
                 })
             };
             const f=document.getElementById('shipFileInput').files[0];
@@ -649,52 +638,15 @@
         }
 
         let editingShipId=null;
-        // 6. Ship Edit Logic (Only enable edit mode)
-        function editShip(id, e){
-            e.stopPropagation(); 
-            const x=allShipsData.find(s=>s.id===id);
-            editingShipId=id;
-            document.getElementById('shipName').value=x.shipName;
-            document.getElementById('shipOnboard').value=x.onboardFeat;
-            document.getElementById('shipOnshore').value=x.onshoreFeat;
-            document.getElementById('shipForm').classList.remove('hidden'); // Ensure visible
-            document.getElementById('shipForm').style.display='block'; // Safety
-            document.getElementById('shipSubmitBtn').innerText="수정 완료";
-            document.getElementById('shipForm').scrollIntoView({behavior:'smooth'})
-        }
+        function editShip(id, e){e.stopPropagation(); const x=allShipsData.find(s=>s.id===id);editingShipId=id;document.getElementById('shipName').value=x.shipName;document.getElementById('shipOnboard').value=x.onboardFeat;document.getElementById('shipOnshore').value=x.onshoreFeat;document.getElementById('shipForm').classList.remove('hidden');document.getElementById('shipSubmitBtn').innerText="수정 완료";document.getElementById('shipForm').scrollIntoView({behavior:'smooth'})}
+        async function deleteShip(id,e){e.stopPropagation();if(await verifyAdmin() && confirm("삭제?"))db.collection("ships").doc(id).delete()}
         
-        async function deleteShip(id, e) {
-            e.stopPropagation();
-            if (!confirm("정말 삭제하시겠습니까?")) return;
-            // Admin Verify before delete
-            if (await verifyAdmin()) {
-                db.collection("ships").doc(id).delete()
-                .then(() => alert("삭제되었습니다."))
-                .catch(err => alert("삭제 실패: " + err));
-            } else {
-                alert("관리자 권한이 필요합니다.");
-            }
-        }
-        
-        // [INSERTION 4: Updated uploadFile]
         function uploadFile(){
-            const f=document.getElementById('fileInput').files[0];
-            if(!f)return;
-            const uploaderName = document.getElementById('fileUploader').value; // Get uploader name
-            
+            const f=document.getElementById('fileInput').files[0]; if(!f)return;
+            const uploaderName = document.getElementById('fileUploader').value;
             storage.ref('archives/'+Date.now()+f.name).put(f).then(s=>s.ref.getDownloadURL()).then(u=>{
-                db.collection("archives").add({
-                    title:document.getElementById('fileTitle').value,
-                    uploader: uploaderName, // Save uploader name
-                    fileUrl:u,
-                    date:new Date().toLocaleString('ko-KR'),
-                    timestamp:firebase.firestore.FieldValue.serverTimestamp()
-                });
-                showToast("완료");
-                // 5. File Input Cleared
-                document.getElementById('fileInput').value = '';
-                document.getElementById('fileTitle').value = '';
-                document.getElementById('fileUploader').value = '';
+                db.collection("archives").add({title:document.getElementById('fileTitle').value,uploader:uploaderName,fileUrl:u,date:new Date().toLocaleString('ko-KR'),timestamp:firebase.firestore.FieldValue.serverTimestamp()});
+                showToast("완료"); document.getElementById('fileInput').value=''; document.getElementById('fileTitle').value=''; document.getElementById('fileUploader').value='';
             })
         }
         
