@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     
     <meta name="description" content="부산항 현장직 필수 앱. 임금계산기, 스마트 근무일지(짝지기록), 선박위치 및 스케줄 조회.">
+    <meta name="keywords" content="부산항, 현장직, 임금계산, 근무일지, 선박스케줄, 갱, YT, QC, Lashing">
     <meta property="og:title" content="BUSAN HAK PORT INFO">
     <title>BUSAN HAK PORT INFO</title>
     
@@ -14,10 +15,11 @@
     
     <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6024353303588422" crossorigin="anonymous"></script>
 
-    <link rel="icon" type="image/png" sizes="32x32" href="icon.png?v=fixed_v7">
+    <link rel="icon" type="image/png" sizes="32x32" href="icon.png?v=debug_fix_v1">
     <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.8/dist/web/static/pretendard.css" />
 
     <style>
+        /* [스타일 유지] */
         :root { --primary: #1e3a8a; --primary-light: #3b82f6; --accent: #f59e0b; --bg-color: #f3f4f6; --card-bg: rgba(255, 255, 255, 0.95); --text-main: #1f2937; --text-sub: #6b7280; --border: rgba(229, 231, 235, 0.8); --danger: #ef4444; --success: #10b981; --glass-border: 1px solid rgba(255, 255, 255, 0.6); --glass-shadow: 0 2px 10px rgba(0,0,0,0.03); --blur: blur(12px); }
         body.dark-mode { --primary: #60a5fa; --primary-light: #93c5fd; --accent: #fbbf24; --bg-color: #0f172a; --card-bg: rgba(30, 41, 59, 0.95); --text-main: #f3f4f6; --text-sub: #9ca3af; --border: rgba(55, 65, 81, 0.5); --glass-border: 1px solid rgba(255, 255, 255, 0.1); }
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; font-family: 'Pretendard', sans-serif; }
@@ -427,26 +429,29 @@
         }
         function toggleContent(id) {
             const el = document.getElementById(id);
-            const header = el.previousElementSibling;
-            const icon = header.querySelector('.toggle-icon');
-            if(el.style.display === 'block') { el.style.display = 'none'; if(icon) icon.classList.remove('rotated'); }
-            else { el.style.display = 'block'; if(icon) icon.classList.add('rotated'); }
-            vibrate();
-        }
-        // [Fixed: Force Toggle for Ships]
-        function toggleShipContent(id) {
-            const el = document.getElementById(id);
-            // Directly check and set style to override any hidden classes
-            if (el.style.display === 'block') {
-                el.style.display = 'none';
-                const icon = el.previousElementSibling.querySelector('.toggle-icon');
-                if(icon) icon.classList.remove('rotated');
+            // Strong toggle to ensure visibility
+            if(el.style.display === 'block') {
+                el.style.setProperty('display', 'none', 'important');
+                const header = el.previousElementSibling;
+                if(header) {
+                     const icon = header.querySelector('.toggle-icon');
+                     if(icon) icon.classList.remove('rotated');
+                }
             } else {
-                el.style.display = 'block';
-                const icon = el.previousElementSibling.querySelector('.toggle-icon');
-                if(icon) icon.classList.add('rotated');
+                el.style.setProperty('display', 'block', 'important');
+                const header = el.previousElementSibling;
+                if(header) {
+                     const icon = header.querySelector('.toggle-icon');
+                     if(icon) icon.classList.add('rotated');
+                }
             }
             vibrate();
+        }
+        // Alias for compatibility
+        function toggleItemContent(id) { toggleContent(id); }
+        
+        function toggleShipContent(id) {
+            toggleContent(id); // Use the unified strong toggle
         }
 
         function toggleHidden(id){document.getElementById(id).classList.toggle('hidden'); vibrate();}
@@ -456,62 +461,132 @@
         function scrollToTop(){window.scrollTo({top:0,behavior:'smooth'})}
         function openPrivacy(){document.getElementById('privacyModal').style.display='flex'}
 
+        // [Wage & Log Logic]
+        function calculateTotalWage({ hourly, day, night, skill, signal, rain, taxRate }) {
+            const h = hourly || DEFAULT_HOURLY;
+            const baseWage = (h * (day || 0)) + (h * 1.5 * (night || 0));
+            const additional = (skill || 0) + (signal || 0) + (rain || 0);
+            return (baseWage + additional) * (1 - (taxRate || 0));
+        }
+        function getWageFormValues() {
+            return {
+                hourly: parseFloat(document.getElementById('wageHourly').value) || DEFAULT_HOURLY,
+                day: parseFloat(document.getElementById('wageDayHours').value) || 0,
+                night: parseFloat(document.getElementById('wageNightHours').value) || 0,
+                skill: (parseFloat(document.getElementById('wageSkillTime').value)||0) * (parseFloat(document.getElementById('wageSkillRate').value)||0),
+                signal: (parseFloat(document.getElementById('wageSignalTime').value)||0) * (parseFloat(document.getElementById('wageSignalRate').value)||0),
+                rain: (parseFloat(document.getElementById('wageRainTime').value)||0) * (parseFloat(document.getElementById('wageRainRate').value)||0),
+                taxRate: parseFloat(document.getElementById('wageTaxType').value) || 0
+            };
+        }
         function calculateWage(){
-            const h=parseFloat(document.getElementById('wageHourly').value)||0, d=parseFloat(document.getElementById('wageDayHours').value)||0, n=parseFloat(document.getElementById('wageNightHours').value)||0;
-            const s= (parseFloat(document.getElementById('wageSkillTime').value)||0)*(parseFloat(document.getElementById('wageSkillRate').value)||0) + (parseFloat(document.getElementById('wageSignalTime').value)||0)*(parseFloat(document.getElementById('wageSignalRate').value)||0) + (parseFloat(document.getElementById('wageRainTime').value)||0)*(parseFloat(document.getElementById('wageRainRate').value)||0);
-            const net = ((h*d)+(h*1.5*n)+s) * (1 - parseFloat(document.getElementById('wageTaxType').value));
-            document.getElementById('wageResultBox').classList.remove('hidden'); document.getElementById('wageTotal').innerText=Math.floor(net).toLocaleString()+"원"; vibrate();
+            const values = getWageFormValues();
+            const total = calculateTotalWage(values);
+            document.getElementById('wageResultBox').classList.remove('hidden'); 
+            document.getElementById('wageTotal').innerText = Math.floor(total).toLocaleString()+"원"; 
+            vibrate();
         }
-        function resetWageForm(){document.querySelectorAll('#wageArea input').forEach(i=>i.value='');document.getElementById('wageHourly').value='10030';document.getElementById('wageResultBox').classList.add('hidden');vibrate()}
+        function resetWageForm(){
+            document.querySelectorAll('#wage-card input').forEach(i=>i.value='');
+            document.getElementById('wageHourly').value='10030';
+            document.getElementById('wageResultBox').classList.add('hidden');
+            vibrate();
+        }
 
-        let cy, cm, selDate;
-        function checkAdminAndOpenLog(headerEl){
-            if(prompt("관리자 암호:")==="0346"){
-                toggleDashItem('log-card');
-                const n=new Date(); renderCalendar(n.getFullYear(),n.getMonth());
-            } else showToast("⛔ 접근 불가");
+        async function checkAdminAndOpenLog(headerEl){
+            if(await verifyAdmin()){ toggleDashItem('log-card'); const n=new Date(); renderCalendar(n.getFullYear(),n.getMonth()); } else showToast("⛔ 접근 불가");
         }
-        function renderCalendar(y,m){cy=y;cm=m;const dt=new Date(y,m,1);document.getElementById('calMonthYear').innerText=`${y}년 ${m+1}월`;const g=document.getElementById('calendarGrid');g.innerHTML='';['일','월','화','수','목','금','토'].forEach(d=>g.innerHTML+=`<div style="font-weight:bold;color:var(--text-sub);font-size:0.8rem;">${d}</div>`);for(let i=0;i<dt.getDay();i++)g.innerHTML+=`<div></div>`;const dim=new Date(y,m+1,0).getDate();db.collection("work_logs").where("date",">=",`${y}-${String(m+1).padStart(2,'0')}-01`).where("date","<=",`${y}-${String(m+1).padStart(2,'0')}-${dim}`).get().then(qs=>{adminWorkLogs={};let t=0;qs.forEach(d=>{adminWorkLogs[d.id]=d.data();t+=(d.data().totalPay||0)});document.getElementById('monthlyTotalDisplay').innerText=Math.floor(t).toLocaleString()+"원";for(let i=1;i<=dim;i++){const ds=`${y}-${String(m+1).padStart(2,'0')}-${String(i).padStart(2,'0')}`;const d=document.createElement('div');d.className='cal-day tap-effect';if(adminWorkLogs[ds])d.classList.add('has-data');d.innerHTML=`${i}<div class="cal-dot"></div>`;d.onclick=()=>selectDate(ds,d);g.appendChild(d)}})}
+        function renderCalendar(y,m){
+            cy=y; cm=m; const dt=new Date(y,m,1);
+            document.getElementById('calMonthYear').innerText=`${y}년 ${m+1}월`;
+            const g=document.getElementById('calendarGrid'); g.innerHTML='';
+            ['일','월','화','수','목','금','토'].forEach(d=>g.innerHTML+=`<div style="font-weight:bold;color:var(--text-sub);font-size:0.8rem;">${d}</div>`);
+            for(let i=0;i<dt.getDay();i++)g.innerHTML+=`<div></div>`;
+            const dim=new Date(y,m+1,0).getDate(); const monthStr=String(m+1).padStart(2,'0');
+            db.collection("work_logs").where("date",">=",`${y}-${monthStr}-01`).where("date","<=",`${y}-${monthStr}-${String(dim).padStart(2,'0')}`).get().then(qs=>{
+                adminWorkLogs={}; let t=0;
+                qs.forEach(d=>{ const data=d.data(); adminWorkLogs[d.id]=data; t+=(data.totalPay||0) });
+                document.getElementById('monthlyTotalDisplay').innerText=Math.floor(t).toLocaleString()+"원";
+                for(let i=1;i<=dim;i++){
+                    const ds=`${y}-${monthStr}-${String(i).padStart(2,'0')}`;
+                    const d=document.createElement('div'); d.className='cal-day tap-effect';
+                    if(adminWorkLogs[ds])d.classList.add('has-data');
+                    d.innerHTML=`${i}<div class="cal-dot"></div>`; d.onclick=()=>selectDate(ds,d); g.appendChild(d);
+                }
+            });
+        }
         function changeMonth(d){renderCalendar(new Date(cy,cm+d,1).getFullYear(),new Date(cy,cm+d,1).getMonth());vibrate()}
-        function selectDate(ds,el){document.querySelectorAll('.cal-day').forEach(d=>d.classList.remove('selected'));el.classList.add('selected');selDate=ds;document.getElementById('dailyLogForm').classList.remove('hidden');document.getElementById('selectedDateText').innerText=ds;const d=adminWorkLogs[ds]||{};document.getElementById('logDayHours').value=d.dayHours||'';document.getElementById('logNightHours').value=d.nightHours||'';document.getElementById('logSkillTime').value=d.skillTime||'';document.getElementById('logSkillRate').value=d.skillRate||'';document.getElementById('logSignalTime').value=d.signalTime||'';document.getElementById('logSignalRate').value=d.signalRate||'';document.getElementById('logRainTime').value=d.rainTime||'';document.getElementById('logRainRate').value=d.rainRate||'';document.getElementById('logMemo').value=d.memo||'';document.getElementById('logImagePreview').src=d.imageUrl||'';document.getElementById('logImageContainer').style.display=d.imageUrl?'block':'none';document.getElementById('dailyTotalDisplay').innerText=(d.totalPay||0).toLocaleString()+"원";vibrate()}
-        function resetLogInputs(){document.querySelectorAll('#dailyLogForm input, #dailyLogForm textarea').forEach(i=>i.value=''); document.getElementById('logImagePreview').src=''; document.getElementById('logImageContainer').style.display='none'; vibrate();}
-        function previewLogImage(input){if(input.files && input.files[0]){const r = new FileReader(); r.onload = function(e){document.getElementById('logImagePreview').src=e.target.result; document.getElementById('logImagePreview').style.display='block';}; r.readAsDataURL(input.files[0]);}}
-        function saveWorkLog(){if(!selDate)return;const h=10030,d=parseFloat(document.getElementById('logDayHours').value)||0,n=parseFloat(document.getElementById('logNightHours').value)||0,t=(d*h)+(n*h*1.5)+((parseFloat(document.getElementById('logSkillTime').value)||0)*(parseFloat(document.getElementById('logSkillRate').value)||0))+((parseFloat(document.getElementById('logSignalTime').value)||0)*(parseFloat(document.getElementById('logSignalRate').value)||0))+((parseFloat(document.getElementById('logRainTime').value)||0)*(parseFloat(document.getElementById('logRainRate').value)||0)),memo=document.getElementById('logMemo').value,file=document.getElementById('logImageInput').files[0];const saveData=(url)=>{const data={date:selDate,dayHours:d,nightHours:n,totalPay:t,memo:memo,imageUrl:url,skillTime:parseFloat(document.getElementById('logSkillTime').value)||0,skillRate:parseFloat(document.getElementById('logSkillRate').value)||0,signalTime:parseFloat(document.getElementById('logSignalTime').value)||0,signalRate:parseFloat(document.getElementById('logSignalRate').value)||0,rainTime:parseFloat(document.getElementById('logRainTime').value)||0,rainRate:parseFloat(document.getElementById('logRainRate').value)||0,memo,totalPay:total,imageUrl:url};
-        db.collection("work_logs").doc(selDate).set(data).then(()=>{showToast("저장됨");renderCalendar(cy,cm)})};if(file){storage.ref('work_logs/'+selDate+'_'+file.name).put(file).then(s=>s.ref.getDownloadURL()).then(u=>saveData(u))}else{saveData(adminWorkLogs[selDate]?.imageUrl||null)}}
-        function deleteWorkLog(){if(selDate&&confirm("삭제?"))db.collection("work_logs").doc(selDate).delete().then(()=>{showToast("삭제됨");renderCalendar(cy,cm)})}
+        function selectDate(ds,el){
+            document.querySelectorAll('.cal-day').forEach(d=>d.classList.remove('selected')); el.classList.add('selected'); selDate=ds;
+            document.getElementById('dailyLogForm').classList.remove('hidden'); document.getElementById('selectedDateText').innerText=ds;
+            const d=adminWorkLogs[ds]||{};
+            document.getElementById('logDayHours').value=d.dayHours||''; document.getElementById('logNightHours').value=d.nightHours||'';
+            document.getElementById('logSkillTime').value=d.skillTime||''; document.getElementById('logSkillRate').value=d.skillRate||'';
+            document.getElementById('logSignalTime').value=d.signalTime||''; document.getElementById('logSignalRate').value=d.signalRate||'';
+            document.getElementById('logRainTime').value=d.rainTime||''; document.getElementById('logRainRate').value=d.rainRate||'';
+            document.getElementById('logMemo').value=d.memo||'';
+            const img=document.getElementById('logImagePreview');
+            if(d.imageUrl){img.src=d.imageUrl;img.style.display='block';}else{img.src='';img.style.display='none';}
+            document.getElementById('dailyTotalDisplay').innerText=(d.totalPay||0).toLocaleString()+"원"; vibrate();
+        }
+        function resetLogInputs(){
+            document.querySelectorAll('#dailyLogForm input, #dailyLogForm textarea').forEach(i=>{if(i.type!=='file')i.value=''});
+            const img=document.getElementById('logImagePreview'); img.src=''; img.style.display='none';
+            document.getElementById('dailyTotalDisplay').innerText='0원'; vibrate();
+        }
+        function previewLogImage(input){if(input.files&&input.files[0]){const r=new FileReader();r.onload=e=>{document.getElementById('logImagePreview').src=e.target.result;document.getElementById('logImagePreview').style.display='block';};r.readAsDataURL(input.files[0]);}}
+        function saveWorkLog(){
+            if(!selDate)return;
+            const day=parseFloat(document.getElementById('logDayHours').value)||0; const night=parseFloat(document.getElementById('logNightHours').value)||0;
+            const skill=(parseFloat(document.getElementById('logSkillTime').value)||0)*(parseFloat(document.getElementById('logSkillRate').value)||0);
+            const signal=(parseFloat(document.getElementById('logSignalTime').value)||0)*(parseFloat(document.getElementById('logSignalRate').value)||0);
+            const rain=(parseFloat(document.getElementById('logRainTime').value)||0)*(parseFloat(document.getElementById('logRainRate').value)||0);
+            const total=calculateTotalWage({hourly:DEFAULT_HOURLY,day,night,skill,signal,rain,taxRate:0});
+            const memo=escapeHtml(document.getElementById('logMemo').value); const file=document.getElementById('logImageInput').files[0];
+            const saveData=(url)=>{
+                const data={date:selDate,dayHours:day,nightHours:night,skillTime:parseFloat(document.getElementById('logSkillTime').value)||0,skillRate:parseFloat(document.getElementById('logSkillRate').value)||0,signalTime:parseFloat(document.getElementById('logSignalTime').value)||0,signalRate:parseFloat(document.getElementById('logSignalRate').value)||0,rainTime:parseFloat(document.getElementById('logRainTime').value)||0,rainRate:parseFloat(document.getElementById('logRainRate').value)||0,memo,totalPay:total,imageUrl:url};
+                db.collection("work_logs").doc(selDate).set(data).then(()=>{showToast("저장됨");adminWorkLogs[selDate]=data;document.getElementById('dailyTotalDisplay').innerText=Math.floor(total).toLocaleString()+'원';renderCalendar(cy,cm)});
+            };
+            if(file){storage.ref('work_logs/'+selDate+'_'+file.name).put(file).then(s=>s.ref.getDownloadURL()).then(u=>saveData(u))}else{saveData(adminWorkLogs[selDate]?.imageUrl||null)}
+        }
+        function deleteWorkLog(){if(selDate&&confirm("삭제?"))db.collection("work_logs").doc(selDate).delete().then(()=>{showToast("삭제됨");delete adminWorkLogs[selDate];resetLogInputs();renderCalendar(cy,cm)})}
 
-        // [Comment System]
-        function loadCommentsForPage() {
-            Object.values(commentUnsubscribes).forEach(unsub => unsub()); commentUnsubscribes = {};
-            const currentPosts = allPostsData.slice((currentBoardPage-1)*postsPerPage, currentBoardPage*postsPerPage);
-            currentPosts.forEach(post => {
-                const unsub = db.collection('posts').doc(post.id).collection('comments').orderBy('timestamp', 'asc').onSnapshot(snapshot => {
-                    const listEl = document.getElementById(`cmt-list-${post.id}`);
-                    if (!listEl) return;
-                    listEl.innerHTML = "";
-                    snapshot.forEach(doc => {
-                        const c = doc.data();
-                        listEl.innerHTML += `<div class="comment-item"><span class="comment-meta">${c.name}</span><span class="comment-text">${c.text}</span><button class="comment-del-btn" onclick="deleteComment('${post.id}', '${doc.id}', '${c.password}')">×</button></div>`;
+        // [Board & Ships]
+        function cleanupCommentListeners(postId){ if(commentUnsubscribes[postId]){commentUnsubscribes[postId]();delete commentUnsubscribes[postId];} }
+        function loadCommentsForPage(){
+            Object.keys(commentUnsubscribes).forEach(id=>cleanupCommentListeners(id));
+            const currentPosts=allPostsData.slice((currentBoardPage-1)*postsPerPage,currentBoardPage*postsPerPage);
+            currentPosts.forEach(post=>{
+                const unsub=db.collection('posts').doc(post.id).collection('comments').orderBy('timestamp','asc').onSnapshot(snapshot=>{
+                    const listEl=document.getElementById(`cmt-list-${post.id}`); if(!listEl)return;
+                    listEl.innerHTML=""; const frag=document.createDocumentFragment();
+                    snapshot.forEach(doc=>{
+                        const c=doc.data(); const div=document.createElement('div'); div.className='comment-item';
+                        div.innerHTML=`<span class="comment-meta">${escapeHtml(c.name)}</span><span class="comment-text">${escapeHtml(c.text)}</span><button class="comment-del-btn" onclick="deleteComment('${post.id}','${doc.id}','${c.password}')">×</button>`;
+                        frag.appendChild(div);
                     });
+                    listEl.appendChild(frag);
                 });
-                commentUnsubscribes[post.id] = unsub;
+                commentUnsubscribes[post.id]=unsub;
             });
         }
-        function addComment(postId) {
-            const name = document.getElementById(`cmt-name-${postId}`).value; const pw = document.getElementById(`cmt-pw-${postId}`).value; const text = document.getElementById(`cmt-txt-${postId}`).value;
-            if (!name || !pw || !text) { showToast("입력 확인"); return; }
-            db.collection('posts').doc(postId).collection('comments').add({ name: name, password: pw, text: text, timestamp: firebase.firestore.FieldValue.serverTimestamp() }).then(() => { 
-                // [FIX 3] Comment input initialization
-                document.getElementById(`cmt-name-${postId}`).value = "";
-                document.getElementById(`cmt-pw-${postId}`).value = "";
-                document.getElementById(`cmt-txt-${postId}`).value = ""; 
-                showToast("댓글 등록"); 
+        function addComment(postId){
+            const name=document.getElementById(`cmt-name-${postId}`).value; const pw=document.getElementById(`cmt-pw-${postId}`).value; const text=document.getElementById(`cmt-txt-${postId}`).value;
+            if(!name||!pw||!text){showToast("입력 확인");return;}
+            db.collection('posts').doc(postId).collection('comments').add({name:escapeHtml(name),password:pw,text:escapeHtml(text),timestamp:firebase.firestore.FieldValue.serverTimestamp()})
+            .then(()=>{
+                document.getElementById(`cmt-txt-${postId}`).value=""; document.getElementById(`cmt-name-${postId}`).value=""; document.getElementById(`cmt-pw-${postId}`).value=""; showToast("댓글 등록");
             });
         }
-        function deleteComment(postId, commentId, realPw) { const inputPw = prompt("비밀번호:"); if (inputPw === realPw || inputPw === "0346") { db.collection('posts').doc(postId).collection('comments').doc(commentId).delete().then(() => showToast("삭제됨")); } else { showToast("비밀번호 불일치"); } }
+        async function deleteComment(postId,commentId,realPw){
+            const inputPw=prompt("비밀번호:"); if(inputPw===realPw||(await verifyAdmin())){db.collection('posts').doc(postId).collection('comments').doc(commentId).delete().then(()=>showToast("삭제됨"))}else{showToast("비밀번호 불일치")}
+        }
+        
+        let searchTimeout;
+        function filterShipsDebounced(){clearTimeout(searchTimeout);searchTimeout=setTimeout(()=>filterShips(),300);}
 
         function loadAllData(){
-            db.collection("notices").orderBy("timestamp","desc").onSnapshot(s=>{const l=document.getElementById("noticeList");l.innerHTML="";s.forEach(d=>{const n=d.data();l.innerHTML+=`<li class="post-item tap-effect"><div class="post-header-row" onclick="toggleContent('n-${d.id}')"><span class="post-title-text" style="color:var(--danger)">📢 ${n.title}</span><span class="post-meta-info">${n.date}</span></div><div id="n-${d.id}" class="post-body-content">${n.content}<br><button class="mini-btn btn-del" onclick="delNotice('${d.id}',event)">삭제</button></div></li>`})});
+            db.collection("notices").orderBy("timestamp","desc").onSnapshot(s=>{const l=document.getElementById("noticeList");l.innerHTML="";s.forEach(d=>{const n=d.data();l.innerHTML+=`<li class="post-item tap-effect"><div class="post-header-row" onclick="toggleContent('n-${d.id}')"><span class="post-title-text" style="color:var(--danger)">📢 ${escapeHtml(n.title)}</span><span class="post-meta-info">${n.date}</span></div><div id="n-${d.id}" class="post-body-content">${escapeHtml(n.content)}<br><button class="mini-btn btn-del" onclick="delNotice('${d.id}',event)">삭제</button></div></li>`})});
             db.collection("posts").orderBy("timestamp","desc").onSnapshot(s=>{allPostsData=[];s.forEach(d=>{let o=d.data();o.id=d.id;allPostsData.push(o)});renderBoardPage(1)});
             
             // [FIX: Initial List View]
@@ -526,86 +601,67 @@
         }
         function renderBoardPage(p){
             currentBoardPage=p; const l=document.getElementById("boardList"); l.innerHTML="";
-            allPostsData.slice((p-1)*postsPerPage, p*postsPerPage).forEach(x=>{
-                l.innerHTML+=`
-                <li class="post-item tap-effect">
-                    <div class="post-header-row" onclick="toggleContent('p-${x.id}')">
-                        <span class="post-title-text">[${x.category}] ${x.title}</span>
-                        <span class="post-meta-info">${x.name} | ${x.date}</span>
-                    </div>
-                    <div id="p-${x.id}" class="post-body-content">
-                        <div style="margin-bottom:15px; white-space:pre-wrap;">${x.content}</div>
-                        <div class="comment-section"><div id="cmt-list-${x.id}" class="comment-list"></div><div class="comment-form"><input id="cmt-name-${x.id}" class="comment-input-sm" placeholder="닉"><input id="cmt-pw-${x.id}" class="comment-input-sm" type="password" placeholder="비번"><input id="cmt-txt-${x.id}" class="comment-input-lg" placeholder="댓글..."><button class="comment-submit" onclick="addComment('${x.id}')">등록</button></div></div><div style="margin-top:10px; text-align:right;"><button class="mini-btn btn-del" onclick="deletePost('${x.id}','${x.password}',event)">글 삭제</button></div>
-                    </div>
-                </li>`;
+            const currentPosts=allPostsData.slice((p-1)*postsPerPage,p*postsPerPage); const frag=document.createDocumentFragment();
+            currentPosts.forEach(x=>{
+                const li=document.createElement('li'); li.className='post-item tap-effect';
+                li.innerHTML=`<div class="post-header-row" onclick="toggleContent('p-${x.id}')"><span class="post-title-text">[${escapeHtml(x.category)}] ${escapeHtml(x.title)}</span><span class="post-meta-info">${escapeHtml(x.name)} | ${x.date}</span></div><div id="p-${x.id}" class="post-body-content"><div style="margin-bottom:15px; white-space:pre-wrap;">${escapeHtml(x.content)}</div><div class="comment-section"><div id="cmt-list-${x.id}" class="comment-list"></div><div class="comment-form"><input id="cmt-name-${x.id}" class="comment-input-sm" placeholder="닉"><input id="cmt-pw-${x.id}" class="comment-input-sm" type="password" placeholder="비번"><input id="cmt-txt-${x.id}" class="comment-input-lg" placeholder="댓글..."><button class="comment-submit" onclick="addComment('${x.id}')">등록</button></div></div><div style="margin-top:10px; text-align:right;"><button class="mini-btn btn-del" onclick="deletePost('${x.id}','${x.password}',event)">글 삭제</button></div></div>`;
+                frag.appendChild(li);
             });
-            renderPagination("pagination",Math.ceil(allPostsData.length/postsPerPage),p,renderBoardPage);
-            loadCommentsForPage();
+            l.appendChild(frag); renderPagination("pagination",Math.ceil(allPostsData.length/postsPerPage),p,renderBoardPage); loadCommentsForPage();
         }
         function renderShipPage(p){
-            currentShipPage=p;const l=document.getElementById("shipList");l.innerHTML="";
+            currentShipPage=p;const l=document.getElementById("shipList");l.innerHTML=""; const frag=document.createDocumentFragment();
             filteredShips.slice((p-1)*postsPerPage,p*postsPerPage).forEach(x=>{
                 let img=x.imageUrl?`<button class="mini-btn btn-photo" onclick="event.stopPropagation();showImageModal('${x.imageUrl}')">📷</button>`:"";
                 // Fixed: Added toggle-icon span and onclick handler using toggleShipContent
-                l.innerHTML+=`
-                <li class="post-item tap-effect">
-                    <div onclick="toggleShipContent('s-${x.id}')" style="display:flex;justify-content:space-between; padding:15px 5px; align-items:center;">
-                        <span class="post-title-text" style="margin:0;">🚢 ${x.shipName} <span class="toggle-icon" style="font-size:0.7rem; color:var(--text-sub); margin-left:5px;">▼</span></span>
-                        <div>${img}</div>
-                    </div>
-                    <div id="s-${x.id}" class="post-body-content">
-                        <p><strong>[본선]</strong> ${x.onboardFeat||'-'}</p>
-                        <p><strong>[육상]</strong> ${x.onshoreFeat||'-'}</p>
-                        <button class="mini-btn btn-edit" onclick="editShip('${x.id}')">수정</button>
-                        <button class="mini-btn btn-del" onclick="deleteShip('${x.id}',event)">삭제</button>
-                    </div>
-                </li>`;
+                const li=document.createElement('li'); li.className='post-item tap-effect';
+                li.innerHTML=`<div onclick="toggleShipContent('s-${x.id}')" style="display:flex;justify-content:space-between; padding:15px 5px; align-items:center;"><span class="post-title-text" style="margin:0;">🚢 ${escapeHtml(x.shipName)} <span class="toggle-icon" style="font-size:0.7rem; color:var(--text-sub); margin-left:5px;">▼</span></span><div>${img}</div></div><div id="s-${x.id}" class="post-body-content"><p><strong>[본선]</strong> ${escapeHtml(x.onboardFeat)||'-'}</p><p><strong>[육상]</strong> ${escapeHtml(x.onshoreFeat)||'-'}</p><button class="mini-btn btn-edit" onclick="editShip('${x.id}', event)">수정</button><button class="mini-btn btn-del" onclick="deleteShip('${x.id}',event)">삭제</button></div>`;
+                frag.appendChild(li);
             });
-            renderPagination("shipPagination",Math.ceil(filteredShips.length/postsPerPage),p,renderShipPage)
+            l.appendChild(frag); renderPagination("shipPagination",Math.ceil(filteredShips.length/postsPerPage),p,renderShipPage)
         }
-        function renderFilePage(p){currentFilePage=p;const l=document.getElementById("fileList");l.innerHTML="";allFilesData.slice((p-1)*postsPerPage,p*postsPerPage).forEach(x=>{l.innerHTML+=`<li class="post-item tap-effect" style="display:flex;justify-content:space-between; padding:15px 5px;"><div><a href="${x.fileUrl}" target="_blank" style="text-decoration:none;color:var(--text-main);font-weight:bold;">💾 ${x.title}</a></div></li>`});renderPagination("filePagination",Math.ceil(allFilesData.length/postsPerPage),p,renderFilePage)}
+        function renderFilePage(p){currentFilePage=p;const l=document.getElementById("fileList");l.innerHTML=""; const frag=document.createDocumentFragment();
+        allFilesData.slice((p-1)*postsPerPage,p*postsPerPage).forEach(x=>{const li=document.createElement('li');li.className='post-item tap-effect';li.innerHTML=`<div style="display:flex;justify-content:space-between; padding:15px 5px;"><div><a href="${x.fileUrl}" target="_blank" style="text-decoration:none;color:var(--text-main);font-weight:bold;">💾 ${escapeHtml(x.title)}</a></div></div>`;frag.appendChild(li);});
+        l.appendChild(frag); renderPagination("filePagination",Math.ceil(allFilesData.length/postsPerPage),p,renderFilePage)}
         function renderPagination(id,t,c,f){const el=document.getElementById(id);el.innerHTML="";for(let i=1;i<=t;i++){const s=document.createElement("span");s.className=`page-num ${i===c?'active':''} tap-effect`;s.innerText=i;s.onclick=()=>f(i);el.appendChild(s)}}
 
         function filterShips(){const q=document.getElementById('shipSearch').value.toUpperCase();filteredShips=allShipsData.filter(s=>s.shipName.toUpperCase().includes(q));renderShipPage(1);}
         function filterFiles(){const k=document.getElementById('fileSearch').value.toUpperCase();const l=document.getElementById('fileList').getElementsByTagName('li');for(let i=0;i<l.length;i++)l[i].style.display=l[i].innerText.toUpperCase().includes(k)?"":"none"}
 
-        // [FIX 4 & 5 & 7] Add Post & Clear all inputs
         function addPost(){
             const t=document.getElementById('inputTitle').value,n=document.getElementById('inputName').value,p=document.getElementById('inputPw').value,c=document.getElementById('inputContent').value;
-            if(!t||!n||!p)return;
-            db.collection("posts").add({category:document.getElementById('inputCategory').value,title:t,name:n,password:p,content:c,date:new Date().toLocaleString('ko-KR'),timestamp:firebase.firestore.FieldValue.serverTimestamp()}).then(()=>{
+            if(!t||!p||!c){showToast("내용 입력하세요");return;}
+            let finalName=n; if(!finalName) finalName="익명-"+Math.floor(1000+Math.random()*9000);
+            db.collection("posts").add({category:document.getElementById('inputCategory').value,title:escapeHtml(t),name:escapeHtml(finalName),password:p,content:escapeHtml(c),date:new Date().toLocaleString('ko-KR'),timestamp:firebase.firestore.FieldValue.serverTimestamp()})
+            .then(()=>{
                 showToast("완료");
+                document.getElementById('inputTitle').value='';document.getElementById('inputName').value='';document.getElementById('inputPw').value='';document.getElementById('inputContent').value='';
                 toggleHidden('boardForm');
-                // Clear inputs
-                document.getElementById('inputTitle').value = '';
-                document.getElementById('inputName').value = '';
-                document.getElementById('inputPw').value = '';
-                document.getElementById('inputContent').value = '';
-                document.getElementById('inputCategory').value = '💬 잡담';
             });
         }
-        function deletePost(id,pw,e){e.stopPropagation();if(prompt("비번:")===pw||prompt("관리자?")==="0346")db.collection("posts").doc(id).delete()}
+        async function deletePost(id,pw,e){e.stopPropagation();const inputPw=prompt("비밀번호:"); if(inputPw===pw||(await verifyAdmin())) db.collection("posts").doc(id).delete()}
         
-        // [FIX 2 & 7] Notice Add & Clear
         async function addNotice(){
-            if(prompt("암호:")==="0346") {
+            if(await verifyAdmin()){
                 db.collection("notices").add({title:document.getElementById('noticeTitle').value,content:document.getElementById('noticeContent').value,date:new Date().toLocaleString('ko-KR'),timestamp:firebase.firestore.FieldValue.serverTimestamp()})
-                .then(() => {
+                .then(()=>{
                     showToast("공지 등록 완료");
-                    document.getElementById('noticeTitle').value = '';
-                    document.getElementById('noticeContent').value = '';
+                    document.getElementById('noticeTitle').value='';
+                    document.getElementById('noticeContent').value='';
                 });
             }
         }
         // [FIX 1] Notice Delete Toast
-        function delNotice(id,e){
+        async function delNotice(id,e){
             e.stopPropagation();
-            if(prompt("암호:")==="0346") {
-                db.collection("notices").doc(id).delete().then(() => showToast("삭제됨"));
+            if(await verifyAdmin()){
+                if(confirm("정말 삭제하시겠습니까?")){
+                    db.collection("notices").doc(id).delete().then(()=>showToast("공지 삭제됨"));
+                }
             }
         }
-
-        // [FIX 6 & 7] Ship Add/Edit Logic & Clear
+        
+        // [INSERTION 3: Updated addShipInfo]
         function addShipInfo(){
             const n=document.getElementById('shipName').value;
             if(!n){alert("선박명 필수");return}
@@ -615,8 +671,7 @@
                     showToast("완료");
                     toggleHidden('shipForm');
                     editingShipId=null;
-                    // Reset inputs & button
-                    document.getElementById('shipSubmitBtn').innerText="등록";
+                    document.getElementById('shipSubmitBtn').innerText="등록"; // Reset button text
                     document.querySelectorAll('#shipForm input,#shipForm textarea').forEach(i=>i.value=''); 
                     document.getElementById('shipSearch').value = ''; 
                     filterShips(); 
@@ -625,8 +680,10 @@
             const f=document.getElementById('shipFileInput').files[0];
             if(f)storage.ref('ships/'+Date.now()+f.name).put(f).then(x=>x.ref.getDownloadURL()).then(u=>s(u));else s(editingShipId?allShipsData.find(x=>x.id===editingShipId).imageUrl:null)
         }
+
         let editingShipId=null;
-        function editShip(id){
+        function editShip(id, e){
+            e.stopPropagation(); 
             const x=allShipsData.find(s=>s.id===id);
             editingShipId=id;
             document.getElementById('shipName').value=x.shipName;
@@ -637,25 +694,46 @@
             document.getElementById('shipSubmitBtn').innerText="수정 완료";
             document.getElementById('shipForm').scrollIntoView({behavior:'smooth'})
         }
-        function deleteShip(id,e){e.stopPropagation();if(prompt("암호:")==="0346")db.collection("ships").doc(id).delete()}
         
-        // [FIX 7] File Upload Clear
+        async function deleteShip(id, e) {
+            e.stopPropagation();
+            if (!confirm("정말 삭제하시겠습니까?")) return;
+            // Admin Verify before delete
+            if (await verifyAdmin()) {
+                db.collection("ships").doc(id).delete()
+                .then(() => alert("삭제되었습니다."))
+                .catch(err => alert("삭제 실패: " + err));
+            } else {
+                alert("관리자 권한이 필요합니다.");
+            }
+        }
+        
+        // [INSERTION 4: Updated uploadFile]
         function uploadFile(){
             const f=document.getElementById('fileInput').files[0];
             if(!f)return;
+            const uploaderName = document.getElementById('fileUploader').value; // Get uploader name
+            
             storage.ref('archives/'+Date.now()+f.name).put(f).then(s=>s.ref.getDownloadURL()).then(u=>{
-                db.collection("archives").add({title:document.getElementById('fileTitle').value,uploader:document.getElementById('fileUploader').value,fileUrl:u,date:new Date().toLocaleString('ko-KR'),timestamp:firebase.firestore.FieldValue.serverTimestamp()});
+                db.collection("archives").add({
+                    title:document.getElementById('fileTitle').value,
+                    uploader: uploaderName, // Save uploader name
+                    fileUrl:u,
+                    date:new Date().toLocaleString('ko-KR'),
+                    timestamp:firebase.firestore.FieldValue.serverTimestamp()
+                });
                 showToast("완료");
+                // Clear inputs
+                document.getElementById('fileInput').value = '';
                 document.getElementById('fileTitle').value = '';
                 document.getElementById('fileUploader').value = '';
-                document.getElementById('fileInput').value = '';
             })
         }
         
         function loadBanner(){db.collection('settings').doc('banner').onSnapshot(d=>{if(d.exists){const data=d.data();let msg="";if(data.adminMessage)msg+=`🚨 ${data.adminMessage}   /   `;if(data.messages&&data.messages.length>0)msg+=data.messages.join("   /   ");if(!msg)msg="🚨 안전 제일! 오늘도 무사고!";document.getElementById('tickerText').innerText=msg}})}
         function writeUserTicker(){const msg=prompt("안전 문구 입력 (누구나):");if(msg){db.collection('settings').doc('banner').get().then(doc=>{let msgs=doc.exists?(doc.data().messages||[]):[];msgs.unshift(msg);if(msgs.length>10)msgs=msgs.slice(0,10);db.collection('settings').doc('banner').set({messages:msgs},{merge:true})})}}
-        function setAdminTicker(){if(prompt("관리자 암호:")==="0346"){const msg=prompt("고정 공지 입력:");if(msg)db.collection('settings').doc('banner').set({adminMessage:msg},{merge:true})}else showToast("⛔ 관리자만 가능")}
-        function resetTicker(){if(prompt("관리자 암호:")==="0346"&&confirm("초기화?"))db.collection('settings').doc('banner').set({adminMessage:null,messages:[]})}
+        async function setAdminTicker(){if(await verifyAdmin()){const msg=prompt("고정 공지 입력:");if(msg)db.collection('settings').doc('banner').set({adminMessage:msg},{merge:true})}else showToast("⛔ 관리자만 가능")}
+        async function resetTicker(){if(await verifyAdmin()&&confirm("초기화?"))db.collection('settings').doc('banner').set({adminMessage:null,messages:[]})}
         function openBusSchedule(){showImageModal("https://firebasestorage.googleapis.com/v0/b/my-app-d8527.firebasestorage.app/o/archives%2F1769013796862_BandPhoto_2026_01_22_01_39_56.jpg?alt=media&token=a2e8f727-250a-41aa-855c-7b1f341d9048")}
         function showImageModal(s){document.getElementById("modalImage").src=s;document.getElementById("imageModal").style.display="flex"}
         function closeImageModal(){document.getElementById("imageModal").style.display="none"}
