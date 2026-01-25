@@ -478,16 +478,101 @@
         function deleteWorkLog(){if(selDate&&confirm("삭제?"))db.collection("work_logs").doc(selDate).delete().then(()=>{showToast("삭제됨");delete adminWorkLogs[selDate];resetLogInputs();renderCalendar(cy,cm)})}
 
         // [Post & Notice]
+        // [1. 익명게시판 글쓰기 기능 수정]
         function addPost(){
-            const t=document.getElementById('inputTitle').value,n=document.getElementById('inputName').value,p=document.getElementById('inputPw').value,c=document.getElementById('inputContent').value;
-            if(!t||!p||!c){showToast("내용 입력하세요");return;}
-            let finalName=n; if(!finalName) finalName="익명-"+Math.floor(1000+Math.random()*9000);
-            db.collection("posts").add({category:document.getElementById('inputCategory').value,title:escapeHtml(t),name:escapeHtml(finalName),password:p,content:escapeHtml(c),date:new Date().toLocaleString('ko-KR'),timestamp:firebase.firestore.FieldValue.serverTimestamp()})
+            const t=document.getElementById('inputTitle').value;
+            const n=document.getElementById('inputName').value;
+            const p=document.getElementById('inputPw').value;
+            const c=document.getElementById('inputContent').value;
+            
+            if(!t || !c || !p){ showToast("제목, 내용, 비밀번호는 필수입니다."); return; }
+            
+            let finalName = n; 
+            if(!finalName) finalName = "익명-" + Math.floor(1000 + Math.random() * 9000);
+
+            db.collection("posts").add({
+                category: document.getElementById('inputCategory').value,
+                title: escapeHtml(t),
+                name: escapeHtml(finalName),
+                password: p,
+                content: escapeHtml(c),
+                date: new Date().toLocaleString('ko-KR'),
+                timestamp: firebase.firestore.FieldValue.serverTimestamp()
+            })
             .then(()=>{
-                showToast("완료");
-                document.getElementById('inputTitle').value='';document.getElementById('inputName').value='';document.getElementById('inputPw').value='';document.getElementById('inputContent').value='';
+                showToast("게시글 등록 완료");
+                // 입력창 초기화
+                document.getElementById('inputTitle').value='';
+                document.getElementById('inputName').value='';
+                document.getElementById('inputPw').value='';
+                document.getElementById('inputContent').value='';
+                document.getElementById('inputCategory').value='💬 잡담';
                 toggleHidden('boardForm');
+            })
+            .catch((error) => {
+                alert("글 등록 실패: " + error.message);
+                console.error("Error adding document: ", error);
             });
+        }
+
+        // [2. 선박정보 등록/수정 기능 수정]
+        function addShipInfo(){
+            const n = document.getElementById('shipName').value;
+            if(!n){ alert("선박명은 필수입니다."); return; }
+
+            const saveToDb = (url) => {
+                const data = {
+                    shipName: n,
+                    onboardFeat: document.getElementById('shipOnboard').value,
+                    onshoreFeat: document.getElementById('shipOnshore').value,
+                    imageUrl: url,
+                    date: new Date().toLocaleString('ko-KR'),
+                    timestamp: firebase.firestore.FieldValue.serverTimestamp()
+                };
+
+                let promise;
+                if(editingShipId) {
+                    promise = db.collection("ships").doc(editingShipId).update(data);
+                } else {
+                    promise = db.collection("ships").add(data);
+                }
+
+                promise.then(() => {
+                    showToast("선박 정보 저장 완료");
+                    toggleHidden('shipForm');
+                    
+                    // 초기화
+                    editingShipId = null;
+                    document.getElementById('shipSubmitBtn').innerText = "등록";
+                    document.getElementById('shipName').value = '';
+                    document.getElementById('shipFileInput').value = '';
+                    document.getElementById('shipOnboard').value = '';
+                    document.getElementById('shipOnshore').value = '';
+                    document.getElementById('shipSearch').value = '';
+                    filterShips();
+                })
+                .catch((error) => {
+                    alert("저장 실패: " + error.message);
+                });
+            };
+
+            const file = document.getElementById('shipFileInput').files[0];
+            
+            if(file) {
+                // 새 파일이 있는 경우 업로드 후 저장
+                storage.ref('ships/' + Date.now() + "_" + file.name).put(file)
+                .then(snapshot => snapshot.ref.getDownloadURL())
+                .then(url => saveToDb(url))
+                .catch(error => alert("이미지 업로드 실패: " + error.message));
+            } else {
+                // 파일이 없는 경우 (수정 시 기존 이미지 유지, 신규 시 null)
+                let existingUrl = null;
+                if(editingShipId) {
+                    const currentShip = allShipsData.find(x => x.id === editingShipId);
+                    if(currentShip) existingUrl = currentShip.imageUrl;
+                }
+                saveToDb(existingUrl);
+            }
         }
         async function deletePost(id,pw,e){
             e.stopPropagation();
@@ -615,3 +700,4 @@
     </script>
 </body>
 </html>
+
