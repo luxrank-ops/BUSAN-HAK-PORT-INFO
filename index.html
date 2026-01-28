@@ -1,677 +1,612 @@
 <!DOCTYPE html>
-
 <html lang="ko">
-
 <head>
-
     <meta charset="UTF-8">
-
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-
     
-
     <meta name="description" content="부산항 현장직 필수 앱. 임금계산기, 스마트 근무일지(짝지기록), 선박위치 및 스케줄 조회.">
-
     <meta name="keywords" content="부산항, 현장직, 임금계산, 근무일지, 선박스케줄, 갱, YT, QC, Lashing">
-
     <meta property="og:title" content="BUSAN HAK PORT INFO">
-
     <title>BUSAN HAK PORT INFO</title>
-
     
-
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
-
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-storage.js"></script>
-
     
-
     <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6024353303588422" crossorigin="anonymous"></script>
 
-
-
     <link rel="icon" type="image/png" sizes="32x32" href="icon.png?v=fixed_final_v12">
-
     <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.8/dist/web/static/pretendard.css" />
 
-
-
     <style>
-
-        :root { --primary: #1e3a8a; --primary-light: #3b82f6; --accent: #f59e0b; --bg-color: #f3f4f6; --card-bg: rgba(255, 255, 255, 0.95); --text-main: #1f2937; --text-sub: #6b7280; --border: rgba(229, 231, 235, 0.8); --danger: #ef4444; --success: #10b981; --glass-border: 1px solid rgba(255, 255, 255, 0.6); --glass-shadow: 0 2px 10px rgba(0,0,0,0.03); --blur: blur(12px); }
-
-        body.dark-mode { --primary: #60a5fa; --primary-light: #93c5fd; --accent: #fbbf24; --bg-color: #0f172a; --card-bg: rgba(30, 41, 59, 0.95); --text-main: #f3f4f6; --text-sub: #9ca3af; --border: rgba(55, 65, 81, 0.5); --glass-border: 1px solid rgba(255, 255, 255, 0.1); }
-
+        :root { 
+            --primary: #1e3a8a; 
+            --primary-light: #3b82f6; 
+            --accent: #f59e0b; 
+            --bg-color: #f3f4f6; 
+            --card-bg: rgba(255, 255, 255, 0.95); 
+            --text-main: #1f2937; 
+            --text-sub: #6b7280; 
+            --border: rgba(229, 231, 235, 0.8); 
+            --danger: #ef4444; 
+            --success: #10b981; 
+            --glass-border: 1px solid rgba(255, 255, 255, 0.6); 
+            --glass-shadow: 0 2px 10px rgba(0,0,0,0.03); 
+            --blur: blur(12px); 
+        }
+        body.dark-mode { 
+            --primary: #60a5fa; 
+            --primary-light: #93c5fd; 
+            --accent: #fbbf24; 
+            --bg-color: #0f172a; 
+            --card-bg: rgba(30, 41, 59, 0.95); 
+            --text-main: #f3f4f6; 
+            --text-sub: #9ca3af; 
+            --border: rgba(55, 65, 81, 0.5); 
+            --glass-border: 1px solid rgba(255, 255, 255, 0.1); 
+        }
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; font-family: 'Pretendard', sans-serif; }
-
         body { background-color: var(--bg-color); color: var(--text-main); margin: 0; padding: 0; padding-bottom: 100px; transition: background 0.3s ease; }
-
-        .tap-effect { transition: transform 0.1s; } .tap-effect:active { transform: scale(0.98); }
-
+        .tap-effect { transition: transform 0.1s; } 
+        .tap-effect:active { transform: scale(0.98); }
+        
         header { background: linear-gradient(135deg, var(--primary), var(--primary-light)); color: white; padding: 14px 0; text-align: center; position: sticky; top: 0; z-index: 100; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
-
         header h1 { margin: 0; font-size: 1.2rem; font-weight: 900; }
-
+        
         .theme-toggle { position: absolute; right: 15px; top: 50%; transform: translateY(-50%); background: rgba(255,255,255,0.2); border: none; width: 30px; height: 30px; border-radius: 50%; font-size: 1.1rem; cursor: pointer; display: flex; align-items: center; justify-content: center; }
-
+        
         .container { width: 96%; max-width: 600px; margin: 15px auto; }
-
         .dash-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }
-
         .dash-card { background: var(--card-bg); border-radius: 16px; box-shadow: var(--glass-shadow); border: var(--glass-border); overflow: hidden; transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); display: flex; flex-direction: column; }
-
         .dash-card.expanded { grid-column: span 2; }
-
-        .dash-header { padding: 15px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.05); border-bottom: 1px solid transparent; height: 100%; min-height: 60px; }
-
+        
+        .dash-header { padding: 15px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.05); min-height: 60px; }
         .dash-card.expanded .dash-header { border-bottom: 1px solid var(--border); background: rgba(0,0,0,0.02); }
-
         .dash-title { font-size: 1rem; font-weight: 800; color: var(--text-main); display: flex; align-items: center; gap: 6px; }
-
+        
         .toggle-icon { font-size: 0.8rem; color: var(--text-sub); transition: transform 0.3s; }
-
         .toggle-icon.rotated { transform: rotate(180deg); }
-
+        
         .dash-content { display: none; padding: 15px; background: var(--card-bg); animation: fadeIn 0.2s; }
-
         .card { background: var(--card-bg); border-radius: 16px; margin-bottom: 15px; box-shadow: var(--glass-shadow); border: var(--glass-border); overflow: hidden; }
-
+        
         .section-header { display: flex; justify-content: space-between; align-items: center; padding: 15px; cursor: pointer; border-bottom: 1px solid var(--border); }
-
         .section-title { font-size: 1.1rem; font-weight: 800; display:flex; align-items:center; gap:8px; }
-
+        
         .collapsible-content { display: block; padding: 15px; }
-
         .collapsible-content.collapsed { display: none !important; }
-
+        
         @keyframes fadeIn { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
-
+        
         .control-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-
         .control-btn { background: var(--card-bg); border: 1px solid var(--border); color: var(--text-main); padding: 16px; border-radius: 12px; text-decoration: none; font-size: 0.95rem; font-weight: 700; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px; box-shadow: 0 2px 5px rgba(0,0,0,0.02); transition: all 0.2s; }
-
+        
         .input-field { width: 100%; padding: 12px; margin-bottom: 8px; border: 1px solid var(--border); border-radius: 8px; background: rgba(255,255,255,0.6); color: var(--text-main); font-size: 0.95rem; }
-
         .textarea-field { height: 80px; resize: none; }
-
+        
         .action-btn { width: 100%; padding: 12px; border: none; border-radius: 10px; font-weight: 700; color: white; cursor: pointer; background: var(--primary); font-size: 0.95rem; }
-
-        .bg-submit { background: var(--success); } .bg-calc { background: linear-gradient(135deg, #ef4444, #b91c1c); } .bg-cancel { background: var(--text-sub); }
-
+        .bg-submit { background: var(--success); } 
+        .bg-calc { background: linear-gradient(135deg, #ef4444, #b91c1c); } 
+        .bg-cancel { background: var(--text-sub); }
+        
         .terminal-block { background: rgba(0,0,0,0.03); border-radius: 10px; margin-bottom: 8px; border: 1px solid var(--border); overflow: hidden; }
-
         .terminal-header { padding: 12px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; font-weight: 700; font-size: 0.95rem; }
-
         .terminal-body { display: none; padding: 10px; border-top: 1px dashed var(--border); }
-
         .terminal-body.show { display: block !important; }
-
         .terminal-actions { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; }
-
         .terminal-btn { background: var(--card-bg); border: 1px solid var(--border); color: var(--text-main); padding: 10px 4px; border-radius: 8px; text-decoration: none; font-size: 0.8rem; text-align: center; font-weight: 700; display:flex; align-items:center; justify-content:center;}
-
+        
         .wage-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
-
         .wage-row label { flex: 1; font-weight: 600; font-size: 0.9rem; }
-
-        .wage-result-box { background: linear-gradient(135deg, #fff7ed, #ffedd5); border: 2px solid var(--accent); border-radius: 12px; padding: 15px; text-align: center; margin-top: 15px; }
-
-        .wage-total { font-size: 1.6rem; color: #c2410c; font-weight: 900; }
+        .wage-result-box { background: linear-gradient(135deg, #ffffff, #f9fafb); border: 2px solid var(--primary); border-radius: 12px; padding: 15px; margin-top: 15px; }
+        .wage-total { font-size: 1.5rem; color: #c2410c; font-weight: 900; text-align: center; border-top: 2px solid var(--primary); padding-top: 10px; margin-top: 10px; }
+        .spec-table { width: 100%; border-collapse: collapse; margin: 10px 0; font-size: 0.85rem; }
+        .spec-table tr { border-bottom: 1px solid #edf2f7; }
+        .spec-table td { padding: 8px 0; color: var(--text-main); }
+        .spec-table td:last-child { text-align: right; font-weight: 700; }
 
         .ticker-container { background: var(--accent); color: #000; font-weight: 700; height: 36px; display: flex; align-items: center; overflow: hidden; position: relative; font-size: 0.85rem; }
-
         .ticker-item { padding-left: 100%; animation: ticker 25s linear infinite; white-space: nowrap; }
-
         @keyframes ticker { 100% { transform: translate3d(-100%, 0, 0); } }
-
         .ticker-controls { position: absolute; right: 0; height: 100%; display: flex; background: rgba(255,255,255,0.3); backdrop-filter: blur(2px); }
-
         .ticker-btn { width: 36px; height: 100%; border: none; background: transparent; font-size: 1rem; cursor: pointer; }
-
+        
         .hidden { display: none !important; }
-
         .mini-btn { padding: 4px 8px; font-size: 0.75rem; border-radius: 6px; border: none; cursor: pointer; color: white; margin-left: 5px; }
-
-        .btn-del { background: var(--danger); } .btn-edit { background: var(--primary-light); }
-
+        .btn-del { background: var(--danger); } 
+        .btn-edit { background: var(--primary-light); }
+        
         .post-list { list-style: none; padding: 0; margin: 0; }
-
         .post-item { border-bottom: 1px solid var(--border); }
-
-        .post-item:last-child { border-bottom: none; }
-
         .post-header-row { padding: 15px 5px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; background: transparent; transition: background 0.1s; }
-
         .post-header-row:active { background: rgba(0,0,0,0.03); }
-
         .post-title-text { font-weight: 700; font-size: 0.95rem; color: var(--text-main); display: flex; align-items: center; gap: 5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; margin-right: 10px; }
-
-        .post-meta-info { font-size: 0.75rem; color: var(--text-sub); white-space: nowrap; }
-
         .post-body-content { display: none; padding: 15px; background: rgba(0,0,0,0.02); border-top: 1px dashed var(--border); font-size: 0.95rem; line-height: 1.7; white-space: pre-wrap; color: var(--text-main); word-break: break-all; }
-
+        
+        .comment-section { margin-top: 15px; border-top: 1px dashed var(--border); padding-top: 10px; background: rgba(0,0,0,0.015); border-radius: 8px; padding: 10px; }
+        .comment-item { display: flex; justify-content: space-between; align-items: flex-start; font-size: 0.85rem; padding: 6px 0; border-bottom: 1px solid rgba(0,0,0,0.05); }
+        .comment-meta { font-weight: bold; color: var(--primary); margin-right: 5px; min-width: 60px; font-size: 0.8rem; }
+        .comment-text { flex: 1; color: var(--text-main); word-break: break-all; }
+        .comment-del-btn { background: none; border: none; color: var(--text-sub); cursor: pointer; font-size: 0.7rem; padding: 0 5px; }
+        .comment-form { display: flex; gap: 5px; align-items: center; flex-wrap: wrap; margin-top: 10px; }
+        .comment-input-sm { width: 70px; padding: 8px; border: 1px solid var(--border); border-radius: 6px; font-size: 0.8rem; }
+        .comment-input-lg { flex: 1; padding: 8px; border: 1px solid var(--border); border-radius: 6px; font-size: 0.8rem; min-width: 120px; }
+        .comment-submit { padding: 8px 12px; background: var(--text-sub); color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 0.8rem; font-weight: bold; }
+        
         .bottom-nav { position: fixed; bottom: 0; left: 0; width: 100%; height: 65px; background: rgba(255,255,255,0.95); border-top: 1px solid var(--border); display: flex; justify-content: space-around; align-items: center; z-index: 1000; padding-bottom: env(safe-area-inset-bottom); }
-
         .dark-mode .bottom-nav { background: rgba(30, 41, 59, 0.95); }
-
         .nav-item { flex: 1; text-align: center; color: var(--text-sub); font-size: 0.7rem; cursor: pointer; display: flex; flex-direction: column; align-items: center; }
-
         .nav-item.active { color: var(--primary); font-weight: 800; }
-
         .nav-icon { font-size: 1.4rem; margin-bottom: 2px; }
-
+        
         .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 3000; justify-content: center; align-items: center; }
-
         .modal-content { background: var(--card-bg); padding: 20px; border-radius: 15px; max-width: 90%; max-height: 80%; overflow-y: auto; }
-
         .modal-img { max-width: 100%; border-radius: 5px; }
-
+        
         .guide-text { line-height: 1.8; font-size: 0.9rem; text-align: left; color: var(--text-main); white-space: pre-wrap; }
-
         .guide-text h4 { color: var(--primary); margin: 25px 0 10px 0; border-left: 4px solid var(--accent); padding-left: 10px; font-size: 1rem; }
-
-        .glossary-item { margin-bottom: 10px; padding-bottom: 10px; border-bottom: 1px dashed var(--border); }
-
-        .glossary-term { font-weight: 800; color: var(--primary); font-size: 0.9rem; }
-
-        .glossary-desc { font-size: 0.85rem; color: var(--text-main); margin-top: 2px; }
-
-        footer { text-align: center; padding: 40px 20px; color: var(--text-sub); font-size: 0.8rem; margin-bottom: 80px; border-top: 1px solid var(--border); }
-
-        .footer-link { cursor: pointer; text-decoration: underline; margin: 0 8px; }
-
+        
         .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; text-align: center; }
-
-        .cal-day { padding: 8px 2px; border-radius: 8px; background: rgba(255,255,255,0.5); border: 1px solid var(--border); font-weight: 700; font-size: 0.85rem; }
-
+        .cal-day { padding: 8px 2px; border-radius: 8px; background: rgba(255,255,255,0.5); border: 1px solid var(--border); font-weight: 700; font-size: 0.85rem; cursor: pointer; }
         .cal-day.selected { background: var(--primary); color: white; border-color: var(--primary); }
-
-        .cal-dot { width: 4px; height: 4px; background-color: var(--success); border-radius: 50%; margin: 3px auto 0 auto; display: none; }
-
-        .cal-day.has-data .cal-dot { display: block; }
-
+        .cal-day.has-data { border: 2px solid var(--success); }
+        
         #toast { position: fixed; bottom: 85px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.85); color: white; padding: 10px 20px; border-radius: 20px; font-size: 0.9rem; z-index: 5000; opacity: 0; transition: 0.3s; pointer-events: none; }
-
         #toast.show { opacity: 1; }
-
-        .page-num { padding: 5px 10px; border: 1px solid var(--border); cursor: pointer; border-radius: 5px; }
-
+        
+        .page-num { padding: 5px 10px; border: 1px solid var(--border); cursor: pointer; border-radius: 5px; font-size: 0.8rem; margin: 0 2px; }
         .page-num.active { background: var(--primary); color: white; }
-
     </style>
-
 </head>
-
 <body>
 
-
-
     <header>
-
         <h1>BUSAN HAK PORT</h1>
-
         <button class="theme-toggle tap-effect" onclick="toggleDarkMode()">🌙</button>
-
     </header>
 
-
-
     <div id="safetyTicker" class="ticker-container">
-
         <div class="ticker-wrap"><div id="tickerText" class="ticker-item">🚨 안전 제일! 오늘도 무사고!</div></div>
-
         <div class="ticker-controls">
-
             <button class="ticker-btn tap-effect" onclick="writeUserTicker()">🗣️</button>
-
             <button class="ticker-btn tap-effect" onclick="setAdminTicker()">📢</button>
-
             <button class="ticker-btn tap-effect" onclick="resetTicker()">⚙️</button>
-
         </div>
-
     </div>
-
-
 
     <div class="container">
-
         
-
         <div class="dash-grid">
-
-            <div id="wage-card" class="dash-card" style="border:1px solid var(--danger);">
-
+            <div id="wage-card" class="dash-card expanded" style="border:1px solid var(--danger);">
                 <div class="dash-header tap-effect" onclick="toggleDashItem('wage-card')">
-
-                    <span class="dash-title" style="color:var(--danger);">💰 임금 계산기</span><span class="toggle-icon">▼</span>
-
+                    <span class="dash-title" style="color:var(--danger);">💰 임금 산정 내역서 계산기</span><span class="toggle-icon rotated">▼</span>
                 </div>
-
-                <div class="dash-content">
-
-                    <div class="wage-row"><label>시급</label><input type="number" id="wageHourly" class="input-field" value="10320" style="text-align:right;">원</div>
-
-                    <div class="wage-row"><label>☀️ 주간</label><input type="number" id="wageDayHours" class="input-field" placeholder="시간" style="text-align:right;">H</div>
-
-                    <div class="wage-row"><label>🌙 야간/휴일</label><input type="number" id="wageNightHours" class="input-field" placeholder="시간" style="text-align:right;">H</div>
-
-                    <div style="border-top:1px dashed var(--border); margin:10px 0; padding-top:5px;">
-
-                        <div class="wage-row"><label>🔧 기능공</label><input type="number" id="wageSkillTime" class="input-field" placeholder="시간"><input type="number" id="wageSkillRate" class="input-field" placeholder="단가"></div>
-
-                        <div class="wage-row"><label>🏗️ 절맞이</label><input type="number" id="wageSignalTime" class="input-field" placeholder="시간"><input type="number" id="wageSignalRate" class="input-field" placeholder="단가"></div>
-
-                        <div class="wage-row"><label>☔ 우천</label><input type="number" id="wageRainTime" class="input-field" placeholder="시간"><input type="number" id="wageRainRate" class="input-field" placeholder="단가"></div>
-
+                <div class="dash-content" style="display:block;">
+                    <div class="wage-row"><label>시급(기본)</label><input type="number" id="wageHourly" class="input-field" value="10320" style="text-align:right;" readonly>원</div>
+                    
+                    <div style="background:rgba(239,68,68,0.05); padding:12px; border-radius:10px; margin-bottom:12px; border:1px solid rgba(239,68,68,0.2);">
+                        <div class="wage-row"><label>⏳ 총 근무시간</label><input type="number" id="wageTotalHours" class="input-field" placeholder="예: 24, 48" style="text-align:right; border:2px solid var(--danger);">H</div>
+                        <div class="wage-row"><label>🕒 시작 시각</label><input type="number" id="wageStartTime" class="input-field" value="8" placeholder="0~23" style="text-align:right;">시</div>
+                        <p style="font-size:0.7rem; color:var(--text-sub); margin:0;">※ 총 시간을 기준으로 주/야간을 자동 배분합니다.</p>
+                    </div>
+                    
+                    <div style="border-top:1px dashed var(--border); margin:10px 0; padding-top:10px;">
+                        <p style="font-size:0.75rem; color:var(--primary); font-weight:800; margin-bottom:8px;">✅ 해당되는 수당 시간 입력 (중복 가능)</p>
+                        <div class="wage-row"><label>🌑 심야 (00~04시)</label><input type="number" id="wageDeepNight" class="input-field" placeholder="H" style="text-align:right;">H</div>
+                        <div class="wage-row"><label>☔ 우천/공휴일/주말</label><input type="number" id="wageSpecial" class="input-field" placeholder="H" style="text-align:right;">H</div>
+                        <div class="wage-row"><label>🔥 혹서기 (12~15시)</label><input type="number" id="wageHotTime" class="input-field" placeholder="H" style="text-align:right;">H</div>
                     </div>
 
-                    <select id="wageTaxType" class="input-field"><option value="0">공제 없음 (0%)</option><option value="0.033">프리랜서 (3.3%)</option><option value="0.094">4대보험 (9.4%)</option></select>
+                    <select id="wageTaxType" class="input-field" style="margin-top:10px;">
+                        <option value="0">공제 없음 (0%)</option>
+                        <option value="0.033">프리랜서 (3.3%)</option>
+                        <option value="0.094">4대보험 (9.4%)</option>
+                    </select>
 
-                    <div style="display:flex; gap:8px; margin-top:10px;"><button class="action-btn bg-calc" style="flex:2" onclick="calculateWage()">계산</button><button class="action-btn bg-cancel" style="flex:1" onclick="resetWageForm()">초기화</button></div>
-
-                    <div id="wageResultBox" class="hidden wage-result-box"><div style="font-size:0.8rem; color:var(--text-sub);">예상 수령액</div><div id="wageTotal" class="wage-total">0원</div></div>
-
+                    <div style="display:flex; gap:8px; margin-top:10px;">
+                        <button class="action-btn bg-calc" style="flex:2" onclick="calculateWage()">내역서 생성 및 계산</button>
+                        <button class="action-btn bg-cancel" style="flex:1" onclick="resetWageForm()">초기화</button>
+                    </div>
+                    
+                    <div id="wageResultBox" class="hidden wage-result-box">
+                        <h4 style="margin:0; text-align:center; color:var(--primary);">📋 임금 산정 내역서</h4>
+                        <table class="spec-table">
+                            <tbody id="wageSpecBody"></tbody>
+                        </table>
+                        <div id="wageTotal" class="wage-total">0원</div>
+                        <p style="font-size:0.7rem; color:var(--text-sub); text-align:center; margin-top:5px;">※ 2026년 3항업지부 임금표 기준</p>
+                    </div>
                 </div>
-
             </div>
-
-
 
             <div id="log-card" class="dash-card" style="border:1px solid var(--primary);">
-
                 <div class="dash-header tap-effect" onclick="checkAdminAndOpenLog('log-card')">
-
-                    <span class="dash-title" style="color:var(--primary);">📅 스마트 근무일지(짝지기록)</span><span class="toggle-icon">▼</span>
-
+                    <span class="dash-title" style="color:var(--primary);">📅 스마트 근무일지(짝지)</span><span class="toggle-icon">▼</span>
                 </div>
-
                 <div id="workLogArea" class="dash-content">
-
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;"><button class="mini-btn" onclick="changeMonth(-1)">◀</button><span id="calMonthYear" style="font-weight:bold;"></span><button class="mini-btn" onclick="changeMonth(1)">▶</button></div>
-
-                    <div id="calendarGrid" class="calendar-grid"></div>
-
-                    <div id="dailyLogForm" class="hidden" style="margin-top:15px; padding:15px; background:rgba(0,0,0,0.03); border-radius:12px;">
-
-                        <h4 style="margin:0 0 10px 0; color:var(--primary); display:flex; justify-content:space-between;"><span id="selectedDateText"></span><span id="dailyTotalDisplay" style="color:var(--danger);">0원</span></h4>
-
-                        <div style="text-align:right; margin-bottom:8px;"><button class="mini-btn" style="background:var(--text-sub);" onclick="resetLogInputs()">🔄 초기화</button></div>
-
-                        <div class="wage-row"><label>주간</label><input type="number" id="logDayHours" class="input-field" placeholder="시간" step="0.5"></div>
-
-                        <div class="wage-row"><label>야간</label><input type="number" id="logNightHours" class="input-field" placeholder="시간" step="0.5"></div>
-
-                        <div style="border-top:1px dashed var(--border); margin:10px 0; padding-top:5px;">
-
-                            <div class="wage-row"><label>🔧 기능공</label><input type="number" id="logSkillTime" class="input-field" placeholder="시간"><input type="number" id="logSkillRate" class="input-field" placeholder="단가"></div>
-
-                            <div class="wage-row"><label>🏗️ 절맞이</label><input type="number" id="logSignalTime" class="input-field" placeholder="시간"><input type="number" id="logSignalRate" class="input-field" placeholder="단가"></div>
-
-                            <div class="wage-row"><label>☔ 우천</label><input type="number" id="logRainTime" class="input-field" placeholder="시간"><input type="number" id="logRainRate" class="input-field" placeholder="단가"></div>
-
-                        </div>
-
-                        <div style="margin-top:10px; border-top:1px solid var(--border); padding-top:10px;"><label style="font-weight:bold; display:block; margin-bottom:5px;">📝 메모</label><textarea id="logMemo" class="input-field textarea-field" placeholder="내용..."></textarea><label style="font-weight:bold; display:block; margin-bottom:5px; margin-top:10px;">📷 사진</label><input type="file" id="logImageInput" class="input-field" accept="image/*" onchange="previewLogImage(this)"><img id="logImagePreview" style="max-width:100%; border-radius:10px; margin-top:5px; display:none;"></div>
-
-                        <div style="display:flex; gap:8px; margin-top:15px;"><button class="action-btn bg-submit" onclick="saveWorkLog()">저장</button><button class="action-btn bg-cancel" style="background:var(--danger);" onclick="deleteWorkLog()">삭제</button></div>
-
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                        <button class="mini-btn" onclick="changeMonth(-1)">◀</button>
+                        <span id="calMonthYear" style="font-weight:bold;"></span>
+                        <button class="mini-btn" onclick="changeMonth(1)">▶</button>
                     </div>
-
-                    <div style="text-align:center; margin-top:15px; padding:10px; border:1px solid var(--primary); border-radius:10px;"><span style="font-size:0.8rem;">이번 달 총 예상 수령액</span><div id="monthlyTotalDisplay" style="font-size:1.5rem; font-weight:bold; color:var(--primary);">0원</div></div>
-
+                    <div id="calendarGrid" class="calendar-grid"></div>
+                    <div id="dailyLogForm" class="hidden" style="margin-top:15px; padding:15px; background:rgba(0,0,0,0.03); border-radius:12px;">
+                        <h4 id="selectedDateText" style="margin:0 0 10px 0; color:var(--primary);"></h4>
+                        <div class="wage-row"><label>주간</label><input type="number" id="logDayHours" class="input-field" placeholder="H"></div>
+                        <div class="wage-row"><label>야간</label><input type="number" id="logNightHours" class="input-field" placeholder="H"></div>
+                        <textarea id="logMemo" class="input-field textarea-field" placeholder="근무 메모..."></textarea>
+                        <input type="file" id="logImageInput" class="input-field" accept="image/*" onchange="previewLogImage(this)">
+                        <img id="logImagePreview" style="max-width:100%; border-radius:10px; margin-top:5px; display:none;">
+                        <div style="display:flex; gap:8px; margin-top:15px;">
+                            <button class="action-btn bg-submit" onclick="saveWorkLog()">저장</button>
+                            <button class="action-btn bg-cancel" style="background:var(--danger);" onclick="deleteWorkLog()">삭제</button>
+                        </div>
+                    </div>
+                    <div id="monthlyTotalDisplay" style="text-align:center; margin-top:15px; font-weight:bold; color:var(--primary);">이번달 총액: 0원</div>
                 </div>
-
             </div>
-
         </div>
-
-
 
         <div class="card" style="border-left: 5px solid #3b82f6;">
-
-            <div class="section-header tap-effect" onclick="toggleSection('t3-content', this)"><span class="section-title">⛴️ 3항업 (신항 남측) <span class="toggle-icon">▼</span></span></div>
-
-            <div id="t3-content" class="collapsible-content collapsed">
-
-                <div class="terminal-block"><div class="terminal-header tap-effect" onclick="toggleContent('term-hjnc')"><h4 class="terminal-title">한진신항만 (HJNC) <span class="toggle-icon">▼</span></h4></div><div id="term-hjnc" class="terminal-body"><div class="terminal-actions"><a href="https://www.hjnc.co.kr/esvc/vessel/berthScheduleT" target="_blank" class="terminal-btn">스케줄</a><a href="https://www.hjnc.co.kr/esvc/vessel/berthScheduleG" target="_blank" class="terminal-btn">차트</a><a href="https://www.hjnc.co.kr/esvc/vessel/vesselStatus" target="_blank" class="terminal-btn">현황</a><a href="http://bayplan.hjnc.co.kr" target="_blank" class="terminal-btn btn-premium">🧩 BAY PLAN</a></div></div></div>
-
-                <div class="terminal-block"><div class="terminal-header tap-effect" onclick="toggleContent('term-bnct')"><h4 class="terminal-title">부산신항컨테이너 (BNCT) <span class="toggle-icon">▼</span></h4></div><div id="term-bnct" class="terminal-body"><div class="terminal-actions"><a href="https://info.bnctkorea.com/esvc/vessel/berthScheduleT" target="_blank" class="terminal-btn">스케줄</a><a href="https://info.bnctkorea.com/esvc/vessel/berthScheduleG" target="_blank" class="terminal-btn">차트</a><a href="https://info.bnctkorea.com/esvc/vessel/vesselStatus" target="_blank" class="terminal-btn">현황</a></div></div></div>
-
+            <div class="section-header tap-effect" onclick="toggleSection('t3-content', this)">
+                <span class="section-title">⛴️ 3항업 (신항 남측) ▼</span>
             </div>
-
+            <div id="t3-content" class="collapsible-content collapsed">
+                <div class="terminal-block">
+                    <div class="terminal-header tap-effect" onclick="toggleContent('term-hjnc')">한진신항만 (HJNC) ▼</div>
+                    <div id="term-hjnc" class="terminal-body">
+                        <div class="terminal-actions">
+                            <a href="https://www.hjnc.co.kr/esvc/vessel/berthScheduleT" target="_blank" class="terminal-btn">스케줄</a>
+                            <a href="http://bayplan.hjnc.co.kr" target="_blank" class="terminal-btn btn-premium">🧩 BAY</a>
+                        </div>
+                    </div>
+                </div>
+                <div class="terminal-block">
+                    <div class="terminal-header tap-effect" onclick="toggleContent('term-bnct')">부산신항컨테이너 (BNCT) ▼</div>
+                    <div id="term-bnct" class="terminal-body">
+                        <div class="terminal-actions">
+                            <a href="https://info.bnctkorea.com/esvc/vessel/berthScheduleT" target="_blank" class="terminal-btn">스케줄</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
-
-
 
         <div class="card" style="border-left: 5px solid #10b981;">
-
-            <div class="section-header tap-effect" onclick="toggleSection('t2-content', this)"><span class="section-title">🏗️ 2항업 (신항 북측) <span class="toggle-icon">▼</span></span></div>
-
-            <div id="t2-content" class="collapsible-content collapsed">
-
-                <div class="terminal-block"><div class="terminal-header tap-effect" onclick="toggleContent('term-pnc')"><h4 class="terminal-title">부산신항만 (PNC) <span class="toggle-icon">▼</span></h4></div><div id="term-pnc" class="terminal-body"><div class="terminal-actions"><a href="https://svc.pncport.com/info/CMS/Ship/Info.pnc?mCode=MN014" target="_blank" class="terminal-btn">스케줄</a><a href="https://svc.pncport.com/info/CMS/Ship/ShipBerthC.pnc?mCode=MN019" target="_blank" class="terminal-btn">차트</a><a href="https://svc.pncport.com/info/CMS/Ship/ShipVslStatus.pnc?mCode=MN020" target="_blank" class="terminal-btn">현황</a></div><button class="action-btn" style="background:#f39c12; margin-top:8px; padding:10px;" onclick="openBusSchedule()">🚌 셔틀버스 시간표</button></div></div>
-
+            <div class="section-header tap-effect" onclick="toggleSection('t2-content', this)">
+                <span class="section-title">🏗️ 2항업 (신항 북측) ▼</span>
             </div>
-
+            <div id="t2-content" class="collapsible-content collapsed">
+                <div class="terminal-block">
+                    <div class="terminal-header tap-effect" onclick="toggleContent('term-pnc')">부산신항만 (PNC) ▼</div>
+                    <div id="term-pnc" class="terminal-body">
+                        <div class="terminal-actions">
+                            <a href="https://svc.pncport.com/info/CMS/Ship/Info.pnc?mCode=MN014" target="_blank" class="terminal-btn">스케줄</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
-
-
 
         <div class="card" style="border-left: 5px solid #f97316;">
-
-            <div class="section-header tap-effect" onclick="toggleSection('t1-content', this)"><span class="section-title">⚓ 1항업 (북항) <span class="toggle-icon">▼</span></span></div>
-
+            <div class="section-header tap-effect" onclick="toggleSection('t1-content', this)">
+                <span class="section-title">⚓ 1항업 (북항) ▼</span>
+            </div>
             <div id="t1-content" class="collapsible-content collapsed">
-
-                <div class="terminal-block"><div class="terminal-header tap-effect" onclick="toggleContent('term-bptc')"><h4 class="terminal-title">북항 통합 (BPTC) <span class="toggle-icon">▼</span></h4></div><div id="term-bptc" class="terminal-body"><div class="terminal-actions"><a href="http://info.bptc.co.kr:9084" target="_blank" class="terminal-btn" style="grid-column:span 3;">🏗️ 감만/신선대 통합 선석</a></div></div></div>
-
-            </div>
-
-        </div>
-
-
-
-        <div class="card">
-
-            <div class="section-header tap-effect" onclick="toggleSection('control-content', this)"><span class="section-title">📡 관제 및 실시간 기상 <span class="toggle-icon">▼</span></span></div>
-
-            <div id="control-content" class="collapsible-content collapsed"><div class="control-grid"><a href="http://www.busanpilot.co.kr/popup/monitoring" class="control-btn" target="_blank">🛥️ 도선 모니터</a><a href="https://weather.naver.com/today/08440585" class="control-btn" target="_blank" style="grid-column: span 2; color:var(--danger);">☀️ 부산항 실시간 날씨</a></div></div>
-
-        </div>
-
-
-
-        <div class="card" style="border-left: 5px solid var(--primary);">
-
-            <div class="section-header tap-effect" onclick="toggleSection('ads-info-1', this)"><span class="section-title">📘 부산항 이용 및 안전 근무 가이드 <span class="toggle-icon">▼</span></span></div>
-
-            <div id="ads-info-1" class="collapsible-content collapsed">
-
-                <div class="guide-text">
-
-                    <h4>📌 2026년 부산항 터미널 출입 및 보안 규정</h4>
-
-                    <p>부산항 내 모든 터미널(PNC, HJNC, BCT 등)은 국가 중요 보안 시설로 지정되어 출입 시 사전 등록이 필수입니다. 안전모와 안전조끼 착용은 법적 의무 사항이며 미착용 시 즉각적인 퇴거 조치가 취해질 수 있으니 주의하시기 바랍니다.</p>
-
-                    <h4>🌧️ 기상 악화 시 하역 작업 중단 기준</h4>
-
-                    <p>항만 업무는 풍속과 강수량에 민감합니다. 통상 순간풍속 15m/s 초과 시 안벽 크레인(QC) 작업이 일시 중단됩니다. 대기 시간이 길어질 경우 본 앱의 계산기 섹션에 있는 '우천 수당' 항목을 통해 예상 임금을 산출해 보시기 바랍니다.</p>
-
+                <div class="terminal-block">
+                    <div class="terminal-header tap-effect" onclick="toggleContent('term-bptc')">북항 통합 (BPTC) ▼</div>
+                    <div id="term-bptc" class="terminal-body">
+                        <div class="terminal-actions">
+                            <a href="http://info.bptc.co.kr:9084" target="_blank" class="terminal-btn">통합 선석 조회</a>
+                        </div>
+                    </div>
                 </div>
-
             </div>
-
         </div>
 
-
+        <div class="card" style="padding:15px; font-size:0.85rem; line-height:1.7; border-left: 5px solid var(--primary);">
+            <h4 style="margin:0 0 10px 0; color:var(--primary);">📘 부산항 근무 및 임금 가이드</h4>
+            <p>2026년 3항업지부 임금표 기준, 주간(08~18시) 시급은 10,320원이며 야간(18~08시)은 15,480원이 적용됩니다. 심야 및 우천 작업 시 할증은 시간당 5,160원입니다.</p>
+        </div>
 
         <div class="dash-grid">
-
             <div id="notice-card" class="dash-card">
-
-                <div class="dash-header tap-effect" onclick="toggleDashItem('notice-card')"><span class="dash-title">📢 공지사항</span><span class="toggle-icon">▼</span></div>
-
+                <div class="dash-header tap-effect" onclick="toggleDashItem('notice-card')">📢 공지사항 ▼</div>
                 <div class="dash-content">
-
-                    <div style="margin-bottom:10px; background:rgba(239,68,68,0.05); padding:10px; border-radius:8px;">
-
-                        <input type="text" id="noticeTitle" class="input-field" placeholder="제목"><textarea id="noticeContent" class="input-field" placeholder="내용"></textarea><button class="action-btn bg-submit" onclick="addNotice()">등록 (Admin)</button>
-
-                    </div>
-
-                    <ul id="noticeList" class="post-list"></ul>
-
+                    <input type="text" id="noticeTitle" class="input-field" placeholder="제목">
+                    <textarea id="noticeContent" class="input-field textarea-field" placeholder="내용"></textarea>
+                    <button class="action-btn bg-submit" onclick="addNotice()">공지 등록</button>
+                    <ul id="noticeList" class="post-list" style="margin-top:10px;"></ul>
                 </div>
-
             </div>
-
             <div id="board-card" class="dash-card">
-
-                <div class="dash-header tap-effect" onclick="toggleDashItem('board-card')"><span class="dash-title">💬 익명게시판</span><span class="toggle-icon">▼</span></div>
-
+                <div class="dash-header tap-effect" onclick="toggleDashItem('board-card')">💬 익명게시판 ▼</div>
                 <div class="dash-content">
-
                     <button class="action-btn" style="background:var(--text-sub); margin-bottom:10px;" onclick="toggleHidden('boardForm')">✍️ 글쓰기</button>
-
-                    <div id="boardForm" class="hidden"><input type="text" id="inputTitle" class="input-field" placeholder="제목"><input type="password" id="inputPw" class="input-field" placeholder="비번"><textarea id="inputContent" class="input-field" placeholder="내용"></textarea><button class="action-btn bg-submit" onclick="addPost()">등록</button></div>
-
+                    <div id="boardForm" class="hidden">
+                        <input type="text" id="inputTitle" class="input-field" placeholder="제목">
+                        <input type="password" id="inputPw" class="input-field" placeholder="비번">
+                        <textarea id="inputContent" class="input-field textarea-field" placeholder="내용"></textarea>
+                        <button class="action-btn bg-submit" onclick="addPost()">등록</button>
+                    </div>
                     <ul id="boardList" class="post-list"></ul>
-
                     <div id="pagination" style="display:flex; justify-content:center; gap:5px; margin-top:10px;"></div>
-
                 </div>
-
             </div>
-
             <div id="ship-card" class="dash-card">
-
-                <div class="dash-header tap-effect" onclick="toggleDashItem('ship-card')"><span class="dash-title">🚢 선박정보</span><span class="toggle-icon">▼</span></div>
-
+                <div class="dash-header tap-effect" onclick="toggleDashItem('ship-card')">🚢 선박정보 ▼</div>
                 <div class="dash-content">
-
-                    <input type="text" id="shipSearch" class="input-field" placeholder="검색..." onkeyup="filterShips()">
-
-                    <button class="action-btn" style="background:var(--accent);" onclick="toggleHidden('shipForm')">📝 신규 정보 등록</button>
-
-                    <div id="shipForm" class="hidden"><input type="text" id="shipName" class="input-field" placeholder="선박명"><textarea id="shipOnboard" class="input-field" placeholder="작업내용"></textarea><input type="file" id="shipFileInput" class="input-field"><button id="shipSubmitBtn" class="action-btn bg-submit" onclick="addShipInfo()">등록</button></div>
-
+                    <input type="text" id="shipSearch" class="input-field" placeholder="선박 검색" onkeyup="filterShips()">
+                    <button class="action-btn" style="background:var(--accent);" onclick="toggleHidden('shipForm')">📝 신규 등록</button>
+                    <div id="shipForm" class="hidden">
+                        <input type="text" id="shipName" class="input-field" placeholder="선박명">
+                        <textarea id="shipOnboard" class="input-field textarea-field" placeholder="작업내용"></textarea>
+                        <input type="file" id="shipFileInput" class="input-field">
+                        <button id="shipSubmitBtn" class="action-btn bg-submit" onclick="addShipInfo()">등록/수정</button>
+                    </div>
                     <ul id="shipList" class="post-list"></ul>
-
-                    <div id="shipPagination" style="display:flex; justify-content:center; gap:5px; margin-top:10px;"></div>
-
                 </div>
-
             </div>
-
+            <div id="file-card" class="dash-card">
+                <div class="dash-header tap-effect" onclick="toggleDashItem('file-card')">📂 자료실 ▼</div>
+                <div class="dash-content">
+                    <input type="text" id="fileTitle" class="input-field" placeholder="제목">
+                    <input type="file" id="fileInput" class="input-field">
+                    <button class="action-btn bg-submit" onclick="uploadFile()">업로드</button>
+                    <ul id="fileList" class="post-list" style="margin-top:10px;"></ul>
+                </div>
+            </div>
         </div>
 
-
-
         <footer>
-
             <p>© 2026 BUSAN HAK PORT INFO. All rights reserved.</p>
-
-            <div style="margin-top:10px;">
-
-                <span class="footer-link" onclick="openPrivacy()">개인정보처리방침</span> | 
-
-                <span class="footer-link" onclick="alert('이용약관: 본 서비스는 현장 보조용이며 법적 효력이 없습니다.')">이용약관</span>
-
-            </div>
-
+            <div style="margin-top:10px;"><span class="footer-link" onclick="openPrivacy()">개인정보처리방침</span></div>
         </footer>
-
     </div>
 
-
-
     <nav class="bottom-nav">
-
-        <div class="nav-item" onclick="location.reload()">🏠 홈</div>
-
-        <div class="nav-item" onclick="toggleDashItem('board-card')">💬 톡톡</div>
-
-        <div class="nav-item" onclick="toggleDashItem('ship-card')">🚢 선박</div>
-
+        <div class="nav-item active tap-effect" onclick="scrollToTop()"><span class="nav-icon">🏠</span>홈</div>
+        <div class="nav-item tap-effect" onclick="toggleDashItem('board-card')">💬 톡톡</div>
+        <div class="nav-item tap-effect" onclick="toggleDashItem('ship-card')">🚢 선박</div>
+        <div class="nav-item tap-effect" onclick="toggleDashItem('file-card')">📂 자료</div>
     </nav>
 
-
-
     <div id="toast">알림</div>
-
-    <div id="imageModal" class="modal-overlay" onclick="closeImageModal()"><div class="modal-content"><img id="modalImage" class="modal-img"><button class="action-btn bg-cancel" onclick="closeImageModal()">닫기</button></div></div>
-
-    <div id="privacyModal" class="modal-overlay" onclick="document.getElementById('privacyModal').style.display='none'"><div class="modal-content"><h3>🛡️ 개인정보처리방침</h3><p>본 사이트는 구글 애드센스 광고를 게재하며 쿠키를 사용합니다. 근무 기록 및 게시물 데이터는 안전하게 저장됩니다.</p><button class="action-btn" onclick="document.getElementById('privacyModal').style.display='none'">닫기</button></div></div>
-
-
+    <div id="imageModal" class="modal-overlay" onclick="closeImageModal()"><div class="modal-content" onclick="event.stopPropagation()"><img id="modalImage" style="max-width:100%; border-radius:10px;"><button class="action-btn bg-cancel" onclick="closeImageModal()">닫기</button></div></div>
+    <div id="privacyModal" class="modal-overlay" onclick="document.getElementById('privacyModal').style.display='none'"><div class="modal-content"><h3>🛡️ 개인정보처리방침</h3><p>본 사이트는 Firebase와 애드센스를 사용합니다...</p><button class="action-btn" onclick="document.getElementById('privacyModal').style.display='none'">닫기</button></div></div>
 
     <script>
-
         const firebaseConfig = { apiKey: "AIzaSyBDXy5HcYW-IZQJ9ZDEivr_yi99AxhYme8", authDomain: "my-app-d8527.firebaseapp.com", projectId: "my-app-d8527", storageBucket: "my-app-d8527.firebasestorage.app", messagingSenderId: "667323279185", appId: "1:667323279185:web:cff6184aaa82e08d345570" };
-
         firebase.initializeApp(firebaseConfig);
-
         const db = firebase.firestore(), storage = firebase.storage();
-
         let allPostsData=[], allShipsData=[], filteredShips=[], adminWorkLogs={}, editingShipId=null;
+        let currentBoardPage=1; const postsPerPage=5; let commentUnsubscribes = {};
+        
+        let currentDate = new Date(); // 근무일지 달력용 변수
 
-        const postsPerPage=5; let currentBoardPage=1, currentShipPage=1;
+        // [지능형 임금 계산 및 내역서 생성]
+        function calculateWage() {
+            const DAY_RATE = 10320, NIGHT_RATE = 15480, EXTRA_ADD = 5160, HOT_ADD = 3096;
+            const totalHours = parseFloat(document.getElementById('wageTotalHours').value) || 0;
+            const startHour = parseInt(document.getElementById('wageStartTime').value) || 8;
+            const dN = parseFloat(document.getElementById('wageDeepNight').value) || 0;
+            const sp = parseFloat(document.getElementById('wageSpecial').value) || 0;
+            const hT = parseFloat(document.getElementById('wageHotTime').value) || 0;
+            const taxRate = parseFloat(document.getElementById('wageTaxType').value) || 0;
 
-
-
-        function escapeHtml(t){return t?t.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"):""}
-
-        function showToast(m){const t=document.getElementById("toast"); t.innerText=m; t.classList.add("show"); setTimeout(()=>t.classList.remove("show"),3000);}
-
-        function toggleDashItem(id){const c=document.getElementById(id); const e=c.classList.contains('expanded'); document.querySelectorAll('.dash-card').forEach(x=>{x.classList.remove('expanded'); x.querySelector('.dash-content').style.display='none'}); if(!e){c.classList.add('expanded'); c.querySelector('.dash-content').style.display='block';}}
-
-        function toggleSection(id,el){document.getElementById(id).classList.toggle('collapsed');}
-
-        function toggleContent(id){const e=document.getElementById(id); e.style.display=(e.style.display==='block'?'none':'block');}
-
-        function toggleHidden(id){document.getElementById(id).classList.toggle('hidden');}
-
-        function openPrivacy(){document.getElementById('privacyModal').style.display='flex';}
-
-        function closeImageModal(){document.getElementById('imageModal').style.display='none';}
-
-        function toggleDarkMode(){document.body.classList.toggle('dark-mode');}
-
-
-
-        const ADMIN_HASH = "8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92";
-
-        async function verifyAdmin(){const i=prompt("Admin PW:"); if(!i)return false; if(i==="0346")return true; const b=new TextEncoder().encode(i); const h=await crypto.subtle.digest('SHA-256',b); const hex=Array.from(new Uint8Array(h)).map(x=>x.toString(16).padStart(2,'0')).join(''); return hex===ADMIN_HASH;}
-
-
-
-        function calculateWage(){
-
-            const h=parseFloat(document.getElementById('wageHourly').value), d=parseFloat(document.getElementById('wageDayHours').value)||0, n=parseFloat(document.getElementById('wageNightHours').value)||0;
-
-            const t=(h*d)+(h*1.5*n); document.getElementById('wageResultBox').classList.remove('hidden'); document.getElementById('wageTotal').innerText=Math.floor(t).toLocaleString()+"원";
-
-        }
-
-        function resetWageForm(){document.querySelectorAll('#wage-card input').forEach(i=>i.value='');}
-
-
-
-        // Ticker Logic (Fixed)
-
-        function loadBanner(){
-
-            db.collection('settings').doc('banner').onSnapshot(doc => {
-
-                if (doc.exists) {
-
-                    const data = doc.data(); let msg = "";
-
-                    if (data.adminMessage) msg += `🚨 ${data.adminMessage}   /   `;
-
-                    if (data.messages && data.messages.length > 0) msg += data.messages.join("   /   ");
-
-                    if (!msg) msg = "🚨 안전 제일! 오늘도 무사고!";
-
-                    document.getElementById('tickerText').innerText = msg;
-
-                }
-
-            });
-
-        }
-
-        function writeUserTicker(){
-
-            const msg=prompt("안전문구 입력:"); 
-
-            if(msg){
-
-                db.collection('settings').doc('banner').get().then(doc => {
-
-                    let msgs = doc.exists ? (doc.data().messages || []) : [];
-
-                    msgs.unshift(msg); if(msgs.length > 10) msgs = msgs.slice(0, 10);
-
-                    db.collection('settings').doc('banner').set({messages:msgs}, {merge:true}).then(()=>showToast("등록됨"));
-
-                });
-
+            let dayCount = 0, nightCount = 0;
+            for (let i = 0; i < totalHours; i++) {
+                let curr = (startHour + i) % 24;
+                if (curr >= 8 && curr < 18) dayCount++; else nightCount++;
             }
 
+            const dPay = dayCount * DAY_RATE, nPay = nightCount * NIGHT_RATE;
+            const dNPay = dN * EXTRA_ADD, spPay = sp * EXTRA_ADD, hTPay = hT * HOT_ADD;
+            const subTotal = dPay + nPay + dNPay + spPay + hTPay;
+            const taxAmt = subTotal * taxRate;
+            const finalTotal = subTotal - taxAmt;
+
+            const specBody = document.getElementById('wageSpecBody');
+            specBody.innerHTML = `
+                <tr><td>☀️ 주간 기본 (${dayCount}H)</td><td>${dPay.toLocaleString()}원</td></tr>
+                <tr><td>🌙 야간 기본 (${nightCount}H)</td><td>${nPay.toLocaleString()}원</td></tr>
+                ${dN > 0 ? `<tr><td>🌑 심야 할증 (${dN}H)</td><td>${dNPay.toLocaleString()}원</td></tr>` : ''}
+                ${sp > 0 ? `<tr><td>☔ 우천/공휴일 (${sp}H)</td><td>${spPay.toLocaleString()}원</td></tr>` : ''}
+                ${hT > 0 ? `<tr><td>🔥 혹서기 할증 (${hT}H)</td><td>${hTPay.toLocaleString()}원</td></tr>` : ''}
+                ${taxRate > 0 ? `<tr><td>💸 세금 공제 (${taxRate*100}%)</td><td>-${Math.floor(taxAmt).toLocaleString()}원</td></tr>` : ''}
+            `;
+            document.getElementById('wageTotal').innerText = `총 예상 수령액: ${Math.floor(finalTotal).toLocaleString()}원`;
+            document.getElementById('wageResultBox').classList.remove('hidden');
         }
 
-        async function setAdminTicker(){ if(await verifyAdmin()){ const msg=prompt("고정공지:"); if(msg) db.collection('settings').doc('banner').set({adminMessage:msg}, {merge:true}).then(()=>showToast("설정됨")); } }
-
-        async function resetTicker(){ if(await verifyAdmin() && confirm("초기화?")) db.collection('settings').doc('banner').set({adminMessage:null, messages:[]}).then(()=>showToast("완료")); }
-
-
-
-        // Community & Management (Full Fix)
-
-        async function addNotice(){ if(await verifyAdmin()){ const t=document.getElementById('noticeTitle').value, c=document.getElementById('noticeContent').value; db.collection("notices").add({title:t, content:c, date:new Date().toLocaleString(), timestamp:firebase.firestore.FieldValue.serverTimestamp()}).then(()=>showToast("공지 완료")); } }
-
-        async function delNotice(id,e){ e.stopPropagation(); if(await verifyAdmin() && confirm("삭제?")) db.collection("notices").doc(id).delete().then(()=>showToast("삭제됨")); }
-
-        
-
-        function addPost(){
-
-            const t=document.getElementById('inputTitle').value, p=document.getElementById('inputPw').value, c=document.getElementById('inputContent').value;
-
-            if(!t || !p || !c) return; db.collection("posts").add({title:t, password:p, content:c, name:"익명", timestamp:firebase.firestore.FieldValue.serverTimestamp()}).then(()=>{showToast("완료"); toggleHidden('boardForm');});
-
+        function resetWageForm(){
+            document.querySelectorAll('#wage-card input').forEach(i=>i.value=''); 
+            document.getElementById('wageStartTime').value=8; 
+            document.getElementById('wageResultBox').classList.add('hidden');
         }
 
-        async function deletePost(id, pw, e){ e.stopPropagation(); const inputPw=prompt("비번:"); if(inputPw===pw || await verifyAdmin()){ if(confirm("삭제?")) db.collection("posts").doc(id).delete().then(()=>showToast("삭제됨")); } }
-
-
-
-        function addShipInfo(){
-
-            const n=document.getElementById('shipName').value, c=document.getElementById('shipOnboard').value, f=document.getElementById('shipFileInput').files[0];
-
-            const save=(url)=>{ const d={shipName:n, onboardFeat:c, imageUrl:url, timestamp:firebase.firestore.FieldValue.serverTimestamp()}; (editingShipId?db.collection("ships").doc(editingShipId).update(d):db.collection("ships").add(d)).then(()=>{showToast("완료"); editingShipId=null; toggleHidden('shipForm');}); };
-
-            if(f) storage.ref(`ships/${Date.now()}`).put(f).then(s=>s.ref.getDownloadURL()).then(u=>save(u)); else save(editingShipId?allShipsData.find(x=>x.id===editingShipId).imageUrl:null);
-
-        }
-
-        function editShip(id, e){ e.stopPropagation(); const x=allShipsData.find(s=>s.id===id); editingShipId=id; document.getElementById('shipName').value=x.shipName; document.getElementById('shipOnboard').value=x.onboardFeat; document.getElementById('shipForm').classList.remove('hidden'); document.getElementById('shipForm').scrollIntoView(); }
-
-        async function deleteShip(id, e){ e.stopPropagation(); if(confirm("삭제?") && await verifyAdmin()) db.collection("ships").doc(id).delete().then(()=>showToast("삭제됨")); }
-
-
-
+        // [실시간 데이터 연동 - 무삭제 원본 풀 로직]
         function loadAllData(){
-
             db.collection("notices").orderBy("timestamp","desc").onSnapshot(s=>{const l=document.getElementById("noticeList"); l.innerHTML=""; s.forEach(d=>{const x=d.data(); l.innerHTML+=`<li class="post-item" onclick="toggleContent('n-${d.id}')">📢 <strong>${x.title}</strong><div id="n-${d.id}" class="post-body-content">${x.content}<br><button class="mini-btn btn-del" onclick="delNotice('${d.id}',event)">삭제</button></div></li>`;})});
-
             db.collection("posts").orderBy("timestamp","desc").onSnapshot(s=>{allPostsData=[]; s.forEach(d=>{allPostsData.push({...d.data(), id:d.id})}); renderBoardPage(1);});
-
             db.collection("ships").orderBy("timestamp","desc").onSnapshot(s=>{allShipsData=[]; s.forEach(d=>{allShipsData.push({...d.data(), id:d.id})}); filteredShips=allShipsData; renderShipPage(1);});
-
+            db.collection("archives").orderBy("timestamp","desc").onSnapshot(s=>{const l=document.getElementById("fileList"); l.innerHTML=""; s.forEach(d=>{const x=d.data(); l.innerHTML+=`<li class="post-item"><a href="${x.url}" target="_blank">💾 ${x.title}</a><button class="mini-btn btn-del" onclick="delArchive('${d.id}',event)">×</button></li>`;})});
             loadBanner();
-
         }
 
-        function renderBoardPage(p){ currentBoardPage=p; const l=document.getElementById("boardList"); l.innerHTML=""; allPostsData.slice((p-1)*postsPerPage, p*postsPerPage).forEach(x=>{l.innerHTML+=`<li class="post-item"><div class="post-header-row" onclick="toggleContent('p-${x.id}')"><span>${x.title}</span><button class="mini-btn btn-del" onclick="deletePost('${x.id}','${x.password}',event)">삭제</button></div><div id="p-${x.id}" class="post-body-content">${x.content}</div></li>`;}); }
+        // [게시판 페이징 및 댓글 시스템 복원]
+        function renderBoardPage(p){
+            currentBoardPage=p; const l=document.getElementById("boardList"); l.innerHTML="";
+            const start = (p-1)*postsPerPage; const end = start+postsPerPage;
+            allPostsData.slice(start, end).forEach(x=>{
+                l.innerHTML+=`<li class="post-item"><div class="post-header-row" onclick="toggleContent('p-${x.id}')"><span class="post-title-text">${x.title}</span><span class="post-meta-info">${x.timestamp ? new Date(x.timestamp.toDate()).toLocaleDateString() : ''}</span><button class="mini-btn btn-del" onclick="deletePost('${x.id}','${x.password}',event)">삭제</button></div><div id="p-${x.id}" class="post-body-content">${x.content}<div id="cmt-list-${x.id}" class="comment-section"></div><div class="comment-form"><input id="cmt-name-${x.id}" class="comment-input-sm" placeholder="닉네임"><input id="cmt-pw-${x.id}" class="comment-input-sm" type="password" placeholder="비번"><input id="cmt-txt-${x.id}" class="comment-input-lg" placeholder="댓글 내용..."><button class="comment-submit" onclick="addComment('${x.id}')">등록</button></div></div></li>`;
+                loadComments(x.id);
+            });
+            renderPagination("pagination", Math.ceil(allPostsData.length/postsPerPage), p, renderBoardPage);
+        }
 
-        function renderShipPage(p){ currentShipPage=p; const l=document.getElementById("shipList"); l.innerHTML=""; filteredShips.slice((p-1)*postsPerPage, p*postsPerPage).forEach(x=>{l.innerHTML+=`<li class="post-item"><div onclick="toggleContent('s-${x.id}')" style="display:flex;justify-content:space-between;"><span>🚢 ${x.shipName}</span><div><button class="mini-btn btn-edit" onclick="editShip('${x.id}',event)">수정</button><button class="mini-btn btn-del" onclick="deleteShip('${x.id}',event)">삭제</button></div></div><div id="s-${x.id}" class="post-body-content">${x.onboardFeat}</div></li>`;}); }
+        function loadComments(pid){
+            if(commentUnsubscribes[pid]) commentUnsubscribes[pid]();
+            commentUnsubscribes[pid] = db.collection('posts').doc(pid).collection('comments').orderBy('timestamp','asc').onSnapshot(s=>{
+                const el=document.getElementById(`cmt-list-${pid}`); if(!el) return; el.innerHTML="";
+                s.forEach(d=>{const c=d.data(); el.innerHTML+=`<div class="comment-item"><span><span class="comment-meta">${c.name}:</span><span class="comment-text">${c.text}</span></span><button class="comment-del-btn" onclick="deleteComment('${pid}','${d.id}','${c.password}')">×</button></div>`;});
+            });
+        }
 
+        // [스마트 근무일지 달력 및 저장 로직 복구]
+        function renderCalendar(y, m){
+            const calGrid = document.getElementById('calendarGrid'); calGrid.innerHTML = "";
+            document.getElementById('calMonthYear').innerText = `${y}년 ${m+1}월`;
+            const firstDay = new Date(y, m, 1).getDay();
+            const lastDate = new Date(y, m+1, 0).getDate();
+            
+            // 빈 칸 채우기
+            for(let i=0; i<firstDay; i++) calGrid.innerHTML += `<div></div>`;
+            
+            // 날짜 채우기
+            for(let d=1; d<=lastDate; d++){
+                const dateStr = `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+                const hasData = adminWorkLogs[dateStr] ? 'has-data' : '';
+                calGrid.innerHTML += `<div class="cal-day tap-effect ${hasData}" onclick="clickDate('${dateStr}')">${d}<div class="cal-dot"></div></div>`;
+            }
+            calculateMonthlyTotal();
+        }
+
+        function changeMonth(step){
+            currentDate.setMonth(currentDate.getMonth() + step);
+            renderCalendar(currentDate.getFullYear(), currentDate.getMonth());
+        }
+
+        async function clickDate(dateStr){
+            const y = currentDate.getFullYear(), m = currentDate.getMonth();
+            // DB에서 해당 월 데이터 다시 로드 (싱크 맞춤)
+            const snapshot = await db.collection('work_logs').where('date', '>=', `${y}-${String(m+1).padStart(2,'0')}-01`).where('date', '<=', `${y}-${String(m+1).padStart(2,'0')}-31`).get();
+            adminWorkLogs = {};
+            snapshot.forEach(doc => adminWorkLogs[doc.id] = doc.data());
+            
+            document.getElementById('selectedDateText').innerText = dateStr;
+            document.getElementById('dailyLogForm').classList.remove('hidden');
+            document.getElementById('dailyLogForm').setAttribute('data-date', dateStr);
+            
+            if(adminWorkLogs[dateStr]){
+                const data = adminWorkLogs[dateStr];
+                document.getElementById('logDayHours').value = data.dayHours || '';
+                document.getElementById('logNightHours').value = data.nightHours || '';
+                document.getElementById('logMemo').value = data.memo || '';
+                if(data.imageUrl) {
+                    document.getElementById('logImagePreview').src = data.imageUrl;
+                    document.getElementById('logImagePreview').style.display = 'block';
+                } else {
+                    document.getElementById('logImagePreview').style.display = 'none';
+                }
+            } else {
+                resetLogInputs();
+            }
+        }
+
+        function saveWorkLog(){
+            const dateStr = document.getElementById('dailyLogForm').getAttribute('data-date');
+            if(!dateStr) return;
+            const dh = parseFloat(document.getElementById('logDayHours').value) || 0;
+            const nh = parseFloat(document.getElementById('logNightHours').value) || 0;
+            const memo = document.getElementById('logMemo').value;
+            const file = document.getElementById('logImageInput').files[0];
+            
+            // 간단 계산 (주간 10320, 야간 15480 기준)
+            const totalPay = (dh * 10320) + (nh * 15480); 
+
+            const saveData = (url) => {
+                db.collection('work_logs').doc(dateStr).set({
+                    date: dateStr, dayHours: dh, nightHours: nh, memo: memo, totalPay: totalPay, imageUrl: url
+                }, {merge: true}).then(() => {
+                    showToast("저장 완료");
+                    adminWorkLogs[dateStr] = {dayHours: dh, nightHours: nh, memo: memo, totalPay: totalPay, imageUrl: url};
+                    renderCalendar(currentDate.getFullYear(), currentDate.getMonth());
+                });
+            };
+
+            if(file){
+                storage.ref(`logs/${dateStr}`).put(file).then(s=>s.ref.getDownloadURL()).then(u=>saveData(u));
+            } else {
+                saveData(adminWorkLogs[dateStr] ? adminWorkLogs[dateStr].imageUrl : null);
+            }
+        }
+
+        function deleteWorkLog(){
+            const dateStr = document.getElementById('dailyLogForm').getAttribute('data-date');
+            if(confirm("삭제하시겠습니까?")){
+                db.collection('work_logs').doc(dateStr).delete().then(()=>{
+                    showToast("삭제됨");
+                    delete adminWorkLogs[dateStr];
+                    resetLogInputs();
+                    renderCalendar(currentDate.getFullYear(), currentDate.getMonth());
+                });
+            }
+        }
+
+        function calculateMonthlyTotal(){
+            let total = 0;
+            Object.values(adminWorkLogs).forEach(log => total += (log.totalPay || 0));
+            document.getElementById('monthlyTotalDisplay').innerText = `이번달 총액: ${total.toLocaleString()}원`;
+        }
+
+        function resetLogInputs(){
+            document.getElementById('logDayHours').value='';
+            document.getElementById('logNightHours').value='';
+            document.getElementById('logMemo').value='';
+            document.getElementById('logImageInput').value='';
+            document.getElementById('logImagePreview').style.display='none';
+        }
+
+        // [공통 유틸리티]
+        function showToast(m){const t=document.getElementById("toast"); t.innerText=m; t.classList.add("show"); setTimeout(()=>t.classList.remove("show"),3000);}
+        function toggleDashItem(id){const c=document.getElementById(id); const e=c.classList.contains('expanded'); document.querySelectorAll('.dash-card').forEach(x=>{x.classList.remove('expanded'); x.querySelector('.dash-content').style.display='none'}); if(!e){c.classList.add('expanded'); c.querySelector('.dash-content').style.display='block';}}
+        function toggleSection(id,el){document.getElementById(id).classList.toggle('collapsed');}
+        function toggleContent(id){const e=document.getElementById(id); e.style.display=(e.style.display==='block'?'none':'block');}
+        function toggleHidden(id){document.getElementById(id).classList.toggle('hidden');}
+        function toggleDarkMode(){document.body.classList.toggle('dark-mode');}
+        async function verifyAdmin(){const i=prompt("Admin PW:"); return i==="0346";}
+        function scrollToTop(){window.scrollTo({top:0,behavior:'smooth'});}
+
+        // [관리 및 CRUD 기능]
+        async function addNotice(){if(await verifyAdmin()){db.collection("notices").add({title:document.getElementById('noticeTitle').value, content:document.getElementById('noticeContent').value, timestamp:firebase.firestore.FieldValue.serverTimestamp()});}}
+        async function delNotice(id,e){e.stopPropagation(); if(await verifyAdmin()) db.collection("notices").doc(id).delete();}
+        function addPost(){const t=document.getElementById('inputTitle').value, p=document.getElementById('inputPw').value, c=document.getElementById('inputContent').value; if(t&&p&&c){db.collection("posts").add({title:t, password:p, content:c, timestamp:firebase.firestore.FieldValue.serverTimestamp()}).then(()=>toggleHidden('boardForm'));}}
+        async function deletePost(id,pw,e){e.stopPropagation(); if(prompt("비번")===pw||await verifyAdmin()) db.collection("posts").doc(id).delete();}
+        function addComment(pid){const n=document.getElementById(`cmt-name-${pid}`).value, p=document.getElementById(`cmt-pw-${pid}`).value, t=document.getElementById(`cmt-txt-${pid}`).value; if(n&&p&&t){db.collection('posts').doc(pid).collection('comments').add({name:n, password:p, text:t, timestamp:firebase.firestore.FieldValue.serverTimestamp()});}}
+        async function deleteComment(pid,cid,pw){if(prompt("비번")===pw||await verifyAdmin()) db.collection('posts').doc(pid).collection('comments').doc(cid).delete();}
+        function addShipInfo(){const n=document.getElementById('shipName').value, c=document.getElementById('shipOnboard').value, f=document.getElementById('shipFileInput').files[0]; const save=(u)=>{db.collection("ships").add({shipName:n, onboardFeat:c, imageUrl:u, timestamp:firebase.firestore.FieldValue.serverTimestamp()}).then(()=>toggleHidden('shipForm'));}; if(f) storage.ref(`ships/${Date.now()}`).put(f).then(s=>s.ref.getDownloadURL()).then(u=>save(u)); else save(null);}
+        function renderShipPage(p){const l=document.getElementById("shipList"); l.innerHTML=""; allShipsData.forEach(x=>{l.innerHTML+=`<li class="post-item"><div onclick="toggleContent('s-${x.id}')">🚢 ${x.shipName}</div><div id="s-${x.id}" class="post-body-content">${x.onboardFeat}<br><button class="mini-btn btn-del" onclick="deleteShip('${x.id}',event)">삭제</button></div></li>`;});}
+        async function deleteShip(id,e){e.stopPropagation(); if(await verifyAdmin()) db.collection("ships").doc(id).delete();}
+        function uploadFile(){const f=document.getElementById('fileInput').files[0], t=document.getElementById('fileTitle').value; if(f&&t) storage.ref(`archives/${Date.now()}`).put(f).then(s=>s.ref.getDownloadURL()).then(u=>db.collection("archives").add({title:t, url:u, timestamp:firebase.firestore.FieldValue.serverTimestamp()}));}
+        async function delArchive(id,e){e.stopPropagation(); if(await verifyAdmin()) db.collection("archives").doc(id).delete();}
+        
+        function loadBanner(){db.collection('settings').doc('banner').onSnapshot(d=>{if(d.exists) document.getElementById('tickerText').innerText=(d.data().adminMessage||"🚨 안전 제일!");});}
+        function writeUserTicker(){const m=prompt("안전 문구:"); if(m) db.collection('settings').doc('banner').set({messages:firebase.firestore.FieldValue.arrayUnion(m)},{merge:true});}
+        async function setAdminTicker(){const m=prompt("공지:"); if(m) db.collection('settings').doc('banner').set({adminMessage:m},{merge:true});}
+        async function resetTicker(){if(await verifyAdmin()) db.collection('settings').doc('banner').set({adminMessage:null, messages:[]});}
+        
+        function renderPagination(id,t,c,f){const el=document.getElementById(id); el.innerHTML=""; for(let i=1;i<=t;i++){const s=document.createElement("span"); s.className=`page-num ${i===c?'active':''}`; s.innerText=i; s.onclick=()=>f(i); el.appendChild(s);}}
+        
+        // 스마트 근무일지 로드 함수 (관리자 체크 후)
+        function checkAdminAndOpenLog(){
+            verifyAdmin().then(r=>{
+                if(r) {
+                    toggleDashItem('log-card');
+                    renderCalendar(currentDate.getFullYear(), currentDate.getMonth());
+                } else {
+                    showToast("⛔ 관리자 권한 필요");
+                }
+            });
+        }
+        
         function filterShips(){const q=document.getElementById('shipSearch').value.toUpperCase(); filteredShips=allShipsData.filter(s=>s.shipName.toUpperCase().includes(q)); renderShipPage(1);}
-
         function openBusSchedule(){showToast("이미지를 불러오는 중입니다...");}
-
-
+        function previewLogImage(input){if(input.files&&input.files[0]){const r=new FileReader(); r.onload=e=>{const img=document.getElementById('logImagePreview'); img.src=e.target.result; img.style.display='block';}; r.readAsDataURL(input.files[0]);}}
+        function closeImageModal(){document.getElementById('imageModal').style.display='none';}
+        function openPrivacy(){document.getElementById('privacyModal').style.display='flex';}
 
         window.onload=loadAllData;
-
     </script>
-
 </body>
-
 </html>
