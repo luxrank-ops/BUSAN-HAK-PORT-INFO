@@ -347,7 +347,20 @@
             const hashHex = Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
             return hashHex === ADMIN_HASH;
         }
+// --- [위치: 기존 firebase.initializeApp(...) 및 loadAllData()가 있는 코드 줄] ---
 
+try { 
+    if(firebase.apps.length === 0) firebase.initializeApp(firebaseConfig); 
+    db = firebase.firestore(); 
+    storage = firebase.storage(); 
+    
+    loadAllData(); // 기존 데이터 로드 함수
+    loadBanner();  // <--- 이 줄을 여기에 추가하세요! (알림글 즉시 실행)
+    
+    if(localStorage.getItem('theme') === 'dark') document.body.classList.add('dark-mode'); 
+} catch(e) {
+    console.error("초기화 에러:", e);
+}
         function toggleDashItem(id) {
             const card = document.getElementById(id); const content = card.querySelector('.dash-content');
             document.querySelectorAll('.dash-card.expanded').forEach(c => { if(c !== card) { c.classList.remove('expanded'); c.querySelector('.dash-content').style.display = 'none'; c.querySelector('.toggle-icon')?.classList.remove('rotated'); } });
@@ -386,6 +399,55 @@
             const img=document.getElementById('logImagePreview'); if(d.imageUrl){img.src=d.imageUrl;img.style.display='block';}else{img.src='';img.style.display='none';}
             document.getElementById('dailyTotalDisplay').innerText=(d.totalPay||0).toLocaleString()+"원"; vibrate();
         }
+        // --- 여기서부터 알림글(Ticker) 복구 코드 시작 ---
+function loadBanner(){
+    db.collection('settings').doc('banner').onSnapshot(d=>{
+        if(d.exists){
+            const data=d.data();
+            let msg="";
+            if(data.adminMessage) msg+=`🚨 ${data.adminMessage}   /   `;
+            if(data.messages && data.messages.length > 0) msg+=data.messages.join("   /   ");
+            if(!msg) msg="🚨 안전 제일! 오늘도 무사고!";
+            const tickerEl = document.getElementById('tickerText');
+            if(tickerEl) tickerEl.innerText=msg;
+        }
+    });
+}
+
+function writeUserTicker(){
+    const msg=prompt("안전문구 입력 (누구나):");
+    if(msg){
+        db.collection('settings').doc('banner').get().then(doc=>{
+            let msgs = doc.exists ? (doc.data().messages || []) : [];
+            msgs.unshift(msg);
+            if(msgs.length > 10) msgs = msgs.slice(0, 10);
+            db.collection('settings').doc('banner').set({messages:msgs}, {merge:true})
+            .then(() => showToast("문구가 등록되었습니다."));
+        });
+    }
+}
+
+async function setAdminTicker(){
+    if(await verifyAdmin()){
+        const msg=prompt("고정 공지 입력 (관리자):");
+        if(msg) {
+            db.collection('settings').doc('banner').set({adminMessage:msg}, {merge:true})
+            .then(() => showToast("고정 공지가 설정되었습니다."));
+        }
+    } else {
+        showToast("⛔ 관리자 전용 기능입니다.");
+    }
+}
+
+async function resetTicker(){
+    if(await verifyAdmin()){
+        if(confirm("알림글을 모두 초기화할까요?")){
+            db.collection('settings').doc('banner').set({adminMessage:null, messages:[]})
+            .then(() => showToast("초기화 완료"));
+        }
+    }
+}
+// --- 여기까지 알림글(Ticker) 복구 코드 끝 ---
         function saveWorkLog(){
             if(!selDate)return; const h=10030,d=parseFloat(document.getElementById('logDayHours').value)||0,n=parseFloat(document.getElementById('logNightHours').value)||0;
             const t=(d*h)+(n*h*1.5)+((parseFloat(document.getElementById('logSkillTime').value)||0)*(parseFloat(document.getElementById('logSkillRate').value)||0))+((parseFloat(document.getElementById('logSignalTime').value)||0)*(parseFloat(document.getElementById('logSignalRate').value)||0))+((parseFloat(document.getElementById('logRainTime').value)||0)*(parseFloat(document.getElementById('logRainRate').value)||0));
@@ -493,3 +555,4 @@
     </script>
 </body>
 </html>
+
