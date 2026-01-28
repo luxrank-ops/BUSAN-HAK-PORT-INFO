@@ -12,7 +12,7 @@
     
     <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6024353303588422" crossorigin="anonymous"></script>
 
-    <link rel="icon" type="image/png" sizes="32x32" href="icon.png?v=final_fix_v28">
+    <link rel="icon" type="image/png" sizes="32x32" href="icon.png?v=final_fix_v29">
     <link rel="stylesheet" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.8/dist/web/static/pretendard.css" />
 
     <style>
@@ -49,20 +49,9 @@
         .action-btn { width: 100%; padding: 12px; border: none; border-radius: 10px; font-weight: 700; color: white; cursor: pointer; background: var(--primary); font-size: 0.95rem; }
         .bg-submit { background: var(--success); } .bg-calc { background: linear-gradient(135deg, #ef4444, #b91c1c); } .bg-cancel { background: var(--text-sub); }
         
-        /* 임금 계산기 레이아웃 (좌우 분할) */
-        .calc-layout { display: flex; gap: 10px; margin-bottom: 10px; align-items: stretch; }
-        .calc-left { flex: 1; display: flex; flex-direction: column; justify-content: center; }
-        .calc-right { flex: 1; display: flex; flex-direction: column; justify-content: center; }
-
-        /* 월별 기준표 스타일 */
-        .ref-table { width: 100%; border-collapse: collapse; font-size: 0.75rem; text-align: center; background: rgba(0,0,0,0.02); border-radius: 8px; overflow: hidden; height: 100%; }
-        .ref-table th { background: var(--primary); color: white; padding: 4px; font-weight: normal; }
-        .ref-table td { border: 1px solid var(--border); padding: 4px; color: var(--text-main); vertical-align: middle; }
-        .ref-table .highlight { background: rgba(245, 158, 11, 0.15); font-weight: bold; } /* 현재 월 강조 */
-
-        .wage-row { display: flex; align-items: center; gap: 5px; margin-bottom: 8px; }
-        .wage-row label { width: 60px; min-width: 60px; font-weight: 700; font-size: 0.85rem; white-space: nowrap; text-align: left; }
-        .wage-row .input-field { flex: 1; width: auto; margin-bottom: 0; text-align: right; padding: 8px; font-size: 0.9rem; }
+        .wage-row { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+        .wage-row label { width: 90px; min-width: 90px; font-weight: 700; font-size: 0.9rem; white-space: nowrap; text-align: left; display: flex; align-items: center; }
+        .wage-row .input-field { flex: 1; width: auto; margin-bottom: 0; text-align: right; }
         
         .wage-result-box { background: linear-gradient(135deg, #ffffff, #f9fafb); border: 2px solid var(--primary); border-radius: 12px; padding: 15px; margin-top: 15px; }
         .spec-table { width: 100%; border-collapse: collapse; margin: 10px 0; font-size: 0.85rem; }
@@ -71,10 +60,10 @@
         .spec-table td:last-child { text-align: right; font-weight: 700; }
         .wage-total { font-size: 1.5rem; color: #c2410c; font-weight: 900; text-align: center; border-top: 2px solid var(--primary); padding-top: 10px; margin-top: 10px; }
 
-        .role-selector { display: flex; gap: 3px; margin-bottom: 10px; background: rgba(0,0,0,0.05); padding: 3px; border-radius: 8px; }
+        .role-selector { display: flex; gap: 5px; margin-bottom: 15px; background: rgba(0,0,0,0.05); padding: 5px; border-radius: 10px; }
         .role-selector input[type="radio"] { display: none; }
-        .role-selector label { flex: 1; text-align: center; padding: 8px 0; border-radius: 6px; font-weight: 700; cursor: pointer; font-size: 0.85rem; transition: all 0.2s; color: var(--text-sub); }
-        .role-selector input[type="radio"]:checked + label { background: var(--primary); color: white; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        .role-selector label { flex: 1; text-align: center; padding: 10px 0; border-radius: 8px; font-weight: 700; cursor: pointer; font-size: 0.9rem; transition: all 0.2s; color: var(--text-sub); }
+        .role-selector input[type="radio"]:checked + label { background: var(--primary); color: white; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
 
         .terminal-block { background: rgba(0,0,0,0.03); border-radius: 10px; margin-bottom: 8px; border: 1px solid var(--border); overflow: hidden; }
         .terminal-header { padding: 12px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; font-weight: 700; font-size: 0.95rem; }
@@ -136,6 +125,14 @@
         
         .ticker-manage-item { display: flex; justify-content: space-between; align-items: center; padding: 10px; border-bottom: 1px solid var(--border); }
         .ticker-manage-item span { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.9rem; }
+        
+        .calc-layout { display: flex; gap: 10px; margin-bottom: 10px; align-items: stretch; }
+        .calc-left { flex: 1; display: flex; flex-direction: column; justify-content: center; }
+        .calc-right { flex: 1; display: flex; flex-direction: column; justify-content: center; }
+        .ref-table { width: 100%; border-collapse: collapse; font-size: 0.75rem; text-align: center; background: rgba(0,0,0,0.02); border-radius: 8px; overflow: hidden; height: 100%; }
+        .ref-table th { background: var(--primary); color: white; padding: 4px; font-weight: normal; }
+        .ref-table td { border: 1px solid var(--border); padding: 4px; color: var(--text-main); vertical-align: middle; }
+        .ref-table .highlight { background: rgba(245, 158, 11, 0.15); font-weight: bold; }
     </style>
 </head>
 <body>
@@ -319,24 +316,27 @@
             // 현재 월에 따른 기준 시간 자동 설정 (하이라이트)
             const currentMonth = new Date().getMonth() + 1;
             let dayStartHour = 8, dayEndHour = 18;
-            ['row-jan','row-apr','row-oct'].forEach(id => document.getElementById(id).classList.remove('highlight'));
+            ['row-jan','row-apr','row-oct'].forEach(id => {
+                const el = document.getElementById(id);
+                if(el) el.classList.remove('highlight');
+            });
 
             if (currentMonth >= 4 && currentMonth <= 9) {
                 dayStartHour = 6; dayEndHour = 19;
-                document.getElementById('row-apr').classList.add('highlight');
+                if(document.getElementById('row-apr')) document.getElementById('row-apr').classList.add('highlight');
             } else if (currentMonth >= 10 && currentMonth <= 12) {
                 dayStartHour = 7; dayEndHour = 17;
-                document.getElementById('row-oct').classList.add('highlight');
+                if(document.getElementById('row-oct')) document.getElementById('row-oct').classList.add('highlight');
             } else {
                 dayStartHour = 8; dayEndHour = 18;
-                document.getElementById('row-jan').classList.add('highlight');
+                if(document.getElementById('row-jan')) document.getElementById('row-jan').classList.add('highlight');
             }
 
             const roleEl = document.querySelector('input[name="workRole"]:checked');
             const role = roleEl ? roleEl.value : 'main'; 
 
             const totalHours = parseFloat(document.getElementById('wageTotalHours').value) || 0;
-            const startHour = parseInt(document.getElementById('wageStartTime').value) || dayStartHour; // 미입력 시 해당월 기준시간 적용
+            const startHour = parseInt(document.getElementById('wageStartTime').value) || dayStartHour; 
             
             const hHoliday = parseFloat(document.getElementById('wageHoliday').value) || 0;
             const hWeekend = parseFloat(document.getElementById('wageWeekend').value) || 0;
@@ -345,13 +345,11 @@
             const taxRate = parseFloat(document.getElementById('wageTaxType').value) || 0;
 
             let dayCount = 0, nightCount = 0;
-            let deepNightCount = 0;
-            let lunchExtCount = 0;
+            let deepNightCount = 0, lunchExtCount = 0;
 
             for (let i = 0; i < totalHours; i++) {
                 let curr = (startHour + i) % 24;
                 
-                // 월별 기준 시간 반영하여 주/야간 판별
                 if (curr >= dayStartHour && curr < dayEndHour) dayCount++; 
                 else nightCount++;
 
@@ -400,12 +398,11 @@
             document.getElementById('wageResultBox').classList.remove('hidden');
         }
 
-        // 페이지 로드 시 월별 기준표 하이라이트
         document.addEventListener('DOMContentLoaded', () => {
             const currentMonth = new Date().getMonth() + 1;
-            if (currentMonth >= 4 && currentMonth <= 9) document.getElementById('row-apr').classList.add('highlight');
-            else if (currentMonth >= 10 && currentMonth <= 12) document.getElementById('row-oct').classList.add('highlight');
-            else document.getElementById('row-jan').classList.add('highlight');
+            if (currentMonth >= 4 && currentMonth <= 9) { if(document.getElementById('row-apr')) document.getElementById('row-apr').classList.add('highlight'); }
+            else if (currentMonth >= 10 && currentMonth <= 12) { if(document.getElementById('row-oct')) document.getElementById('row-oct').classList.add('highlight'); }
+            else { if(document.getElementById('row-jan')) document.getElementById('row-jan').classList.add('highlight'); }
         });
 
         function resetWageForm(){document.querySelectorAll('#wage-card input').forEach(i=> { if(i.type !== 'radio') i.value=''; }); document.getElementById('wageStartTime').value=8; document.getElementById('wageResultBox').classList.add('hidden');}
@@ -429,52 +426,43 @@
         function addShipInfo(){const n=document.getElementById('shipName').value, c=document.getElementById('shipOnboard').value, f=document.getElementById('shipFileInput').files[0]; const save=(u)=>{db.collection("ships").add({shipName:n, onboardFeat:c, imageUrl:u, timestamp:firebase.firestore.FieldValue.serverTimestamp()}).then(()=>{document.getElementById('shipName').value=''; document.getElementById('shipOnboard').value=''; document.getElementById('shipFileInput').value=''; toggleHidden('shipForm'); showToast("선박 등록됨");});}; if(f) storage.ref(`ships/${Date.now()}`).put(f).then(s=>s.ref.getDownloadURL()).then(u=>save(u)); else save(null);}
         function renderShipPage(p){const l=document.getElementById("shipList"); l.innerHTML=""; filteredShips.slice((p-1)*postsPerPage, p*postsPerPage).forEach(x=>{l.innerHTML+=`<li class="post-item"><div onclick="toggleContent('s-${x.id}')">🚢 ${x.shipName}</div><div id="s-${x.id}" class="post-body-content">${x.onboardFeat}<br><button class="mini-btn btn-del" onclick="deleteShip('${x.id}',event)">삭제</button></div></li>`;});}
         async function deleteShip(id,e){e.stopPropagation(); if(await verifyAdmin()) db.collection("ships").doc(id).delete();}
-        function uploadFile(){const f=document.getElementById('fileInput').files[0], t=document.getElementById('fileTitle').value; if(f&&t) storage.ref(`archives/${Date.now()}`).put(f).then(s=>s.ref.getDownloadURL()).then(u=>db.collection("archives").add({title:t, url:u, timestamp:firebase.firestore.FieldValue.serverTimestamp()}));}
+        function uploadFile(){const f=document.getElementById('fileInput').files[0], t=document.getElementById('fileTitle').value; if(f&&t) storage.ref(`archives/${Date.now()}`).put(f).then(s=>s.ref.getDownloadURL()).then(u=>db.collection("archives").add({title:t, url:u, timestamp:firebase.firestore.FieldValue.serverTimestamp()})).then(()=>{showToast("업로드 성공"); document.getElementById('fileTitle').value=''; document.getElementById('fileInput').value='';}).catch(err=>{alert("업로드 실패: "+err.message);});}
         async function delArchive(id,e){e.stopPropagation(); if(await verifyAdmin()) db.collection("archives").doc(id).delete();}
         
-        // [티커 기능: 3개 제한, 밀어내기, 관리자 고정, 삭제 기능]
+        // [알림글 Ticker: 3개 제한, 밀어내기, 관리자 고정, 삭제 기능]
         function loadBanner(){
             db.collection('settings').doc('banner').onSnapshot(d=>{
                 if(d.exists) {
                     const data = d.data();
                     let adminMsg = data.adminMessage ? `📢 ${data.adminMessage}` : "";
                     let userMsgs = data.userMessages || [];
-                    
                     let displayArr = [];
-                    if (adminMsg) displayArr.push(adminMsg); // 관리자 0순위
-                    
-                    // 사용자 글 1, 2, 3 붙여서 표시
-                    userMsgs.forEach((msg, idx) => {
-                        displayArr.push(`${idx + 1}. ${msg}`);
-                    });
-                    
+                    if (adminMsg) displayArr.push(adminMsg);
+                    userMsgs.forEach((msg, idx) => { displayArr.push(`${idx + 1}. ${msg}`); });
                     const finalMsg = displayArr.length > 0 ? displayArr.join("   ///   ") : "🚨 안전 제일! 오늘도 무사고!";
                     document.getElementById('tickerText').innerText = finalMsg;
                 }
             });
         }
-
         function writeUserTicker(){
-            const m = prompt("안전 문구 등록 (최대 3개까지 유지됨):"); 
+            const m = prompt("안전 문구 등록 (최대 3개):"); 
             if(m){
                 const docRef = db.collection('settings').doc('banner');
                 db.runTransaction(async (transaction) => {
                     const doc = await transaction.get(docRef);
                     let currentMsgs = doc.exists ? (doc.data().userMessages || []) : [];
-                    currentMsgs.unshift(m); // 새 글 맨 앞
-                    if(currentMsgs.length > 3) currentMsgs = currentMsgs.slice(0, 3); // 3개 유지
+                    currentMsgs.unshift(m); 
+                    if(currentMsgs.length > 3) currentMsgs = currentMsgs.slice(0, 3);
                     transaction.set(docRef, { userMessages: currentMsgs }, { merge: true });
-                }).then(() => showToast("문구가 등록되었습니다."));
+                }).then(() => showToast("등록되었습니다."));
             }
         }
-
         async function setAdminTicker(){
             if(await verifyAdmin()){
-                const m=prompt("관리자 공지 (항상 맨 앞에 고정):"); 
+                const m=prompt("관리자 공지 (항상 맨 앞):"); 
                 if(m) db.collection('settings').doc('banner').set({adminMessage:m},{merge:true}).then(()=>showToast("관리자 공지 등록됨"));
             }
         }
-
         async function openTickerManager(){
             if(await verifyAdmin()){
                 db.collection('settings').doc('banner').get().then(doc => {
@@ -482,11 +470,9 @@
                         const data = doc.data();
                         const listEl = document.getElementById('tickerListContainer');
                         listEl.innerHTML = "";
-                        // 관리자 공지 삭제
                         if(data.adminMessage) {
                             listEl.innerHTML += `<div class="ticker-manage-item"><span style="color:var(--danger); font-weight:bold;">[관리자] ${data.adminMessage}</span> <button class="mini-btn btn-del" onclick="deleteTickerMsg('admin', 0)">삭제</button></div>`;
                         }
-                        // 사용자 메시지 삭제
                         if(data.userMessages && data.userMessages.length > 0) {
                             data.userMessages.forEach((msg, idx) => {
                                 listEl.innerHTML += `<div class="ticker-manage-item"><span>${idx+1}. ${msg}</span> <button class="mini-btn btn-del" onclick="deleteTickerMsg('user', ${idx})">삭제</button></div>`;
@@ -497,7 +483,6 @@
                 });
             }
         }
-
         async function deleteTickerMsg(type, index) {
             const docRef = db.collection('settings').doc('banner');
             if(type === 'admin') {
@@ -511,29 +496,14 @@
                 });
             }
             showToast("삭제되었습니다.");
-            openTickerManager(); // 목록 새로고침
+            openTickerManager();
         }
-
         async function resetTicker(){
             if(await verifyAdmin() && confirm("모든 공지를 초기화하시겠습니까?")) {
                 db.collection('settings').doc('banner').set({adminMessage:null, userMessages:[]});
+                showToast("초기화되었습니다.");
             }
         }
-
-        function renderPagination(id,t,c,f){const el=document.getElementById(id); el.innerHTML=""; for(let i=1;i<=t;i++){const s=document.createElement("span"); s.className=`page-num ${i===c?'active':''}`; s.innerText=i; s.onclick=()=>f(i); el.appendChild(s);}}
-        function checkAdminAndOpenLog(){verifyAdmin().then(r=>{if(r){toggleDashItem('log-card'); renderCalendar(currentDate.getFullYear(), currentDate.getMonth());}else{showToast("⛔ 관리자 권한 필요");}});}
-        function renderCalendar(y, m){const calGrid=document.getElementById('calendarGrid'); calGrid.innerHTML=""; document.getElementById('calMonthYear').innerText=`${y}년 ${m+1}월`; const firstDay=new Date(y,m,1).getDay(); const lastDate=new Date(y,m+1,0).getDate(); for(let i=0;i<firstDay;i++)calGrid.innerHTML+=`<div></div>`; db.collection('work_logs').where('date','>=',`${y}-${String(m+1).padStart(2,'0')}-01`).where('date','<=',`${y}-${String(m+1).padStart(2,'0')}-31`).get().then(snapshot=>{adminWorkLogs={}; snapshot.forEach(doc=>adminWorkLogs[doc.id]=doc.data()); for(let d=1;d<=lastDate;d++){const dateStr=`${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`; const hasData=adminWorkLogs[dateStr]?'has-data':''; calGrid.innerHTML+=`<div class="cal-day tap-effect ${hasData}" onclick="clickDate('${dateStr}')">${d}<div class="cal-dot"></div></div>`;} calculateMonthlyTotal();});}
-        function changeMonth(step){currentDate.setMonth(currentDate.getMonth()+step); renderCalendar(currentDate.getFullYear(), currentDate.getMonth());}
-        async function clickDate(dateStr){document.getElementById('selectedDateText').innerText=dateStr; document.getElementById('dailyLogForm').classList.remove('hidden'); document.getElementById('dailyLogForm').setAttribute('data-date',dateStr); if(adminWorkLogs[dateStr]){const data=adminWorkLogs[dateStr]; document.getElementById('logDayHours').value=data.dayHours||''; document.getElementById('logNightHours').value=data.nightHours||''; document.getElementById('logMemo').value=data.memo||''; if(data.imageUrl){document.getElementById('logImagePreview').src=data.imageUrl; document.getElementById('logImagePreview').style.display='block';}else{document.getElementById('logImagePreview').style.display='none';}}else{resetLogInputs();}}
-        function saveWorkLog(){const dateStr=document.getElementById('dailyLogForm').getAttribute('data-date'); if(!dateStr)return; const dh=parseFloat(document.getElementById('logDayHours').value)||0; const nh=parseFloat(document.getElementById('logNightHours').value)||0; const memo=document.getElementById('logMemo').value; const file=document.getElementById('logImageInput').files[0]; const totalPay=(dh*10320)+(nh*15480); const save=(url)=>{db.collection('work_logs').doc(dateStr).set({date:dateStr,dayHours:dh,nightHours:nh,memo:memo,totalPay:totalPay,imageUrl:url},{merge:true}).then(()=>{showToast("저장 완료"); adminWorkLogs[dateStr]={dayHours:dh,nightHours:nh,memo:memo,totalPay:totalPay,imageUrl:url}; renderCalendar(currentDate.getFullYear(), currentDate.getMonth());});}; if(file){storage.ref(`logs/${dateStr}`).put(file).then(s=>s.ref.getDownloadURL()).then(u=>save(u));}else{save(adminWorkLogs[dateStr]?adminWorkLogs[dateStr].imageUrl:null);}}
-        function deleteWorkLog(){const dateStr=document.getElementById('dailyLogForm').getAttribute('data-date'); if(confirm("삭제?")){db.collection('work_logs').doc(dateStr).delete().then(()=>{showToast("삭제됨"); delete adminWorkLogs[dateStr]; resetLogInputs(); renderCalendar(currentDate.getFullYear(), currentDate.getMonth());});}}
-        function calculateMonthlyTotal(){let total=0; Object.values(adminWorkLogs).forEach(log=>total+=(log.totalPay||0)); document.getElementById('monthlyTotalDisplay').innerText=`이번달 총액: ${total.toLocaleString()}원`;}
-        function resetLogInputs(){document.getElementById('logDayHours').value=''; document.getElementById('logNightHours').value=''; document.getElementById('logMemo').value=''; document.getElementById('logImageInput').value=''; document.getElementById('logImagePreview').style.display='none';}
-        function filterShips(){const q=document.getElementById('shipSearch').value.toUpperCase(); filteredShips=allShipsData.filter(s=>s.shipName.toUpperCase().includes(q)); renderShipPage(1);}
-        function openBusSchedule(){showToast("이미지를 불러오는 중입니다...");}
-        function previewLogImage(input){if(input.files&&input.files[0]){const r=new FileReader(); r.onload=e=>{const img=document.getElementById('logImagePreview'); img.src=e.target.result; img.style.display='block';}; r.readAsDataURL(input.files[0]);}}
-        function closeImageModal(){document.getElementById('imageModal').style.display='none';}
-        function openPrivacy(){document.getElementById('privacyModal').style.display='flex';}
 
         window.onload=loadAllData;
     </script>
