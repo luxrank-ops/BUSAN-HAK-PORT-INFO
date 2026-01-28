@@ -12,7 +12,7 @@
     
     <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6024353303588422" crossorigin="anonymous"></script>
 
-    <link rel="icon" type="image/png" sizes="32x32" href="icon.png?v=final_fix_v22">
+    <link rel="icon" type="image/png" sizes="32x32" href="icon.png?v=final_fix_v24">
     <link rel="stylesheet" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.8/dist/web/static/pretendard.css" />
 
     <style>
@@ -177,15 +177,14 @@
                     <div style="background:rgba(239,68,68,0.05); padding:12px; border-radius:10px; margin-bottom:12px; border:1px solid rgba(239,68,68,0.2);">
                         <div class="wage-row"><label>⏳ 총 근무</label><input type="number" id="wageTotalHours" class="input-field" placeholder="예: 24, 48" style="text-align:right; border:2px solid var(--danger);">H</div>
                         <div class="wage-row"><label>🕒 시작 시각</label><input type="number" id="wageStartTime" class="input-field" value="8" placeholder="0~23" style="text-align:right;">시</div>
-                        <p style="font-size:0.7rem; color:var(--text-sub); margin:0;">※ 총 시간을 기준으로 주/야간 기본급을 자동 배분합니다.</p>
+                        <p style="font-size:0.7rem; color:var(--text-sub); margin:0;">※ 총 시간과 시작 시각을 기준으로 주/야간/심야/중식연장을 자동 계산합니다.</p>
                     </div>
                     
                     <div style="border-top:1px dashed var(--border); margin:10px 0; padding-top:10px;">
-                        <p style="font-size:0.75rem; color:var(--primary); font-weight:800; margin-bottom:8px;">✅ 추가 수당 시간 입력 (중복 가능)</p>
+                        <p style="font-size:0.75rem; color:var(--primary); font-weight:800; margin-bottom:8px;">✅ 추가 수당 시간 입력</p>
                         <div class="wage-row"><label>🌴 공휴일</label><input type="number" id="wageHoliday" class="input-field" placeholder="H" style="text-align:right;">H</div>
                         <div class="wage-row"><label>🏖️ 주말</label><input type="number" id="wageWeekend" class="input-field" placeholder="H" style="text-align:right;">H</div>
                         <div class="wage-row"><label>☔ 우천</label><input type="number" id="wageRain" class="input-field" placeholder="H" style="text-align:right;">H</div>
-                        <div class="wage-row"><label>🌑 심야</label><input type="number" id="wageDeepNight" class="input-field" placeholder="H" style="text-align:right;">H</div>
                         <div class="wage-row"><label>🔥 혹서기</label><input type="number" id="wageHotTime" class="input-field" placeholder="H" style="text-align:right;">H</div>
                     </div>
 
@@ -242,220 +241,48 @@
         </div>
 
         <div class="card" style="border-left: 5px solid #3b82f6;">
-            <div class="section-header tap-effect" onclick="toggleSection('t3-content', this)">
-                <span class="section-title">⛴️ 3항업 (신항 남측) ▼</span>
-            </div>
+            <div class="section-header tap-effect" onclick="toggleSection('t3-content', this)"><span class="section-title">⛴️ 3항업 (신항 남측) ▼</span></div>
             <div id="t3-content" class="collapsible-content collapsed">
-                <div class="terminal-block">
-                    <div class="terminal-header tap-effect" onclick="toggleContent('term-hjnc')">한진신항만 (HJNC) ▼</div>
-                    <div id="term-hjnc" class="terminal-body">
-                        <div class="terminal-actions">
-                            <a href="https://www.hjnc.co.kr/esvc/vessel/berthScheduleT" target="_blank" class="terminal-btn">스케줄</a>
-                            <a href="https://www.hjnc.co.kr/esvc/vessel/berthScheduleG" target="_blank" class="terminal-btn">차트</a>
-                            <a href="https://www.hjnc.co.kr/esvc/vessel/vesselStatus" target="_blank" class="terminal-btn">현황</a>
-                            <a href="http://bayplan.hjnc.co.kr" target="_blank" class="terminal-btn btn-premium">🧩 BAY</a>
-                        </div>
-                    </div>
-                </div>
-                <div class="terminal-block">
-                    <div class="terminal-header tap-effect" onclick="toggleContent('term-bnct')">부산신항컨테이너 (BNCT) ▼</div>
-                    <div id="term-bnct" class="terminal-body">
-                        <div class="terminal-actions">
-                            <a href="https://info.bnctkorea.com/esvc/vessel/berthScheduleT" target="_blank" class="terminal-btn">스케줄</a>
-                            <a href="https://info.bnctkorea.com/esvc/vessel/berthScheduleG" target="_blank" class="terminal-btn">차트</a>
-                            <a href="https://info.bnctkorea.com/esvc/vessel/vesselStatus" target="_blank" class="terminal-btn">현황</a>
-                        </div>
-                    </div>
-                </div>
-                <div class="terminal-block">
-                    <div class="terminal-header tap-effect" onclick="toggleContent('term-dgt')">동원로엑스 (DGT) ▼</div>
-                    <div id="term-dgt" class="terminal-body">
-                        <div class="terminal-actions">
-                            <a href="https://www.dgtbusan.com/DGT/esvc/vessel/berthScheduleT" target="_blank" class="terminal-btn">스케줄</a>
-                            <a href="https://www.dgtbusan.com/DGT/esvc/vessel/berthScheduleG" target="_blank" class="terminal-btn">차트</a>
-                            <a href="https://www.dgtbusan.com/DGT/esvc/vessel/vesselStatus" target="_blank" class="terminal-btn">현황</a>
-                        </div>
-                    </div>
-                </div>
+                <div class="terminal-block"><div class="terminal-header tap-effect" onclick="toggleContent('term-hjnc')">한진신항만 (HJNC) ▼</div><div id="term-hjnc" class="terminal-body"><div class="terminal-actions"><a href="https://www.hjnc.co.kr/esvc/vessel/berthScheduleT" target="_blank" class="terminal-btn">스케줄</a><a href="https://www.hjnc.co.kr/esvc/vessel/berthScheduleG" target="_blank" class="terminal-btn">차트</a><a href="https://www.hjnc.co.kr/esvc/vessel/vesselStatus" target="_blank" class="terminal-btn">현황</a><a href="http://bayplan.hjnc.co.kr" target="_blank" class="terminal-btn btn-premium">🧩 BAY</a></div></div></div>
+                <div class="terminal-block"><div class="terminal-header tap-effect" onclick="toggleContent('term-bnct')">부산신항컨테이너 (BNCT) ▼</div><div id="term-bnct" class="terminal-body"><div class="terminal-actions"><a href="https://info.bnctkorea.com/esvc/vessel/berthScheduleT" target="_blank" class="terminal-btn">스케줄</a><a href="https://info.bnctkorea.com/esvc/vessel/berthScheduleG" target="_blank" class="terminal-btn">차트</a><a href="https://info.bnctkorea.com/esvc/vessel/vesselStatus" target="_blank" class="terminal-btn">현황</a></div></div></div>
+                <div class="terminal-block"><div class="terminal-header tap-effect" onclick="toggleContent('term-dgt')">동원로엑스 (DGT) ▼</div><div id="term-dgt" class="terminal-body"><div class="terminal-actions"><a href="https://www.dgtbusan.com/DGT/esvc/vessel/berthScheduleT" target="_blank" class="terminal-btn">스케줄</a><a href="https://www.dgtbusan.com/DGT/esvc/vessel/berthScheduleG" target="_blank" class="terminal-btn">차트</a><a href="https://www.dgtbusan.com/DGT/esvc/vessel/vesselStatus" target="_blank" class="terminal-btn">현황</a></div></div></div>
             </div>
         </div>
 
         <div class="card" style="border-left: 5px solid #10b981;">
-            <div class="section-header tap-effect" onclick="toggleSection('t2-content', this)">
-                <span class="section-title">🏗️ 2항업 (신항 북측) ▼</span>
-            </div>
+            <div class="section-header tap-effect" onclick="toggleSection('t2-content', this)"><span class="section-title">🏗️ 2항업 (신항 북측) ▼</span></div>
             <div id="t2-content" class="collapsible-content collapsed">
-                <div class="terminal-block">
-                    <div class="terminal-header tap-effect" onclick="toggleContent('term-pnc')">부산신항만 (PNC) ▼</div>
-                    <div id="term-pnc" class="terminal-body">
-                        <div class="terminal-actions">
-                            <a href="https://svc.pncport.com/info/CMS/Ship/Info.pnc?mCode=MN014" target="_blank" class="terminal-btn">스케줄</a>
-                            <a href="https://svc.pncport.com/info/CMS/Ship/ShipBerthC.pnc?mCode=MN019" target="_blank" class="terminal-btn">차트</a>
-                            <a href="https://svc.pncport.com/info/CMS/Ship/ShipVslStatus.pnc?mCode=MN020" target="_blank" class="terminal-btn">현황</a>
-                        </div>
-                        <button class="action-btn" style="background:#f39c12; margin-top:8px; padding:10px;" onclick="openBusSchedule()">🚌 셔틀버스 시간표</button>
-                    </div>
-                </div>
-                <div class="terminal-block">
-                    <div class="terminal-header tap-effect" onclick="toggleContent('term-hpnt')">HMM (HPNT) ▼</div>
-                    <div id="term-hpnt" class="terminal-body">
-                        <div class="terminal-actions">
-                            <a href="https://www.hpnt.co.kr/main/vessel/schedule/list" target="_blank" class="terminal-btn">스케줄</a>
-                            <a href="https://www.hpnt.co.kr/main/vessel/berth/list" target="_blank" class="terminal-btn">선석</a>
-                        </div>
-                    </div>
-                </div>
-                <div class="terminal-block">
-                    <div class="terminal-header tap-effect" onclick="toggleContent('term-pnit')">신항국제 (PNIT) ▼</div>
-                    <div id="term-pnit" class="terminal-body">
-                        <div class="terminal-actions">
-                            <a href="http://www.pnitl.com" target="_blank" class="terminal-btn">홈페이지</a>
-                        </div>
-                    </div>
-                </div>
+                <div class="terminal-block"><div class="terminal-header tap-effect" onclick="toggleContent('term-pnc')">부산신항만 (PNC) ▼</div><div id="term-pnc" class="terminal-body"><div class="terminal-actions"><a href="https://svc.pncport.com/info/CMS/Ship/Info.pnc?mCode=MN014" target="_blank" class="terminal-btn">스케줄</a><a href="https://svc.pncport.com/info/CMS/Ship/ShipBerthC.pnc?mCode=MN019" target="_blank" class="terminal-btn">차트</a><a href="https://svc.pncport.com/info/CMS/Ship/ShipVslStatus.pnc?mCode=MN020" target="_blank" class="terminal-btn">현황</a></div><button class="action-btn" style="background:#f39c12; margin-top:8px; padding:10px;" onclick="openBusSchedule()">🚌 셔틀버스 시간표</button></div></div>
+                <div class="terminal-block"><div class="terminal-header tap-effect" onclick="toggleContent('term-hpnt')">HMM (HPNT) ▼</div><div id="term-hpnt" class="terminal-body"><div class="terminal-actions"><a href="https://www.hpnt.co.kr/main/vessel/schedule/list" target="_blank" class="terminal-btn">스케줄</a><a href="https://www.hpnt.co.kr/main/vessel/berth/list" target="_blank" class="terminal-btn">선석</a></div></div></div>
+                <div class="terminal-block"><div class="terminal-header tap-effect" onclick="toggleContent('term-pnit')">신항국제 (PNIT) ▼</div><div id="term-pnit" class="terminal-body"><div class="terminal-actions"><a href="http://www.pnitl.com" target="_blank" class="terminal-btn">홈페이지</a></div></div></div>
             </div>
         </div>
 
         <div class="card" style="border-left: 5px solid #f97316;">
-            <div class="section-header tap-effect" onclick="toggleSection('t1-content', this)">
-                <span class="section-title">⚓ 1항업 (북항) ▼</span>
-            </div>
+            <div class="section-header tap-effect" onclick="toggleSection('t1-content', this)"><span class="section-title">⚓ 1항업 (북항) ▼</span></div>
             <div id="t1-content" class="collapsible-content collapsed">
-                <div class="terminal-block">
-                    <div class="terminal-header tap-effect" onclick="toggleContent('term-bptc')">북항 통합 (BPTC) ▼</div>
-                    <div id="term-bptc" class="terminal-body">
-                        <div class="terminal-actions">
-                            <a href="http://info.bptc.co.kr:9084" target="_blank" class="terminal-btn" style="grid-column:span 3;">🏗️ 감만/신선대 통합 선석</a>
-                        </div>
-                    </div>
-                </div>
-                <div class="terminal-block">
-                    <div class="terminal-header tap-effect" onclick="toggleContent('term-hbct')">허치슨 (HBCT/자성대) ▼</div>
-                    <div id="term-hbct" class="terminal-body">
-                        <div class="terminal-actions">
-                            <a href="https://www.hutchisonportsbusan.com" target="_blank" class="terminal-btn">홈페이지</a>
-                        </div>
-                    </div>
-                </div>
+                <div class="terminal-block"><div class="terminal-header tap-effect" onclick="toggleContent('term-bptc')">북항 통합 (BPTC) ▼</div><div id="term-bptc" class="terminal-body"><div class="terminal-actions"><a href="http://info.bptc.co.kr:9084" target="_blank" class="terminal-btn" style="grid-column:span 3;">🏗️ 감만/신선대 통합 선석</a></div></div></div>
+                <div class="terminal-block"><div class="terminal-header tap-effect" onclick="toggleContent('term-hbct')">허치슨 (HBCT/자성대) ▼</div><div id="term-hbct" class="terminal-body"><div class="terminal-actions"><a href="https://www.hutchisonportsbusan.com" target="_blank" class="terminal-btn">홈페이지</a></div></div></div>
             </div>
         </div>
 
-        <div class="card">
-            <div class="section-header tap-effect" onclick="toggleSection('control-content', this)">
-                <span class="section-title">📡 관제 및 실시간 기상 ▼</span>
-            </div>
-            <div id="control-content" class="collapsible-content collapsed">
-                <div class="control-grid">
-                    <a href="http://www.busanpilot.co.kr/popup/monitoring" class="control-btn" target="_blank">🛥️ 도선 모니터</a>
-                    <a href="https://weather.naver.com/today/08440585" class="control-btn" target="_blank" style="grid-column: span 2; color:var(--danger);">☀️ 부산항 실시간 날씨</a>
-                </div>
-            </div>
-        </div>
-
-        <div class="card" style="border-left: 5px solid var(--primary);">
-            <div class="section-header tap-effect" onclick="toggleSection('ads-info-1', this)">
-                <span class="section-title">📘 부산항 이용 및 안전 근무 가이드 ▼</span>
-            </div>
-            <div id="ads-info-1" class="collapsible-content collapsed">
-                <div class="guide-text">
-                    <h4>📌 2026년 부산항 터미널 출입 및 보안 규정</h4>
-                    <p>부산항 내 모든 터미널(PNC, HJNC, BCT 등)은 국가 중요 보안 시설로 지정되어 출입 시 사전 등록이 필수입니다. 안전모와 안전조끼 착용은 법적 의무 사항이며 미착용 시 즉각적인 퇴거 조치가 취해질 수 있으니 주의하시기 바랍니다.</p>
-                    <h4>🌧️ 기상 악화 시 하역 작업 중단 기준</h4>
-                    <p>항만 업무는 풍속과 강수량에 민감합니다. 통상 순간풍속 15m/s 초과 시 안벽 크레인(QC) 작업이 일시 중단됩니다. 대기 시간이 길어질 경우 본 앱의 계산기 섹션에 있는 '우천 수당' 항목을 통해 예상 임금을 산출해 보시기 바랍니다.</p>
-                </div>
-            </div>
-        </div>
+        <div class="card"><div class="section-header tap-effect" onclick="toggleSection('control-content', this)"><span class="section-title">📡 관제 및 실시간 기상 ▼</span></div><div id="control-content" class="collapsible-content collapsed"><div class="control-grid"><a href="http://www.busanpilot.co.kr/popup/monitoring" class="control-btn" target="_blank">🛥️ 도선 모니터</a><a href="https://weather.naver.com/today/08440585" class="control-btn" target="_blank" style="grid-column: span 2; color:var(--danger);">☀️ 부산항 실시간 날씨</a></div></div></div>
+        <div class="card" style="border-left: 5px solid var(--primary);"><div class="section-header tap-effect" onclick="toggleSection('ads-info-1', this)"><span class="section-title">📘 부산항 이용 및 안전 근무 가이드 ▼</span></div><div id="ads-info-1" class="collapsible-content collapsed"><div class="guide-text"><h4>📌 2026년 부산항 터미널 출입 및 보안 규정</h4><p>부산항 내 모든 터미널(PNC, HJNC, BCT 등)은 국가 중요 보안 시설로 지정되어 출입 시 사전 등록이 필수입니다.</p><h4>🌧️ 기상 악화 시 하역 작업 중단 기준</h4><p>항만 업무는 풍속과 강수량에 민감합니다. 통상 순간풍속 15m/s 초과 시 안벽 크레인(QC) 작업이 일시 중단됩니다.</p></div></div></div>
 
         <div class="dash-grid">
-            <div id="notice-card" class="dash-card">
-                <div class="dash-header tap-effect" onclick="toggleDashItem('notice-card')">📢 공지사항 ▼</div>
-                <div class="dash-content">
-                    <div style="margin-bottom:10px; background:rgba(239,68,68,0.05); padding:10px; border-radius:8px;">
-                        <input type="text" id="noticeTitle" class="input-field" placeholder="제목">
-                        <textarea id="noticeContent" class="input-field textarea-field" placeholder="내용"></textarea>
-                        <button class="action-btn bg-submit" onclick="addNotice()">공지 등록 (Admin)</button>
-                    </div>
-                    <ul id="noticeList" class="post-list" style="margin-top:10px;"></ul>
-                </div>
-            </div>
-
-            <div id="board-card" class="dash-card">
-                <div class="dash-header tap-effect" onclick="toggleDashItem('board-card')">💬 익명게시판 ▼</div>
-                <div class="dash-content">
-                    <button class="action-btn" style="background:var(--text-sub); margin-bottom:10px;" onclick="toggleHidden('boardForm')">✍️ 글쓰기</button>
-                    <div id="boardForm" class="hidden">
-                        <input type="text" id="inputTitle" class="input-field" placeholder="제목">
-                        <input type="password" id="inputPw" class="input-field" placeholder="비번">
-                        <textarea id="inputContent" class="input-field textarea-field" placeholder="내용"></textarea>
-                        <button class="action-btn bg-submit" onclick="addPost()">등록</button>
-                    </div>
-                    <ul id="boardList" class="post-list"></ul>
-                    <div id="pagination" style="display:flex; justify-content:center; gap:5px; margin-top:10px;"></div>
-                </div>
-            </div>
-            
-            <div id="ship-card" class="dash-card">
-                <div class="dash-header tap-effect" onclick="toggleDashItem('ship-card')">🚢 선박정보 ▼</div>
-                <div class="dash-content">
-                    <div style="display:flex; gap:5px; margin-bottom:10px;">
-                        <input type="text" id="shipSearch" class="input-field" placeholder="선박 검색" onkeyup="filterShips()" style="margin-bottom:0;">
-                        <button class="action-btn" style="width:auto;" onclick="filterShips()">🔍</button>
-                    </div>
-                    <a href="https://www.marinetraffic.com/" target="_blank" class="action-btn" style="background:#0284c7; text-align:center; display:block; text-decoration:none; margin-bottom:10px; padding:12px;">🌍 실시간 선박 위치 확인</a>
-                    <button class="action-btn" style="background:var(--accent); margin-bottom:10px;" onclick="toggleHidden('shipForm')">📝 선박 정보 신규 등록</button>
-                    <div id="shipForm" class="hidden">
-                        <input type="text" id="shipName" class="input-field" placeholder="선박명">
-                        <textarea id="shipOnboard" class="input-field textarea-field" placeholder="작업내용"></textarea>
-                        <input type="file" id="shipFileInput" class="input-field">
-                        <button id="shipSubmitBtn" class="action-btn bg-submit" onclick="addShipInfo()">등록/수정</button>
-                    </div>
-                    <ul id="shipList" class="post-list"></ul>
-                </div>
-            </div>
-
-            <div id="file-card" class="dash-card">
-                <div class="dash-header tap-effect" onclick="toggleDashItem('file-card')">📂 자료실 ▼</div>
-                <div class="dash-content">
-                    <input type="text" id="fileTitle" class="input-field" placeholder="파일 제목">
-                    <input type="file" id="fileInput" class="input-field">
-                    <button class="action-btn bg-submit" onclick="uploadFile()">업로드</button>
-                    <ul id="fileList" class="post-list" style="margin-top:10px;"></ul>
-                </div>
-            </div>
+            <div id="notice-card" class="dash-card"><div class="dash-header tap-effect" onclick="toggleDashItem('notice-card')">📢 공지사항 ▼</div><div class="dash-content"><div style="margin-bottom:10px; background:rgba(239,68,68,0.05); padding:10px; border-radius:8px;"><input type="text" id="noticeTitle" class="input-field" placeholder="제목"><textarea id="noticeContent" class="input-field textarea-field" placeholder="내용"></textarea><button class="action-btn bg-submit" onclick="addNotice()">공지 등록 (Admin)</button></div><ul id="noticeList" class="post-list" style="margin-top:10px;"></ul></div></div>
+            <div id="board-card" class="dash-card"><div class="dash-header tap-effect" onclick="toggleDashItem('board-card')">💬 익명게시판 ▼</div><div class="dash-content"><button class="action-btn" style="background:var(--text-sub); margin-bottom:10px;" onclick="toggleHidden('boardForm')">✍️ 글쓰기</button><div id="boardForm" class="hidden"><input type="text" id="inputTitle" class="input-field" placeholder="제목"><input type="password" id="inputPw" class="input-field" placeholder="비번"><textarea id="inputContent" class="input-field textarea-field" placeholder="내용"></textarea><button class="action-btn bg-submit" onclick="addPost()">등록</button></div><ul id="boardList" class="post-list"></ul><div id="pagination" style="display:flex; justify-content:center; gap:5px; margin-top:10px;"></div></div></div>
+            <div id="ship-card" class="dash-card"><div class="dash-header tap-effect" onclick="toggleDashItem('ship-card')">🚢 선박정보 ▼</div><div class="dash-content"><div style="display:flex; gap:5px; margin-bottom:10px;"><input type="text" id="shipSearch" class="input-field" placeholder="선박 검색" onkeyup="filterShips()" style="margin-bottom:0;"><button class="action-btn" style="width:auto;" onclick="filterShips()">🔍</button></div><a href="https://www.marinetraffic.com/" target="_blank" class="action-btn" style="background:#0284c7; text-align:center; display:block; text-decoration:none; margin-bottom:10px; padding:12px;">🌍 실시간 선박 위치 확인</a><button class="action-btn" style="background:var(--accent); margin-bottom:10px;" onclick="toggleHidden('shipForm')">📝 선박 정보 신규 등록</button><div id="shipForm" class="hidden"><input type="text" id="shipName" class="input-field" placeholder="선박명"><textarea id="shipOnboard" class="input-field textarea-field" placeholder="작업내용"></textarea><input type="file" id="shipFileInput" class="input-field"><button id="shipSubmitBtn" class="action-btn bg-submit" onclick="addShipInfo()">등록/수정</button></div><ul id="shipList" class="post-list"></ul></div></div>
+            <div id="file-card" class="dash-card"><div class="dash-header tap-effect" onclick="toggleDashItem('file-card')">📂 자료실 ▼</div><div class="dash-content"><input type="text" id="fileTitle" class="input-field" placeholder="파일 제목"><input type="file" id="fileInput" class="input-field"><button class="action-btn bg-submit" onclick="uploadFile()">업로드</button><ul id="fileList" class="post-list" style="margin-top:10px;"></ul></div></div>
         </div>
 
-        <footer>
-            <p>© 2026 BUSAN HAK PORT INFO. All rights reserved.</p>
-            <div style="margin-top:10px;">
-                <span class="footer-link" onclick="openPrivacy()">개인정보처리방침</span> | 
-                <span class="footer-link" onclick="alert('이용약관: 본 서비스는 현장 보조용입니다.')">이용약관</span>
-            </div>
-        </footer>
+        <footer><p>© 2026 BUSAN HAK PORT INFO. All rights reserved.</p><div style="margin-top:10px;"><span class="footer-link" onclick="openPrivacy()">개인정보처리방침</span></div></footer>
     </div>
 
-    <nav class="bottom-nav">
-        <div class="nav-item active tap-effect" onclick="scrollToTop()"><span class="nav-icon">🏠</span>홈</div>
-        <div class="nav-item tap-effect" onclick="toggleDashItem('board-card')">💬 톡톡</div>
-        <div class="nav-item tap-effect" onclick="toggleDashItem('ship-card')">🚢 선박</div>
-        <div class="nav-item tap-effect" onclick="toggleDashItem('file-card')">📂 자료</div>
-    </nav>
-
+    <nav class="bottom-nav"><div class="nav-item active tap-effect" onclick="scrollToTop()">🏠 홈</div><div class="nav-item tap-effect" onclick="toggleDashItem('board-card')">💬 톡톡</div><div class="nav-item tap-effect" onclick="toggleDashItem('ship-card')">🚢 선박</div><div class="nav-item tap-effect" onclick="toggleDashItem('file-card')">📂 자료</div></nav>
     <div id="toast">알림</div>
-    
-    <div id="imageModal" class="modal-overlay" onclick="closeImageModal()">
-        <div class="modal-content" onclick="event.stopPropagation()">
-            <img id="modalImage" class="modal-img">
-            <button class="action-btn bg-cancel" onclick="closeImageModal()">닫기</button>
-        </div>
-    </div>
-    
-    <div id="privacyModal" class="modal-overlay" onclick="document.getElementById('privacyModal').style.display='none'">
-        <div class="modal-content">
-            <h3>🛡️ 개인정보처리방침</h3>
-            <p>본 사이트는 구글 애드센스 광고를 게재하며 쿠키를 사용합니다. 근무 기록 및 게시물 데이터는 Firebase 서버에 안전하게 보관됩니다.</p>
-            <button class="action-btn" onclick="document.getElementById('privacyModal').style.display='none'">닫기</button>
-        </div>
-    </div>
+    <div id="imageModal" class="modal-overlay" onclick="closeImageModal()"><div class="modal-content" onclick="event.stopPropagation()"><img id="modalImage" class="modal-img"><button class="action-btn bg-cancel" onclick="closeImageModal()">닫기</button></div></div>
+    <div id="privacyModal" class="modal-overlay" onclick="document.getElementById('privacyModal').style.display='none'"><div class="modal-content"><h3>🛡️ 개인정보처리방침</h3><p>본 사이트는 구글 애드센스 광고를 게재하며 쿠키를 사용합니다. 근무 기록 및 게시물 데이터는 Firebase 서버에 안전하게 보관됩니다.</p><button class="action-btn" onclick="document.getElementById('privacyModal').style.display='none'">닫기</button></div></div>
 
     <script>
         const firebaseConfig = { apiKey: "AIzaSyBDXy5HcYW-IZQJ9ZDEivr_yi99AxhYme8", authDomain: "my-app-d8527.firebaseapp.com", projectId: "my-app-d8527", storageBucket: "my-app-d8527.firebasestorage.app", messagingSenderId: "667323279185", appId: "1:667323279185:web:cff6184aaa82e08d345570" };
@@ -465,72 +292,95 @@
         let currentBoardPage=1; const postsPerPage=5; let commentUnsubscribes = {};
         let currentDate = new Date();
 
-        // [핵심 기능: 지능형 임금 계산 - 기능공/육상 자동계산]
+        // [핵심 기능: 지능형 임금 계산 (심야/중식 자동화)]
         function calculateWage() {
             const DAY_RATE = 10320, NIGHT_RATE = 15480, EXTRA_ADD = 5160, HOT_ADD = 3096;
             const SKILLED_DAY_ADD = 2557, SKILLED_NIGHT_ADD = 3836; 
 
-            // 라디오 버튼 선택값 확인 (안전 장치 추가)
+            // 라디오 버튼 선택값
             const roleEl = document.querySelector('input[name="workRole"]:checked');
             const role = roleEl ? roleEl.value : 'main'; 
 
             const totalHours = parseFloat(document.getElementById('wageTotalHours').value) || 0;
             const startHour = parseInt(document.getElementById('wageStartTime').value) || 8;
-            const dN = parseFloat(document.getElementById('wageDeepNight').value) || 0;
+            
+            // 수동 입력 값들
             const hHoliday = parseFloat(document.getElementById('wageHoliday').value) || 0;
             const hWeekend = parseFloat(document.getElementById('wageWeekend').value) || 0;
             const hRain = parseFloat(document.getElementById('wageRain').value) || 0;
             const hT = parseFloat(document.getElementById('wageHotTime').value) || 0;
             const taxRate = parseFloat(document.getElementById('wageTaxType').value) || 0;
 
+            // [루프] 시간별 계산: 주/야간, 심야(00-04), 중식(12-13)
             let dayCount = 0, nightCount = 0;
+            let deepNightCount = 0; // 심야 자동 카운트
+            let lunchExtCount = 0; // 중식 연장 자동 카운트
+
             for (let i = 0; i < totalHours; i++) {
                 let curr = (startHour + i) % 24;
-                if (curr >= 8 && curr < 18) dayCount++; else nightCount++;
+                
+                // 주간(08~18) / 야간(18~08) 판별
+                if (curr >= 8 && curr < 18) dayCount++; 
+                else nightCount++;
+
+                // 심야(00~04) 자동 체크 (모든 파트 적용)
+                if (curr >= 0 && curr < 4) deepNightCount++;
+
+                // 중식 연장(12~13) 자동 체크
+                if (curr === 12) lunchExtCount++;
             }
 
-            // 기능공/육상 선택 시 전체 시간에 수당 자동 적용
+            // [기능공] 주/야간 수당 계산 (기능공일 때만 적용)
             let sDayCount = 0, sNightCount = 0;
-            if (role === 'skilled' || role === 'onshore') {
+            if (role === 'skilled') {
                 sDayCount = dayCount;
                 sNightCount = nightCount;
             }
 
+            // 금액 산출
             const dPay = dayCount * DAY_RATE;
             const nPay = nightCount * NIGHT_RATE;
-            const dNPay = dN * EXTRA_ADD;
+            
+            const deepNightPay = deepNightCount * EXTRA_ADD; // 심야 할증 (자동)
+            const lunchPay = lunchExtCount * DAY_RATE;       // 중식 연장 (기본급 1시간 추가)
+            
             const holidayPay = hHoliday * EXTRA_ADD;
             const weekendPay = hWeekend * EXTRA_ADD;
             const rainPay = hRain * EXTRA_ADD;
             const hTPay = hT * HOT_ADD;
             
-            // 기능공 수당 (선택된 경우에만 계산)
+            // 기능공 수당 (기능공 선택 시에만)
             const sDayPay = sDayCount * SKILLED_DAY_ADD;
             const sNightPay = sNightCount * SKILLED_NIGHT_ADD;
             const totalSkilledPay = sDayPay + sNightPay;
 
-            const subTotal = dPay + nPay + dNPay + holidayPay + weekendPay + rainPay + hTPay + totalSkilledPay;
+            // 총합
+            const subTotal = dPay + nPay + deepNightPay + lunchPay + holidayPay + weekendPay + rainPay + hTPay + totalSkilledPay;
             const taxAmt = subTotal * taxRate;
             const finalTotal = subTotal - taxAmt;
 
+            // 내역서 출력
             const specBody = document.getElementById('wageSpecBody');
             specBody.innerHTML = `
                 <tr><td>☀️ 주간 기본 (${dayCount.toFixed(1)}H)</td><td>${dPay > 0 ? dPay.toLocaleString() + '원' : '0원'}</td></tr>
                 <tr><td>🌙 야간 기본 (${nightCount.toFixed(1)}H)</td><td>${nPay > 0 ? nPay.toLocaleString() + '원' : '0원'}</td></tr>
                 
-                ${role !== 'main' ? `
-                <tr style="background:rgba(0,0,0,0.03)"><td colspan="2" style="font-size:0.8rem; font-weight:bold;">[기능공/육상 수당 적용]</td></tr>
+                ${role === 'skilled' ? `
+                <tr style="background:rgba(0,0,0,0.03)"><td colspan="2" style="font-size:0.8rem; font-weight:bold;">[기능공 수당]</td></tr>
                 <tr><td>🔧 전체 합계</td><td>${Math.round(totalSkilledPay).toLocaleString()}원</td></tr>
                 <tr><td>&nbsp;&nbsp;ㄴ주간분 (${sDayCount.toFixed(1)}H)</td><td>${Math.round(sDayPay).toLocaleString()}원</td></tr>
                 <tr><td>&nbsp;&nbsp;ㄴ야간분 (${sNightCount.toFixed(1)}H)</td><td>${Math.round(sNightPay).toLocaleString()}원</td></tr>
                 ` : ''}
 
-                <tr style="background:rgba(0,0,0,0.03)"><td colspan="2" style="font-size:0.8rem; font-weight:bold;">[할증 수당]</td></tr>
-                <tr><td>🌴 공휴일 (${hHoliday}H)</td><td>${holidayPay.toLocaleString()}원</td></tr>
-                <tr><td>🏖️ 주말 (${hWeekend}H)</td><td>${weekendPay.toLocaleString()}원</td></tr>
-                <tr><td>☔ 우천 (${hRain}H)</td><td>${rainPay.toLocaleString()}원</td></tr>
-                <tr><td>🌑 심야 (${dN}H)</td><td>${dNPay.toLocaleString()}원</td></tr>
-                <tr><td>🔥 혹서기 (${hT}H)</td><td>${hTPay.toLocaleString()}원</td></tr>
+                <tr style="background:rgba(0,0,0,0.03)"><td colspan="2" style="font-size:0.8rem; font-weight:bold;">[자동 산출 항목]</td></tr>
+                <tr><td>🌑 심야 할증 (${deepNightCount}H)</td><td>${deepNightPay > 0 ? deepNightPay.toLocaleString() + '원' : '0원'}</td></tr>
+                <tr><td>🍱 중식 연장 (${lunchExtCount}H)</td><td>${lunchPay > 0 ? lunchPay.toLocaleString() + '원' : '0원'}</td></tr>
+
+                <tr style="background:rgba(0,0,0,0.03)"><td colspan="2" style="font-size:0.8rem; font-weight:bold;">[입력 할증]</td></tr>
+                <tr><td>🌴 공휴일 (${hHoliday}H)</td><td>${holidayPay > 0 ? holidayPay.toLocaleString() + '원' : '0원'}</td></tr>
+                <tr><td>🏖️ 주말 (${hWeekend}H)</td><td>${weekendPay > 0 ? weekendPay.toLocaleString() + '원' : '0원'}</td></tr>
+                <tr><td>☔ 우천 (${hRain}H)</td><td>${rainPay > 0 ? rainPay.toLocaleString() + '원' : '0원'}</td></tr>
+                <tr><td>🔥 혹서기 (${hT}H)</td><td>${hTPay > 0 ? hTPay.toLocaleString() + '원' : '0원'}</td></tr>
                 
                 <tr style="border-top:2px solid var(--border)"><td>💸 세금 공제 (${taxRate*100}%)</td><td>-${Math.floor(taxAmt).toLocaleString()}원</td></tr>
             `;
