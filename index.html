@@ -12,7 +12,7 @@
     
     <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6024353303588422" crossorigin="anonymous"></script>
 
-    <link rel="icon" type="image/png" sizes="32x32" href="icon.png?v=final_fix_v30">
+    <link rel="icon" type="image/png" sizes="32x32" href="icon.png?v=final_fix_v31">
     <link rel="stylesheet" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.8/dist/web/static/pretendard.css" />
 
     <style>
@@ -186,7 +186,8 @@
                             </table>
                         </div>
                     </div>
-                    <p style="font-size:0.7rem; color:var(--text-sub); margin:0 0 10px 0; text-align:center;">※ 현재 월에 맞춰 주/야간 시간이 자동 적용됩니다.</p>
+                    <p style="font-size:0.7rem; color:var(--text-sub); margin:0; text-align:center;">※ 현재 월에 맞춰 주/야간 시간이 자동 적용됩니다.</p>
+                    <p style="font-size:0.75rem; color:#ef4444; font-weight:bold; margin:2px 0 10px 0; text-align:center;">더블 오더로 겹치는 시간은 별도로 시간을 계산 하여야 합니다!!</p>
 
                     <div style="border-top:1px dashed var(--border); margin:10px 0; padding-top:10px;">
                         <p style="font-size:0.75rem; color:var(--primary); font-weight:800; margin-bottom:8px;">✅ 추가 수당 시간 입력</p>
@@ -219,8 +220,6 @@
                     </div>
                 </div>
             </div>
-
-
 
 
 
@@ -325,7 +324,7 @@
             const DAY_RATE = 10320, NIGHT_RATE = 15480, EXTRA_ADD = 5160, HOT_ADD = 3096;
             const SKILLED_DAY_ADD = 2557, SKILLED_NIGHT_ADD = 3836; 
 
-            // 현재 월에 따른 기준 시간 설정
+            // 현재 월에 따른 기준 시간 자동 설정 (하이라이트)
             const currentMonth = new Date().getMonth() + 1;
             let dayStartHour = 8, dayEndHour = 18;
             ['row-jan','row-apr','row-oct'].forEach(id => {
@@ -357,10 +356,12 @@
             const taxRate = parseFloat(document.getElementById('wageTaxType').value) || 0;
 
             let dayCount = 0, nightCount = 0;
-            let deepNightCount = 0, lunchExtCount = 0;
+            let deepNightCount = 0;
+            let lunchExtCount = 0;
 
             for (let i = 0; i < totalHours; i++) {
                 let curr = (startHour + i) % 24;
+                
                 if (curr >= dayStartHour && curr < dayEndHour) dayCount++; 
                 else nightCount++;
 
@@ -428,6 +429,7 @@
         function toggleDarkMode(){document.body.classList.toggle('dark-mode');}
         async function verifyAdmin(){const i=prompt("Admin PW:"); return i==="0346";}
         function scrollToTop(){window.scrollTo({top:0,behavior:'smooth'});}
+        
         async function addNotice(){if(await verifyAdmin()){db.collection("notices").add({title:document.getElementById('noticeTitle').value, content:document.getElementById('noticeContent').value, timestamp:firebase.firestore.FieldValue.serverTimestamp()}).then(()=>{document.getElementById('noticeTitle').value=''; document.getElementById('noticeContent').value=''; showToast("공지 등록됨");});}}
         async function delNotice(id,e){e.stopPropagation(); if(await verifyAdmin()) db.collection("notices").doc(id).delete();}
         function addPost(){const t=document.getElementById('inputTitle').value, p=document.getElementById('inputPw').value, c=document.getElementById('inputContent').value; if(t&&p&&c){db.collection("posts").add({title:t, password:p, content:c, timestamp:firebase.firestore.FieldValue.serverTimestamp()}).then(()=>{document.getElementById('inputTitle').value=''; document.getElementById('inputPw').value=''; document.getElementById('inputContent').value=''; toggleHidden('boardForm'); showToast("작성 완료");});}}
@@ -440,19 +442,18 @@
         function uploadFile(){const f=document.getElementById('fileInput').files[0], t=document.getElementById('fileTitle').value; if(f&&t) storage.ref(`archives/${Date.now()}`).put(f).then(s=>s.ref.getDownloadURL()).then(u=>db.collection("archives").add({title:t, url:u, timestamp:firebase.firestore.FieldValue.serverTimestamp()})).then(()=>{showToast("업로드 성공"); document.getElementById('fileTitle').value=''; document.getElementById('fileInput').value='';}).catch(err=>{alert("업로드 실패: "+err.message);});}
         async function delArchive(id,e){e.stopPropagation(); if(await verifyAdmin()) db.collection("archives").doc(id).delete();}
         
-        // PNC 버스 시간표 팝업
+        // PNC 버스 시간표 (모달)
         function openBusSchedule(){
             const m = document.getElementById('imageModal');
             const i = document.getElementById('modalImage');
-            i.src = 'pnc_bus.jpg'; // 사용자가 저장해야 할 이미지 파일명
+            i.src = 'pnc_bus.jpg';
             m.style.display = 'flex';
-            showToast("pnc_bus.jpg 파일이 필요합니다.");
         }
         function closeImageModal(){document.getElementById('imageModal').style.display='none';}
         function previewLogImage(input){if(input.files&&input.files[0]){const r=new FileReader(); r.onload=e=>{const img=document.getElementById('logImagePreview'); img.src=e.target.result; img.style.display='block';}; r.readAsDataURL(input.files[0]);}}
         function openPrivacy(){document.getElementById('privacyModal').style.display='flex';}
 
-        // [티커 기능: 3개 제한, 밀어내기, 관리자 고정, 삭제]
+        // [티커 기능: 3개 제한, 밀어내기, 관리자 고정, 삭제 기능]
         function loadBanner(){
             db.collection('settings').doc('banner').onSnapshot(d=>{
                 if(d.exists) {
@@ -476,7 +477,7 @@
                     if (doc.exists && doc.data().userMessages) {
                         currentMsgs = doc.data().userMessages;
                     }
-                    currentMsgs.unshift(m);
+                    currentMsgs.unshift(m); // 새 글 맨 앞
                     if(currentMsgs.length > 3) currentMsgs = currentMsgs.slice(0, 3);
                     return docRef.set({ userMessages: currentMsgs }, { merge: true });
                 }).then(() => showToast("등록되었습니다."));
