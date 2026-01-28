@@ -568,15 +568,60 @@ async function resetTicker(){
             })
         }
         
-        function loadBanner(){db.collection('settings').doc('banner').onSnapshot(d=>{if(d.exists){const data=d.data();let msg="";if(data.adminMessage)msg+=`🚨 ${data.adminMessage}   /   `;if(data.messages&&data.messages.length>0)msg+=data.messages.join("   /   ");if(!msg)msg="🚨 안전 제일! 오늘도 무사고!";document.getElementById('tickerText').innerText=msg}})}
-        function writeUserTicker(){const msg=prompt("안전문구:");if(msg){db.collection('settings').doc('banner').get().then(doc=>{let msgs=doc.exists?(doc.data().messages||[]):[];msgs.unshift(msg);if(msgs.length>10)msgs=msgs.slice(0,10);db.collection('settings').doc('banner').set({messages:msgs},{merge:true})})}}
-        async function setAdminTicker(){if(await verifyAdmin()){const msg=prompt("고정공지:");if(msg)db.collection('settings').doc('banner').set({adminMessage:msg},{merge:true})}else showToast("⛔ 관리자 전용")}
-        async function resetTicker(){if(await verifyAdmin()&&confirm("초기화?"))db.collection('settings').doc('banner').set({adminMessage:null,messages:[]})}
-        function openBusSchedule(){showImageModal("https://firebasestorage.googleapis.com/v0/b/my-app-d8527.firebasestorage.app/o/archives%2F1769013796862_BandPhoto_2026_01_22_01_39_56.jpg?alt=media&token=a2e8f727-250a-41aa-855c-7b1f341d9048")}
-        function showImageModal(s){document.getElementById("modalImage").src=s;document.getElementById("imageModal").style.display="flex"}
-        function closeImageModal(){document.getElementById("imageModal").style.display="none"}
+      // 573번 라인부터 580번 라인까지를 삭제하고 아래 코드를 넣으세요.
+        function loadBanner() {
+            db.collection('settings').doc('banner').onSnapshot(doc => {
+                if (doc.exists) {
+                    const data = doc.data();
+                    let msg = "";
+                    if (data.adminMessage) msg += `🚨 ${data.adminMessage}   /   `;
+                    if (data.messages && data.messages.length > 0) msg += data.messages.join("   /   ");
+                    if (!msg) msg = "🚨 안전 제일! 오늘도 무사고!";
+                    const tickerEl = document.getElementById('tickerText');
+                    if (tickerEl) tickerEl.innerText = msg;
+                }
+            });
+        }
+
+        function writeUserTicker() {
+            const msg = prompt("안전문구 입력 (누구나):");
+            if (msg && msg.trim() !== "") {
+                db.collection('settings').doc('banner').get().then(doc => {
+                    let msgs = doc.exists ? (doc.data().messages || []) : [];
+                    msgs.unshift(msg);
+                    if (msgs.length > 10) msgs = msgs.slice(0, 10);
+                    return db.collection('settings').doc('banner').set({ messages: msgs }, { merge: true });
+                }).then(() => {
+                    showToast("✅ 문구가 등록되었습니다.");
+                }).catch(err => {
+                    showToast("❌ 등록 실패: " + err.message);
+                });
+            }
+        }
+
+        async function setAdminTicker() {
+            if (await verifyAdmin()) {
+                const msg = prompt("고정 공지 입력 (관리자):");
+                if (msg) {
+                    db.collection('settings').doc('banner').set({ adminMessage: msg }, { merge: true })
+                    .then(() => showToast("📢 고정 공지가 설정되었습니다."));
+                }
+            } else {
+                showToast("⛔ 관리자 전용 기능입니다.");
+            }
+        }
+
+        async function resetTicker() {
+            if (await verifyAdmin()) {
+                if (confirm("알림글을 모두 초기화할까요?")) {
+                    db.collection('settings').doc('banner').set({ adminMessage: null, messages: [] })
+                    .then(() => showToast("🔄 초기화 완료"));
+                }
+            }
+        }
     </script>
 </body>
 </html>
+
 
 
