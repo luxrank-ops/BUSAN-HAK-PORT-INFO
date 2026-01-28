@@ -12,7 +12,7 @@
     
     <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6024353303588422" crossorigin="anonymous"></script>
 
-    <link rel="icon" type="image/png" sizes="32x32" href="icon.png?v=final_ticker_v27">
+    <link rel="icon" type="image/png" sizes="32x32" href="icon.png?v=final_fix_v28">
     <link rel="stylesheet" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.8/dist/web/static/pretendard.css" />
 
     <style>
@@ -49,9 +49,20 @@
         .action-btn { width: 100%; padding: 12px; border: none; border-radius: 10px; font-weight: 700; color: white; cursor: pointer; background: var(--primary); font-size: 0.95rem; }
         .bg-submit { background: var(--success); } .bg-calc { background: linear-gradient(135deg, #ef4444, #b91c1c); } .bg-cancel { background: var(--text-sub); }
         
-        .wage-row { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
-        .wage-row label { width: 90px; min-width: 90px; font-weight: 700; font-size: 0.9rem; white-space: nowrap; text-align: left; display: flex; align-items: center; }
-        .wage-row .input-field { flex: 1; width: auto; margin-bottom: 0; text-align: right; }
+        /* 임금 계산기 레이아웃 (좌우 분할) */
+        .calc-layout { display: flex; gap: 10px; margin-bottom: 10px; align-items: stretch; }
+        .calc-left { flex: 1; display: flex; flex-direction: column; justify-content: center; }
+        .calc-right { flex: 1; display: flex; flex-direction: column; justify-content: center; }
+
+        /* 월별 기준표 스타일 */
+        .ref-table { width: 100%; border-collapse: collapse; font-size: 0.75rem; text-align: center; background: rgba(0,0,0,0.02); border-radius: 8px; overflow: hidden; height: 100%; }
+        .ref-table th { background: var(--primary); color: white; padding: 4px; font-weight: normal; }
+        .ref-table td { border: 1px solid var(--border); padding: 4px; color: var(--text-main); vertical-align: middle; }
+        .ref-table .highlight { background: rgba(245, 158, 11, 0.15); font-weight: bold; } /* 현재 월 강조 */
+
+        .wage-row { display: flex; align-items: center; gap: 5px; margin-bottom: 8px; }
+        .wage-row label { width: 60px; min-width: 60px; font-weight: 700; font-size: 0.85rem; white-space: nowrap; text-align: left; }
+        .wage-row .input-field { flex: 1; width: auto; margin-bottom: 0; text-align: right; padding: 8px; font-size: 0.9rem; }
         
         .wage-result-box { background: linear-gradient(135deg, #ffffff, #f9fafb); border: 2px solid var(--primary); border-radius: 12px; padding: 15px; margin-top: 15px; }
         .spec-table { width: 100%; border-collapse: collapse; margin: 10px 0; font-size: 0.85rem; }
@@ -60,10 +71,10 @@
         .spec-table td:last-child { text-align: right; font-weight: 700; }
         .wage-total { font-size: 1.5rem; color: #c2410c; font-weight: 900; text-align: center; border-top: 2px solid var(--primary); padding-top: 10px; margin-top: 10px; }
 
-        .role-selector { display: flex; gap: 5px; margin-bottom: 15px; background: rgba(0,0,0,0.05); padding: 5px; border-radius: 10px; }
+        .role-selector { display: flex; gap: 3px; margin-bottom: 10px; background: rgba(0,0,0,0.05); padding: 3px; border-radius: 8px; }
         .role-selector input[type="radio"] { display: none; }
-        .role-selector label { flex: 1; text-align: center; padding: 10px 0; border-radius: 8px; font-weight: 700; cursor: pointer; font-size: 0.9rem; transition: all 0.2s; color: var(--text-sub); }
-        .role-selector input[type="radio"]:checked + label { background: var(--primary); color: white; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        .role-selector label { flex: 1; text-align: center; padding: 8px 0; border-radius: 6px; font-weight: 700; cursor: pointer; font-size: 0.85rem; transition: all 0.2s; color: var(--text-sub); }
+        .role-selector input[type="radio"]:checked + label { background: var(--primary); color: white; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
 
         .terminal-block { background: rgba(0,0,0,0.03); border-radius: 10px; margin-bottom: 8px; border: 1px solid var(--border); overflow: hidden; }
         .terminal-header { padding: 12px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; font-weight: 700; font-size: 0.95rem; }
@@ -123,7 +134,6 @@
         #toast { position: fixed; bottom: 85px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.85); color: white; padding: 10px 20px; border-radius: 20px; font-size: 0.9rem; z-index: 5000; opacity: 0; transition: 0.3s; pointer-events: none; }
         #toast.show { opacity: 1; }
         
-        /* 알림글 관리 리스트 스타일 */
         .ticker-manage-item { display: flex; justify-content: space-between; align-items: center; padding: 10px; border-bottom: 1px solid var(--border); }
         .ticker-manage-item span { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.9rem; }
     </style>
@@ -162,23 +172,36 @@
                         <label for="role-onshore">🚛 육상</label>
                     </div>
 
-                    <div class="wage-row"><label>시급(기본)</label><input type="number" id="wageHourly" class="input-field" value="10320" style="text-align:right;" readonly>원</div>
-                    
-                    <div style="background:rgba(239,68,68,0.05); padding:12px; border-radius:10px; margin-bottom:12px; border:1px solid rgba(239,68,68,0.2);">
-                        <div class="wage-row"><label>⏳ 총 근무</label><input type="number" id="wageTotalHours" class="input-field" placeholder="예: 24, 48" style="text-align:right; border:2px solid var(--danger);">H</div>
-                        <div class="wage-row"><label>🕒 시작 시각</label><input type="number" id="wageStartTime" class="input-field" value="8" placeholder="0~23" style="text-align:right;">시</div>
-                        <p style="font-size:0.7rem; color:var(--text-sub); margin:0;">※ 총 시간을 기준으로 주/야간/심야/중식을 자동 판별합니다.</p>
+                    <div class="calc-layout">
+                        <div class="calc-left">
+                            <div class="wage-row"><label>시급(기본)</label><input type="number" id="wageHourly" class="input-field" value="10320" style="text-align:right;" readonly></div>
+                            <div class="wage-row"><label>⏳ 총 근무</label><input type="number" id="wageTotalHours" class="input-field" placeholder="H" style="text-align:right;"></div>
+                            <div class="wage-row"><label>🕒 시작시각</label><input type="number" id="wageStartTime" class="input-field" value="8" placeholder="0~23" style="text-align:right;"></div>
+                        </div>
+                        <div class="calc-right">
+                            <table class="ref-table">
+                                <thead><tr><th>월(Month)</th><th>주간</th><th>야간</th></tr></thead>
+                                <tbody>
+                                    <tr id="row-jan"><td>1~3월</td><td>08~18</td><td>18~08</td></tr>
+                                    <tr id="row-apr"><td>4~9월</td><td>06~19</td><td>19~06</td></tr>
+                                    <tr id="row-oct"><td>10~12월</td><td>07~17</td><td>17~07</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
-                    
+                    <p style="font-size:0.7rem; color:var(--text-sub); margin:0 0 10px 0; text-align:center;">※ 현재 월에 맞춰 주/야간 시간이 자동 적용됩니다.</p>
+
                     <div style="border-top:1px dashed var(--border); margin:10px 0; padding-top:10px;">
-                        <p style="font-size:0.75rem; color:var(--primary); font-weight:800; margin-bottom:8px;">✅ 추가 수당 시간 직접 입력</p>
-                        <div class="wage-row"><label>🌴 공휴일</label><input type="number" id="wageHoliday" class="input-field" placeholder="H" style="text-align:right;">H</div>
-                        <div class="wage-row"><label>🏖️ 주말</label><input type="number" id="wageWeekend" class="input-field" placeholder="H" style="text-align:right;">H</div>
-                        <div class="wage-row"><label>☔ 우천</label><input type="number" id="wageRain" class="input-field" placeholder="H" style="text-align:right;">H</div>
-                        <div class="wage-row"><label>🔥 혹서기</label><input type="number" id="wageHotTime" class="input-field" placeholder="H" style="text-align:right;">H</div>
+                        <p style="font-size:0.75rem; color:var(--primary); font-weight:800; margin-bottom:8px;">✅ 추가 수당 시간 입력</p>
+                        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:5px;">
+                            <div class="wage-row"><label style="width:50px;">공휴일</label><input type="number" id="wageHoliday" class="input-field" placeholder="H"></div>
+                            <div class="wage-row"><label style="width:50px;">주말</label><input type="number" id="wageWeekend" class="input-field" placeholder="H"></div>
+                            <div class="wage-row"><label style="width:50px;">우천</label><input type="number" id="wageRain" class="input-field" placeholder="H"></div>
+                            <div class="wage-row"><label style="width:50px;">혹서기</label><input type="number" id="wageHotTime" class="input-field" placeholder="H"></div>
+                        </div>
                     </div>
 
-                    <select id="wageTaxType" class="input-field" style="margin-top:10px;">
+                    <select id="wageTaxType" class="input-field" style="margin-top:5px;">
                         <option value="0">공제 없음 (0%)</option>
                         <option value="0.033">프리랜서 (3.3%)</option>
                         <option value="0.094">4대보험 (9.4%)</option>
@@ -293,11 +316,27 @@
             const DAY_RATE = 10320, NIGHT_RATE = 15480, EXTRA_ADD = 5160, HOT_ADD = 3096;
             const SKILLED_DAY_ADD = 2557, SKILLED_NIGHT_ADD = 3836; 
 
+            // 현재 월에 따른 기준 시간 자동 설정 (하이라이트)
+            const currentMonth = new Date().getMonth() + 1;
+            let dayStartHour = 8, dayEndHour = 18;
+            ['row-jan','row-apr','row-oct'].forEach(id => document.getElementById(id).classList.remove('highlight'));
+
+            if (currentMonth >= 4 && currentMonth <= 9) {
+                dayStartHour = 6; dayEndHour = 19;
+                document.getElementById('row-apr').classList.add('highlight');
+            } else if (currentMonth >= 10 && currentMonth <= 12) {
+                dayStartHour = 7; dayEndHour = 17;
+                document.getElementById('row-oct').classList.add('highlight');
+            } else {
+                dayStartHour = 8; dayEndHour = 18;
+                document.getElementById('row-jan').classList.add('highlight');
+            }
+
             const roleEl = document.querySelector('input[name="workRole"]:checked');
             const role = roleEl ? roleEl.value : 'main'; 
 
             const totalHours = parseFloat(document.getElementById('wageTotalHours').value) || 0;
-            const startHour = parseInt(document.getElementById('wageStartTime').value) || 8;
+            const startHour = parseInt(document.getElementById('wageStartTime').value) || dayStartHour; // 미입력 시 해당월 기준시간 적용
             
             const hHoliday = parseFloat(document.getElementById('wageHoliday').value) || 0;
             const hWeekend = parseFloat(document.getElementById('wageWeekend').value) || 0;
@@ -311,7 +350,9 @@
 
             for (let i = 0; i < totalHours; i++) {
                 let curr = (startHour + i) % 24;
-                if (curr >= 8 && curr < 18) dayCount++; 
+                
+                // 월별 기준 시간 반영하여 주/야간 판별
+                if (curr >= dayStartHour && curr < dayEndHour) dayCount++; 
                 else nightCount++;
 
                 if (curr >= 0 && curr < 4) deepNightCount++;
@@ -359,6 +400,14 @@
             document.getElementById('wageResultBox').classList.remove('hidden');
         }
 
+        // 페이지 로드 시 월별 기준표 하이라이트
+        document.addEventListener('DOMContentLoaded', () => {
+            const currentMonth = new Date().getMonth() + 1;
+            if (currentMonth >= 4 && currentMonth <= 9) document.getElementById('row-apr').classList.add('highlight');
+            else if (currentMonth >= 10 && currentMonth <= 12) document.getElementById('row-oct').classList.add('highlight');
+            else document.getElementById('row-jan').classList.add('highlight');
+        });
+
         function resetWageForm(){document.querySelectorAll('#wage-card input').forEach(i=> { if(i.type !== 'radio') i.value=''; }); document.getElementById('wageStartTime').value=8; document.getElementById('wageResultBox').classList.add('hidden');}
         function loadAllData(){db.collection("notices").orderBy("timestamp","desc").onSnapshot(s=>{const l=document.getElementById("noticeList"); l.innerHTML=""; s.forEach(d=>{const x=d.data(); l.innerHTML+=`<li class="post-item" onclick="toggleContent('n-${d.id}')">📢 <strong>${x.title}</strong><div id="n-${d.id}" class="post-body-content">${x.content}<br><button class="mini-btn btn-del" onclick="delNotice('${d.id}',event)">삭제</button></div></li>`;})}); db.collection("posts").orderBy("timestamp","desc").onSnapshot(s=>{allPostsData=[]; s.forEach(d=>{allPostsData.push({...d.data(), id:d.id})}); renderBoardPage(1);}); db.collection("ships").orderBy("timestamp","desc").onSnapshot(s=>{allShipsData=[]; s.forEach(d=>{allShipsData.push({...d.data(), id:d.id})}); filteredShips=allShipsData; renderShipPage(1);}); db.collection("archives").orderBy("timestamp","desc").onSnapshot(s=>{const l=document.getElementById("fileList"); l.innerHTML=""; s.forEach(d=>{const x=d.data(); l.innerHTML+=`<li class="post-item"><a href="${x.url}" target="_blank">💾 ${x.title}</a><button class="mini-btn btn-del" onclick="delArchive('${d.id}',event)">×</button></li>`;})}); loadBanner();}
         function renderBoardPage(p){currentBoardPage=p; const l=document.getElementById("boardList"); l.innerHTML=""; const start=(p-1)*postsPerPage; const end=start+postsPerPage; allPostsData.slice(start, end).forEach(x=>{l.innerHTML+=`<li class="post-item"><div class="post-header-row" onclick="toggleContent('p-${x.id}')"><span class="post-title-text">${x.title}</span><span class="post-meta-info">${x.timestamp ? new Date(x.timestamp.toDate()).toLocaleDateString() : ''}</span><button class="mini-btn btn-del" onclick="deletePost('${x.id}','${x.password}',event)">삭제</button></div><div id="p-${x.id}" class="post-body-content">${x.content}<div id="cmt-list-${x.id}" class="comment-section"></div><div class="comment-form"><input id="cmt-name-${x.id}" class="comment-input-sm" placeholder="닉네임"><input id="cmt-pw-${x.id}" class="comment-input-sm" type="password" placeholder="비번"><input id="cmt-txt-${x.id}" class="comment-input-lg" placeholder="댓글 내용..."><button class="comment-submit" onclick="addComment('${x.id}')">등록</button></div></div></li>`; loadComments(x.id);}); renderPagination("pagination", Math.ceil(allPostsData.length/postsPerPage), p, renderBoardPage);}
@@ -382,22 +431,8 @@
         async function deleteShip(id,e){e.stopPropagation(); if(await verifyAdmin()) db.collection("ships").doc(id).delete();}
         function uploadFile(){const f=document.getElementById('fileInput').files[0], t=document.getElementById('fileTitle').value; if(f&&t) storage.ref(`archives/${Date.now()}`).put(f).then(s=>s.ref.getDownloadURL()).then(u=>db.collection("archives").add({title:t, url:u, timestamp:firebase.firestore.FieldValue.serverTimestamp()}));}
         async function delArchive(id,e){e.stopPropagation(); if(await verifyAdmin()) db.collection("archives").doc(id).delete();}
-        function renderPagination(id,t,c,f){const el=document.getElementById(id); el.innerHTML=""; for(let i=1;i<=t;i++){const s=document.createElement("span"); s.className=`page-num ${i===c?'active':''}`; s.innerText=i; s.onclick=()=>f(i); el.appendChild(s);}}
-        function checkAdminAndOpenLog(){verifyAdmin().then(r=>{if(r){toggleDashItem('log-card'); renderCalendar(currentDate.getFullYear(), currentDate.getMonth());}else{showToast("⛔ 관리자 권한 필요");}});}
-        function renderCalendar(y, m){const calGrid=document.getElementById('calendarGrid'); calGrid.innerHTML=""; document.getElementById('calMonthYear').innerText=`${y}년 ${m+1}월`; const firstDay=new Date(y,m,1).getDay(); const lastDate=new Date(y,m+1,0).getDate(); for(let i=0;i<firstDay;i++)calGrid.innerHTML+=`<div></div>`; db.collection('work_logs').where('date','>=',`${y}-${String(m+1).padStart(2,'0')}-01`).where('date','<=',`${y}-${String(m+1).padStart(2,'0')}-31`).get().then(snapshot=>{adminWorkLogs={}; snapshot.forEach(doc=>adminWorkLogs[doc.id]=doc.data()); for(let d=1;d<=lastDate;d++){const dateStr=`${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`; const hasData=adminWorkLogs[dateStr]?'has-data':''; calGrid.innerHTML+=`<div class="cal-day tap-effect ${hasData}" onclick="clickDate('${dateStr}')">${d}<div class="cal-dot"></div></div>`;} calculateMonthlyTotal();});}
-        function changeMonth(step){currentDate.setMonth(currentDate.getMonth()+step); renderCalendar(currentDate.getFullYear(), currentDate.getMonth());}
-        async function clickDate(dateStr){document.getElementById('selectedDateText').innerText=dateStr; document.getElementById('dailyLogForm').classList.remove('hidden'); document.getElementById('dailyLogForm').setAttribute('data-date',dateStr); if(adminWorkLogs[dateStr]){const data=adminWorkLogs[dateStr]; document.getElementById('logDayHours').value=data.dayHours||''; document.getElementById('logNightHours').value=data.nightHours||''; document.getElementById('logMemo').value=data.memo||''; if(data.imageUrl){document.getElementById('logImagePreview').src=data.imageUrl; document.getElementById('logImagePreview').style.display='block';}else{document.getElementById('logImagePreview').style.display='none';}}else{resetLogInputs();}}
-        function saveWorkLog(){const dateStr=document.getElementById('dailyLogForm').getAttribute('data-date'); if(!dateStr)return; const dh=parseFloat(document.getElementById('logDayHours').value)||0; const nh=parseFloat(document.getElementById('logNightHours').value)||0; const memo=document.getElementById('logMemo').value; const file=document.getElementById('logImageInput').files[0]; const totalPay=(dh*10320)+(nh*15480); const save=(url)=>{db.collection('work_logs').doc(dateStr).set({date:dateStr,dayHours:dh,nightHours:nh,memo:memo,totalPay:totalPay,imageUrl:url},{merge:true}).then(()=>{showToast("저장 완료"); adminWorkLogs[dateStr]={dayHours:dh,nightHours:nh,memo:memo,totalPay:totalPay,imageUrl:url}; renderCalendar(currentDate.getFullYear(), currentDate.getMonth());});}; if(file){storage.ref(`logs/${dateStr}`).put(file).then(s=>s.ref.getDownloadURL()).then(u=>save(u));}else{save(adminWorkLogs[dateStr]?adminWorkLogs[dateStr].imageUrl:null);}}
-        function deleteWorkLog(){const dateStr=document.getElementById('dailyLogForm').getAttribute('data-date'); if(confirm("삭제?")){db.collection('work_logs').doc(dateStr).delete().then(()=>{showToast("삭제됨"); delete adminWorkLogs[dateStr]; resetLogInputs(); renderCalendar(currentDate.getFullYear(), currentDate.getMonth());});}}
-        function calculateMonthlyTotal(){let total=0; Object.values(adminWorkLogs).forEach(log=>total+=(log.totalPay||0)); document.getElementById('monthlyTotalDisplay').innerText=`이번달 총액: ${total.toLocaleString()}원`;}
-        function resetLogInputs(){document.getElementById('logDayHours').value=''; document.getElementById('logNightHours').value=''; document.getElementById('logMemo').value=''; document.getElementById('logImageInput').value=''; document.getElementById('logImagePreview').style.display='none';}
-        function filterShips(){const q=document.getElementById('shipSearch').value.toUpperCase(); filteredShips=allShipsData.filter(s=>s.shipName.toUpperCase().includes(q)); renderShipPage(1);}
-        function openBusSchedule(){showToast("이미지를 불러오는 중입니다...");}
-        function previewLogImage(input){if(input.files&&input.files[0]){const r=new FileReader(); r.onload=e=>{const img=document.getElementById('logImagePreview'); img.src=e.target.result; img.style.display='block';}; r.readAsDataURL(input.files[0]);}}
-        function closeImageModal(){document.getElementById('imageModal').style.display='none';}
-        function openPrivacy(){document.getElementById('privacyModal').style.display='flex';}
-
-        // [알림글 Ticker 개선 - 3개 제한, 밀어내기, 관리자 고정]
+        
+        // [티커 기능: 3개 제한, 밀어내기, 관리자 고정, 삭제 기능]
         function loadBanner(){
             db.collection('settings').doc('banner').onSnapshot(d=>{
                 if(d.exists) {
@@ -406,9 +441,9 @@
                     let userMsgs = data.userMessages || [];
                     
                     let displayArr = [];
-                    if (adminMsg) displayArr.push(adminMsg); // 0순위 관리자
+                    if (adminMsg) displayArr.push(adminMsg); // 관리자 0순위
                     
-                    // 사용자 글 순서대로 1, 2, 3 붙여서 표시
+                    // 사용자 글 1, 2, 3 붙여서 표시
                     userMsgs.forEach((msg, idx) => {
                         displayArr.push(`${idx + 1}. ${msg}`);
                     });
@@ -426,15 +461,8 @@
                 db.runTransaction(async (transaction) => {
                     const doc = await transaction.get(docRef);
                     let currentMsgs = doc.exists ? (doc.data().userMessages || []) : [];
-                    
-                    // 새 글을 맨 앞에 추가 (밀어내기)
-                    currentMsgs.unshift(m);
-                    
-                    // 3개 초과 시 뒤에꺼 삭제
-                    if(currentMsgs.length > 3) {
-                        currentMsgs = currentMsgs.slice(0, 3);
-                    }
-                    
+                    currentMsgs.unshift(m); // 새 글 맨 앞
+                    if(currentMsgs.length > 3) currentMsgs = currentMsgs.slice(0, 3); // 3개 유지
                     transaction.set(docRef, { userMessages: currentMsgs }, { merge: true });
                 }).then(() => showToast("문구가 등록되었습니다."));
             }
@@ -454,19 +482,16 @@
                         const data = doc.data();
                         const listEl = document.getElementById('tickerListContainer');
                         listEl.innerHTML = "";
-
-                        // 관리자 공지
+                        // 관리자 공지 삭제
                         if(data.adminMessage) {
                             listEl.innerHTML += `<div class="ticker-manage-item"><span style="color:var(--danger); font-weight:bold;">[관리자] ${data.adminMessage}</span> <button class="mini-btn btn-del" onclick="deleteTickerMsg('admin', 0)">삭제</button></div>`;
                         }
-
-                        // 사용자 메시지
+                        // 사용자 메시지 삭제
                         if(data.userMessages && data.userMessages.length > 0) {
                             data.userMessages.forEach((msg, idx) => {
                                 listEl.innerHTML += `<div class="ticker-manage-item"><span>${idx+1}. ${msg}</span> <button class="mini-btn btn-del" onclick="deleteTickerMsg('user', ${idx})">삭제</button></div>`;
                             });
                         }
-                        
                         document.getElementById('tickerManageModal').style.display = 'flex';
                     }
                 });
@@ -475,14 +500,13 @@
 
         async function deleteTickerMsg(type, index) {
             const docRef = db.collection('settings').doc('banner');
-            
             if(type === 'admin') {
                 await docRef.update({ adminMessage: firebase.firestore.FieldValue.delete() });
             } else {
                 db.runTransaction(async (t) => {
                     const doc = await t.get(docRef);
                     let msgs = doc.data().userMessages || [];
-                    msgs.splice(index, 1); // 해당 인덱스 삭제
+                    msgs.splice(index, 1);
                     t.update(docRef, { userMessages: msgs });
                 });
             }
@@ -495,6 +519,21 @@
                 db.collection('settings').doc('banner').set({adminMessage:null, userMessages:[]});
             }
         }
+
+        function renderPagination(id,t,c,f){const el=document.getElementById(id); el.innerHTML=""; for(let i=1;i<=t;i++){const s=document.createElement("span"); s.className=`page-num ${i===c?'active':''}`; s.innerText=i; s.onclick=()=>f(i); el.appendChild(s);}}
+        function checkAdminAndOpenLog(){verifyAdmin().then(r=>{if(r){toggleDashItem('log-card'); renderCalendar(currentDate.getFullYear(), currentDate.getMonth());}else{showToast("⛔ 관리자 권한 필요");}});}
+        function renderCalendar(y, m){const calGrid=document.getElementById('calendarGrid'); calGrid.innerHTML=""; document.getElementById('calMonthYear').innerText=`${y}년 ${m+1}월`; const firstDay=new Date(y,m,1).getDay(); const lastDate=new Date(y,m+1,0).getDate(); for(let i=0;i<firstDay;i++)calGrid.innerHTML+=`<div></div>`; db.collection('work_logs').where('date','>=',`${y}-${String(m+1).padStart(2,'0')}-01`).where('date','<=',`${y}-${String(m+1).padStart(2,'0')}-31`).get().then(snapshot=>{adminWorkLogs={}; snapshot.forEach(doc=>adminWorkLogs[doc.id]=doc.data()); for(let d=1;d<=lastDate;d++){const dateStr=`${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`; const hasData=adminWorkLogs[dateStr]?'has-data':''; calGrid.innerHTML+=`<div class="cal-day tap-effect ${hasData}" onclick="clickDate('${dateStr}')">${d}<div class="cal-dot"></div></div>`;} calculateMonthlyTotal();});}
+        function changeMonth(step){currentDate.setMonth(currentDate.getMonth()+step); renderCalendar(currentDate.getFullYear(), currentDate.getMonth());}
+        async function clickDate(dateStr){document.getElementById('selectedDateText').innerText=dateStr; document.getElementById('dailyLogForm').classList.remove('hidden'); document.getElementById('dailyLogForm').setAttribute('data-date',dateStr); if(adminWorkLogs[dateStr]){const data=adminWorkLogs[dateStr]; document.getElementById('logDayHours').value=data.dayHours||''; document.getElementById('logNightHours').value=data.nightHours||''; document.getElementById('logMemo').value=data.memo||''; if(data.imageUrl){document.getElementById('logImagePreview').src=data.imageUrl; document.getElementById('logImagePreview').style.display='block';}else{document.getElementById('logImagePreview').style.display='none';}}else{resetLogInputs();}}
+        function saveWorkLog(){const dateStr=document.getElementById('dailyLogForm').getAttribute('data-date'); if(!dateStr)return; const dh=parseFloat(document.getElementById('logDayHours').value)||0; const nh=parseFloat(document.getElementById('logNightHours').value)||0; const memo=document.getElementById('logMemo').value; const file=document.getElementById('logImageInput').files[0]; const totalPay=(dh*10320)+(nh*15480); const save=(url)=>{db.collection('work_logs').doc(dateStr).set({date:dateStr,dayHours:dh,nightHours:nh,memo:memo,totalPay:totalPay,imageUrl:url},{merge:true}).then(()=>{showToast("저장 완료"); adminWorkLogs[dateStr]={dayHours:dh,nightHours:nh,memo:memo,totalPay:totalPay,imageUrl:url}; renderCalendar(currentDate.getFullYear(), currentDate.getMonth());});}; if(file){storage.ref(`logs/${dateStr}`).put(file).then(s=>s.ref.getDownloadURL()).then(u=>save(u));}else{save(adminWorkLogs[dateStr]?adminWorkLogs[dateStr].imageUrl:null);}}
+        function deleteWorkLog(){const dateStr=document.getElementById('dailyLogForm').getAttribute('data-date'); if(confirm("삭제?")){db.collection('work_logs').doc(dateStr).delete().then(()=>{showToast("삭제됨"); delete adminWorkLogs[dateStr]; resetLogInputs(); renderCalendar(currentDate.getFullYear(), currentDate.getMonth());});}}
+        function calculateMonthlyTotal(){let total=0; Object.values(adminWorkLogs).forEach(log=>total+=(log.totalPay||0)); document.getElementById('monthlyTotalDisplay').innerText=`이번달 총액: ${total.toLocaleString()}원`;}
+        function resetLogInputs(){document.getElementById('logDayHours').value=''; document.getElementById('logNightHours').value=''; document.getElementById('logMemo').value=''; document.getElementById('logImageInput').value=''; document.getElementById('logImagePreview').style.display='none';}
+        function filterShips(){const q=document.getElementById('shipSearch').value.toUpperCase(); filteredShips=allShipsData.filter(s=>s.shipName.toUpperCase().includes(q)); renderShipPage(1);}
+        function openBusSchedule(){showToast("이미지를 불러오는 중입니다...");}
+        function previewLogImage(input){if(input.files&&input.files[0]){const r=new FileReader(); r.onload=e=>{const img=document.getElementById('logImagePreview'); img.src=e.target.result; img.style.display='block';}; r.readAsDataURL(input.files[0]);}}
+        function closeImageModal(){document.getElementById('imageModal').style.display='none';}
+        function openPrivacy(){document.getElementById('privacyModal').style.display='flex';}
 
         window.onload=loadAllData;
     </script>
