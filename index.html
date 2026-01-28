@@ -220,6 +220,10 @@
                 </div>
             </div>
 
+
+
+
+
             <div id="log-card" class="dash-card" style="border:1px solid var(--primary);">
                 <div class="dash-header tap-effect" onclick="checkAdminAndOpenLog('log-card')">
                     <span class="dash-title" style="color:var(--primary);">📅 스마트 근무일지(짝지)</span><span class="toggle-icon">▼</span>
@@ -345,7 +349,8 @@
             const taxRate = parseFloat(document.getElementById('wageTaxType').value) || 0;
 
             let dayCount = 0, nightCount = 0;
-            let deepNightCount = 0, lunchExtCount = 0;
+            let deepNightCount = 0;
+            let lunchExtCount = 0;
 
             for (let i = 0; i < totalHours; i++) {
                 let curr = (startHour + i) % 24;
@@ -429,16 +434,19 @@
         function uploadFile(){const f=document.getElementById('fileInput').files[0], t=document.getElementById('fileTitle').value; if(f&&t) storage.ref(`archives/${Date.now()}`).put(f).then(s=>s.ref.getDownloadURL()).then(u=>db.collection("archives").add({title:t, url:u, timestamp:firebase.firestore.FieldValue.serverTimestamp()})).then(()=>{showToast("업로드 성공"); document.getElementById('fileTitle').value=''; document.getElementById('fileInput').value='';}).catch(err=>{alert("업로드 실패: "+err.message);});}
         async function delArchive(id,e){e.stopPropagation(); if(await verifyAdmin()) db.collection("archives").doc(id).delete();}
         
-        // [알림글 Ticker: 3개 제한, 밀어내기, 관리자 고정, 삭제 기능]
+        // [알림글 Ticker: 3개 제한, 밀어내기, 관리자 고정, 삭제]
         function loadBanner(){
             db.collection('settings').doc('banner').onSnapshot(d=>{
                 if(d.exists) {
                     const data = d.data();
                     let adminMsg = data.adminMessage ? `📢 ${data.adminMessage}` : "";
                     let userMsgs = data.userMessages || [];
+                    
                     let displayArr = [];
                     if (adminMsg) displayArr.push(adminMsg);
+                    
                     userMsgs.forEach((msg, idx) => { displayArr.push(`${idx + 1}. ${msg}`); });
+                    
                     const finalMsg = displayArr.length > 0 ? displayArr.join("   ///   ") : "🚨 안전 제일! 오늘도 무사고!";
                     document.getElementById('tickerText').innerText = finalMsg;
                 }
@@ -448,12 +456,17 @@
             const m = prompt("안전 문구 등록 (최대 3개):"); 
             if(m){
                 const docRef = db.collection('settings').doc('banner');
-                db.runTransaction(async (transaction) => {
-                    const doc = await transaction.get(docRef);
-                    let currentMsgs = doc.exists ? (doc.data().userMessages || []) : [];
-                    currentMsgs.unshift(m); 
+                docRef.get().then((doc) => {
+                    let currentMsgs = [];
+                    if (doc.exists && doc.data().userMessages) {
+                        currentMsgs = doc.data().userMessages;
+                    }
+                    // 1. 새 글 맨 앞 추가
+                    currentMsgs.unshift(m);
+                    // 2. 3개 초과 시 뒤에꺼 삭제
                     if(currentMsgs.length > 3) currentMsgs = currentMsgs.slice(0, 3);
-                    transaction.set(docRef, { userMessages: currentMsgs }, { merge: true });
+                    // 3. 저장
+                    return docRef.set({ userMessages: currentMsgs }, { merge: true });
                 }).then(() => showToast("등록되었습니다."));
             }
         }
@@ -488,12 +501,10 @@
             if(type === 'admin') {
                 await docRef.update({ adminMessage: firebase.firestore.FieldValue.delete() });
             } else {
-                db.runTransaction(async (t) => {
-                    const doc = await t.get(docRef);
-                    let msgs = doc.data().userMessages || [];
-                    msgs.splice(index, 1);
-                    t.update(docRef, { userMessages: msgs });
-                });
+                const doc = await docRef.get();
+                let msgs = doc.data().userMessages || [];
+                msgs.splice(index, 1);
+                await docRef.update({ userMessages: msgs });
             }
             showToast("삭제되었습니다.");
             openTickerManager();
