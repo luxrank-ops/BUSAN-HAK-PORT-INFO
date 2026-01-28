@@ -12,7 +12,7 @@
     
     <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6024353303588422" crossorigin="anonymous"></script>
 
-    <link rel="icon" type="image/png" sizes="32x32" href="icon.png?v=final_full_v33">
+    <link rel="icon" type="image/png" sizes="32x32" href="icon.png?v=final_fix_v34">
     <link rel="stylesheet" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.8/dist/web/static/pretendard.css" />
 
     <style>
@@ -238,7 +238,6 @@
 
 
 
-
             <div id="log-card" class="dash-card" style="border:1px solid var(--primary);">
                 <div class="dash-header tap-effect" onclick="openLogImmediately('log-card')">
                     <span class="dash-title" style="color:var(--primary);">📅 스마트 근무일지(짝지)</span><span class="toggle-icon">▼</span>
@@ -313,7 +312,14 @@
 
     <nav class="bottom-nav"><div class="nav-item active tap-effect" onclick="scrollToTop()">🏠 홈</div><div class="nav-item tap-effect" onclick="toggleDashItem('board-card')">💬 톡톡</div><div class="nav-item tap-effect" onclick="toggleDashItem('ship-card')">🚢 선박</div><div class="nav-item tap-effect" onclick="toggleDashItem('file-card')">📂 자료</div></nav>
     <div id="toast">알림</div>
-    <div id="imageModal" class="modal-overlay" onclick="closeImageModal()"><div class="modal-content" onclick="event.stopPropagation()"><img id="modalImage" class="modal-img"><button class="action-btn bg-cancel" onclick="closeImageModal()">닫기</button></div></div>
+    
+    <div id="imageModal" class="modal-overlay" onclick="closeImageModal()">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <img id="modalImage" class="modal-img">
+            <button class="action-btn bg-cancel" onclick="closeImageModal()">닫기</button>
+        </div>
+    </div>
+    
     <div id="privacyModal" class="modal-overlay" onclick="document.getElementById('privacyModal').style.display='none'"><div class="modal-content"><h3>🛡️ 개인정보처리방침</h3><p>본 사이트는 구글 애드센스 광고를 게재하며 쿠키를 사용합니다. 근무 기록 및 게시물 데이터는 Firebase 서버에 안전하게 보관됩니다.</p><button class="action-btn" onclick="document.getElementById('privacyModal').style.display='none'">닫기</button></div></div>
     
     <div id="tickerManageModal" class="modal-overlay" onclick="document.getElementById('tickerManageModal').style.display='none'">
@@ -336,6 +342,7 @@
             const DAY_RATE = 10320, NIGHT_RATE = 15480, EXTRA_ADD = 5160, HOT_ADD = 3096;
             const SKILLED_DAY_ADD = 2557, SKILLED_NIGHT_ADD = 3836; 
 
+            // 현재 월에 따른 기준 시간 설정 (하이라이트)
             const currentMonth = new Date().getMonth() + 1;
             let dayStartHour = 8, dayEndHour = 18;
             ['row-jan','row-apr','row-oct'].forEach(id => {
@@ -434,9 +441,6 @@
             document.getElementById('wageResultBox').classList.add('hidden');
         }
 
-        // ==========================================
-        // 2. 스마트 근무일지 (복구 및 기능 활성화)
-        // ==========================================
         function openLogImmediately(id){
             const c=document.getElementById(id); 
             const e=c.classList.contains('expanded'); 
@@ -558,21 +562,46 @@
             document.getElementById('logImagePreview').style.display='none';
         }
 
-        function previewLogImage(input){
-            if(input.files && input.files[0]){
-                const r = new FileReader(); 
-                r.onload = e => {
-                    const img = document.getElementById('logImagePreview'); 
-                    img.src = e.target.result; 
-                    img.style.display = 'block';
-                }; 
-                r.readAsDataURL(input.files[0]);
-            }
+        function loadAllData(){
+            loadBanner();
+            db.collection("notices").orderBy("timestamp","desc").onSnapshot(s=>{const l=document.getElementById("noticeList"); l.innerHTML=""; s.forEach(d=>{const x=d.data(); l.innerHTML+=`<li class="post-item" onclick="toggleContent('n-${d.id}')">📢 <strong>${x.title}</strong><div id="n-${d.id}" class="post-body-content">${x.content}<br><button class="mini-btn btn-del" onclick="delNotice('${d.id}',event)">삭제</button></div></li>`;})}); 
+            db.collection("posts").orderBy("timestamp","desc").onSnapshot(s=>{allPostsData=[]; s.forEach(d=>{allPostsData.push({...d.data(), id:d.id})}); renderBoardPage(1);}); 
+            db.collection("ships").orderBy("timestamp","desc").onSnapshot(s=>{allShipsData=[]; s.forEach(d=>{allShipsData.push({...d.data(), id:d.id})}); filteredShips=allShipsData; renderShipPage(1);}); 
+            db.collection("archives").orderBy("timestamp","desc").onSnapshot(s=>{const l=document.getElementById("fileList"); l.innerHTML=""; s.forEach(d=>{const x=d.data(); l.innerHTML+=`<li class="post-item"><a href="${x.url}" target="_blank">💾 ${x.title}</a><button class="mini-btn btn-del" onclick="delArchive('${d.id}',event)">×</button></li>`;})});
         }
+        function renderBoardPage(p){currentBoardPage=p; const l=document.getElementById("boardList"); l.innerHTML=""; const start=(p-1)*postsPerPage; const end=start+postsPerPage; allPostsData.slice(start, end).forEach(x=>{l.innerHTML+=`<li class="post-item"><div class="post-header-row" onclick="toggleContent('p-${x.id}')"><span class="post-title-text">${x.title}</span><span class="post-meta-info">${x.timestamp ? new Date(x.timestamp.toDate()).toLocaleDateString() : ''}</span><button class="mini-btn btn-del" onclick="deletePost('${x.id}','${x.password}',event)">삭제</button></div><div id="p-${x.id}" class="post-body-content">${x.content}<div id="cmt-list-${x.id}" class="comment-section"></div><div class="comment-form"><input id="cmt-name-${x.id}" class="comment-input-sm" placeholder="닉네임"><input id="cmt-pw-${x.id}" class="comment-input-sm" type="password" placeholder="비번"><input id="cmt-txt-${x.id}" class="comment-input-lg" placeholder="댓글 내용..."><button class="comment-submit" onclick="addComment('${x.id}')">등록</button></div></div></li>`; loadComments(x.id);}); renderPagination("pagination", Math.ceil(allPostsData.length/postsPerPage), p, renderBoardPage);}
+        function loadComments(pid){if(commentUnsubscribes[pid]) commentUnsubscribes[pid](); commentUnsubscribes[pid]=db.collection('posts').doc(pid).collection('comments').orderBy('timestamp','asc').onSnapshot(s=>{const el=document.getElementById(`cmt-list-${pid}`); if(!el) return; el.innerHTML=""; s.forEach(d=>{const c=d.data(); el.innerHTML+=`<div class="comment-item"><span><span class="comment-meta">${c.name}:</span><span class="comment-text">${c.text}</span></span><button class="comment-del-btn" onclick="deleteComment('${pid}','${d.id}','${c.password}')">×</button></div>`;});});}
+        function showToast(m){const t=document.getElementById("toast"); t.innerText=m; t.classList.add("show"); setTimeout(()=>t.classList.remove("show"),3000);}
+        function toggleDashItem(id){const c=document.getElementById(id); const e=c.classList.contains('expanded'); document.querySelectorAll('.dash-card').forEach(x=>{x.classList.remove('expanded'); x.querySelector('.dash-content').style.display='none'}); if(!e){c.classList.add('expanded'); c.querySelector('.dash-content').style.display='block';}}
+        function toggleSection(id,el){document.getElementById(id).classList.toggle('collapsed');}
+        function toggleContent(id){const e=document.getElementById(id); e.style.display=(e.style.display==='block'?'none':'block');}
+        function toggleHidden(id){document.getElementById(id).classList.toggle('hidden');}
+        function toggleDarkMode(){document.body.classList.toggle('dark-mode');}
+        async function verifyAdmin(){const i=prompt("Admin PW:"); return i==="0346";}
+        function scrollToTop(){window.scrollTo({top:0,behavior:'smooth'});}
+        async function addNotice(){if(await verifyAdmin()){db.collection("notices").add({title:document.getElementById('noticeTitle').value, content:document.getElementById('noticeContent').value, timestamp:firebase.firestore.FieldValue.serverTimestamp()}).then(()=>{document.getElementById('noticeTitle').value=''; document.getElementById('noticeContent').value=''; showToast("공지 등록됨");});}}
+        async function delNotice(id,e){e.stopPropagation(); if(await verifyAdmin()) db.collection("notices").doc(id).delete();}
+        function addPost(){const t=document.getElementById('inputTitle').value, p=document.getElementById('inputPw').value, c=document.getElementById('inputContent').value; if(t&&p&&c){db.collection("posts").add({title:t, password:p, content:c, timestamp:firebase.firestore.FieldValue.serverTimestamp()}).then(()=>{document.getElementById('inputTitle').value=''; document.getElementById('inputPw').value=''; document.getElementById('inputContent').value=''; toggleHidden('boardForm'); showToast("작성 완료");});}}
+        async function deletePost(id,pw,e){e.stopPropagation(); if(prompt("비번")===pw||await verifyAdmin()) db.collection("posts").doc(id).delete();}
+        function addComment(pid){const n=document.getElementById(`cmt-name-${pid}`).value, p=document.getElementById(`cmt-pw-${pid}`).value, t=document.getElementById(`cmt-txt-${pid}`).value; if(n&&p&&t){db.collection('posts').doc(pid).collection('comments').add({name:n, password:p, text:t, timestamp:firebase.firestore.FieldValue.serverTimestamp()}).then(()=>{document.getElementById(`cmt-txt-${pid}`).value=""; showToast("댓글 등록됨");});}}
+        async function deleteComment(pid,cid,pw){if(prompt("비번")===pw||await verifyAdmin()) db.collection('posts').doc(pid).collection('comments').doc(cid).delete();}
+        function addShipInfo(){const n=document.getElementById('shipName').value, c=document.getElementById('shipOnboard').value, f=document.getElementById('shipFileInput').files[0]; const save=(u)=>{db.collection("ships").add({shipName:n, onboardFeat:c, imageUrl:u, timestamp:firebase.firestore.FieldValue.serverTimestamp()}).then(()=>{document.getElementById('shipName').value=''; document.getElementById('shipOnboard').value=''; document.getElementById('shipFileInput').value=''; toggleHidden('shipForm'); showToast("선박 등록됨");});}; if(f) storage.ref(`ships/${Date.now()}`).put(f).then(s=>s.ref.getDownloadURL()).then(u=>save(u)); else save(null);}
+        function renderShipPage(p){const l=document.getElementById("shipList"); l.innerHTML=""; filteredShips.slice((p-1)*postsPerPage, p*postsPerPage).forEach(x=>{l.innerHTML+=`<li class="post-item"><div onclick="toggleContent('s-${x.id}')">🚢 ${x.shipName}</div><div id="s-${x.id}" class="post-body-content">${x.onboardFeat}<br><button class="mini-btn btn-del" onclick="deleteShip('${x.id}',event)">삭제</button></div></li>`;});}
+        async function deleteShip(id,e){e.stopPropagation(); if(await verifyAdmin()) db.collection("ships").doc(id).delete();}
+        function uploadFile(){const f=document.getElementById('fileInput').files[0], t=document.getElementById('fileTitle').value; if(f&&t) storage.ref(`archives/${Date.now()}`).put(f).then(s=>s.ref.getDownloadURL()).then(u=>db.collection("archives").add({title:t, url:u, timestamp:firebase.firestore.FieldValue.serverTimestamp()})).then(()=>{showToast("업로드 성공"); document.getElementById('fileTitle').value=''; document.getElementById('fileInput').value='';}).catch(err=>{alert("업로드 실패: "+err.message);});}
+        async function delArchive(id,e){e.stopPropagation(); if(await verifyAdmin()) db.collection("archives").doc(id).delete();}
+        
+        // PNC 버스 시간표 (모달)
+        function openBusSchedule(){
+            const m = document.getElementById('imageModal');
+            const i = document.getElementById('modalImage');
+            i.src = 'http://pasc.dothome.co.kr/pnitbus.jpg';
+            m.style.display = 'flex';
+        }
+        function closeImageModal(){document.getElementById('imageModal').style.display='none';}
+        function previewLogImage(input){if(input.files&&input.files[0]){const r=new FileReader(); r.onload=e=>{const img=document.getElementById('logImagePreview'); img.src=e.target.result; img.style.display='block';}; r.readAsDataURL(input.files[0]);}}
+        function openPrivacy(){document.getElementById('privacyModal').style.display='flex';}
 
-        // ==========================================
-        // 3. 알림글(Ticker) 및 기타 기능
-        // ==========================================
         function loadBanner(){
             db.collection('settings').doc('banner').onSnapshot(d=>{
                 if(d.exists) {
@@ -641,47 +670,14 @@
             showToast("삭제되었습니다.");
             openTickerManager();
         }
-
-        // ==========================================
-        // 4. 게시판, 선박정보, 자료실 등 기본 로직
-        // ==========================================
-        function loadAllData(){
-            loadBanner();
-            db.collection("notices").orderBy("timestamp","desc").onSnapshot(s=>{const l=document.getElementById("noticeList"); l.innerHTML=""; s.forEach(d=>{const x=d.data(); l.innerHTML+=`<li class="post-item" onclick="toggleContent('n-${d.id}')">📢 <strong>${x.title}</strong><div id="n-${d.id}" class="post-body-content">${x.content}<br><button class="mini-btn btn-del" onclick="delNotice('${d.id}',event)">삭제</button></div></li>`;})}); 
-            db.collection("posts").orderBy("timestamp","desc").onSnapshot(s=>{allPostsData=[]; s.forEach(d=>{allPostsData.push({...d.data(), id:d.id})}); renderBoardPage(1);}); 
-            db.collection("ships").orderBy("timestamp","desc").onSnapshot(s=>{allShipsData=[]; s.forEach(d=>{allShipsData.push({...d.data(), id:d.id})}); filteredShips=allShipsData; renderShipPage(1);}); 
-            db.collection("archives").orderBy("timestamp","desc").onSnapshot(s=>{const l=document.getElementById("fileList"); l.innerHTML=""; s.forEach(d=>{const x=d.data(); l.innerHTML+=`<li class="post-item"><a href="${x.url}" target="_blank">💾 ${x.title}</a><button class="mini-btn btn-del" onclick="delArchive('${d.id}',event)">×</button></li>`;})});
+        async function resetTicker(){
+            if(await verifyAdmin() && confirm("모든 공지를 초기화하시겠습니까?")) {
+                db.collection('settings').doc('banner').set({adminMessage:null, userMessages:[]});
+                showToast("초기화되었습니다.");
+            }
         }
-        function renderBoardPage(p){currentBoardPage=p; const l=document.getElementById("boardList"); l.innerHTML=""; const start=(p-1)*postsPerPage; const end=start+postsPerPage; allPostsData.slice(start, end).forEach(x=>{l.innerHTML+=`<li class="post-item"><div class="post-header-row" onclick="toggleContent('p-${x.id}')"><span class="post-title-text">${x.title}</span><span class="post-meta-info">${x.timestamp ? new Date(x.timestamp.toDate()).toLocaleDateString() : ''}</span><button class="mini-btn btn-del" onclick="deletePost('${x.id}','${x.password}',event)">삭제</button></div><div id="p-${x.id}" class="post-body-content">${x.content}<div id="cmt-list-${x.id}" class="comment-section"></div><div class="comment-form"><input id="cmt-name-${x.id}" class="comment-input-sm" placeholder="닉네임"><input id="cmt-pw-${x.id}" class="comment-input-sm" type="password" placeholder="비번"><input id="cmt-txt-${x.id}" class="comment-input-lg" placeholder="댓글 내용..."><button class="comment-submit" onclick="addComment('${x.id}')">등록</button></div></div></li>`; loadComments(x.id);}); renderPagination("pagination", Math.ceil(allPostsData.length/postsPerPage), p, renderBoardPage);}
-        function loadComments(pid){if(commentUnsubscribes[pid]) commentUnsubscribes[pid](); commentUnsubscribes[pid]=db.collection('posts').doc(pid).collection('comments').orderBy('timestamp','asc').onSnapshot(s=>{const el=document.getElementById(`cmt-list-${pid}`); if(!el) return; el.innerHTML=""; s.forEach(d=>{const c=d.data(); el.innerHTML+=`<div class="comment-item"><span><span class="comment-meta">${c.name}:</span><span class="comment-text">${c.text}</span></span><button class="comment-del-btn" onclick="deleteComment('${pid}','${d.id}','${c.password}')">×</button></div>`;});});}
-        function showToast(m){const t=document.getElementById("toast"); t.innerText=m; t.classList.add("show"); setTimeout(()=>t.classList.remove("show"),3000);}
-        function toggleDashItem(id){const c=document.getElementById(id); const e=c.classList.contains('expanded'); document.querySelectorAll('.dash-card').forEach(x=>{x.classList.remove('expanded'); x.querySelector('.dash-content').style.display='none'}); if(!e){c.classList.add('expanded'); c.querySelector('.dash-content').style.display='block';}}
-        function toggleSection(id,el){document.getElementById(id).classList.toggle('collapsed');}
-        function toggleContent(id){const e=document.getElementById(id); e.style.display=(e.style.display==='block'?'none':'block');}
-        function toggleHidden(id){document.getElementById(id).classList.toggle('hidden');}
-        function toggleDarkMode(){document.body.classList.toggle('dark-mode');}
-        async function verifyAdmin(){const i=prompt("Admin PW:"); return i==="0346";}
-        function scrollToTop(){window.scrollTo({top:0,behavior:'smooth'});}
-        async function addNotice(){if(await verifyAdmin()){db.collection("notices").add({title:document.getElementById('noticeTitle').value, content:document.getElementById('noticeContent').value, timestamp:firebase.firestore.FieldValue.serverTimestamp()}).then(()=>{document.getElementById('noticeTitle').value=''; document.getElementById('noticeContent').value=''; showToast("공지 등록됨");});}}
-        async function delNotice(id,e){e.stopPropagation(); if(await verifyAdmin()) db.collection("notices").doc(id).delete();}
-        function addPost(){const t=document.getElementById('inputTitle').value, p=document.getElementById('inputPw').value, c=document.getElementById('inputContent').value; if(t&&p&&c){db.collection("posts").add({title:t, password:p, content:c, timestamp:firebase.firestore.FieldValue.serverTimestamp()}).then(()=>{document.getElementById('inputTitle').value=''; document.getElementById('inputPw').value=''; document.getElementById('inputContent').value=''; toggleHidden('boardForm'); showToast("작성 완료");});}}
-        async function deletePost(id,pw,e){e.stopPropagation(); if(prompt("비번")===pw||await verifyAdmin()) db.collection("posts").doc(id).delete();}
-        function addComment(pid){const n=document.getElementById(`cmt-name-${pid}`).value, p=document.getElementById(`cmt-pw-${pid}`).value, t=document.getElementById(`cmt-txt-${pid}`).value; if(n&&p&&t){db.collection('posts').doc(pid).collection('comments').add({name:n, password:p, text:t, timestamp:firebase.firestore.FieldValue.serverTimestamp()}).then(()=>{document.getElementById(`cmt-txt-${pid}`).value=""; showToast("댓글 등록됨");});}}
-        async function deleteComment(pid,cid,pw){if(prompt("비번")===pw||await verifyAdmin()) db.collection('posts').doc(pid).collection('comments').doc(cid).delete();}
-        function addShipInfo(){const n=document.getElementById('shipName').value, c=document.getElementById('shipOnboard').value, f=document.getElementById('shipFileInput').files[0]; const save=(u)=>{db.collection("ships").add({shipName:n, onboardFeat:c, imageUrl:u, timestamp:firebase.firestore.FieldValue.serverTimestamp()}).then(()=>{document.getElementById('shipName').value=''; document.getElementById('shipOnboard').value=''; document.getElementById('shipFileInput').value=''; toggleHidden('shipForm'); showToast("선박 등록됨");});}; if(f) storage.ref(`ships/${Date.now()}`).put(f).then(s=>s.ref.getDownloadURL()).then(u=>save(u)); else save(null);}
-        function renderShipPage(p){const l=document.getElementById("shipList"); l.innerHTML=""; filteredShips.slice((p-1)*postsPerPage, p*postsPerPage).forEach(x=>{l.innerHTML+=`<li class="post-item"><div onclick="toggleContent('s-${x.id}')">🚢 ${x.shipName}</div><div id="s-${x.id}" class="post-body-content">${x.onboardFeat}<br><button class="mini-btn btn-del" onclick="deleteShip('${x.id}',event)">삭제</button></div></li>`;});}
-        async function deleteShip(id,e){e.stopPropagation(); if(await verifyAdmin()) db.collection("ships").doc(id).delete();}
-        function uploadFile(){const f=document.getElementById('fileInput').files[0], t=document.getElementById('fileTitle').value; if(f&&t) storage.ref(`archives/${Date.now()}`).put(f).then(s=>s.ref.getDownloadURL()).then(u=>db.collection("archives").add({title:t, url:u, timestamp:firebase.firestore.FieldValue.serverTimestamp()})).then(()=>{showToast("업로드 성공"); document.getElementById('fileTitle').value=''; document.getElementById('fileInput').value='';}).catch(err=>{alert("업로드 실패: "+err.message);});}
-        async function delArchive(id,e){e.stopPropagation(); if(await verifyAdmin()) db.collection("archives").doc(id).delete();}
-        
-        // PNC 버스 시간표 (모달)
-        function openBusSchedule(){
-            const m = document.getElementById('imageModal');
-            const i = document.getElementById('modalImage');
-            i.src = 'pnc_bus.jpg';
-            m.style.display = 'flex';
-        }
-        function closeImageModal(){document.getElementById('imageModal').style.display='none';}
 
         window.onload=loadAllData;
     </script>
+</body>
+</html>
