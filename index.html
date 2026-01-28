@@ -12,7 +12,7 @@
     
     <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6024353303588422" crossorigin="anonymous"></script>
 
-    <link rel="icon" type="image/png" sizes="32x32" href="icon.png?v=final_fix_v29">
+    <link rel="icon" type="image/png" sizes="32x32" href="icon.png?v=final_fix_v30">
     <link rel="stylesheet" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.8/dist/web/static/pretendard.css" />
 
     <style>
@@ -49,9 +49,9 @@
         .action-btn { width: 100%; padding: 12px; border: none; border-radius: 10px; font-weight: 700; color: white; cursor: pointer; background: var(--primary); font-size: 0.95rem; }
         .bg-submit { background: var(--success); } .bg-calc { background: linear-gradient(135deg, #ef4444, #b91c1c); } .bg-cancel { background: var(--text-sub); }
         
-        .wage-row { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
-        .wage-row label { width: 90px; min-width: 90px; font-weight: 700; font-size: 0.9rem; white-space: nowrap; text-align: left; display: flex; align-items: center; }
-        .wage-row .input-field { flex: 1; width: auto; margin-bottom: 0; text-align: right; }
+        .wage-row { display: flex; align-items: center; gap: 5px; margin-bottom: 8px; }
+        .wage-row label { width: 60px; min-width: 60px; font-weight: 700; font-size: 0.85rem; white-space: nowrap; text-align: left; }
+        .wage-row .input-field { flex: 1; width: auto; margin-bottom: 0; text-align: right; padding: 8px; font-size: 0.9rem; }
         
         .wage-result-box { background: linear-gradient(135deg, #ffffff, #f9fafb); border: 2px solid var(--primary); border-radius: 12px; padding: 15px; margin-top: 15px; }
         .spec-table { width: 100%; border-collapse: collapse; margin: 10px 0; font-size: 0.85rem; }
@@ -60,10 +60,10 @@
         .spec-table td:last-child { text-align: right; font-weight: 700; }
         .wage-total { font-size: 1.5rem; color: #c2410c; font-weight: 900; text-align: center; border-top: 2px solid var(--primary); padding-top: 10px; margin-top: 10px; }
 
-        .role-selector { display: flex; gap: 5px; margin-bottom: 15px; background: rgba(0,0,0,0.05); padding: 5px; border-radius: 10px; }
+        .role-selector { display: flex; gap: 3px; margin-bottom: 10px; background: rgba(0,0,0,0.05); padding: 3px; border-radius: 8px; }
         .role-selector input[type="radio"] { display: none; }
-        .role-selector label { flex: 1; text-align: center; padding: 10px 0; border-radius: 8px; font-weight: 700; cursor: pointer; font-size: 0.9rem; transition: all 0.2s; color: var(--text-sub); }
-        .role-selector input[type="radio"]:checked + label { background: var(--primary); color: white; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        .role-selector label { flex: 1; text-align: center; padding: 8px 0; border-radius: 6px; font-weight: 700; cursor: pointer; font-size: 0.85rem; transition: all 0.2s; color: var(--text-sub); }
+        .role-selector input[type="radio"]:checked + label { background: var(--primary); color: white; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
 
         .terminal-block { background: rgba(0,0,0,0.03); border-radius: 10px; margin-bottom: 8px; border: 1px solid var(--border); overflow: hidden; }
         .terminal-header { padding: 12px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; font-weight: 700; font-size: 0.95rem; }
@@ -265,7 +265,8 @@
         <div class="card" style="border-left: 5px solid #10b981;">
             <div class="section-header tap-effect" onclick="toggleSection('t2-content', this)"><span class="section-title">🏗️ 2항업 (신항 북측) ▼</span></div>
             <div id="t2-content" class="collapsible-content collapsed">
-                <div class="terminal-block"><div class="terminal-header tap-effect" onclick="toggleContent('term-pnc')">부산신항만 (PNC) ▼</div><div id="term-pnc" class="terminal-body"><div class="terminal-actions"><a href="https://svc.pncport.com/info/CMS/Ship/Info.pnc?mCode=MN014" target="_blank" class="terminal-btn">스케줄</a><a href="https://svc.pncport.com/info/CMS/Ship/ShipBerthC.pnc?mCode=MN019" target="_blank" class="terminal-btn">차트</a><a href="https://svc.pncport.com/info/CMS/Ship/ShipVslStatus.pnc?mCode=MN020" target="_blank" class="terminal-btn">현황</a></div><button class="action-btn" style="background:#f39c12; margin-top:8px; padding:10px;" onclick="openBusSchedule()">🚌 셔틀버스 시간표</button></div></div>
+                <div class="terminal-block"><div class="terminal-header tap-effect" onclick="toggleContent('term-pnc')">부산신항만 (PNC) ▼</div><div id="term-pnc" class="terminal-body"><div class="terminal-actions"><a href="https://svc.pncport.com/info/CMS/Ship/Info.pnc?mCode=MN014" target="_blank" class="terminal-btn">스케줄</a><a href="https://svc.pncport.com/info/CMS/Ship/ShipBerthC.pnc?mCode=MN019" target="_blank" class="terminal-btn">차트</a><a href="https://svc.pncport.com/info/CMS/Ship/ShipVslStatus.pnc?mCode=MN020" target="_blank" class="terminal-btn">현황</a></div>
+                <button class="action-btn" style="background:#f39c12; margin-top:8px; padding:10px;" onclick="openBusSchedule()">🚌 셔틀버스 시간표</button></div></div>
                 <div class="terminal-block"><div class="terminal-header tap-effect" onclick="toggleContent('term-hpnt')">HMM (HPNT) ▼</div><div id="term-hpnt" class="terminal-body"><div class="terminal-actions"><a href="https://www.hpnt.co.kr/main/vessel/schedule/list" target="_blank" class="terminal-btn">스케줄</a><a href="https://www.hpnt.co.kr/main/vessel/berth/list" target="_blank" class="terminal-btn">선석</a></div></div></div>
                 <div class="terminal-block"><div class="terminal-header tap-effect" onclick="toggleContent('term-pnit')">신항국제 (PNIT) ▼</div><div id="term-pnit" class="terminal-body"><div class="terminal-actions"><a href="http://www.pnitl.com" target="_blank" class="terminal-btn">홈페이지</a></div></div></div>
             </div>
@@ -294,7 +295,14 @@
 
     <nav class="bottom-nav"><div class="nav-item active tap-effect" onclick="scrollToTop()">🏠 홈</div><div class="nav-item tap-effect" onclick="toggleDashItem('board-card')">💬 톡톡</div><div class="nav-item tap-effect" onclick="toggleDashItem('ship-card')">🚢 선박</div><div class="nav-item tap-effect" onclick="toggleDashItem('file-card')">📂 자료</div></nav>
     <div id="toast">알림</div>
-    <div id="imageModal" class="modal-overlay" onclick="closeImageModal()"><div class="modal-content" onclick="event.stopPropagation()"><img id="modalImage" class="modal-img"><button class="action-btn bg-cancel" onclick="closeImageModal()">닫기</button></div></div>
+    
+    <div id="imageModal" class="modal-overlay" onclick="closeImageModal()">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <img id="modalImage" class="modal-img">
+            <button class="action-btn bg-cancel" onclick="closeImageModal()">닫기</button>
+        </div>
+    </div>
+    
     <div id="privacyModal" class="modal-overlay" onclick="document.getElementById('privacyModal').style.display='none'"><div class="modal-content"><h3>🛡️ 개인정보처리방침</h3><p>본 사이트는 구글 애드센스 광고를 게재하며 쿠키를 사용합니다. 근무 기록 및 게시물 데이터는 Firebase 서버에 안전하게 보관됩니다.</p><button class="action-btn" onclick="document.getElementById('privacyModal').style.display='none'">닫기</button></div></div>
     
     <div id="tickerManageModal" class="modal-overlay" onclick="document.getElementById('tickerManageModal').style.display='none'">
@@ -317,7 +325,7 @@
             const DAY_RATE = 10320, NIGHT_RATE = 15480, EXTRA_ADD = 5160, HOT_ADD = 3096;
             const SKILLED_DAY_ADD = 2557, SKILLED_NIGHT_ADD = 3836; 
 
-            // 현재 월에 따른 기준 시간 자동 설정 (하이라이트)
+            // 현재 월에 따른 기준 시간 설정
             const currentMonth = new Date().getMonth() + 1;
             let dayStartHour = 8, dayEndHour = 18;
             ['row-jan','row-apr','row-oct'].forEach(id => {
@@ -349,12 +357,10 @@
             const taxRate = parseFloat(document.getElementById('wageTaxType').value) || 0;
 
             let dayCount = 0, nightCount = 0;
-            let deepNightCount = 0;
-            let lunchExtCount = 0;
+            let deepNightCount = 0, lunchExtCount = 0;
 
             for (let i = 0; i < totalHours; i++) {
                 let curr = (startHour + i) % 24;
-                
                 if (curr >= dayStartHour && curr < dayEndHour) dayCount++; 
                 else nightCount++;
 
@@ -434,19 +440,28 @@
         function uploadFile(){const f=document.getElementById('fileInput').files[0], t=document.getElementById('fileTitle').value; if(f&&t) storage.ref(`archives/${Date.now()}`).put(f).then(s=>s.ref.getDownloadURL()).then(u=>db.collection("archives").add({title:t, url:u, timestamp:firebase.firestore.FieldValue.serverTimestamp()})).then(()=>{showToast("업로드 성공"); document.getElementById('fileTitle').value=''; document.getElementById('fileInput').value='';}).catch(err=>{alert("업로드 실패: "+err.message);});}
         async function delArchive(id,e){e.stopPropagation(); if(await verifyAdmin()) db.collection("archives").doc(id).delete();}
         
-        // [알림글 Ticker: 3개 제한, 밀어내기, 관리자 고정, 삭제]
+        // PNC 버스 시간표 팝업
+        function openBusSchedule(){
+            const m = document.getElementById('imageModal');
+            const i = document.getElementById('modalImage');
+            i.src = 'pnc_bus.jpg'; // 사용자가 저장해야 할 이미지 파일명
+            m.style.display = 'flex';
+            showToast("pnc_bus.jpg 파일이 필요합니다.");
+        }
+        function closeImageModal(){document.getElementById('imageModal').style.display='none';}
+        function previewLogImage(input){if(input.files&&input.files[0]){const r=new FileReader(); r.onload=e=>{const img=document.getElementById('logImagePreview'); img.src=e.target.result; img.style.display='block';}; r.readAsDataURL(input.files[0]);}}
+        function openPrivacy(){document.getElementById('privacyModal').style.display='flex';}
+
+        // [티커 기능: 3개 제한, 밀어내기, 관리자 고정, 삭제]
         function loadBanner(){
             db.collection('settings').doc('banner').onSnapshot(d=>{
                 if(d.exists) {
                     const data = d.data();
                     let adminMsg = data.adminMessage ? `📢 ${data.adminMessage}` : "";
                     let userMsgs = data.userMessages || [];
-                    
                     let displayArr = [];
                     if (adminMsg) displayArr.push(adminMsg);
-                    
                     userMsgs.forEach((msg, idx) => { displayArr.push(`${idx + 1}. ${msg}`); });
-                    
                     const finalMsg = displayArr.length > 0 ? displayArr.join("   ///   ") : "🚨 안전 제일! 오늘도 무사고!";
                     document.getElementById('tickerText').innerText = finalMsg;
                 }
@@ -461,11 +476,8 @@
                     if (doc.exists && doc.data().userMessages) {
                         currentMsgs = doc.data().userMessages;
                     }
-                    // 1. 새 글 맨 앞 추가
                     currentMsgs.unshift(m);
-                    // 2. 3개 초과 시 뒤에꺼 삭제
                     if(currentMsgs.length > 3) currentMsgs = currentMsgs.slice(0, 3);
-                    // 3. 저장
                     return docRef.set({ userMessages: currentMsgs }, { merge: true });
                 }).then(() => showToast("등록되었습니다."));
             }
