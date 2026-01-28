@@ -224,7 +224,7 @@
 
 
            <div id="log-card" class="dash-card" style="border:1px solid var(--primary);">
-                <div class="dash-header tap-effect" onclick="openLogImmediately('log-card')">
+                <div class="dash-header tap-effect" onclick="checkAdminAndOpenLog('log-card')">
                     <span class="dash-title" style="color:var(--primary);">📅 스마트 근무일지(짝지)</span><span class="toggle-icon">▼</span>
                 </div>
                 <div id="workLogArea" class="dash-content">
@@ -232,6 +232,9 @@
                         <button class="mini-btn" onclick="changeMonth(-1)">◀</button>
                         <span id="calMonthYear" style="font-weight:bold;"></span>
                         <button class="mini-btn" onclick="changeMonth(1)">▶</button>
+                    </div>
+                    <div style="display:grid; grid-template-columns:repeat(7,1fr); text-align:center; font-size:0.75rem; color:var(--text-sub); margin-bottom:5px;">
+                        <span style="color:var(--danger)">일</span><span>월</span><span>화</span><span>수</span><span>목</span><span>금</span><span style="color:var(--primary)">토</span>
                     </div>
                     <div id="calendarGrid" class="calendar-grid"></div>
                     
@@ -265,7 +268,8 @@
         <div class="card" style="border-left: 5px solid #10b981;">
             <div class="section-header tap-effect" onclick="toggleSection('t2-content', this)"><span class="section-title">🏗️ 2항업 (신항 북측) ▼</span></div>
             <div id="t2-content" class="collapsible-content collapsed">
-                <div class="terminal-block"><div class="terminal-header tap-effect" onclick="toggleContent('term-pnc')">부산신항만 (PNC) ▼</div><div id="term-pnc" class="terminal-body"><div class="terminal-actions"><a href="https://svc.pncport.com/info/CMS/Ship/Info.pnc?mCode=MN014" target="_blank" class="terminal-btn">스케줄</a><a href="https://svc.pncport.com/info/CMS/Ship/ShipBerthC.pnc?mCode=MN019" target="_blank" class="terminal-btn">차트</a><a href="https://svc.pncport.com/info/CMS/Ship/ShipVslStatus.pnc?mCode=MN020" target="_blank" class="terminal-btn">현황</a></div><button class="action-btn" style="background:#f39c12; margin-top:8px; padding:10px;" onclick="openBusSchedule()">🚌 셔틀버스 시간표</button></div></div>
+                <div class="terminal-block"><div class="terminal-header tap-effect" onclick="toggleContent('term-pnc')">부산신항만 (PNC) ▼</div><div id="term-pnc" class="terminal-body"><div class="terminal-actions"><a href="https://svc.pncport.com/info/CMS/Ship/Info.pnc?mCode=MN014" target="_blank" class="terminal-btn">스케줄</a><a href="https://svc.pncport.com/info/CMS/Ship/ShipBerthC.pnc?mCode=MN019" target="_blank" class="terminal-btn">차트</a><a href="https://svc.pncport.com/info/CMS/Ship/ShipVslStatus.pnc?mCode=MN020" target="_blank" class="terminal-btn">현황</a></div>
+                <button class="action-btn" style="background:#f39c12; margin-top:8px; padding:10px;" onclick="openBusSchedule()">🚌 셔틀버스 시간표</button></div></div>
                 <div class="terminal-block"><div class="terminal-header tap-effect" onclick="toggleContent('term-hpnt')">HMM (HPNT) ▼</div><div id="term-hpnt" class="terminal-body"><div class="terminal-actions"><a href="https://www.hpnt.co.kr/main/vessel/schedule/list" target="_blank" class="terminal-btn">스케줄</a><a href="https://www.hpnt.co.kr/main/vessel/berth/list" target="_blank" class="terminal-btn">선석</a></div></div></div>
                 <div class="terminal-block"><div class="terminal-header tap-effect" onclick="toggleContent('term-pnit')">신항국제 (PNIT) ▼</div><div id="term-pnit" class="terminal-body"><div class="terminal-actions"><a href="http://www.pnitl.com" target="_blank" class="terminal-btn">홈페이지</a></div></div></div>
             </div>
@@ -294,7 +298,14 @@
 
     <nav class="bottom-nav"><div class="nav-item active tap-effect" onclick="scrollToTop()">🏠 홈</div><div class="nav-item tap-effect" onclick="toggleDashItem('board-card')">💬 톡톡</div><div class="nav-item tap-effect" onclick="toggleDashItem('ship-card')">🚢 선박</div><div class="nav-item tap-effect" onclick="toggleDashItem('file-card')">📂 자료</div></nav>
     <div id="toast">알림</div>
-    <div id="imageModal" class="modal-overlay" onclick="closeImageModal()"><div class="modal-content" onclick="event.stopPropagation()"><img id="modalImage" class="modal-img"><button class="action-btn bg-cancel" onclick="closeImageModal()">닫기</button></div></div>
+    
+    <div id="imageModal" class="modal-overlay" onclick="closeImageModal()">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <img id="modalImage" class="modal-img">
+            <button class="action-btn bg-cancel" onclick="closeImageModal()">닫기</button>
+        </div>
+    </div>
+    
     <div id="privacyModal" class="modal-overlay" onclick="document.getElementById('privacyModal').style.display='none'"><div class="modal-content"><h3>🛡️ 개인정보처리방침</h3><p>본 사이트는 구글 애드센스 광고를 게재하며 쿠키를 사용합니다. 근무 기록 및 게시물 데이터는 Firebase 서버에 안전하게 보관됩니다.</p><button class="action-btn" onclick="document.getElementById('privacyModal').style.display='none'">닫기</button></div></div>
     
     <div id="tickerManageModal" class="modal-overlay" onclick="document.getElementById('tickerManageModal').style.display='none'">
@@ -317,6 +328,7 @@
             const DAY_RATE = 10320, NIGHT_RATE = 15480, EXTRA_ADD = 5160, HOT_ADD = 3096;
             const SKILLED_DAY_ADD = 2557, SKILLED_NIGHT_ADD = 3836; 
 
+            // 현재 월에 따른 기준 시간 자동 설정 (하이라이트)
             const currentMonth = new Date().getMonth() + 1;
             let dayStartHour = 8, dayEndHour = 18;
             ['row-jan','row-apr','row-oct'].forEach(id => {
@@ -352,6 +364,7 @@
 
             for (let i = 0; i < totalHours; i++) {
                 let curr = (startHour + i) % 24;
+                
                 if (curr >= dayStartHour && curr < dayEndHour) dayCount++; 
                 else nightCount++;
 
@@ -407,7 +420,15 @@
             else { if(document.getElementById('row-jan')) document.getElementById('row-jan').classList.add('highlight'); }
         });
 
-        function resetWageForm(){document.querySelectorAll('#wage-card input').forEach(i=> { if(i.type !== 'radio' && i.id !== 'wageHourly') i.value=''; }); document.getElementById('wageStartTime').value=8; document.getElementById('wageResultBox').classList.add('hidden');}
+        // [수정: 시급 초기화 방지]
+        function resetWageForm(){
+            document.querySelectorAll('#wage-card input').forEach(i=> { 
+                if(i.type !== 'radio' && i.id !== 'wageHourly') i.value=''; 
+            }); 
+            document.getElementById('wageStartTime').value=8; 
+            document.getElementById('wageResultBox').classList.add('hidden');
+        }
+
         function loadAllData(){db.collection("notices").orderBy("timestamp","desc").onSnapshot(s=>{const l=document.getElementById("noticeList"); l.innerHTML=""; s.forEach(d=>{const x=d.data(); l.innerHTML+=`<li class="post-item" onclick="toggleContent('n-${d.id}')">📢 <strong>${x.title}</strong><div id="n-${d.id}" class="post-body-content">${x.content}<br><button class="mini-btn btn-del" onclick="delNotice('${d.id}',event)">삭제</button></div></li>`;})}); db.collection("posts").orderBy("timestamp","desc").onSnapshot(s=>{allPostsData=[]; s.forEach(d=>{allPostsData.push({...d.data(), id:d.id})}); renderBoardPage(1);}); db.collection("ships").orderBy("timestamp","desc").onSnapshot(s=>{allShipsData=[]; s.forEach(d=>{allShipsData.push({...d.data(), id:d.id})}); filteredShips=allShipsData; renderShipPage(1);}); db.collection("archives").orderBy("timestamp","desc").onSnapshot(s=>{const l=document.getElementById("fileList"); l.innerHTML=""; s.forEach(d=>{const x=d.data(); l.innerHTML+=`<li class="post-item"><a href="${x.url}" target="_blank">💾 ${x.title}</a><button class="mini-btn btn-del" onclick="delArchive('${d.id}',event)">×</button></li>`;})}); loadBanner();}
         function renderBoardPage(p){currentBoardPage=p; const l=document.getElementById("boardList"); l.innerHTML=""; const start=(p-1)*postsPerPage; const end=start+postsPerPage; allPostsData.slice(start, end).forEach(x=>{l.innerHTML+=`<li class="post-item"><div class="post-header-row" onclick="toggleContent('p-${x.id}')"><span class="post-title-text">${x.title}</span><span class="post-meta-info">${x.timestamp ? new Date(x.timestamp.toDate()).toLocaleDateString() : ''}</span><button class="mini-btn btn-del" onclick="deletePost('${x.id}','${x.password}',event)">삭제</button></div><div id="p-${x.id}" class="post-body-content">${x.content}<div id="cmt-list-${x.id}" class="comment-section"></div><div class="comment-form"><input id="cmt-name-${x.id}" class="comment-input-sm" placeholder="닉네임"><input id="cmt-pw-${x.id}" class="comment-input-sm" type="password" placeholder="비번"><input id="cmt-txt-${x.id}" class="comment-input-lg" placeholder="댓글 내용..."><button class="comment-submit" onclick="addComment('${x.id}')">등록</button></div></div></li>`; loadComments(x.id);}); renderPagination("pagination", Math.ceil(allPostsData.length/postsPerPage), p, renderBoardPage);}
         function loadComments(pid){if(commentUnsubscribes[pid]) commentUnsubscribes[pid](); commentUnsubscribes[pid]=db.collection('posts').doc(pid).collection('comments').orderBy('timestamp','asc').onSnapshot(s=>{const el=document.getElementById(`cmt-list-${pid}`); if(!el) return; el.innerHTML=""; s.forEach(d=>{const c=d.data(); el.innerHTML+=`<div class="comment-item"><span><span class="comment-meta">${c.name}:</span><span class="comment-text">${c.text}</span></span><button class="comment-del-btn" onclick="deleteComment('${pid}','${d.id}','${c.password}')">×</button></div>`;});});}
@@ -432,12 +453,13 @@
         async function delArchive(id,e){e.stopPropagation(); if(await verifyAdmin()) db.collection("archives").doc(id).delete();}
         
         // [수정: 클릭 시 바로 열리게 변경]
-        function openLogImmediately(id){
+        function checkAdminAndOpenLog(id){
             const c=document.getElementById(id); 
             const e=c.classList.contains('expanded'); 
             document.querySelectorAll('.dash-card').forEach(x=>{x.classList.remove('expanded'); x.querySelector('.dash-content').style.display='none'}); 
             if(!e){c.classList.add('expanded'); c.querySelector('.dash-content').style.display='block'; renderCalendar(currentDate.getFullYear(), currentDate.getMonth());}
         }
+        
         function openBusSchedule(){
             const m = document.getElementById('imageModal');
             const i = document.getElementById('modalImage');
@@ -523,8 +545,40 @@
             }
         }
 
+        // [수정: 달력 초기화 로직 보완]
+        function renderCalendar(y, m){
+            const calGrid = document.getElementById('calendarGrid');
+            calGrid.innerHTML = "";
+            document.getElementById('calMonthYear').innerText = `${y}년 ${m+1}월`;
+            
+            const firstDay = new Date(y, m, 1).getDay();
+            const lastDate = new Date(y, m+1, 0).getDate();
+            
+            // 1. 빈 칸 채우기
+            for(let i=0; i<firstDay; i++) calGrid.innerHTML += `<div></div>`;
+            
+            // 2. 날짜 칸 미리 그리기 (데이터 로딩 전)
+            for(let d=1; d<=lastDate; d++){
+                // id를 부여해서 나중에 데이터를 채울 수 있게 함
+                calGrid.innerHTML += `<div id="cal-day-${d}" class="cal-day tap-effect" onclick="clickDate('${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}')">${d}<div class="cal-dot"></div></div>`;
+            }
+
+            // 3. 데이터 가져와서 업데이트
+            db.collection('work_logs').where('date', '>=', `${y}-${String(m+1).padStart(2,'0')}-01`)
+              .where('date', '<=', `${y}-${String(m+1).padStart(2,'0')}-31`).get().then(snapshot => {
+                adminWorkLogs = {};
+                snapshot.forEach(doc => {
+                    const data = doc.data();
+                    adminWorkLogs[doc.id] = data;
+                    const day = parseInt(doc.id.split('-')[2]);
+                    const el = document.getElementById(`cal-day-${day}`);
+                    if(el) el.classList.add('has-data');
+                });
+                calculateMonthlyTotal();
+            });
+        }
+
         window.onload=loadAllData;
     </script>
 </body>
 </html>
-
