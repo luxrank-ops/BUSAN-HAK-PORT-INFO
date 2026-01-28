@@ -4,34 +4,19 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="description" content="부산항 현장직 필수 앱. 임금계산기, 스마트 근무일지(짝지기록), 선박위치 및 스케줄 조회.">
-    <meta name="keywords" content="부산항, 현장직, 임금계산, 근무일지, 선박스케줄, 갱, YT, QC, Lashing">
-    <meta property="og:title" content="BUSAN HAK PORT INFO">
     <title>BUSAN HAK PORT INFO</title>
     
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-storage.js"></script>
-    
     <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6024353303588422" crossorigin="anonymous"></script>
 
-    <link rel="icon" type="image/png" sizes="32x32" href="icon.png?v=final_fix_18">
+    <link rel="icon" type="image/png" sizes="32x32" href="icon.png?v=final_fix_v20">
     <link rel="stylesheet" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.8/dist/web/static/pretendard.css" />
 
     <style>
-        :root { 
-            --primary: #1e3a8a; --primary-light: #3b82f6; --accent: #f59e0b; 
-            --bg-color: #f3f4f6; --card-bg: rgba(255, 255, 255, 0.95); 
-            --text-main: #1f2937; --text-sub: #6b7280; 
-            --border: rgba(229, 231, 235, 0.8); --danger: #ef4444; --success: #10b981; 
-            --glass-border: 1px solid rgba(255, 255, 255, 0.6); 
-            --glass-shadow: 0 2px 10px rgba(0,0,0,0.03); --blur: blur(12px); 
-        }
-        body.dark-mode { 
-            --primary: #60a5fa; --primary-light: #93c5fd; --accent: #fbbf24; 
-            --bg-color: #0f172a; --card-bg: rgba(30, 41, 59, 0.95); 
-            --text-main: #f3f4f6; --text-sub: #9ca3af; 
-            --border: rgba(55, 65, 81, 0.5); --glass-border: 1px solid rgba(255, 255, 255, 0.1); 
-        }
+        :root { --primary: #1e3a8a; --primary-light: #3b82f6; --accent: #f59e0b; --bg-color: #f3f4f6; --card-bg: rgba(255, 255, 255, 0.95); --text-main: #1f2937; --text-sub: #6b7280; --border: rgba(229, 231, 235, 0.8); --danger: #ef4444; --success: #10b981; }
+        body.dark-mode { --primary: #60a5fa; --primary-light: #93c5fd; --accent: #fbbf24; --bg-color: #0f172a; --card-bg: rgba(30, 41, 59, 0.95); --text-main: #f3f4f6; --text-sub: #9ca3af; --border: rgba(55, 65, 81, 0.5); }
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; font-family: 'Pretendard', sans-serif; }
         body { background-color: var(--bg-color); color: var(--text-main); margin: 0; padding: 0; padding-bottom: 100px; transition: background 0.3s ease; }
         .tap-effect { transition: transform 0.1s; } .tap-effect:active { transform: scale(0.98); }
@@ -42,7 +27,7 @@
         
         .container { width: 96%; max-width: 600px; margin: 15px auto; }
         .dash-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }
-        .dash-card { background: var(--card-bg); border-radius: 16px; box-shadow: var(--glass-shadow); border: var(--glass-border); overflow: hidden; transition: all 0.3s; display: flex; flex-direction: column; }
+        .dash-card { background: var(--card-bg); border-radius: 16px; box-shadow: 0 2px 10px rgba(0,0,0,0.03); border: 1px solid var(--border); overflow: hidden; transition: all 0.3s; display: flex; flex-direction: column; }
         .dash-card.expanded { grid-column: span 2; }
         .dash-header { padding: 15px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.05); min-height: 60px; }
         .dash-card.expanded .dash-header { border-bottom: 1px solid var(--border); background: rgba(0,0,0,0.02); }
@@ -52,7 +37,7 @@
         .dash-content { display: none; padding: 15px; background: var(--card-bg); animation: fadeIn 0.2s; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
 
-        .card { background: var(--card-bg); border-radius: 16px; margin-bottom: 15px; box-shadow: var(--glass-shadow); border: var(--glass-border); overflow: hidden; }
+        .card { background: var(--card-bg); border-radius: 16px; margin-bottom: 15px; box-shadow: 0 2px 10px rgba(0,0,0,0.03); border: 1px solid var(--border); overflow: hidden; }
         .section-header { display: flex; justify-content: space-between; align-items: center; padding: 15px; cursor: pointer; border-bottom: 1px solid var(--border); }
         .section-title { font-size: 1.1rem; font-weight: 800; display:flex; align-items:center; gap:8px; }
         .collapsible-content { display: block; padding: 15px; }
@@ -63,24 +48,9 @@
         .action-btn { width: 100%; padding: 12px; border: none; border-radius: 10px; font-weight: 700; color: white; cursor: pointer; background: var(--primary); font-size: 0.95rem; }
         .bg-submit { background: var(--success); } .bg-calc { background: linear-gradient(135deg, #ef4444, #b91c1c); } .bg-cancel { background: var(--text-sub); }
         
-        /* [수정됨] 임금 계산기 레이아웃 개선: 가로 정렬 및 줄바꿈 방지 */
         .wage-row { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
-        .wage-row label { 
-            width: 90px; /* 라벨 너비 고정 */
-            min-width: 90px; 
-            font-weight: 700; 
-            font-size: 0.9rem; 
-            white-space: nowrap; /* 줄바꿈 절대 금지 */
-            text-align: left;
-            display: flex;
-            align-items: center;
-        }
-        /* 입력칸이 남은 공간을 차지하도록 설정 */
-        .wage-row .input-field { 
-            flex: 1; 
-            width: auto; 
-            margin-bottom: 0; 
-        }
+        .wage-row label { width: 90px; min-width: 90px; font-weight: 700; font-size: 0.9rem; white-space: nowrap; text-align: left; display: flex; align-items: center; }
+        .wage-row .input-field { flex: 1; width: auto; margin-bottom: 0; text-align: right; }
         
         .wage-result-box { background: linear-gradient(135deg, #ffffff, #f9fafb); border: 2px solid var(--primary); border-radius: 12px; padding: 15px; margin-top: 15px; }
         .spec-table { width: 100%; border-collapse: collapse; margin: 10px 0; font-size: 0.85rem; }
@@ -88,6 +58,12 @@
         .spec-table td { padding: 8px 0; color: var(--text-main); }
         .spec-table td:last-child { text-align: right; font-weight: 700; }
         .wage-total { font-size: 1.5rem; color: #c2410c; font-weight: 900; text-align: center; border-top: 2px solid var(--primary); padding-top: 10px; margin-top: 10px; }
+
+        /* [추가] 역할 선택 라디오 버튼 스타일 */
+        .role-selector { display: flex; gap: 5px; margin-bottom: 15px; background: rgba(0,0,0,0.05); padding: 5px; border-radius: 10px; }
+        .role-selector input[type="radio"] { display: none; }
+        .role-selector label { flex: 1; text-align: center; padding: 10px 0; border-radius: 8px; font-weight: 700; cursor: pointer; font-size: 0.9rem; transition: all 0.2s; color: var(--text-sub); }
+        .role-selector input[type="radio"]:checked + label { background: var(--primary); color: white; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
 
         .terminal-block { background: rgba(0,0,0,0.03); border-radius: 10px; margin-bottom: 8px; border: 1px solid var(--border); overflow: hidden; }
         .terminal-header { padding: 12px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; font-weight: 700; font-size: 0.95rem; }
@@ -172,6 +148,18 @@
                     <span class="dash-title" style="color:var(--danger);">💰 임금 산정 내역서 계산기</span><span class="toggle-icon">▼</span>
                 </div>
                 <div class="dash-content" style="display:none;">
+                    
+                    <div class="role-selector">
+                        <input type="radio" id="role-main" name="workRole" value="main" checked>
+                        <label for="role-main">🚢 본선</label>
+                        
+                        <input type="radio" id="role-skilled" name="workRole" value="skilled">
+                        <label for="role-skilled">🔧 기능공</label>
+                        
+                        <input type="radio" id="role-onshore" name="workRole" value="onshore">
+                        <label for="role-onshore">🚛 육상</label>
+                    </div>
+
                     <div class="wage-row"><label>시급(기본)</label><input type="number" id="wageHourly" class="input-field" value="10320" style="text-align:right;" readonly>원</div>
                     
                     <div style="background:rgba(239,68,68,0.05); padding:12px; border-radius:10px; margin-bottom:12px; border:1px solid rgba(239,68,68,0.2);">
@@ -181,8 +169,7 @@
                     </div>
                     
                     <div style="border-top:1px dashed var(--border); margin:10px 0; padding-top:10px;">
-                        <p style="font-size:0.75rem; color:var(--primary); font-weight:800; margin-bottom:8px;">✅ 해당 수당 시간 입력 (중복 가능)</p>
-                        <div class="wage-row"><label>🔧 기능공</label><input type="number" id="wageSkilled" class="input-field" placeholder="H" style="text-align:right;">H</div>
+                        <p style="font-size:0.75rem; color:var(--primary); font-weight:800; margin-bottom:8px;">✅ 추가 수당 시간 입력</p>
                         <div class="wage-row"><label>🌴 공휴일</label><input type="number" id="wageHoliday" class="input-field" placeholder="H" style="text-align:right;">H</div>
                         <div class="wage-row"><label>🏖️ 주말</label><input type="number" id="wageWeekend" class="input-field" placeholder="H" style="text-align:right;">H</div>
                         <div class="wage-row"><label>☔ 우천</label><input type="number" id="wageRain" class="input-field" placeholder="H" style="text-align:right;">H</div>
@@ -243,120 +230,38 @@
         </div>
 
         <div class="card" style="border-left: 5px solid #3b82f6;">
-            <div class="section-header tap-effect" onclick="toggleSection('t3-content', this)">
-                <span class="section-title">⛴️ 3항업 (신항 남측) ▼</span>
-            </div>
+            <div class="section-header tap-effect" onclick="toggleSection('t3-content', this)"><span class="section-title">⛴️ 3항업 (신항 남측) ▼</span></div>
             <div id="t3-content" class="collapsible-content collapsed">
-                <div class="terminal-block">
-                    <div class="terminal-header tap-effect" onclick="toggleContent('term-hjnc')">한진신항만 (HJNC) ▼</div>
-                    <div id="term-hjnc" class="terminal-body">
-                        <div class="terminal-actions">
-                            <a href="https://www.hjnc.co.kr/esvc/vessel/berthScheduleT" target="_blank" class="terminal-btn">스케줄</a>
-                            <a href="https://www.hjnc.co.kr/esvc/vessel/berthScheduleG" target="_blank" class="terminal-btn">차트</a>
-                            <a href="https://www.hjnc.co.kr/esvc/vessel/vesselStatus" target="_blank" class="terminal-btn">현황</a>
-                            <a href="http://bayplan.hjnc.co.kr" target="_blank" class="terminal-btn btn-premium">🧩 BAY</a>
-                        </div>
-                    </div>
-                </div>
-                <div class="terminal-block">
-                    <div class="terminal-header tap-effect" onclick="toggleContent('term-bnct')">부산신항컨테이너 (BNCT) ▼</div>
-                    <div id="term-bnct" class="terminal-body">
-                        <div class="terminal-actions">
-                            <a href="https://info.bnctkorea.com/esvc/vessel/berthScheduleT" target="_blank" class="terminal-btn">스케줄</a>
-                            <a href="https://info.bnctkorea.com/esvc/vessel/berthScheduleG" target="_blank" class="terminal-btn">차트</a>
-                            <a href="https://info.bnctkorea.com/esvc/vessel/vesselStatus" target="_blank" class="terminal-btn">현황</a>
-                        </div>
-                    </div>
-                </div>
-                <div class="terminal-block">
-                    <div class="terminal-header tap-effect" onclick="toggleContent('term-dgt')">동원로엑스 (DGT) ▼</div>
-                    <div id="term-dgt" class="terminal-body">
-                        <div class="terminal-actions">
-                            <a href="https://www.dgtbusan.com/DGT/esvc/vessel/berthScheduleT" target="_blank" class="terminal-btn">스케줄</a>
-                            <a href="https://www.dgtbusan.com/DGT/esvc/vessel/berthScheduleG" target="_blank" class="terminal-btn">차트</a>
-                            <a href="https://www.dgtbusan.com/DGT/esvc/vessel/vesselStatus" target="_blank" class="terminal-btn">현황</a>
-                        </div>
-                    </div>
-                </div>
+                <div class="terminal-block"><div class="terminal-header tap-effect" onclick="toggleContent('term-hjnc')">한진신항만 (HJNC) ▼</div><div id="term-hjnc" class="terminal-body"><div class="terminal-actions"><a href="https://www.hjnc.co.kr/esvc/vessel/berthScheduleT" target="_blank" class="terminal-btn">스케줄</a><a href="https://www.hjnc.co.kr/esvc/vessel/berthScheduleG" target="_blank" class="terminal-btn">차트</a><a href="https://www.hjnc.co.kr/esvc/vessel/vesselStatus" target="_blank" class="terminal-btn">현황</a><a href="http://bayplan.hjnc.co.kr" target="_blank" class="terminal-btn btn-premium">🧩 BAY</a></div></div></div>
+                <div class="terminal-block"><div class="terminal-header tap-effect" onclick="toggleContent('term-bnct')">부산신항컨테이너 (BNCT) ▼</div><div id="term-bnct" class="terminal-body"><div class="terminal-actions"><a href="https://info.bnctkorea.com/esvc/vessel/berthScheduleT" target="_blank" class="terminal-btn">스케줄</a><a href="https://info.bnctkorea.com/esvc/vessel/berthScheduleG" target="_blank" class="terminal-btn">차트</a><a href="https://info.bnctkorea.com/esvc/vessel/vesselStatus" target="_blank" class="terminal-btn">현황</a></div></div></div>
+                <div class="terminal-block"><div class="terminal-header tap-effect" onclick="toggleContent('term-dgt')">동원로엑스 (DGT) ▼</div><div id="term-dgt" class="terminal-body"><div class="terminal-actions"><a href="https://www.dgtbusan.com/DGT/esvc/vessel/berthScheduleT" target="_blank" class="terminal-btn">스케줄</a><a href="https://www.dgtbusan.com/DGT/esvc/vessel/berthScheduleG" target="_blank" class="terminal-btn">차트</a><a href="https://www.dgtbusan.com/DGT/esvc/vessel/vesselStatus" target="_blank" class="terminal-btn">현황</a></div></div></div>
             </div>
         </div>
 
         <div class="card" style="border-left: 5px solid #10b981;">
-            <div class="section-header tap-effect" onclick="toggleSection('t2-content', this)">
-                <span class="section-title">🏗️ 2항업 (신항 북측) ▼</span>
-            </div>
+            <div class="section-header tap-effect" onclick="toggleSection('t2-content', this)"><span class="section-title">🏗️ 2항업 (신항 북측) ▼</span></div>
             <div id="t2-content" class="collapsible-content collapsed">
-                <div class="terminal-block">
-                    <div class="terminal-header tap-effect" onclick="toggleContent('term-pnc')">부산신항만 (PNC) ▼</div>
-                    <div id="term-pnc" class="terminal-body">
-                        <div class="terminal-actions">
-                            <a href="https://svc.pncport.com/info/CMS/Ship/Info.pnc?mCode=MN014" target="_blank" class="terminal-btn">스케줄</a>
-                            <a href="https://svc.pncport.com/info/CMS/Ship/ShipBerthC.pnc?mCode=MN019" target="_blank" class="terminal-btn">차트</a>
-                            <a href="https://svc.pncport.com/info/CMS/Ship/ShipVslStatus.pnc?mCode=MN020" target="_blank" class="terminal-btn">현황</a>
-                        </div>
-                        <button class="action-btn" style="background:#f39c12; margin-top:8px; padding:10px;" onclick="openBusSchedule()">🚌 셔틀버스 시간표</button>
-                    </div>
-                </div>
-                <div class="terminal-block">
-                    <div class="terminal-header tap-effect" onclick="toggleContent('term-hpnt')">HMM (HPNT) ▼</div>
-                    <div id="term-hpnt" class="terminal-body">
-                        <div class="terminal-actions">
-                            <a href="https://www.hpnt.co.kr/main/vessel/schedule/list" target="_blank" class="terminal-btn">스케줄</a>
-                            <a href="https://www.hpnt.co.kr/main/vessel/berth/list" target="_blank" class="terminal-btn">선석</a>
-                        </div>
-                    </div>
-                </div>
-                <div class="terminal-block">
-                    <div class="terminal-header tap-effect" onclick="toggleContent('term-pnit')">신항국제 (PNIT) ▼</div>
-                    <div id="term-pnit" class="terminal-body">
-                        <div class="terminal-actions">
-                            <a href="http://www.pnitl.com" target="_blank" class="terminal-btn">홈페이지</a>
-                        </div>
-                    </div>
-                </div>
+                <div class="terminal-block"><div class="terminal-header tap-effect" onclick="toggleContent('term-pnc')">부산신항만 (PNC) ▼</div><div id="term-pnc" class="terminal-body"><div class="terminal-actions"><a href="https://svc.pncport.com/info/CMS/Ship/Info.pnc?mCode=MN014" target="_blank" class="terminal-btn">스케줄</a><a href="https://svc.pncport.com/info/CMS/Ship/ShipBerthC.pnc?mCode=MN019" target="_blank" class="terminal-btn">차트</a><a href="https://svc.pncport.com/info/CMS/Ship/ShipVslStatus.pnc?mCode=MN020" target="_blank" class="terminal-btn">현황</a></div><button class="action-btn" style="background:#f39c12; margin-top:8px; padding:10px;" onclick="openBusSchedule()">🚌 셔틀버스 시간표</button></div></div>
+                <div class="terminal-block"><div class="terminal-header tap-effect" onclick="toggleContent('term-hpnt')">HMM (HPNT) ▼</div><div id="term-hpnt" class="terminal-body"><div class="terminal-actions"><a href="https://www.hpnt.co.kr/main/vessel/schedule/list" target="_blank" class="terminal-btn">스케줄</a><a href="https://www.hpnt.co.kr/main/vessel/berth/list" target="_blank" class="terminal-btn">선석</a></div></div></div>
+                <div class="terminal-block"><div class="terminal-header tap-effect" onclick="toggleContent('term-pnit')">신항국제 (PNIT) ▼</div><div id="term-pnit" class="terminal-body"><div class="terminal-actions"><a href="http://www.pnitl.com" target="_blank" class="terminal-btn">홈페이지</a></div></div></div>
             </div>
         </div>
 
         <div class="card" style="border-left: 5px solid #f97316;">
-            <div class="section-header tap-effect" onclick="toggleSection('t1-content', this)">
-                <span class="section-title">⚓ 1항업 (북항) ▼</span>
-            </div>
+            <div class="section-header tap-effect" onclick="toggleSection('t1-content', this)"><span class="section-title">⚓ 1항업 (북항) ▼</span></div>
             <div id="t1-content" class="collapsible-content collapsed">
-                <div class="terminal-block">
-                    <div class="terminal-header tap-effect" onclick="toggleContent('term-bptc')">북항 통합 (BPTC) ▼</div>
-                    <div id="term-bptc" class="terminal-body">
-                        <div class="terminal-actions">
-                            <a href="http://info.bptc.co.kr:9084" target="_blank" class="terminal-btn" style="grid-column:span 3;">🏗️ 감만/신선대 통합 선석</a>
-                        </div>
-                    </div>
-                </div>
-                <div class="terminal-block">
-                    <div class="terminal-header tap-effect" onclick="toggleContent('term-hbct')">허치슨 (HBCT/자성대) ▼</div>
-                    <div id="term-hbct" class="terminal-body">
-                        <div class="terminal-actions">
-                            <a href="https://www.hutchisonportsbusan.com" target="_blank" class="terminal-btn">홈페이지</a>
-                        </div>
-                    </div>
-                </div>
+                <div class="terminal-block"><div class="terminal-header tap-effect" onclick="toggleContent('term-bptc')">북항 통합 (BPTC) ▼</div><div id="term-bptc" class="terminal-body"><div class="terminal-actions"><a href="http://info.bptc.co.kr:9084" target="_blank" class="terminal-btn" style="grid-column:span 3;">🏗️ 감만/신선대 통합 선석</a></div></div></div>
+                <div class="terminal-block"><div class="terminal-header tap-effect" onclick="toggleContent('term-hbct')">허치슨 (HBCT/자성대) ▼</div><div id="term-hbct" class="terminal-body"><div class="terminal-actions"><a href="https://www.hutchisonportsbusan.com" target="_blank" class="terminal-btn">홈페이지</a></div></div></div>
             </div>
         </div>
 
         <div class="card">
-            <div class="section-header tap-effect" onclick="toggleSection('control-content', this)">
-                <span class="section-title">📡 관제 및 실시간 기상 ▼</span>
-            </div>
-            <div id="control-content" class="collapsible-content collapsed">
-                <div class="control-grid">
-                    <a href="http://www.busanpilot.co.kr/popup/monitoring" class="control-btn" target="_blank">🛥️ 도선 모니터</a>
-                    <a href="https://weather.naver.com/today/08440585" class="control-btn" target="_blank" style="grid-column: span 2; color:var(--danger);">☀️ 부산항 실시간 날씨</a>
-                </div>
-            </div>
+            <div class="section-header tap-effect" onclick="toggleSection('control-content', this)"><span class="section-title">📡 관제 및 실시간 기상 ▼</span></div>
+            <div id="control-content" class="collapsible-content collapsed"><div class="control-grid"><a href="http://www.busanpilot.co.kr/popup/monitoring" class="control-btn" target="_blank">🛥️ 도선 모니터</a><a href="https://weather.naver.com/today/08440585" class="control-btn" target="_blank" style="grid-column: span 2; color:var(--danger);">☀️ 부산항 실시간 날씨</a></div></div>
         </div>
 
         <div class="card" style="border-left: 5px solid var(--primary);">
-            <div class="section-header tap-effect" onclick="toggleSection('ads-info-1', this)">
-                <span class="section-title">📘 부산항 이용 및 안전 근무 가이드 ▼</span>
-            </div>
+            <div class="section-header tap-effect" onclick="toggleSection('ads-info-1', this)"><span class="section-title">📘 부산항 이용 및 안전 근무 가이드 ▼</span></div>
             <div id="ads-info-1" class="collapsible-content collapsed">
                 <div class="guide-text">
                     <h4>📌 2026년 부산항 터미널 출입 및 보안 규정</h4>
@@ -466,10 +371,13 @@
         let currentBoardPage=1; const postsPerPage=5; let commentUnsubscribes = {};
         let currentDate = new Date();
 
-        // [핵심 기능 1: 지능형 임금 계산 및 내역서 생성 - 기능공 주/야 차등 및 0원 표기 적용]
+        // [핵심 기능 1: 지능형 임금 계산 및 내역서 생성 - 역할별 자동 계산]
         function calculateWage() {
             const DAY_RATE = 10320, NIGHT_RATE = 15480, EXTRA_ADD = 5160, HOT_ADD = 3096;
             const SKILLED_DAY_ADD = 2557, SKILLED_NIGHT_ADD = 3836; 
+
+            // 선택된 역할 확인 (본선 / 기능공 / 육상)
+            const role = document.querySelector('input[name="workRole"]:checked').value;
 
             const totalHours = parseFloat(document.getElementById('wageTotalHours').value) || 0;
             const startHour = parseInt(document.getElementById('wageStartTime').value) || 8;
@@ -479,7 +387,6 @@
             const hWeekend = parseFloat(document.getElementById('wageWeekend').value) || 0;
             const hRain = parseFloat(document.getElementById('wageRain').value) || 0;
             const hT = parseFloat(document.getElementById('wageHotTime').value) || 0;
-            const skilledH = parseFloat(document.getElementById('wageSkilled').value) || 0; 
             const taxRate = parseFloat(document.getElementById('wageTaxType').value) || 0;
 
             let dayCount = 0, nightCount = 0;
@@ -488,15 +395,11 @@
                 if (curr >= 8 && curr < 18) dayCount++; else nightCount++;
             }
 
-            // 기능공 시간 자동 배분 로직
+            // 기능공/육상 선택 시 전체 시간에 수당 자동 적용
             let sDayCount = 0, sNightCount = 0;
-            if(skilledH > 0) {
-                if (totalHours > 0) {
-                    sDayCount = (dayCount / totalHours) * skilledH;
-                    sNightCount = (nightCount / totalHours) * skilledH;
-                } else {
-                    sDayCount = skilledH; 
-                }
+            if (role === 'skilled' || role === 'onshore') {
+                sDayCount = dayCount;
+                sNightCount = nightCount;
             }
 
             const dPay = dayCount * DAY_RATE;
@@ -507,6 +410,7 @@
             const rainPay = hRain * EXTRA_ADD;
             const hTPay = hT * HOT_ADD;
             
+            // 기능공 수당 (선택된 경우에만 계산)
             const sDayPay = sDayCount * SKILLED_DAY_ADD;
             const sNightPay = sNightCount * SKILLED_NIGHT_ADD;
             const totalSkilledPay = sDayPay + sNightPay;
@@ -520,10 +424,12 @@
                 <tr><td>☀️ 주간 기본 (${dayCount.toFixed(1)}H)</td><td>${dPay > 0 ? dPay.toLocaleString() + '원' : '0원'}</td></tr>
                 <tr><td>🌙 야간 기본 (${nightCount.toFixed(1)}H)</td><td>${nPay > 0 ? nPay.toLocaleString() + '원' : '0원'}</td></tr>
                 
-                <tr style="background:rgba(0,0,0,0.03)"><td colspan="2" style="font-size:0.8rem; font-weight:bold;">[기능공/라이싱 수당]</td></tr>
-                <tr><td>🔧 전체 (${skilledH}H)</td><td>${Math.round(totalSkilledPay).toLocaleString()}원</td></tr>
+                ${role !== 'main' ? `
+                <tr style="background:rgba(0,0,0,0.03)"><td colspan="2" style="font-size:0.8rem; font-weight:bold;">[기능공/육상 수당 적용]</td></tr>
+                <tr><td>🔧 전체 수당</td><td>${Math.round(totalSkilledPay).toLocaleString()}원</td></tr>
                 <tr><td>&nbsp;&nbsp;ㄴ주간분 (${sDayCount.toFixed(1)}H)</td><td>${Math.round(sDayPay).toLocaleString()}원</td></tr>
                 <tr><td>&nbsp;&nbsp;ㄴ야간분 (${sNightCount.toFixed(1)}H)</td><td>${Math.round(sNightPay).toLocaleString()}원</td></tr>
+                ` : ''}
 
                 <tr style="background:rgba(0,0,0,0.03)"><td colspan="2" style="font-size:0.8rem; font-weight:bold;">[할증 수당]</td></tr>
                 <tr><td>🌴 공휴일 (${hHoliday}H)</td><td>${holidayPay.toLocaleString()}원</td></tr>
@@ -539,7 +445,9 @@
         }
 
         function resetWageForm(){
-            document.querySelectorAll('#wage-card input').forEach(i=>i.value=''); 
+            document.querySelectorAll('#wage-card input').forEach(i=> {
+                 if(i.type !== 'radio') i.value=''; // 라디오 버튼은 초기화 제외
+            });
             document.getElementById('wageStartTime').value=8; 
             document.getElementById('wageResultBox').classList.add('hidden');
         }
@@ -574,36 +482,19 @@
         async function deleteShip(id,e){e.stopPropagation(); if(await verifyAdmin()) db.collection("ships").doc(id).delete();}
         function uploadFile(){const f=document.getElementById('fileInput').files[0], t=document.getElementById('fileTitle').value; if(f&&t) storage.ref(`archives/${Date.now()}`).put(f).then(s=>s.ref.getDownloadURL()).then(u=>db.collection("archives").add({title:t, url:u, timestamp:firebase.firestore.FieldValue.serverTimestamp()}));}
         async function delArchive(id,e){e.stopPropagation(); if(await verifyAdmin()) db.collection("archives").doc(id).delete();}
-        
-        // [알림글 Ticker 개선 - 사용자/관리자 통합]
-        function loadBanner(){
-            db.collection('settings').doc('banner').onSnapshot(d=>{
-                if(d.exists) {
-                    const data = d.data();
-                    let msg = "";
-                    if(data.adminMessage) msg += `📢 ${data.adminMessage}   `;
-                    if(data.messages && data.messages.length > 0) msg += `  ///  ${data.messages.join("  ///  ")}`;
-                    document.getElementById('tickerText').innerText = msg || "🚨 안전 제일! 오늘도 무사고!";
-                }
-            });
-        }
-        function writeUserTicker(){const m=prompt("안전 문구:"); if(m) db.collection('settings').doc('banner').set({messages:firebase.firestore.FieldValue.arrayUnion(m)},{merge:true}).then(()=>showToast("문구 등록됨"));}
+        function loadBanner(){db.collection('settings').doc('banner').onSnapshot(d=>{if(d.exists) {const data=d.data(); let msg=""; if(data.adminMessage) msg+=`📢 ${data.adminMessage}   `; if(data.messages&&data.messages.length>0) msg+=`  ///  ${data.messages.join("  ///  ")}`; document.getElementById('tickerText').innerText=msg||"🚨 안전 제일! 오늘도 무사고!";}});}
+        function writeUserTicker(){const m=prompt("안전 문구:"); if(m){db.collection('settings').doc('banner').set({messages:firebase.firestore.FieldValue.arrayUnion(m)},{merge:true}).then(()=>showToast("문구 등록됨"));}}
         async function setAdminTicker(){if(await verifyAdmin()){const m=prompt("공지:"); if(m) db.collection('settings').doc('banner').set({adminMessage:m},{merge:true});}}
         async function resetTicker(){if(await verifyAdmin()) db.collection('settings').doc('banner').set({adminMessage:null, messages:[]});}
-        
         function renderPagination(id,t,c,f){const el=document.getElementById(id); el.innerHTML=""; for(let i=1;i<=t;i++){const s=document.createElement("span"); s.className=`page-num ${i===c?'active':''}`; s.innerText=i; s.onclick=()=>f(i); el.appendChild(s);}}
-        
-        function checkAdminAndOpenLog(){
-            verifyAdmin().then(r=>{
-                if(r) {
-                    toggleDashItem('log-card');
-                    renderCalendar(currentDate.getFullYear(), currentDate.getMonth());
-                } else {
-                    showToast("⛔ 관리자 권한 필요");
-                }
-            });
-        }
-        
+        function checkAdminAndOpenLog(){verifyAdmin().then(r=>{if(r){toggleDashItem('log-card'); renderCalendar(currentDate.getFullYear(), currentDate.getMonth());}else{showToast("⛔ 관리자 권한 필요");}});}
+        function renderCalendar(y, m){const calGrid=document.getElementById('calendarGrid'); calGrid.innerHTML=""; document.getElementById('calMonthYear').innerText=`${y}년 ${m+1}월`; const firstDay=new Date(y,m,1).getDay(); const lastDate=new Date(y,m+1,0).getDate(); for(let i=0;i<firstDay;i++)calGrid.innerHTML+=`<div></div>`; db.collection('work_logs').where('date','>=',`${y}-${String(m+1).padStart(2,'0')}-01`).where('date','<=',`${y}-${String(m+1).padStart(2,'0')}-31`).get().then(snapshot=>{adminWorkLogs={}; snapshot.forEach(doc=>adminWorkLogs[doc.id]=doc.data()); for(let d=1;d<=lastDate;d++){const dateStr=`${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`; const hasData=adminWorkLogs[dateStr]?'has-data':''; calGrid.innerHTML+=`<div class="cal-day tap-effect ${hasData}" onclick="clickDate('${dateStr}')">${d}<div class="cal-dot"></div></div>`;} calculateMonthlyTotal();});}
+        function changeMonth(step){currentDate.setMonth(currentDate.getMonth()+step); renderCalendar(currentDate.getFullYear(), currentDate.getMonth());}
+        async function clickDate(dateStr){document.getElementById('selectedDateText').innerText=dateStr; document.getElementById('dailyLogForm').classList.remove('hidden'); document.getElementById('dailyLogForm').setAttribute('data-date',dateStr); if(adminWorkLogs[dateStr]){const data=adminWorkLogs[dateStr]; document.getElementById('logDayHours').value=data.dayHours||''; document.getElementById('logNightHours').value=data.nightHours||''; document.getElementById('logMemo').value=data.memo||''; if(data.imageUrl){document.getElementById('logImagePreview').src=data.imageUrl; document.getElementById('logImagePreview').style.display='block';}else{document.getElementById('logImagePreview').style.display='none';}}else{resetLogInputs();}}
+        function saveWorkLog(){const dateStr=document.getElementById('dailyLogForm').getAttribute('data-date'); if(!dateStr)return; const dh=parseFloat(document.getElementById('logDayHours').value)||0; const nh=parseFloat(document.getElementById('logNightHours').value)||0; const memo=document.getElementById('logMemo').value; const file=document.getElementById('logImageInput').files[0]; const totalPay=(dh*10320)+(nh*15480); const save=(url)=>{db.collection('work_logs').doc(dateStr).set({date:dateStr,dayHours:dh,nightHours:nh,memo:memo,totalPay:totalPay,imageUrl:url},{merge:true}).then(()=>{showToast("저장 완료"); adminWorkLogs[dateStr]={dayHours:dh,nightHours:nh,memo:memo,totalPay:totalPay,imageUrl:url}; renderCalendar(currentDate.getFullYear(), currentDate.getMonth());});}; if(file){storage.ref(`logs/${dateStr}`).put(file).then(s=>s.ref.getDownloadURL()).then(u=>save(u));}else{save(adminWorkLogs[dateStr]?adminWorkLogs[dateStr].imageUrl:null);}}
+        function deleteWorkLog(){const dateStr=document.getElementById('dailyLogForm').getAttribute('data-date'); if(confirm("삭제?")){db.collection('work_logs').doc(dateStr).delete().then(()=>{showToast("삭제됨"); delete adminWorkLogs[dateStr]; resetLogInputs(); renderCalendar(currentDate.getFullYear(), currentDate.getMonth());});}}
+        function calculateMonthlyTotal(){let total=0; Object.values(adminWorkLogs).forEach(log=>total+=(log.totalPay||0)); document.getElementById('monthlyTotalDisplay').innerText=`이번달 총액: ${total.toLocaleString()}원`;}
+        function resetLogInputs(){document.getElementById('logDayHours').value=''; document.getElementById('logNightHours').value=''; document.getElementById('logMemo').value=''; document.getElementById('logImageInput').value=''; document.getElementById('logImagePreview').style.display='none';}
         function filterShips(){const q=document.getElementById('shipSearch').value.toUpperCase(); filteredShips=allShipsData.filter(s=>s.shipName.toUpperCase().includes(q)); renderShipPage(1);}
         function openBusSchedule(){showToast("이미지를 불러오는 중입니다...");}
         function previewLogImage(input){if(input.files&&input.files[0]){const r=new FileReader(); r.onload=e=>{const img=document.getElementById('logImagePreview'); img.src=e.target.result; img.style.display='block';}; r.readAsDataURL(input.files[0]);}}
