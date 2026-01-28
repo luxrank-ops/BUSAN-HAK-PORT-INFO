@@ -335,7 +335,17 @@
         let currentBoardPage=1, currentShipPage=1, currentFilePage=1; const postsPerPage=5;
         let commentUnsubscribes = {};
 
-        try { if(firebase.apps.length===0) firebase.initializeApp(firebaseConfig); db=firebase.firestore(); storage=firebase.storage(); loadAllData(); loadBanner(); if(localStorage.getItem('theme')==='dark') document.body.classList.add('dark-mode'); } catch(e){}
+        // 기존 로직 유지 (수정 금지 구역)
+try { 
+    if(firebase.apps.length === 0) firebase.initializeApp(firebaseConfig); 
+    db = firebase.firestore(); 
+    storage = firebase.storage(); 
+    
+    loadAllData(); // 게시판 및 선박 데이터 로드
+    loadBanner();  // <--- [이 줄이 반드시 있어야 등록된 글이 보입니다!]
+    
+    if(localStorage.getItem('theme') === 'dark') document.body.classList.add('dark-mode'); 
+} catch(e) { }
 
         function escapeHtml(text) { if(!text) return ""; return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;"); }
         const ADMIN_HASH = "8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92"; 
@@ -415,14 +425,27 @@ function loadBanner(){
 }
 
 function writeUserTicker(){
-    const msg=prompt("안전문구 입력 (누구나):");
-    if(msg){
-        db.collection('settings').doc('banner').get().then(doc=>{
-            let msgs = doc.exists ? (doc.data().messages || []) : [];
+    const msg = prompt("안전문구 입력 (누구나):");
+    if(msg && msg.trim() !== ""){
+        // settings 컬렉션의 banner 문서에서 기존 메시지 목록을 가져옵니다.
+        db.collection('settings').doc('banner').get().then(doc => {
+            let msgs = [];
+            if(doc.exists && doc.data().messages) {
+                msgs = doc.data().messages;
+            }
+            // 새 메시지를 맨 앞에 추가하고 최대 10개까지 유지
             msgs.unshift(msg);
             if(msgs.length > 10) msgs = msgs.slice(0, 10);
-            db.collection('settings').doc('banner').set({messages:msgs}, {merge:true})
-            .then(() => showToast("문구가 등록되었습니다."));
+            
+            // 데이터베이스 업데이트
+            return db.collection('settings').doc('banner').set({
+                messages: msgs
+            }, { merge: true });
+        }).then(() => {
+            showToast("✅ 문구가 등록되었습니다.");
+        }).catch(err => {
+            console.error("등록 에러:", err);
+            showToast("❌ 등록 실패: " + err.message);
         });
     }
 }
@@ -555,4 +578,5 @@ async function resetTicker(){
     </script>
 </body>
 </html>
+
 
