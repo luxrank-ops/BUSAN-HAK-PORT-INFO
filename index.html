@@ -19,6 +19,7 @@
     <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.8/dist/web/static/pretendard.css" />
 
     <style>
+        /* [전체 공통 스타일 정의] */
         :root { 
             --primary: #1e3a8a; 
             --primary-light: #3b82f6; 
@@ -34,6 +35,7 @@
             --glass-shadow: 0 2px 10px rgba(0,0,0,0.03); 
             --blur: blur(12px); 
         }
+        
         body.dark-mode { 
             --primary: #60a5fa; 
             --primary-light: #93c5fd; 
@@ -45,22 +47,70 @@
             --border: rgba(55, 65, 81, 0.5); 
             --glass-border: 1px solid rgba(255, 255, 255, 0.1); 
         }
+
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; font-family: 'Pretendard', sans-serif; }
         body { background-color: var(--bg-color); color: var(--text-main); margin: 0; padding: 0; padding-bottom: 100px; transition: background 0.3s ease; }
+        
+        /* 터치 효과 */
         .tap-effect { transition: transform 0.1s; } 
         .tap-effect:active { transform: scale(0.98); }
         
-        header { background: linear-gradient(135deg, var(--primary), var(--primary-light)); color: white; padding: 14px 0; text-align: center; position: sticky; top: 0; z-index: 100; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        /* 헤더 스타일 */
+        header { 
+            background: linear-gradient(135deg, var(--primary), var(--primary-light)); 
+            color: white; 
+            padding: 14px 0; 
+            text-align: center; 
+            position: sticky; 
+            top: 0; 
+            z-index: 100; 
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1); 
+        }
         header h1 { margin: 0; font-size: 1.2rem; font-weight: 900; }
         
-        .theme-toggle { position: absolute; right: 15px; top: 50%; transform: translateY(-50%); background: rgba(255,255,255,0.2); border: none; width: 30px; height: 30px; border-radius: 50%; font-size: 1.1rem; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+        .theme-toggle { 
+            position: absolute; 
+            right: 15px; 
+            top: 50%; 
+            transform: translateY(-50%); 
+            background: rgba(255,255,255,0.2); 
+            border: none; 
+            width: 30px; 
+            height: 30px; 
+            border-radius: 50%; 
+            font-size: 1.1rem; 
+            cursor: pointer; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+        }
         
+        /* 레이아웃 */
         .container { width: 96%; max-width: 600px; margin: 15px auto; }
         .dash-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }
-        .dash-card { background: var(--card-bg); border-radius: 16px; box-shadow: var(--glass-shadow); border: var(--glass-border); overflow: hidden; transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); display: flex; flex-direction: column; }
+        
+        /* 카드 컴포넌트 */
+        .dash-card { 
+            background: var(--card-bg); 
+            border-radius: 16px; 
+            box-shadow: var(--glass-shadow); 
+            border: var(--glass-border); 
+            overflow: hidden; 
+            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); 
+            display: flex; 
+            flex-direction: column; 
+        }
         .dash-card.expanded { grid-column: span 2; }
         
-        .dash-header { padding: 15px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.05); min-height: 60px; }
+        .dash-header { 
+            padding: 15px; 
+            cursor: pointer; 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            background: rgba(255,255,255,0.05); 
+            min-height: 60px; 
+        }
         .dash-card.expanded .dash-header { border-bottom: 1px solid var(--border); background: rgba(0,0,0,0.02); }
         .dash-title { font-size: 1rem; font-weight: 800; color: var(--text-main); display: flex; align-items: center; gap: 6px; }
         
@@ -68,9 +118,25 @@
         .toggle-icon.rotated { transform: rotate(180deg); }
         
         .dash-content { display: none; padding: 15px; background: var(--card-bg); animation: fadeIn 0.2s; }
-        .card { background: var(--card-bg); border-radius: 16px; margin-bottom: 15px; box-shadow: var(--glass-shadow); border: var(--glass-border); overflow: hidden; }
         
-        .section-header { display: flex; justify-content: space-between; align-items: center; padding: 15px; cursor: pointer; border-bottom: 1px solid var(--border); }
+        /* 일반 카드 섹션 */
+        .card { 
+            background: var(--card-bg); 
+            border-radius: 16px; 
+            margin-bottom: 15px; 
+            box-shadow: var(--glass-shadow); 
+            border: var(--glass-border); 
+            overflow: hidden; 
+        }
+        
+        .section-header { 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            padding: 15px; 
+            cursor: pointer; 
+            border-bottom: 1px solid var(--border); 
+        }
         .section-title { font-size: 1.1rem; font-weight: 800; display:flex; align-items:center; gap:8px; }
         
         .collapsible-content { display: block; padding: 15px; }
@@ -79,50 +145,175 @@
         @keyframes fadeIn { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
         
         .control-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-        .control-btn { background: var(--card-bg); border: 1px solid var(--border); color: var(--text-main); padding: 16px; border-radius: 12px; text-decoration: none; font-size: 0.95rem; font-weight: 700; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px; box-shadow: 0 2px 5px rgba(0,0,0,0.02); transition: all 0.2s; }
+        .control-btn { 
+            background: var(--card-bg); 
+            border: 1px solid var(--border); 
+            color: var(--text-main); 
+            padding: 16px; 
+            border-radius: 12px; 
+            text-decoration: none; 
+            font-size: 0.95rem; 
+            font-weight: 700; 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            justify-content: center; 
+            gap: 5px; 
+            box-shadow: 0 2px 5px rgba(0,0,0,0.02); 
+            transition: all 0.2s; 
+        }
         
-        .input-field { width: 100%; padding: 12px; margin-bottom: 8px; border: 1px solid var(--border); border-radius: 8px; background: rgba(255,255,255,0.6); color: var(--text-main); font-size: 0.95rem; }
+        /* 폼 요소 */
+        .input-field { 
+            width: 100%; 
+            padding: 12px; 
+            margin-bottom: 8px; 
+            border: 1px solid var(--border); 
+            border-radius: 8px; 
+            background: rgba(255,255,255,0.6); 
+            color: var(--text-main); 
+            font-size: 0.95rem; 
+        }
         .textarea-field { height: 80px; resize: none; }
         
-        .action-btn { width: 100%; padding: 12px; border: none; border-radius: 10px; font-weight: 700; color: white; cursor: pointer; background: var(--primary); font-size: 0.95rem; }
+        .action-btn { 
+            width: 100%; 
+            padding: 12px; 
+            border: none; 
+            border-radius: 10px; 
+            font-weight: 700; 
+            color: white; 
+            cursor: pointer; 
+            background: var(--primary); 
+            font-size: 0.95rem; 
+        }
         .bg-submit { background: var(--success); } 
         .bg-calc { background: linear-gradient(135deg, #ef4444, #b91c1c); } 
         .bg-cancel { background: var(--text-sub); }
         
-        .terminal-block { background: rgba(0,0,0,0.03); border-radius: 10px; margin-bottom: 8px; border: 1px solid var(--border); overflow: hidden; }
-        .terminal-header { padding: 12px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; font-weight: 700; font-size: 0.95rem; }
+        /* 항업 정보 스타일 */
+        .terminal-block { 
+            background: rgba(0,0,0,0.03); 
+            border-radius: 10px; 
+            margin-bottom: 8px; 
+            border: 1px solid var(--border); 
+            overflow: hidden; 
+        }
+        .terminal-header { 
+            padding: 12px; 
+            cursor: pointer; 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            font-weight: 700; 
+            font-size: 0.95rem; 
+        }
         .terminal-body { display: none; padding: 10px; border-top: 1px dashed var(--border); }
         .terminal-body.show { display: block !important; }
         .terminal-actions { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; }
-        .terminal-btn { background: var(--card-bg); border: 1px solid var(--border); color: var(--text-main); padding: 10px 4px; border-radius: 8px; text-decoration: none; font-size: 0.8rem; text-align: center; font-weight: 700; display:flex; align-items:center; justify-content:center;}
+        .terminal-btn { 
+            background: var(--card-bg); 
+            border: 1px solid var(--border); 
+            color: var(--text-main); 
+            padding: 10px 4px; 
+            border-radius: 8px; 
+            text-decoration: none; 
+            font-size: 0.8rem; 
+            text-align: center; 
+            font-weight: 700; 
+            display:flex; 
+            align-items:center; 
+            justify-content:center;
+        }
         
+        /* 임금 계산기 스타일 */
         .wage-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
         .wage-row label { flex: 1; font-weight: 600; font-size: 0.9rem; }
-        .wage-result-box { background: linear-gradient(135deg, #ffffff, #f9fafb); border: 2px solid var(--primary); border-radius: 12px; padding: 15px; margin-top: 15px; }
-        .wage-total { font-size: 1.5rem; color: #c2410c; font-weight: 900; text-align: center; border-top: 2px solid var(--primary); padding-top: 10px; margin-top: 10px; }
+        .wage-result-box { 
+            background: linear-gradient(135deg, #ffffff, #f9fafb); 
+            border: 2px solid var(--primary); 
+            border-radius: 12px; 
+            padding: 15px; 
+            margin-top: 15px; 
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        }
         .spec-table { width: 100%; border-collapse: collapse; margin: 10px 0; font-size: 0.85rem; }
         .spec-table tr { border-bottom: 1px solid #edf2f7; }
         .spec-table td { padding: 8px 0; color: var(--text-main); }
         .spec-table td:last-child { text-align: right; font-weight: 700; }
+        .wage-total { 
+            font-size: 1.5rem; 
+            color: #c2410c; 
+            font-weight: 900; 
+            text-align: center; 
+            border-top: 2px solid var(--primary); 
+            padding-top: 10px; 
+            margin-top: 10px;
+        }
 
-        .ticker-container { background: var(--accent); color: #000; font-weight: 700; height: 36px; display: flex; align-items: center; overflow: hidden; position: relative; font-size: 0.85rem; }
+        /* 흐르는 알림바 (Ticker) */
+        .ticker-container { 
+            background: var(--accent); 
+            color: #000; 
+            font-weight: 700; 
+            height: 36px; 
+            display: flex; 
+            align-items: center; 
+            overflow: hidden; 
+            position: relative; 
+            font-size: 0.85rem; 
+        }
         .ticker-item { padding-left: 100%; animation: ticker 25s linear infinite; white-space: nowrap; }
         @keyframes ticker { 100% { transform: translate3d(-100%, 0, 0); } }
         .ticker-controls { position: absolute; right: 0; height: 100%; display: flex; background: rgba(255,255,255,0.3); backdrop-filter: blur(2px); }
         .ticker-btn { width: 36px; height: 100%; border: none; background: transparent; font-size: 1rem; cursor: pointer; }
         
+        /* 유틸리티 */
         .hidden { display: none !important; }
         .mini-btn { padding: 4px 8px; font-size: 0.75rem; border-radius: 6px; border: none; cursor: pointer; color: white; margin-left: 5px; }
         .btn-del { background: var(--danger); } 
         .btn-edit { background: var(--primary-light); }
         
+        /* 게시판 스타일 */
         .post-list { list-style: none; padding: 0; margin: 0; }
-        .post-item { border-bottom: 1px solid var(--border); }
-        .post-header-row { padding: 15px 5px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; background: transparent; transition: background 0.1s; }
+        .post-item { border-bottom: 1px solid var(--border); padding: 10px 0; }
+        .post-item:last-child { border-bottom: none; }
+        .post-header-row { 
+            padding: 5px; 
+            cursor: pointer; 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            background: transparent; 
+            transition: background 0.1s; 
+        }
         .post-header-row:active { background: rgba(0,0,0,0.03); }
-        .post-title-text { font-weight: 700; font-size: 0.95rem; color: var(--text-main); display: flex; align-items: center; gap: 5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; margin-right: 10px; }
-        .post-body-content { display: none; padding: 15px; background: rgba(0,0,0,0.02); border-top: 1px dashed var(--border); font-size: 0.95rem; line-height: 1.7; white-space: pre-wrap; color: var(--text-main); word-break: break-all; }
+        .post-title-text { 
+            font-weight: 700; 
+            font-size: 0.95rem; 
+            color: var(--text-main); 
+            display: flex; 
+            align-items: center; 
+            gap: 5px; 
+            overflow: hidden; 
+            text-overflow: ellipsis; 
+            white-space: nowrap; 
+            flex: 1; 
+            margin-right: 10px; 
+        }
+        .post-body-content { 
+            display: none; 
+            padding: 15px; 
+            background: rgba(0,0,0,0.02); 
+            border-top: 1px dashed var(--border); 
+            font-size: 0.95rem; 
+            line-height: 1.7; 
+            white-space: pre-wrap; 
+            color: var(--text-main); 
+            word-break: break-all; 
+        }
         
+        /* 댓글 시스템 */
         .comment-section { margin-top: 15px; border-top: 1px dashed var(--border); padding-top: 10px; background: rgba(0,0,0,0.015); border-radius: 8px; padding: 10px; }
         .comment-item { display: flex; justify-content: space-between; align-items: flex-start; font-size: 0.85rem; padding: 6px 0; border-bottom: 1px solid rgba(0,0,0,0.05); }
         .comment-meta { font-weight: bold; color: var(--primary); margin-right: 5px; min-width: 60px; font-size: 0.8rem; }
@@ -133,29 +324,28 @@
         .comment-input-lg { flex: 1; padding: 8px; border: 1px solid var(--border); border-radius: 6px; font-size: 0.8rem; min-width: 120px; }
         .comment-submit { padding: 8px 12px; background: var(--text-sub); color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 0.8rem; font-weight: bold; }
         
-        .bottom-nav { position: fixed; bottom: 0; left: 0; width: 100%; height: 65px; background: rgba(255,255,255,0.95); border-top: 1px solid var(--border); display: flex; justify-content: space-around; align-items: center; z-index: 1000; padding-bottom: env(safe-area-inset-bottom); }
-        .dark-mode .bottom-nav { background: rgba(30, 41, 59, 0.95); }
-        .nav-item { flex: 1; text-align: center; color: var(--text-sub); font-size: 0.7rem; cursor: pointer; display: flex; flex-direction: column; align-items: center; }
-        .nav-item.active { color: var(--primary); font-weight: 800; }
-        .nav-icon { font-size: 1.4rem; margin-bottom: 2px; }
-        
-        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 3000; justify-content: center; align-items: center; }
-        .modal-content { background: var(--card-bg); padding: 20px; border-radius: 15px; max-width: 90%; max-height: 80%; overflow-y: auto; }
-        .modal-img { max-width: 100%; border-radius: 5px; }
-        
-        .guide-text { line-height: 1.8; font-size: 0.9rem; text-align: left; color: var(--text-main); white-space: pre-wrap; }
-        .guide-text h4 { color: var(--primary); margin: 25px 0 10px 0; border-left: 4px solid var(--accent); padding-left: 10px; font-size: 1rem; }
-        
+        /* 근무일지 달력 */
         .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; text-align: center; }
         .cal-day { padding: 8px 2px; border-radius: 8px; background: rgba(255,255,255,0.5); border: 1px solid var(--border); font-weight: 700; font-size: 0.85rem; cursor: pointer; }
         .cal-day.selected { background: var(--primary); color: white; border-color: var(--primary); }
         .cal-day.has-data { border: 2px solid var(--success); }
+        .cal-dot { width: 4px; height: 4px; background-color: var(--success); border-radius: 50%; margin: 3px auto 0 auto; display: none; }
+        .cal-day.has-data .cal-dot { display: block; }
         
-        #toast { position: fixed; bottom: 85px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.85); color: white; padding: 10px 20px; border-radius: 20px; font-size: 0.9rem; z-index: 5000; opacity: 0; transition: 0.3s; pointer-events: none; }
-        #toast.show { opacity: 1; }
-        
+        /* 하단 네비게이션 및 페이징 */
+        .bottom-nav { position: fixed; bottom: 0; left: 0; width: 100%; height: 65px; background: rgba(255,255,255,0.95); border-top: 1px solid var(--border); display: flex; justify-content: space-around; align-items: center; z-index: 1000; padding-bottom: env(safe-area-inset-bottom); }
+        .nav-item { flex: 1; text-align: center; color: var(--text-sub); font-size: 0.7rem; cursor: pointer; display: flex; flex-direction: column; align-items: center; }
+        .nav-item.active { color: var(--primary); font-weight: 800; }
+        .nav-icon { font-size: 1.4rem; margin-bottom: 2px; }
         .page-num { padding: 5px 10px; border: 1px solid var(--border); cursor: pointer; border-radius: 5px; font-size: 0.8rem; margin: 0 2px; }
         .page-num.active { background: var(--primary); color: white; }
+        
+        /* 모달 및 토스트 */
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 3000; justify-content: center; align-items: center; }
+        .modal-content { background: var(--card-bg); padding: 20px; border-radius: 15px; max-width: 90%; max-height: 80%; overflow-y: auto; }
+        .modal-img { max-width: 100%; border-radius: 5px; }
+        #toast { position: fixed; bottom: 85px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.85); color: white; padding: 10px 20px; border-radius: 20px; font-size: 0.9rem; z-index: 5000; opacity: 0; transition: 0.3s; pointer-events: none; }
+        #toast.show { opacity: 1; }
     </style>
 </head>
 <body>
@@ -187,11 +377,11 @@
                     <div style="background:rgba(239,68,68,0.05); padding:12px; border-radius:10px; margin-bottom:12px; border:1px solid rgba(239,68,68,0.2);">
                         <div class="wage-row"><label>⏳ 총 근무시간</label><input type="number" id="wageTotalHours" class="input-field" placeholder="예: 24, 48" style="text-align:right; border:2px solid var(--danger);">H</div>
                         <div class="wage-row"><label>🕒 시작 시각</label><input type="number" id="wageStartTime" class="input-field" value="8" placeholder="0~23" style="text-align:right;">시</div>
-                        <p style="font-size:0.7rem; color:var(--text-sub); margin:0;">※ 총 시간을 기준으로 주/야간을 자동 배분합니다.</p>
+                        <p style="font-size:0.7rem; color:var(--text-sub); margin:0;">※ 총 시간을 기반으로 주/야간을 자동 배분합니다.</p>
                     </div>
                     
                     <div style="border-top:1px dashed var(--border); margin:10px 0; padding-top:10px;">
-                        <p style="font-size:0.75rem; color:var(--primary); font-weight:800; margin-bottom:8px;">✅ 해당되는 수당 시간 입력 (중복 가능)</p>
+                        <p style="font-size:0.75rem; color:var(--primary); font-weight:800; margin-bottom:8px;">✅ 해당 수당 시간 입력 (중복 가능)</p>
                         <div class="wage-row"><label>🌑 심야 (00~04시)</label><input type="number" id="wageDeepNight" class="input-field" placeholder="H" style="text-align:right;">H</div>
                         <div class="wage-row"><label>☔ 우천/공휴일/주말</label><input type="number" id="wageSpecial" class="input-field" placeholder="H" style="text-align:right;">H</div>
                         <div class="wage-row"><label>🔥 혹서기 (12~15시)</label><input type="number" id="wageHotTime" class="input-field" placeholder="H" style="text-align:right;">H</div>
@@ -230,13 +420,17 @@
                         <button class="mini-btn" onclick="changeMonth(1)">▶</button>
                     </div>
                     <div id="calendarGrid" class="calendar-grid"></div>
+                    
                     <div id="dailyLogForm" class="hidden" style="margin-top:15px; padding:15px; background:rgba(0,0,0,0.03); border-radius:12px;">
                         <h4 id="selectedDateText" style="margin:0 0 10px 0; color:var(--primary);"></h4>
-                        <div class="wage-row"><label>주간</label><input type="number" id="logDayHours" class="input-field" placeholder="H"></div>
-                        <div class="wage-row"><label>야간</label><input type="number" id="logNightHours" class="input-field" placeholder="H"></div>
+                        <div class="wage-row"><label>주간</label><input type="number" id="logDayHours" class="input-field" placeholder="H" step="0.5"></div>
+                        <div class="wage-row"><label>야간</label><input type="number" id="logNightHours" class="input-field" placeholder="H" step="0.5"></div>
                         <textarea id="logMemo" class="input-field textarea-field" placeholder="근무 메모..."></textarea>
+                        
+                        <label style="font-size:0.8rem; font-weight:bold; display:block; margin-top:5px;">📷 현장 사진</label>
                         <input type="file" id="logImageInput" class="input-field" accept="image/*" onchange="previewLogImage(this)">
-                        <img id="logImagePreview" style="max-width:100%; border-radius:10px; margin-top:5px; display:none;">
+                        <img id="logImagePreview" style="max-width:100%; border-radius:10px; margin-top:5px; display:none;" onclick="document.getElementById('imageModal').style.display='flex'; document.getElementById('modalImage').src=this.src;">
+                        
                         <div style="display:flex; gap:8px; margin-top:15px;">
                             <button class="action-btn bg-submit" onclick="saveWorkLog()">저장</button>
                             <button class="action-btn bg-cancel" style="background:var(--danger);" onclick="deleteWorkLog()">삭제</button>
@@ -257,6 +451,8 @@
                     <div id="term-hjnc" class="terminal-body">
                         <div class="terminal-actions">
                             <a href="https://www.hjnc.co.kr/esvc/vessel/berthScheduleT" target="_blank" class="terminal-btn">스케줄</a>
+                            <a href="https://www.hjnc.co.kr/esvc/vessel/berthScheduleG" target="_blank" class="terminal-btn">차트</a>
+                            <a href="https://www.hjnc.co.kr/esvc/vessel/vesselStatus" target="_blank" class="terminal-btn">현황</a>
                             <a href="http://bayplan.hjnc.co.kr" target="_blank" class="terminal-btn btn-premium">🧩 BAY</a>
                         </div>
                     </div>
@@ -266,6 +462,8 @@
                     <div id="term-bnct" class="terminal-body">
                         <div class="terminal-actions">
                             <a href="https://info.bnctkorea.com/esvc/vessel/berthScheduleT" target="_blank" class="terminal-btn">스케줄</a>
+                            <a href="https://info.bnctkorea.com/esvc/vessel/berthScheduleG" target="_blank" class="terminal-btn">차트</a>
+                            <a href="https://info.bnctkorea.com/esvc/vessel/vesselStatus" target="_blank" class="terminal-btn">현황</a>
                         </div>
                     </div>
                 </div>
@@ -282,7 +480,10 @@
                     <div id="term-pnc" class="terminal-body">
                         <div class="terminal-actions">
                             <a href="https://svc.pncport.com/info/CMS/Ship/Info.pnc?mCode=MN014" target="_blank" class="terminal-btn">스케줄</a>
+                            <a href="https://svc.pncport.com/info/CMS/Ship/ShipBerthC.pnc?mCode=MN019" target="_blank" class="terminal-btn">차트</a>
+                            <a href="https://svc.pncport.com/info/CMS/Ship/ShipVslStatus.pnc?mCode=MN020" target="_blank" class="terminal-btn">현황</a>
                         </div>
+                        <button class="action-btn" style="background:#f39c12; margin-top:8px; padding:10px;" onclick="openBusSchedule()">🚌 셔틀버스 시간표</button>
                     </div>
                 </div>
             </div>
@@ -297,30 +498,54 @@
                     <div class="terminal-header tap-effect" onclick="toggleContent('term-bptc')">북항 통합 (BPTC) ▼</div>
                     <div id="term-bptc" class="terminal-body">
                         <div class="terminal-actions">
-                            <a href="http://info.bptc.co.kr:9084" target="_blank" class="terminal-btn">통합 선석 조회</a>
+                            <a href="http://info.bptc.co.kr:9084" target="_blank" class="terminal-btn" style="grid-column:span 3;">🏗️ 감만/신선대 통합 선석</a>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
 
-        <div class="card" style="padding:15px; font-size:0.85rem; line-height:1.7; border-left: 5px solid var(--primary);">
-            <h4 style="margin:0 0 10px 0; color:var(--primary);">📘 부산항 근무 및 임금 가이드</h4>
-            <p>2026년 3항업지부 임금표 기준, 주간(08~18시) 시급은 10,320원이며 야간(18~08시)은 15,480원이 적용됩니다. 심야 및 우천 작업 시 할증은 시간당 5,160원입니다.</p>
+        <div class="card">
+            <div class="section-header tap-effect" onclick="toggleSection('control-content', this)">
+                <span class="section-title">📡 관제 및 실시간 기상 ▼</span>
+            </div>
+            <div id="control-content" class="collapsible-content collapsed">
+                <div class="control-grid">
+                    <a href="http://www.busanpilot.co.kr/popup/monitoring" class="control-btn" target="_blank">🛥️ 도선 모니터</a>
+                    <a href="https://weather.naver.com/today/08440585" class="control-btn" target="_blank" style="grid-column: span 2; color:var(--danger);">☀️ 부산항 실시간 날씨</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="card" style="border-left: 5px solid var(--primary);">
+            <div class="section-header tap-effect" onclick="toggleSection('ads-info-1', this)">
+                <span class="section-title">📘 부산항 이용 및 안전 근무 가이드 ▼</span>
+            </div>
+            <div id="ads-info-1" class="collapsible-content collapsed">
+                <div class="guide-text">
+                    <h4>📌 2026년 부산항 터미널 출입 및 보안 규정</h4>
+                    <p>부산항 내 모든 터미널(PNC, HJNC, BCT 등)은 국가 중요 보안 시설로 지정되어 출입 시 사전 등록이 필수입니다. 안전모와 안전조끼 착용은 법적 의무 사항이며 미착용 시 즉각적인 퇴거 조치가 취해질 수 있으니 주의하시기 바랍니다.</p>
+                    <h4>🌧️ 기상 악화 시 하역 작업 중단 기준</h4>
+                    <p>항만 업무는 풍속과 강수량에 민감합니다. 통상 순간풍속 15m/s 초과 시 안벽 크레인(QC) 작업이 일시 중단됩니다. 대기 시간이 길어질 경우 본 앱의 계산기 섹션에 있는 '우천 수당' 항목을 통해 예상 임금을 산출해 보시기 바랍니다.</p>
+                </div>
+            </div>
         </div>
 
         <div class="dash-grid">
             <div id="notice-card" class="dash-card">
-                <div class="dash-header tap-effect" onclick="toggleDashItem('notice-card')">📢 공지사항 ▼</div>
+                <div class="dash-header tap-effect" onclick="toggleDashItem('notice-card')"><span class="dash-title">📢 공지사항</span><span class="toggle-icon">▼</span></div>
                 <div class="dash-content">
-                    <input type="text" id="noticeTitle" class="input-field" placeholder="제목">
-                    <textarea id="noticeContent" class="input-field textarea-field" placeholder="내용"></textarea>
-                    <button class="action-btn bg-submit" onclick="addNotice()">공지 등록</button>
+                    <div style="margin-bottom:10px; background:rgba(239,68,68,0.05); padding:10px; border-radius:8px;">
+                        <input type="text" id="noticeTitle" class="input-field" placeholder="제목">
+                        <textarea id="noticeContent" class="input-field textarea-field" placeholder="내용"></textarea>
+                        <button class="action-btn bg-submit" onclick="addNotice()">공지 등록 (Admin)</button>
+                    </div>
                     <ul id="noticeList" class="post-list" style="margin-top:10px;"></ul>
                 </div>
             </div>
+
             <div id="board-card" class="dash-card">
-                <div class="dash-header tap-effect" onclick="toggleDashItem('board-card')">💬 익명게시판 ▼</div>
+                <div class="dash-header tap-effect" onclick="toggleDashItem('board-card')"><span class="dash-title">💬 익명게시판</span><span class="toggle-icon">▼</span></div>
                 <div class="dash-content">
                     <button class="action-btn" style="background:var(--text-sub); margin-bottom:10px;" onclick="toggleHidden('boardForm')">✍️ 글쓰기</button>
                     <div id="boardForm" class="hidden">
@@ -333,8 +558,9 @@
                     <div id="pagination" style="display:flex; justify-content:center; gap:5px; margin-top:10px;"></div>
                 </div>
             </div>
+            
             <div id="ship-card" class="dash-card">
-                <div class="dash-header tap-effect" onclick="toggleDashItem('ship-card')">🚢 선박정보 ▼</div>
+                <div class="dash-header tap-effect" onclick="toggleDashItem('ship-card')"><span class="dash-title">🚢 선박정보</span><span class="toggle-icon">▼</span></div>
                 <div class="dash-content">
                     <input type="text" id="shipSearch" class="input-field" placeholder="선박 검색" onkeyup="filterShips()">
                     <button class="action-btn" style="background:var(--accent);" onclick="toggleHidden('shipForm')">📝 신규 등록</button>
@@ -347,10 +573,11 @@
                     <ul id="shipList" class="post-list"></ul>
                 </div>
             </div>
+
             <div id="file-card" class="dash-card">
-                <div class="dash-header tap-effect" onclick="toggleDashItem('file-card')">📂 자료실 ▼</div>
+                <div class="dash-header tap-effect" onclick="toggleDashItem('file-card')"><span class="dash-title">📂 자료실</span><span class="toggle-icon">▼</span></div>
                 <div class="dash-content">
-                    <input type="text" id="fileTitle" class="input-field" placeholder="제목">
+                    <input type="text" id="fileTitle" class="input-field" placeholder="파일 제목">
                     <input type="file" id="fileInput" class="input-field">
                     <button class="action-btn bg-submit" onclick="uploadFile()">업로드</button>
                     <ul id="fileList" class="post-list" style="margin-top:10px;"></ul>
@@ -360,20 +587,36 @@
 
         <footer>
             <p>© 2026 BUSAN HAK PORT INFO. All rights reserved.</p>
-            <div style="margin-top:10px;"><span class="footer-link" onclick="openPrivacy()">개인정보처리방침</span></div>
+            <div style="margin-top:10px;">
+                <span class="footer-link" onclick="openPrivacy()">개인정보처리방침</span> | 
+                <span class="footer-link" onclick="alert('이용약관: 본 서비스는 현장 보조용이며 법적 효력이 없습니다.')">이용약관</span>
+            </div>
         </footer>
     </div>
 
     <nav class="bottom-nav">
         <div class="nav-item active tap-effect" onclick="scrollToTop()"><span class="nav-icon">🏠</span>홈</div>
-        <div class="nav-item tap-effect" onclick="toggleDashItem('board-card')">💬 톡톡</div>
-        <div class="nav-item tap-effect" onclick="toggleDashItem('ship-card')">🚢 선박</div>
-        <div class="nav-item tap-effect" onclick="toggleDashItem('file-card')">📂 자료</div>
+        <div class="nav-item tap-effect" onclick="toggleDashItem('board-card')"><span class="nav-icon">💬</span>톡톡</div>
+        <div class="nav-item tap-effect" onclick="toggleDashItem('ship-card')"><span class="nav-icon">🚢</span>선박</div>
+        <div class="nav-item tap-effect" onclick="toggleDashItem('file-card')"><span class="nav-icon">📂</span>자료</div>
     </nav>
 
     <div id="toast">알림</div>
-    <div id="imageModal" class="modal-overlay" onclick="closeImageModal()"><div class="modal-content" onclick="event.stopPropagation()"><img id="modalImage" style="max-width:100%; border-radius:10px;"><button class="action-btn bg-cancel" onclick="closeImageModal()">닫기</button></div></div>
-    <div id="privacyModal" class="modal-overlay" onclick="document.getElementById('privacyModal').style.display='none'"><div class="modal-content"><h3>🛡️ 개인정보처리방침</h3><p>본 사이트는 Firebase와 애드센스를 사용합니다...</p><button class="action-btn" onclick="document.getElementById('privacyModal').style.display='none'">닫기</button></div></div>
+    
+    <div id="imageModal" class="modal-overlay" onclick="closeImageModal()">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <img id="modalImage" class="modal-img">
+            <button class="action-btn bg-cancel" onclick="closeImageModal()">닫기</button>
+        </div>
+    </div>
+    
+    <div id="privacyModal" class="modal-overlay" onclick="document.getElementById('privacyModal').style.display='none'">
+        <div class="modal-content">
+            <h3>🛡️ 개인정보처리방침</h3>
+            <p>본 사이트는 구글 애드센스 광고를 게재하며 쿠키를 사용합니다. 근무 기록 및 게시물 데이터는 Firebase 서버에 안전하게 보관됩니다.</p>
+            <button class="action-btn" onclick="document.getElementById('privacyModal').style.display='none'">닫기</button>
+        </div>
+    </div>
 
     <script>
         const firebaseConfig = { apiKey: "AIzaSyBDXy5HcYW-IZQJ9ZDEivr_yi99AxhYme8", authDomain: "my-app-d8527.firebaseapp.com", projectId: "my-app-d8527", storageBucket: "my-app-d8527.firebasestorage.app", messagingSenderId: "667323279185", appId: "1:667323279185:web:cff6184aaa82e08d345570" };
@@ -381,10 +624,9 @@
         const db = firebase.firestore(), storage = firebase.storage();
         let allPostsData=[], allShipsData=[], filteredShips=[], adminWorkLogs={}, editingShipId=null;
         let currentBoardPage=1; const postsPerPage=5; let commentUnsubscribes = {};
-        
         let currentDate = new Date(); // 근무일지 달력용 변수
 
-        // [지능형 임금 계산 및 내역서 생성]
+        // [핵심 기능 1: 지능형 임금 계산 및 내역서 생성]
         function calculateWage() {
             const DAY_RATE = 10320, NIGHT_RATE = 15480, EXTRA_ADD = 5160, HOT_ADD = 3096;
             const totalHours = parseFloat(document.getElementById('wageTotalHours').value) || 0;
@@ -434,7 +676,6 @@
             loadBanner();
         }
 
-        // [게시판 페이징 및 댓글 시스템 복원]
         function renderBoardPage(p){
             currentBoardPage=p; const l=document.getElementById("boardList"); l.innerHTML="";
             const start = (p-1)*postsPerPage; const end = start+postsPerPage;
@@ -460,16 +701,19 @@
             const firstDay = new Date(y, m, 1).getDay();
             const lastDate = new Date(y, m+1, 0).getDate();
             
-            // 빈 칸 채우기
             for(let i=0; i<firstDay; i++) calGrid.innerHTML += `<div></div>`;
             
-            // 날짜 채우기
-            for(let d=1; d<=lastDate; d++){
-                const dateStr = `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-                const hasData = adminWorkLogs[dateStr] ? 'has-data' : '';
-                calGrid.innerHTML += `<div class="cal-day tap-effect ${hasData}" onclick="clickDate('${dateStr}')">${d}<div class="cal-dot"></div></div>`;
-            }
-            calculateMonthlyTotal();
+            db.collection('work_logs').where('date', '>=', `${y}-${String(m+1).padStart(2,'0')}-01`).where('date', '<=', `${y}-${String(m+1).padStart(2,'0')}-31`).get().then(snapshot => {
+                adminWorkLogs = {};
+                snapshot.forEach(doc => adminWorkLogs[doc.id] = doc.data());
+                
+                for(let d=1; d<=lastDate; d++){
+                    const dateStr = `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+                    const hasData = adminWorkLogs[dateStr] ? 'has-data' : '';
+                    calGrid.innerHTML += `<div class="cal-day tap-effect ${hasData}" onclick="clickDate('${dateStr}')">${d}<div class="cal-dot"></div></div>`;
+                }
+                calculateMonthlyTotal();
+            });
         }
 
         function changeMonth(step){
@@ -478,12 +722,6 @@
         }
 
         async function clickDate(dateStr){
-            const y = currentDate.getFullYear(), m = currentDate.getMonth();
-            // DB에서 해당 월 데이터 다시 로드 (싱크 맞춤)
-            const snapshot = await db.collection('work_logs').where('date', '>=', `${y}-${String(m+1).padStart(2,'0')}-01`).where('date', '<=', `${y}-${String(m+1).padStart(2,'0')}-31`).get();
-            adminWorkLogs = {};
-            snapshot.forEach(doc => adminWorkLogs[doc.id] = doc.data());
-            
             document.getElementById('selectedDateText').innerText = dateStr;
             document.getElementById('dailyLogForm').classList.remove('hidden');
             document.getElementById('dailyLogForm').setAttribute('data-date', dateStr);
@@ -511,8 +749,6 @@
             const nh = parseFloat(document.getElementById('logNightHours').value) || 0;
             const memo = document.getElementById('logMemo').value;
             const file = document.getElementById('logImageInput').files[0];
-            
-            // 간단 계산 (주간 10320, 야간 15480 기준)
             const totalPay = (dh * 10320) + (nh * 15480); 
 
             const saveData = (url) => {
@@ -520,7 +756,6 @@
                     date: dateStr, dayHours: dh, nightHours: nh, memo: memo, totalPay: totalPay, imageUrl: url
                 }, {merge: true}).then(() => {
                     showToast("저장 완료");
-                    adminWorkLogs[dateStr] = {dayHours: dh, nightHours: nh, memo: memo, totalPay: totalPay, imageUrl: url};
                     renderCalendar(currentDate.getFullYear(), currentDate.getMonth());
                 });
             };
@@ -573,7 +808,7 @@
         async function delNotice(id,e){e.stopPropagation(); if(await verifyAdmin()) db.collection("notices").doc(id).delete();}
         function addPost(){const t=document.getElementById('inputTitle').value, p=document.getElementById('inputPw').value, c=document.getElementById('inputContent').value; if(t&&p&&c){db.collection("posts").add({title:t, password:p, content:c, timestamp:firebase.firestore.FieldValue.serverTimestamp()}).then(()=>toggleHidden('boardForm'));}}
         async function deletePost(id,pw,e){e.stopPropagation(); if(prompt("비번")===pw||await verifyAdmin()) db.collection("posts").doc(id).delete();}
-        function addComment(pid){const n=document.getElementById(`cmt-name-${pid}`).value, p=document.getElementById(`cmt-pw-${pid}`).value, t=document.getElementById(`cmt-txt-${pid}`).value; if(n&&p&&t){db.collection('posts').doc(pid).collection('comments').add({name:n, password:p, text:t, timestamp:firebase.firestore.FieldValue.serverTimestamp()});}}
+        function addComment(pid){const n=document.getElementById(`cmt-name-${pid}`).value, p=document.getElementById(`cmt-pw-${pid}`).value, t=document.getElementById(`cmt-txt-${pid}`).value; if(n&&p&&t){db.collection('posts').doc(pid).collection('comments').add({name:n, password:p, text:t, timestamp:firebase.firestore.FieldValue.serverTimestamp()}).then(()=>{document.getElementById(`cmt-txt-${pid}`).value="";});}}
         async function deleteComment(pid,cid,pw){if(prompt("비번")===pw||await verifyAdmin()) db.collection('posts').doc(pid).collection('comments').doc(cid).delete();}
         function addShipInfo(){const n=document.getElementById('shipName').value, c=document.getElementById('shipOnboard').value, f=document.getElementById('shipFileInput').files[0]; const save=(u)=>{db.collection("ships").add({shipName:n, onboardFeat:c, imageUrl:u, timestamp:firebase.firestore.FieldValue.serverTimestamp()}).then(()=>toggleHidden('shipForm'));}; if(f) storage.ref(`ships/${Date.now()}`).put(f).then(s=>s.ref.getDownloadURL()).then(u=>save(u)); else save(null);}
         function renderShipPage(p){const l=document.getElementById("shipList"); l.innerHTML=""; allShipsData.forEach(x=>{l.innerHTML+=`<li class="post-item"><div onclick="toggleContent('s-${x.id}')">🚢 ${x.shipName}</div><div id="s-${x.id}" class="post-body-content">${x.onboardFeat}<br><button class="mini-btn btn-del" onclick="deleteShip('${x.id}',event)">삭제</button></div></li>`;});}
@@ -588,7 +823,6 @@
         
         function renderPagination(id,t,c,f){const el=document.getElementById(id); el.innerHTML=""; for(let i=1;i<=t;i++){const s=document.createElement("span"); s.className=`page-num ${i===c?'active':''}`; s.innerText=i; s.onclick=()=>f(i); el.appendChild(s);}}
         
-        // 스마트 근무일지 로드 함수 (관리자 체크 후)
         function checkAdminAndOpenLog(){
             verifyAdmin().then(r=>{
                 if(r) {
