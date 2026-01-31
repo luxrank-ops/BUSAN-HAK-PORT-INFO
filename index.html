@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <meta name="description" content="부산항 현장직 필수 앱. 2026년 임금표 반영 계산기.">
+    <meta name="description" content="부산항 현장직 필수 앱. 임금계산기, 스마트 근무일지(짝지기록), 선박위치 및 스케줄 조회.">
     <title>BUSAN HAK PORT INFO</title>
     
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
@@ -12,7 +12,7 @@
     
     <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6024353303588422" crossorigin="anonymous"></script>
 
-    <link rel="icon" type="image/png" sizes="32x32" href="icon.png?v=final_mobile_fix_v37">
+    <link rel="icon" type="image/png" sizes="32x32" href="icon.png?v=final_s24_opt_v38">
     <link rel="stylesheet" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.8/dist/web/static/pretendard.css" />
 
     <style>
@@ -26,72 +26,112 @@
         header h1 { margin: 0; font-size: 1.2rem; font-weight: 900; }
         .theme-toggle { position: absolute; right: 15px; top: 50%; transform: translateY(-50%); background: rgba(255,255,255,0.2); border: none; width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 1.1rem; }
         
-        /* 컨테이너: 화면 너비 100% 사용하되, 패딩으로 여백 확보 */
-        .container { width: 100%; max-width: 600px; margin: 0 auto; padding: 10px; }
+        .container { width: 100%; max-width: 600px; margin: 0 auto; padding: 8px; } /* 패딩 축소 */
         
-        .dash-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; }
+        .dash-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; }
         .dash-card { background: var(--card-bg); border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); border: 1px solid var(--border); overflow: hidden; }
         .dash-card.expanded { grid-column: span 2; }
         
-        .dash-header { padding: 15px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.05); min-height: 55px; }
+        .dash-header { padding: 14px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.05); min-height: 50px; }
         .dash-card.expanded .dash-header { border-bottom: 1px solid var(--border); background: rgba(0,0,0,0.02); }
         .dash-title { font-size: 1rem; font-weight: 800; color: var(--text-main); display: flex; align-items: center; gap: 6px; }
-        
-        /* 대시보드 내용: 패딩 줄임 */
-        .dash-content { display: none; padding: 12px; background: var(--card-bg); }
+        .dash-content { display: none; padding: 12px; background: var(--card-bg); animation: fadeIn 0.2s; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
 
-        .card { background: var(--card-bg); border-radius: 12px; margin-bottom: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); border: 1px solid var(--border); overflow: hidden; }
-        .section-header { display: flex; justify-content: space-between; align-items: center; padding: 14px; cursor: pointer; border-bottom: 1px solid var(--border); }
+        .card { background: var(--card-bg); border-radius: 12px; margin-bottom: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); border: 1px solid var(--border); overflow: hidden; }
+        .section-header { display: flex; justify-content: space-between; align-items: center; padding: 12px 14px; cursor: pointer; border-bottom: 1px solid var(--border); }
         .section-title { font-size: 1rem; font-weight: 800; display:flex; align-items:center; gap:6px; }
         .collapsible-content { display: block; padding: 12px; }
         .collapsible-content.collapsed { display: none !important; }
 
-        /* [중요] 입력창 스타일 최적화: width: 100% 유지 */
-        .input-field { width: 100%; padding: 10px; margin-bottom: 0; border: 1px solid var(--border); border-radius: 8px; background: rgba(255,255,255,0.6); color: var(--text-main); font-size: 1rem; height: 42px; text-align: right; font-weight: bold; }
-        .textarea-field { height: 80px; resize: none; text-align: left; font-weight: normal; }
+        /* [입력창 스타일] S24 Ultra 최적화 */
+        .input-field { 
+            width: 100%; 
+            padding: 0 10px; /* 좌우 패딩만 줌 */
+            margin-bottom: 0; 
+            border: 1px solid var(--border); 
+            border-radius: 8px; 
+            background: rgba(255,255,255,0.6); 
+            color: var(--text-main); 
+            font-size: 1rem; 
+            height: 40px; /* 높이 고정 */
+            text-align: right; 
+            font-weight: bold; 
+            display: flex; 
+            align-items: center;
+        }
+        .textarea-field { height: 80px; resize: none; text-align: left; font-weight: normal; padding: 10px; }
         
         .action-btn { width: 100%; padding: 14px; border: none; border-radius: 10px; font-weight: 800; color: white; cursor: pointer; background: var(--primary); font-size: 1rem; margin-top: 5px; }
         .bg-submit { background: var(--success); } .bg-calc { background: linear-gradient(135deg, #ef4444, #b91c1c); } .bg-cancel { background: var(--text-sub); }
         
-        /* [중요] 입력 줄(Row) 레이아웃: 라벨 고정폭 + 입력창 가변폭 */
-        .wage-row { display: flex; align-items: center; margin-bottom: 10px; width: 100%; }
-        .wage-row label { width: 70px; min-width: 70px; font-weight: 700; font-size: 0.9rem; white-space: nowrap; text-align: left; margin-right: 5px; }
-        .wage-row .input-field { flex: 1; width: auto; /* 남은 공간 모두 차지 */ }
+        /* [입력 줄(Row) 레이아웃] */
+        .wage-row { 
+            display: flex; 
+            align-items: center; 
+            margin-bottom: 8px; 
+            width: 100%; 
+            justify-content: space-between; /* 양끝 정렬 */
+        }
+        .wage-row label { 
+            width: auto; /* 자동 너비 */
+            min-width: 50px; /* 최소 너비 */
+            font-weight: 700; 
+            font-size: 0.9rem; 
+            white-space: nowrap; 
+            text-align: left; 
+            margin-right: 5px; 
+            flex-shrink: 0; /* 줄어들지 않음 */
+        }
+        .wage-row .input-field { 
+            flex: 1; /* 남은 공간 모두 차지 */
+            width: 100%; 
+            min-width: 0; /* flex 자식 넘침 방지 */
+        }
         
+        /* [추가 수당 그리드] S24 화면 맞춤 */
+        .allowance-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr; /* 2열 */
+            column-gap: 8px; /* 가로 간격 */
+            row-gap: 2px; /* 세로 간격 */
+        }
+
         .wage-result-box { background: linear-gradient(135deg, #ffffff, #f9fafb); border: 2px solid var(--primary); border-radius: 10px; padding: 15px; margin-top: 15px; }
-        .spec-table { width: 100%; border-collapse: collapse; margin: 10px 0; font-size: 0.85rem; }
+        .spec-table { width: 100%; border-collapse: collapse; margin: 8px 0; font-size: 0.85rem; }
         .spec-table tr { border-bottom: 1px solid #edf2f7; }
-        .spec-table td { padding: 8px 0; color: var(--text-main); }
+        .spec-table td { padding: 6px 0; color: var(--text-main); }
         .spec-table td:last-child { text-align: right; font-weight: 700; font-size: 0.95rem; }
         .wage-total { font-size: 1.5rem; color: #c2410c; font-weight: 900; text-align: center; border-top: 2px solid var(--primary); padding-top: 10px; margin-top: 10px; }
 
-        .role-selector { display: flex; gap: 5px; margin-bottom: 15px; background: rgba(0,0,0,0.05); padding: 4px; border-radius: 10px; }
+        .role-selector { display: flex; gap: 4px; margin-bottom: 12px; background: rgba(0,0,0,0.05); padding: 4px; border-radius: 10px; }
         .role-selector label { flex: 1; text-align: center; padding: 10px 0; border-radius: 8px; font-weight: 700; cursor: pointer; font-size: 0.9rem; transition: all 0.2s; color: var(--text-sub); }
         .role-selector input[type="radio"]:checked + label { background: var(--primary); color: white; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
         .role-selector input[type="radio"] { display: none; }
 
-        /* 터미널, 버튼 등 기존 스타일 유지 */
-        .terminal-block { background: rgba(0,0,0,0.03); border-radius: 8px; margin-bottom: 8px; border: 1px solid var(--border); overflow: hidden; }
+        /* 터미널 등 기존 스타일 유지 */
+        .terminal-block { background: rgba(0,0,0,0.03); border-radius: 8px; margin-bottom: 6px; border: 1px solid var(--border); overflow: hidden; }
         .terminal-header { padding: 12px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; font-weight: 700; font-size: 0.9rem; }
         .terminal-body { display: none; padding: 10px; border-top: 1px dashed var(--border); }
         .terminal-actions { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; }
         .terminal-btn { background: var(--card-bg); border: 1px solid var(--border); color: var(--text-main); padding: 10px 0; border-radius: 6px; text-decoration: none; font-size: 0.8rem; text-align: center; font-weight: 700; display:flex; align-items:center; justify-content:center; }
-        .btn-premium { grid-column: span 3; background: linear-gradient(135deg, #fffbeb, #fef3c7); border: 1px solid #fcd34d; color: #92400e; margin-top: 5px; }
+        .btn-premium { grid-column: span 3; background: linear-gradient(135deg, #fffbeb, #fef3c7); border: 1px solid #fcd34d; color: #92400e; margin-top: 4px; }
         .control-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
         .control-btn { background: var(--card-bg); border: 1px solid var(--border); color: var(--text-main); padding: 14px; border-radius: 10px; text-decoration: none; font-size: 0.9rem; font-weight: 700; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; }
 
-        .ticker-container { background: var(--accent); color: #000; font-weight: 800; height: 40px; display: flex; align-items: center; overflow: hidden; position: relative; font-size: 0.85rem; }
-        .ticker-item { padding-left: 100%; animation: ticker 25s linear infinite; white-space: nowrap; line-height: 40px; }
+        .ticker-container { background: var(--accent); color: #000; font-weight: 800; height: 38px; display: flex; align-items: center; overflow: hidden; position: relative; font-size: 0.85rem; border-bottom: 1px solid rgba(0,0,0,0.1); }
+        .ticker-item { padding-left: 100%; animation: ticker 25s linear infinite; white-space: nowrap; line-height: 38px; }
         @keyframes ticker { 100% { transform: translate3d(-100%, 0, 0); } }
         .ticker-controls { position: absolute; right: 0; height: 100%; display: flex; background: rgba(255,255,255,0.4); backdrop-filter: blur(4px); }
-        .ticker-btn { width: 40px; height: 100%; border: none; background: transparent; font-size: 1.1rem; cursor: pointer; }
+        .ticker-btn { width: 38px; height: 100%; border: none; background: transparent; font-size: 1.1rem; cursor: pointer; }
 
         .post-list { list-style: none; padding: 0; margin: 0; }
         .post-item { border-bottom: 1px solid var(--border); padding: 10px 0; }
-        .post-header-row { padding: 5px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
-        .post-title-text { font-weight: 700; font-size: 0.95rem; color: var(--text-main); display: flex; align-items: center; gap: 5px; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-right: 10px; }
+        .post-header-row { padding: 4px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
+        .post-title-text { font-weight: 700; font-size: 0.95rem; color: var(--text-main); display: flex; align-items: center; gap: 5px; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-right: 8px; }
         .post-meta-info { font-size: 0.75rem; color: var(--text-sub); white-space: nowrap; }
         .post-body-content { display: none; padding: 12px; background: rgba(0,0,0,0.02); border-top: 1px dashed var(--border); font-size: 0.9rem; line-height: 1.6; white-space: pre-wrap; color: var(--text-main); word-break: break-all; }
+        
         .comment-section { margin-top: 10px; border-top: 1px dashed var(--border); padding-top: 8px; background: rgba(0,0,0,0.015); border-radius: 6px; padding: 8px; }
         .comment-item { display: flex; justify-content: space-between; align-items: flex-start; font-size: 0.8rem; padding: 5px 0; border-bottom: 1px solid rgba(0,0,0,0.05); }
         .comment-form { display: flex; gap: 4px; align-items: center; flex-wrap: wrap; margin-top: 8px; }
@@ -129,7 +169,6 @@
         /* =========================================
            [모바일 9:16 화면 최적화 레이아웃]
            ========================================= */
-        /* 기본: 좌우 배치 (태블릿/PC) */
         .calc-layout { display: flex; gap: 10px; margin-bottom: 12px; }
         .calc-left { flex: 1; display: flex; flex-direction: column; justify-content: center; }
         .calc-right { flex: 1; display: flex; flex-direction: column; justify-content: center; }
@@ -139,21 +178,21 @@
         .ref-table td { border: 1px solid var(--border); padding: 6px; color: var(--text-main); vertical-align: middle; }
         .ref-table .highlight { background: rgba(245, 158, 11, 0.2); font-weight: bold; color: #b45309; }
 
-        /* 모바일 화면 (폭 768px 이하) 강제 수직 배치 */
+        /* 모바일 화면 (폭 768px 이하) 강제 수직 배치 및 꽉 참 보장 */
         @media (max-width: 768px) {
-            .calc-layout { flex-direction: column; } /* 위아래로 쌓임 */
-            .calc-left, .calc-right { width: 100%; } /* 가로 꽉 차게 */
+            .calc-layout { flex-direction: column; } 
+            .calc-left, .calc-right { width: 100%; } 
             
-            /* 입력창 크기 및 여백 조정 */
-            .input-field { font-size: 1rem; height: 45px; padding: 12px; }
-            .wage-row label { width: 75px; font-size: 0.95rem; }
+            /* 입력창, 라벨 크기 및 여백 재조정 */
+            .wage-row label { width: 65px; font-size: 0.95rem; margin-right: 5px; } /* 라벨 조금 좁히고 글자 키움 */
+            .input-field { font-size: 1.1rem; height: 45px; padding: 0 10px; } /* 입력창 시원하게 */
             
             /* 기준표 높이 확보 */
-            .ref-table { margin-top: 8px; font-size: 0.85rem; }
+            .ref-table { margin-top: 8px; font-size: 0.9rem; }
             .ref-table th, .ref-table td { padding: 10px; }
             
             /* 버튼 크기 확대 */
-            .action-btn { padding: 15px; font-size: 1.05rem; margin-top: 10px; }
+            .action-btn { padding: 15px; font-size: 1.1rem; margin-top: 10px; }
         }
     </style>
 </head>
@@ -193,7 +232,7 @@
 
                     <div class="calc-layout">
                         <div class="calc-left">
-                            <div class="wage-row"><label>시급(기본)</label><input type="number" id="wageHourly" class="input-field" value="10320" style="text-align:right; font-weight:bold; color:#ef4444; font-size:1.1rem;" readonly></div>
+                            <div class="wage-row"><label>시급(기본)</label><input type="number" id="wageHourly" class="input-field" value="10320" style="text-align:right; font-weight:bold; color:#ef4444; font-size:1.2rem;" readonly></div>
                             <div class="wage-row"><label>⏳ 총 근무</label><input type="number" id="wageTotalHours" class="input-field" placeholder="H" style="text-align:right;"></div>
                             <div class="wage-row"><label>🕒 시작시각</label><input type="number" id="wageStartTime" class="input-field" value="8" placeholder="0~23" style="text-align:right;"></div>
                         </div>
@@ -213,12 +252,12 @@
                     <p style="font-size:0.8rem; color:#ef4444; font-weight:bold; margin:4px 0 12px 0; text-align:center;">더블 오더로 겹치는 시간은 별도로 시간을 계산 하여야 합니다!!</p>
 
                     <div style="border-top:1px dashed var(--border); margin:10px 0; padding-top:12px;">
-                        <p style="font-size:0.9rem; color:var(--primary); font-weight:800; margin-bottom:10px;">✅ 추가 수당 시간 입력</p>
-                        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
-                            <div class="wage-row"><label style="width:55px;">공휴일</label><input type="number" id="wageHoliday" class="input-field" placeholder="H"></div>
-                            <div class="wage-row"><label style="width:55px;">주말</label><input type="number" id="wageWeekend" class="input-field" placeholder="H"></div>
-                            <div class="wage-row"><label style="width:55px;">우천</label><input type="number" id="wageRain" class="input-field" placeholder="H"></div>
-                            <div class="wage-row"><label style="width:55px;">혹서기</label><input type="number" id="wageHotTime" class="input-field" placeholder="H"></div>
+                        <p style="font-size:0.85rem; color:var(--primary); font-weight:800; margin-bottom:8px;">✅ 추가 수당 시간 입력</p>
+                        <div class="allowance-grid">
+                            <div class="wage-row"><label>공휴일</label><input type="number" id="wageHoliday" class="input-field" placeholder="H"></div>
+                            <div class="wage-row"><label>주말</label><input type="number" id="wageWeekend" class="input-field" placeholder="H"></div>
+                            <div class="wage-row"><label>우천</label><input type="number" id="wageRain" class="input-field" placeholder="H"></div>
+                            <div class="wage-row"><label>혹서기</label><input type="number" id="wageHotTime" class="input-field" placeholder="H"></div>
                         </div>
                     </div>
 
@@ -264,7 +303,7 @@
                         <div class="wage-row"><label>주간</label><input type="number" id="logDayHours" class="input-field" placeholder="시간(H)" step="0.5"></div>
                         <div class="wage-row"><label>야간</label><input type="number" id="logNightHours" class="input-field" placeholder="시간(H)" step="0.5"></div>
                         <textarea id="logMemo" class="input-field textarea-field" placeholder="작업 내용..."></textarea>
-                        <label style="font-size:0.85rem; font-weight:bold; display:block; margin-top:10px; margin-bottom:5px;">📷 현장 사진</label>
+                        <label style="font-size:0.85rem; font-weight:bold; display:block; margin-top:10px; margin-bottom:4px;">📷 현장 사진</label>
                         <input type="file" id="logImageInput" class="input-field" accept="image/*" onchange="previewLogImage(this)">
                         <img id="logImagePreview" style="max-width:100%; border-radius:8px; margin-top:8px; display:none;" onclick="document.getElementById('imageModal').style.display='flex'; document.getElementById('modalImage').src=this.src;">
                         <div style="display:flex; gap:10px; margin-top:15px;">
@@ -467,6 +506,7 @@
         function toggleDarkMode(){document.body.classList.toggle('dark-mode');}
         async function verifyAdmin(){const i=prompt("Admin PW:"); return i==="0346";}
         function scrollToTop(){window.scrollTo({top:0,behavior:'smooth'});}
+        
         async function addNotice(){if(await verifyAdmin()){db.collection("notices").add({title:document.getElementById('noticeTitle').value, content:document.getElementById('noticeContent').value, timestamp:firebase.firestore.FieldValue.serverTimestamp()}).then(()=>{document.getElementById('noticeTitle').value=''; document.getElementById('noticeContent').value=''; showToast("공지 등록됨");});}}
         async function delNotice(id,e){e.stopPropagation(); if(await verifyAdmin()) db.collection("notices").doc(id).delete();}
         function addPost(){const t=document.getElementById('inputTitle').value, p=document.getElementById('inputPw').value, c=document.getElementById('inputContent').value; if(t&&p&&c){db.collection("posts").add({title:t, password:p, content:c, timestamp:firebase.firestore.FieldValue.serverTimestamp()}).then(()=>{document.getElementById('inputTitle').value=''; document.getElementById('inputPw').value=''; document.getElementById('inputContent').value=''; toggleHidden('boardForm'); showToast("작성 완료");});}}
