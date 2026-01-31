@@ -3,22 +3,19 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <meta name="description" content="부산항 현장직 필수 앱. 임금계산기, 스마트 근무일지(비밀번호), 선박위치 및 스케줄 조회.">
+    <meta name="description" content="부산항 현장직 필수 앱. 임금계산기, 개인별 보안 근무일지.">
     <title>BUSAN HAK PORT INFO</title>
     
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-storage.js"></script>
     
-    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6024353303588422" crossorigin="anonymous"></script>
-
-    <link rel="icon" type="image/png" sizes="32x32" href="icon.png?v=final_s24_pw_v47">
+    <link rel="icon" type="image/png" sizes="32x32" href="icon.png?v=final_secure_v48">
     <link rel="stylesheet" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.8/dist/web/static/pretendard.css" />
 
     <style>
-        :root { --primary: #1e3a8a; --primary-light: #3b82f6; --accent: #f59e0b; --bg-color: #f3f4f6; --card-bg: rgba(255, 255, 255, 0.98); --text-main: #1f2937; --text-sub: #6b7280; --border: rgba(229, 231, 235, 0.9); --danger: #ef4444; --success: #10b981; }
-        body.dark-mode { --primary: #60a5fa; --primary-light: #93c5fd; --accent: #fbbf24; --bg-color: #0f172a; --card-bg: rgba(30, 41, 59, 0.98); --text-main: #f3f4f6; --text-sub: #9ca3af; --border: rgba(55, 65, 81, 0.7); }
-        
+        :root { --primary: #1e3a8a; --primary-light: #3b82f6; --accent: #f59e0b; --bg-color: #f3f4f6; --card-bg: rgba(255, 255, 255, 0.99); --text-main: #1f2937; --text-sub: #6b7280; --border: rgba(229, 231, 235, 0.9); --danger: #ef4444; --success: #10b981; }
+        body.dark-mode { --primary: #60a5fa; --primary-light: #93c5fd; --accent: #fbbf24; --bg-color: #0f172a; --card-bg: rgba(30, 41, 59, 0.99); --text-main: #f3f4f6; --text-sub: #9ca3af; --border: rgba(55, 65, 81, 0.7); }
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; font-family: 'Pretendard', sans-serif; }
         body { background-color: var(--bg-color); color: var(--text-main); margin: 0; padding: 0; padding-bottom: 90px; padding-top: env(safe-area-inset-top); font-size: 16px; }
         
@@ -26,28 +23,24 @@
         header h1 { margin: 0; font-size: 1.2rem; font-weight: 900; }
         .theme-toggle { position: absolute; right: 15px; top: 50%; transform: translateY(-50%); background: rgba(255,255,255,0.2); border: none; width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 1.1rem; }
         
-        .container { width: 96%; max-width: 600px; margin: 0 auto; padding: 8px; }
-        
-        /* 대시보드 및 카드 */
+        .container { width: 96%; max-width: 600px; margin: 10px auto; padding: 0; }
         .dash-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; }
-        .dash-card { background: var(--card-bg); border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); border: 1px solid var(--border); overflow: hidden; }
+        .dash-card { background: var(--card-bg); border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); border: 1px solid var(--border); overflow: hidden; transition: all 0.3s; display: flex; flex-direction: column; }
         .dash-card.expanded { grid-column: span 2; }
-        .dash-header { padding: 14px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.05); min-height: 50px; }
-        .dash-card.expanded .dash-header { border-bottom: 1px solid var(--border); background: rgba(0,0,0,0.02); }
-        .dash-title { font-size: 1rem; font-weight: 800; color: var(--text-main); display: flex; align-items: center; gap: 6px; }
-        .dash-content { display: none; padding: 12px; background: var(--card-bg); animation: fadeIn 0.2s; }
+        .dash-header { padding: 14px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.05); min-height: 55px; }
+        .dash-content { display: none; padding: 14px; background: var(--card-bg); animation: fadeIn 0.2s; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
 
-        .card { background: var(--card-bg); border-radius: 12px; margin-bottom: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); border: 1px solid var(--border); overflow: hidden; }
-        .section-header { display: flex; justify-content: space-between; align-items: center; padding: 12px 14px; cursor: pointer; border-bottom: 1px solid var(--border); }
-        .section-title { font-size: 1rem; font-weight: 800; display:flex; align-items:center; gap:6px; }
-        .collapsible-content { display: block; padding: 12px; }
-        .collapsible-content.collapsed { display: none !important; }
+        /* 사용자 프로필 바 (로그인 상태) */
+        .user-profile-bar { display: flex; justify-content: space-between; align-items: center; background: rgba(59, 130, 246, 0.1); padding: 12px; border-radius: 8px; margin-bottom: 15px; border: 1px solid var(--primary-light); }
+        .user-info { display: flex; flex-direction: column; }
+        .user-name { font-weight: 800; color: var(--primary); font-size: 0.95rem; }
+        .user-status { font-size: 0.75rem; color: var(--success); }
+        .logout-btn { background: var(--text-sub); color: white; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 0.8rem; font-weight: bold; }
 
-        /* [입력창 스타일] 모바일 최적화 (짤림 방지) */
-        .input-field { width: 100%; padding: 0 10px; margin-bottom: 8px; border: 1px solid var(--border); border-radius: 8px; background: rgba(255,255,255,0.6); color: var(--text-main); font-size: 1rem; height: 42px; text-align: right; font-weight: bold; display: flex; align-items: center; }
+        /* 입력창 및 버튼 (모바일 짤림 방지) */
+        .input-field { width: 100%; padding: 0 10px; margin-bottom: 8px; border: 1px solid var(--border); border-radius: 8px; background: rgba(255,255,255,0.6); color: var(--text-main); font-size: 1rem; height: 44px; text-align: right; font-weight: bold; display: flex; align-items: center; }
         .textarea-field { height: 80px; resize: none; text-align: left; font-weight: normal; padding: 10px; }
-        
         .action-btn { width: 100%; padding: 14px; border: none; border-radius: 10px; font-weight: 800; color: white; cursor: pointer; background: var(--primary); font-size: 1rem; margin-top: 5px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
         .bg-submit { background: var(--success); } .bg-calc { background: linear-gradient(135deg, #ef4444, #b91c1c); } .bg-cancel { background: var(--text-sub); }
         
@@ -55,62 +48,39 @@
         .wage-row label { width: 65px; min-width: 65px; font-weight: 700; font-size: 0.9rem; white-space: nowrap; text-align: left; margin-right: 2px; }
         .wage-row .input-field { flex: 1; width: auto; margin-bottom: 0; }
         
-        /* [임금 계산기 레이아웃] 반응형 */
         .calc-layout { display: flex; gap: 10px; margin-bottom: 12px; }
-        .calc-left { flex: 1; display: flex; flex-direction: column; justify-content: center; }
-        .calc-right { flex: 1; display: flex; flex-direction: column; justify-content: center; }
-        
+        .calc-left, .calc-right { flex: 1; display: flex; flex-direction: column; justify-content: center; }
         .ref-table { width: 100%; border-collapse: collapse; font-size: 0.75rem; text-align: center; background: rgba(0,0,0,0.02); border-radius: 8px; overflow: hidden; height: 100%; border: 1px solid var(--border); }
         .ref-table th { background: var(--primary); color: white; padding: 6px; font-weight: normal; }
         .ref-table td { border: 1px solid var(--border); padding: 6px; color: var(--text-main); vertical-align: middle; }
         .ref-table .highlight { background: rgba(245, 158, 11, 0.2); font-weight: bold; color: #b45309; }
-        
-        /* [추가 수당 그리드] 2열 배치 */
         .allowance-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 
-        /* [모바일 9:16 화면 최적화 미디어 쿼리] */
         @media (max-width: 768px) {
             .calc-layout { flex-direction: column; } 
             .calc-left, .calc-right { width: 100%; } 
-            .wage-row label { width: 60px; font-size: 0.9rem; } 
             .input-field { font-size: 1.05rem; height: 44px; padding: 0 10px; } 
             .ref-table { margin-top: 8px; font-size: 0.85rem; }
             .action-btn { padding: 16px; font-size: 1.1rem; margin-top: 10px; }
         }
 
-        .wage-result-box { background: linear-gradient(135deg, #ffffff, #f9fafb); border: 2px solid var(--primary); border-radius: 10px; padding: 15px; margin-top: 15px; }
-        .spec-table { width: 100%; border-collapse: collapse; margin: 8px 0; font-size: 0.85rem; }
-        .spec-table tr { border-bottom: 1px solid #edf2f7; }
-        .spec-table td { padding: 6px 0; color: var(--text-main); }
-        .spec-table td:last-child { text-align: right; font-weight: 700; font-size: 0.95rem; }
-        .wage-total { font-size: 1.5rem; color: #c2410c; font-weight: 900; text-align: center; border-top: 2px solid var(--primary); padding-top: 10px; margin-top: 10px; }
-
-        .role-selector { display: flex; gap: 4px; margin-bottom: 12px; background: rgba(0,0,0,0.05); padding: 4px; border-radius: 10px; }
-        .role-selector label { flex: 1; text-align: center; padding: 10px 0; border-radius: 8px; font-weight: 700; cursor: pointer; font-size: 0.9rem; transition: all 0.2s; color: var(--text-sub); }
-        .role-selector input[type="radio"]:checked + label { background: var(--primary); color: white; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-        .role-selector input[type="radio"] { display: none; }
-
-        /* 사용자 프로필 (비밀번호 기능) */
-        .user-profile-bar { display: flex; justify-content: space-between; align-items: center; background: rgba(59, 130, 246, 0.1); padding: 10px 12px; border-radius: 8px; margin-bottom: 15px; border: 1px solid var(--primary-light); }
-        .user-info { display: flex; flex-direction: column; }
-        .user-name { font-weight: 800; color: var(--primary); font-size: 0.95rem; }
-        .user-status { font-size: 0.75rem; color: var(--success); }
-        .logout-btn { background: var(--text-sub); color: white; border: none; padding: 5px 10px; border-radius: 6px; cursor: pointer; font-size: 0.8rem; font-weight: bold; }
-
-        /* 달력 스타일 (화면 깨짐 방지) */
         .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px; text-align: center; min-height: 250px; }
         .cal-day { padding: 8px 0; border-radius: 6px; background: rgba(255,255,255,0.5); border: 1px solid var(--border); font-weight: 700; font-size: 0.85rem; cursor: pointer; min-height: 40px; display: flex; flex-direction: column; justify-content: center; align-items: center; }
         .cal-day.selected { background: var(--primary); color: white; border-color: var(--primary); }
         .cal-day.has-data { border: 2px solid var(--success); background: rgba(16, 185, 129, 0.1); }
         .cal-dot { width: 5px; height: 5px; background-color: var(--success); border-radius: 50%; margin-top: 3px; display: none; }
         .cal-day.has-data .cal-dot { display: block; }
+        
+        .role-selector { display: flex; gap: 4px; margin-bottom: 12px; background: rgba(0,0,0,0.05); padding: 4px; border-radius: 10px; }
+        .role-selector label { flex: 1; text-align: center; padding: 10px 0; border-radius: 8px; font-weight: 700; cursor: pointer; font-size: 0.9rem; transition: all 0.2s; color: var(--text-sub); }
+        .role-selector input[type="radio"]:checked + label { background: var(--primary); color: white; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        .role-selector input[type="radio"] { display: none; }
 
-        /* 기타 공통 */
-        .ticker-container { background: var(--accent); color: #000; font-weight: 800; height: 38px; display: flex; align-items: center; overflow: hidden; position: relative; font-size: 0.85rem; border-bottom: 1px solid rgba(0,0,0,0.1); }
-        .ticker-item { padding-left: 100%; animation: ticker 25s linear infinite; white-space: nowrap; line-height: 38px; }
-        @keyframes ticker { 100% { transform: translate3d(-100%, 0, 0); } }
-        .ticker-controls { position: absolute; right: 0; height: 100%; display: flex; background: rgba(255,255,255,0.4); backdrop-filter: blur(4px); }
-        .ticker-btn { width: 38px; height: 100%; border: none; background: transparent; font-size: 1.1rem; cursor: pointer; }
+        /* 공통 UI 및 기타 */
+        .card { background: var(--card-bg); border-radius: 12px; margin-bottom: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); border: 1px solid var(--border); overflow: hidden; }
+        .section-header { display: flex; justify-content: space-between; align-items: center; padding: 14px; cursor: pointer; border-bottom: 1px solid var(--border); }
+        .collapsible-content { display: block; padding: 12px; }
+        .collapsible-content.collapsed { display: none !important; }
         .bottom-nav { position: fixed; bottom: 0; left: 0; width: 100%; height: 60px; background: rgba(255,255,255,0.98); border-top: 1px solid var(--border); display: flex; justify-content: space-around; align-items: center; z-index: 1000; padding-bottom: env(safe-area-inset-bottom); box-shadow: 0 -2px 10px rgba(0,0,0,0.05); }
         .nav-item { flex: 1; text-align: center; color: var(--text-sub); font-size: 0.7rem; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 2px; }
         .nav-item.active { color: var(--primary); font-weight: 800; transform: scale(1.05); }
@@ -120,6 +90,12 @@
         .hidden { display: none !important; }
         #toast { position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.85); color: white; padding: 10px 20px; border-radius: 30px; font-size: 0.9rem; z-index: 5000; opacity: 0; transition: 0.3s; pointer-events: none; width: max-content; max-width: 80%; text-align: center; }
         #toast.show { opacity: 1; }
+        .wage-result-box { background: linear-gradient(135deg, #ffffff, #f9fafb); border: 2px solid var(--primary); border-radius: 10px; padding: 15px; margin-top: 15px; }
+        .ticker-container { background: var(--accent); color: #000; font-weight: 800; height: 38px; display: flex; align-items: center; overflow: hidden; position: relative; font-size: 0.85rem; border-bottom: 1px solid rgba(0,0,0,0.1); }
+        .ticker-item { padding-left: 100%; animation: ticker 25s linear infinite; white-space: nowrap; line-height: 38px; }
+        @keyframes ticker { 100% { transform: translate3d(-100%, 0, 0); } }
+        .ticker-controls { position: absolute; right: 0; height: 100%; display: flex; background: rgba(255,255,255,0.4); backdrop-filter: blur(4px); }
+        .ticker-btn { width: 38px; height: 100%; border: none; background: transparent; font-size: 1.1rem; cursor: pointer; }
         .terminal-block { background: rgba(0,0,0,0.03); border-radius: 8px; margin-bottom: 6px; border: 1px solid var(--border); overflow: hidden; }
         .terminal-header { padding: 12px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; font-weight: 700; font-size: 0.9rem; }
         .terminal-body { display: none; padding: 10px; border-top: 1px dashed var(--border); }
@@ -135,15 +111,7 @@
         .post-body-content { display: none; padding: 12px; background: rgba(0,0,0,0.02); border-top: 1px dashed var(--border); font-size: 0.9rem; line-height: 1.6; white-space: pre-wrap; color: var(--text-main); word-break: break-all; }
         .comment-section { margin-top: 10px; border-top: 1px dashed var(--border); padding-top: 8px; background: rgba(0,0,0,0.015); border-radius: 6px; padding: 8px; }
         .comment-item { display: flex; justify-content: space-between; align-items: flex-start; font-size: 0.8rem; padding: 5px 0; border-bottom: 1px solid rgba(0,0,0,0.05); }
-        .comment-form { display: flex; gap: 4px; align-items: center; flex-wrap: wrap; margin-top: 8px; }
-        .comment-input-sm { width: 60px; padding: 6px; border: 1px solid var(--border); border-radius: 4px; font-size: 0.8rem; }
-        .comment-input-lg { flex: 1; padding: 6px; border: 1px solid var(--border); border-radius: 4px; font-size: 0.8rem; min-width: 100px; }
-        .comment-submit { padding: 6px 10px; background: var(--text-sub); color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.75rem; font-weight: bold; }
-        .guide-text { line-height: 1.7; font-size: 0.9rem; text-align: left; color: var(--text-main); white-space: pre-wrap; }
         .ticker-manage-item { display: flex; justify-content: space-between; align-items: center; padding: 10px; border-bottom: 1px solid var(--border); }
-        .ticker-manage-item span { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.9rem; }
-        .page-num { padding: 6px 12px; border: 1px solid var(--border); cursor: pointer; border-radius: 6px; font-size: 0.85rem; margin: 0 2px; }
-        .page-num.active { background: var(--primary); color: white; }
     </style>
 </head>
 <body>
@@ -230,7 +198,7 @@
                     <div id="userProfileBar" class="user-profile-bar" style="display:none;">
                         <div class="user-info">
                             <span id="currentUserDisplay" class="user-name"></span>
-                            <span class="user-status">🔒 로그인됨 (나만의 저장소)</span>
+                            <span class="user-status">🔒 내 저장소</span>
                         </div>
                         <button class="logout-btn" onclick="logoutWorker()">로그아웃</button>
                     </div>
@@ -240,10 +208,10 @@
                         <span id="calMonthYear" style="font-weight:bold; font-size:1.1rem;"></span>
                         <button class="mini-btn" style="padding:6px 12px; font-size:1rem;" onclick="changeMonth(1)">▶</button>
                     </div>
-                    
                     <div style="display:grid; grid-template-columns:repeat(7,1fr); text-align:center; font-size:0.85rem; color:var(--text-sub); margin-bottom:6px; font-weight:bold;">
                         <span style="color:var(--danger)">일</span><span>월</span><span>화</span><span>수</span><span>목</span><span>금</span><span style="color:var(--primary)">토</span>
                     </div>
+                    
                     <div id="calendarGrid" class="calendar-grid"></div>
                     
                     <div id="dailyLogForm" class="hidden" style="margin-top:20px; padding:15px; background:rgba(0,0,0,0.03); border-radius:12px; border:1px solid var(--border);">
@@ -263,7 +231,6 @@
                 </div>
             </div>
         </div>
-
 
         <div class="card" style="border-left: 5px solid #3b82f6;">
             <div class="section-header tap-effect" onclick="toggleSection('t3-content')"><span class="section-title">⛴️ 3항업 (신항 남측) ▼</span></div>
@@ -307,7 +274,7 @@
     <nav class="bottom-nav"><div class="nav-item active tap-effect" onclick="scrollToTop()">🏠 홈</div><div class="nav-item tap-effect" onclick="toggleDashItem('board-card')">💬 톡톡</div><div class="nav-item tap-effect" onclick="toggleDashItem('ship-card')">🚢 선박</div><div class="nav-item tap-effect" onclick="toggleDashItem('file-card')">📂 자료</div></nav>
     <div id="toast">알림</div>
     <div id="imageModal" class="modal-overlay" onclick="closeImageModal()"><div class="modal-content" onclick="event.stopPropagation()"><img id="modalImage" class="modal-img"><button class="action-btn bg-cancel" onclick="closeImageModal()">닫기</button></div></div>
-    <div id="privacyModal" class="modal-overlay" onclick="document.getElementById('privacyModal').style.display='none'"><div class="modal-content"><h3>🛡️ 개인정보처리방침</h3><p>본 사이트는 구글 애드센스 광고를 게재하며 쿠키를 사용합니다. 근무 기록 및 게시물 데이터는 Firebase 서버에 안전하게 보관됩니다.</p><button class="action-btn" onclick="document.getElementById('privacyModal').style.display='none'">닫기</button></div></div>
+    <div id="privacyModal" class="modal-overlay" onclick="document.getElementById('privacyModal').style.display='none'"><div class="modal-content"><h3>🛡️ 개인정보처리방침</h3><p>본 사이트는 구글 애드센스 광고를 게재하며 쿠키를 사용합니다.</p><button class="action-btn" onclick="document.getElementById('privacyModal').style.display='none'">닫기</button></div></div>
     <div id="tickerManageModal" class="modal-overlay" onclick="document.getElementById('tickerManageModal').style.display='none'"><div class="modal-content" onclick="event.stopPropagation()"><h3 style="margin-top:0;">⚙️ 알림글 삭제</h3><div id="tickerListContainer"></div><button class="action-btn bg-cancel" onclick="document.getElementById('tickerManageModal').style.display='none'" style="margin-top:10px;">닫기</button></div></div>
 
     <script>
@@ -321,7 +288,7 @@
         let currentDate = new Date();
         let currentWorkerId = localStorage.getItem('myWorkerId'); 
 
-        // 2. 스마트 근무일지 (비번 보호 및 화면 깨짐 방지)
+        // 2. 스마트 근무일지 (비번 보호 및 저장 로직)
         async function checkUserLogin() {
             if (currentWorkerId) {
                 document.getElementById('userProfileBar').style.display = 'flex';
@@ -336,6 +303,7 @@
             const doc = await userRef.get();
 
             if (doc.exists) {
+                // 기존 사용자: 비밀번호 확인
                 const pw = prompt(`'${name}'님의 비밀번호를 입력하세요:`);
                 if (pw === doc.data().password) {
                     currentWorkerId = name;
@@ -346,6 +314,7 @@
                     return false;
                 }
             } else {
+                // 신규 사용자: 비밀번호 설정
                 const newPw = prompt(`'${name}'님은 처음이시네요!\n사용할 비밀번호를 설정해주세요:`);
                 if (newPw) {
                     await userRef.set({ password: newPw, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
@@ -382,18 +351,21 @@
         async function openLogImmediately(id){
             const c=document.getElementById(id), e=c.classList.contains('expanded'); 
             
+            // 닫혀있으면 -> 열기
             if (!e) {
                 document.querySelectorAll('.dash-card').forEach(x=>{x.classList.remove('expanded'); x.querySelector('.dash-content').style.display='none'}); 
                 c.classList.add('expanded'); 
                 c.querySelector('.dash-content').style.display='block'; 
                 
-                // [중요] 로그인 여부와 상관없이 달력 틀은 항상 그림
+                // [중요] 달력은 로그인 여부 상관없이 항상 그립니다. (화면 깨짐 방지)
                 renderCalendar(currentDate.getFullYear(), currentDate.getMonth());
                 
+                // 로그인 안 되어 있으면 체크
                 if (!currentWorkerId) {
                     await checkUserLogin(); 
                 }
             } else {
+                // 열려있으면 -> 닫기
                 c.classList.remove('expanded'); 
                 c.querySelector('.dash-content').style.display='none';
             }
@@ -413,7 +385,7 @@
                 g.innerHTML += `<div id="cal-day-${d}" class="cal-day tap-effect" onclick="clickDate('${dStr}')">${d}<div class="cal-dot"></div></div>`;
             }
 
-            // 2. 로그인 상태일 때만 데이터 채우기
+            // 2. 로그인 상태일 때만 데이터 불러오기
             if(currentWorkerId) {
                 const sDate = `${y}-${String(m+1).padStart(2,'0')}-01`, eDate = `${y}-${String(m+1).padStart(2,'0')}-${lD}`;
                 
@@ -425,6 +397,7 @@
                     let total = 0;
                     s.forEach(doc => {
                         const data = doc.data();
+                        // 닉네임 일치하는 것만 표시
                         if(data.workerId === currentWorkerId) {
                             adminWorkLogs[data.date] = data; 
                             const day = parseInt(data.date.split('-')[2]);
@@ -436,12 +409,17 @@
                     document.getElementById('monthlyTotalDisplay').innerText = `이번달 총액: ${total.toLocaleString()}원`;
                 });
             } else {
+                // 비로그인 상태면 0원 표시
                 document.getElementById('monthlyTotalDisplay').innerText = `이번달 총액: 0원`;
             }
         }
 
         function clickDate(dStr){
-            if(!currentWorkerId) { checkUserLogin(); return; }
+            // 클릭 시 로그인 체크
+            if(!currentWorkerId) {
+                checkUserLogin();
+                return;
+            }
 
             document.getElementById('selectedDateText').innerText = dStr;
             document.getElementById('dailyLogForm').classList.remove('hidden');
@@ -453,10 +431,14 @@
             document.getElementById('logMemo').value = d ? d.memo : '';
             
             const img = document.getElementById('logImagePreview');
-            if(d && d.imageUrl){ img.src = d.imageUrl; img.style.display = 'block'; } 
-            else { img.style.display = 'none'; img.src = ""; }
-            
-            document.getElementById('logImageInput').value = '';
+            if(d && d.imageUrl){ 
+                img.src = d.imageUrl; 
+                img.style.display = 'block'; 
+            } else { 
+                img.style.display = 'none'; 
+                img.src = "";
+            }
+            document.getElementById('logImageInput').value = ''; // 파일 초기화
         }
 
         function saveWorkLog(){
@@ -471,16 +453,20 @@
             const memo = document.getElementById('logMemo').value, file = document.getElementById('logImageInput').files[0];
             const pay = (dh*10320) + (nh*15480);
             
+            // 문서 ID: 닉네임_날짜 조합 (고유값)
             const docId = `${currentWorkerId}_${dStr}`;
+            
             let prevUrl = null;
             if(adminWorkLogs[dStr] && adminWorkLogs[dStr].imageUrl) prevUrl = adminWorkLogs[dStr].imageUrl;
 
+            // DB 저장 함수
             const saveDataToDB = (url) => {
                 db.collection('work_logs').doc(docId).set({
                     date: dStr, workerId: currentWorkerId, dayHours: dh, nightHours: nh, memo: memo, totalPay: pay, imageUrl: url
                 }, {merge: true}).then(() => {
                     alert("저장되었습니다!");
                     btn.innerText = "저장하기";
+                    // 저장 후 로컬 데이터 갱신 및 달력 업데이트
                     adminWorkLogs[dStr] = { date: dStr, workerId: currentWorkerId, dayHours: dh, nightHours: nh, memo: memo, totalPay: pay, imageUrl: url };
                     const day = parseInt(dStr.split('-')[2]);
                     document.getElementById(`cal-day-${day}`).classList.add('has-data');
@@ -495,6 +481,7 @@
                 });
             };
 
+            // 사진 있으면 업로드 후 저장, 없으면 바로 저장
             if(file){
                 const fileRef = storage.ref().child(`logs/${currentWorkerId}/${dStr}_${Date.now()}`); 
                 fileRef.put(file).then(snapshot => snapshot.ref.getDownloadURL()).then(url => saveDataToDB(url)).catch(err => {
