@@ -12,142 +12,152 @@
     
     <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6024353303588422" crossorigin="anonymous"></script>
 
-    <link rel="icon" type="image/png" sizes="32x32" href="icon.png?v=final_fix_v34">
+    <link rel="icon" type="image/png" sizes="32x32" href="icon.png?v=mobile_opt_v35">
     <link rel="stylesheet" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.8/dist/web/static/pretendard.css" />
 
     <style>
         :root { 
             --primary: #1e3a8a; --primary-light: #3b82f6; --accent: #f59e0b; 
-            --bg-color: #f3f4f6; --card-bg: rgba(255, 255, 255, 0.95); 
+            --bg-color: #f3f4f6; --card-bg: rgba(255, 255, 255, 0.98); 
             --text-main: #1f2937; --text-sub: #6b7280; 
-            --border: rgba(229, 231, 235, 0.8); --danger: #ef4444; --success: #10b981; 
+            --border: rgba(229, 231, 235, 0.9); --danger: #ef4444; --success: #10b981; 
             --glass-border: 1px solid rgba(255, 255, 255, 0.6); 
-            --glass-shadow: 0 2px 10px rgba(0,0,0,0.03); --blur: blur(12px); 
+            --glass-shadow: 0 2px 10px rgba(0,0,0,0.03); 
         }
         body.dark-mode { 
             --primary: #60a5fa; --primary-light: #93c5fd; --accent: #fbbf24; 
-            --bg-color: #0f172a; --card-bg: rgba(30, 41, 59, 0.95); 
+            --bg-color: #0f172a; --card-bg: rgba(30, 41, 59, 0.98); 
             --text-main: #f3f4f6; --text-sub: #9ca3af; 
-            --border: rgba(55, 65, 81, 0.5); --glass-border: 1px solid rgba(255, 255, 255, 0.1); 
+            --border: rgba(55, 65, 81, 0.7); 
         }
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; font-family: 'Pretendard', sans-serif; }
-        body { background-color: var(--bg-color); color: var(--text-main); margin: 0; padding: 0; padding-bottom: 100px; transition: background 0.3s ease; }
-        .tap-effect { transition: transform 0.1s; } .tap-effect:active { transform: scale(0.98); }
+        body { background-color: var(--bg-color); color: var(--text-main); margin: 0; padding: 0; padding-bottom: 90px; padding-top: env(safe-area-inset-top); transition: background 0.3s ease; }
+        .tap-effect { transition: transform 0.1s; } .tap-effect:active { transform: scale(0.96); }
         
-        header { background: linear-gradient(135deg, var(--primary), var(--primary-light)); color: white; padding: 14px 0; text-align: center; position: sticky; top: 0; z-index: 100; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
-        header h1 { margin: 0; font-size: 1.2rem; font-weight: 900; }
-        .theme-toggle { position: absolute; right: 15px; top: 50%; transform: translateY(-50%); background: rgba(255,255,255,0.2); border: none; width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 1.1rem; }
+        header { background: linear-gradient(135deg, var(--primary), var(--primary-light)); color: white; padding: 16px 0; text-align: center; position: sticky; top: 0; z-index: 100; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        header h1 { margin: 0; font-size: 1.3rem; font-weight: 900; letter-spacing: -0.5px; }
+        .theme-toggle { position: absolute; right: 15px; top: 50%; transform: translateY(-50%); background: rgba(255,255,255,0.2); border: none; width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 1.2rem; }
         
-        .container { width: 96%; max-width: 600px; margin: 15px auto; }
-        .dash-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }
+        /* 모바일 최적화 컨테이너 */
+        .container { width: 100%; max-width: 600px; margin: 0 auto; padding: 10px; }
+        
+        .dash-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; }
         .dash-card { background: var(--card-bg); border-radius: 16px; box-shadow: var(--glass-shadow); border: var(--glass-border); overflow: hidden; transition: all 0.3s; display: flex; flex-direction: column; }
         .dash-card.expanded { grid-column: span 2; }
-        .dash-header { padding: 15px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.05); min-height: 60px; }
+        
+        .dash-header { padding: 16px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.05); min-height: 60px; }
         .dash-card.expanded .dash-header { border-bottom: 1px solid var(--border); background: rgba(0,0,0,0.02); }
-        .dash-title { font-size: 1rem; font-weight: 800; color: var(--text-main); display: flex; align-items: center; gap: 6px; }
-        .toggle-icon { font-size: 0.8rem; color: var(--text-sub); transition: transform 0.3s; }
-        .toggle-icon.rotated { transform: rotate(180deg); }
-        .dash-content { display: none; padding: 15px; background: var(--card-bg); animation: fadeIn 0.2s; }
+        .dash-title { font-size: 1.05rem; font-weight: 800; color: var(--text-main); display: flex; align-items: center; gap: 8px; }
+        .toggle-icon { font-size: 0.9rem; color: var(--text-sub); }
+        .dash-content { display: none; padding: 16px; background: var(--card-bg); animation: fadeIn 0.2s; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
 
-        .card { background: var(--card-bg); border-radius: 16px; margin-bottom: 15px; box-shadow: var(--glass-shadow); border: var(--glass-border); overflow: hidden; }
-        .section-header { display: flex; justify-content: space-between; align-items: center; padding: 15px; cursor: pointer; border-bottom: 1px solid var(--border); }
+        .card { background: var(--card-bg); border-radius: 16px; margin-bottom: 12px; box-shadow: var(--glass-shadow); border: var(--glass-border); overflow: hidden; }
+        .section-header { display: flex; justify-content: space-between; align-items: center; padding: 16px; cursor: pointer; border-bottom: 1px solid var(--border); }
         .section-title { font-size: 1.1rem; font-weight: 800; display:flex; align-items:center; gap:8px; }
         .collapsible-content { display: block; padding: 15px; }
         .collapsible-content.collapsed { display: none !important; }
 
-        .input-field { width: 100%; padding: 12px; margin-bottom: 8px; border: 1px solid var(--border); border-radius: 8px; background: rgba(255,255,255,0.6); color: var(--text-main); font-size: 0.95rem; }
-        .textarea-field { height: 80px; resize: none; }
-        .action-btn { width: 100%; padding: 12px; border: none; border-radius: 10px; font-weight: 700; color: white; cursor: pointer; background: var(--primary); font-size: 0.95rem; }
+        /* 입력창 모바일 최적화 (높이 증가) */
+        .input-field { width: 100%; padding: 14px; margin-bottom: 10px; border: 1px solid var(--border); border-radius: 10px; background: rgba(255,255,255,0.6); color: var(--text-main); font-size: 1rem; -webkit-appearance: none; }
+        .textarea-field { height: 100px; resize: none; line-height: 1.5; }
+        
+        .action-btn { width: 100%; padding: 14px; border: none; border-radius: 12px; font-weight: 800; color: white; cursor: pointer; background: var(--primary); font-size: 1rem; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
         .bg-submit { background: var(--success); } .bg-calc { background: linear-gradient(135deg, #ef4444, #b91c1c); } .bg-cancel { background: var(--text-sub); }
         
-        /* 임금 계산기 레이아웃 (50:50) */
-        .calc-layout { display: flex; gap: 10px; margin-bottom: 10px; align-items: stretch; }
-        .calc-left { flex: 1; display: flex; flex-direction: column; justify-content: center; }
-        .calc-right { flex: 1; display: flex; flex-direction: column; justify-content: center; }
-
-        /* 월별 표 스타일 */
-        .ref-table { width: 100%; border-collapse: collapse; font-size: 0.75rem; text-align: center; background: rgba(0,0,0,0.02); border-radius: 8px; overflow: hidden; height: 100%; }
-        .ref-table th { background: var(--primary); color: white; padding: 4px; font-weight: normal; }
-        .ref-table td { border: 1px solid var(--border); padding: 4px; color: var(--text-main); vertical-align: middle; }
-        .ref-table .highlight { background: rgba(245, 158, 11, 0.15); font-weight: bold; }
-
-        .wage-row { display: flex; align-items: center; gap: 5px; margin-bottom: 8px; }
-        .wage-row label { width: 60px; min-width: 60px; font-weight: 700; font-size: 0.85rem; white-space: nowrap; text-align: left; }
-        .wage-row .input-field { flex: 1; width: auto; margin-bottom: 0; text-align: right; padding: 8px; font-size: 0.9rem; }
+        .wage-row { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+        .wage-row label { width: 70px; min-width: 70px; font-weight: 700; font-size: 0.95rem; white-space: nowrap; text-align: left; }
+        .wage-row .input-field { flex: 1; width: auto; margin-bottom: 0; text-align: right; font-weight: 600; }
         
         .wage-result-box { background: linear-gradient(135deg, #ffffff, #f9fafb); border: 2px solid var(--primary); border-radius: 12px; padding: 15px; margin-top: 15px; }
-        .spec-table { width: 100%; border-collapse: collapse; margin: 10px 0; font-size: 0.85rem; }
+        .spec-table { width: 100%; border-collapse: collapse; margin: 10px 0; font-size: 0.9rem; }
         .spec-table tr { border-bottom: 1px solid #edf2f7; }
-        .spec-table td { padding: 8px 0; color: var(--text-main); }
-        .spec-table td:last-child { text-align: right; font-weight: 700; }
-        .wage-total { font-size: 1.5rem; color: #c2410c; font-weight: 900; text-align: center; border-top: 2px solid var(--primary); padding-top: 10px; margin-top: 10px; }
+        .spec-table td { padding: 10px 0; color: var(--text-main); }
+        .spec-table td:last-child { text-align: right; font-weight: 700; font-size: 1rem; }
+        .wage-total { font-size: 1.6rem; color: #c2410c; font-weight: 900; text-align: center; border-top: 2px solid var(--primary); padding-top: 15px; margin-top: 10px; }
 
-        .role-selector { display: flex; gap: 3px; margin-bottom: 10px; background: rgba(0,0,0,0.05); padding: 3px; border-radius: 8px; }
+        .role-selector { display: flex; gap: 5px; margin-bottom: 15px; background: rgba(0,0,0,0.05); padding: 5px; border-radius: 12px; }
+        .role-selector label { flex: 1; text-align: center; padding: 12px 0; border-radius: 8px; font-weight: 700; cursor: pointer; font-size: 0.95rem; transition: all 0.2s; color: var(--text-sub); }
+        .role-selector input[type="radio"]:checked + label { background: var(--primary); color: white; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
         .role-selector input[type="radio"] { display: none; }
-        .role-selector label { flex: 1; text-align: center; padding: 8px 0; border-radius: 6px; font-weight: 700; cursor: pointer; font-size: 0.85rem; transition: all 0.2s; color: var(--text-sub); }
-        .role-selector input[type="radio"]:checked + label { background: var(--primary); color: white; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
 
         .terminal-block { background: rgba(0,0,0,0.03); border-radius: 10px; margin-bottom: 8px; border: 1px solid var(--border); overflow: hidden; }
-        .terminal-header { padding: 12px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; font-weight: 700; font-size: 0.95rem; }
+        .terminal-header { padding: 14px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; font-weight: 700; font-size: 1rem; }
         .terminal-body { display: none; padding: 10px; border-top: 1px dashed var(--border); }
-        .terminal-body.show { display: block !important; }
-        .terminal-actions { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; }
-        .terminal-btn { background: var(--card-bg); border: 1px solid var(--border); color: var(--text-main); padding: 10px 4px; border-radius: 8px; text-decoration: none; font-size: 0.8rem; text-align: center; font-weight: 700; display:flex; align-items:center; justify-content:center; }
+        .terminal-actions { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+        .terminal-btn { background: var(--card-bg); border: 1px solid var(--border); color: var(--text-main); padding: 12px 0; border-radius: 8px; text-decoration: none; font-size: 0.85rem; text-align: center; font-weight: 700; display:flex; align-items:center; justify-content:center; }
         .btn-premium { grid-column: span 3; background: linear-gradient(135deg, #fffbeb, #fef3c7); border: 1px solid #fcd34d; color: #92400e; margin-top: 5px; }
 
         .control-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
         .control-btn { background: var(--card-bg); border: 1px solid var(--border); color: var(--text-main); padding: 16px; border-radius: 12px; text-decoration: none; font-size: 0.95rem; font-weight: 700; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px; box-shadow: 0 2px 5px rgba(0,0,0,0.02); }
 
-        .ticker-container { background: var(--accent); color: #000; font-weight: 700; height: 36px; display: flex; align-items: center; overflow: hidden; position: relative; font-size: 0.85rem; }
-        .ticker-item { padding-left: 100%; animation: ticker 25s linear infinite; white-space: nowrap; }
+        .ticker-container { background: var(--accent); color: #000; font-weight: 800; height: 42px; display: flex; align-items: center; overflow: hidden; position: relative; font-size: 0.9rem; border-bottom: 1px solid rgba(0,0,0,0.1); }
+        .ticker-item { padding-left: 100%; animation: ticker 25s linear infinite; white-space: nowrap; line-height: 42px; }
         @keyframes ticker { 100% { transform: translate3d(-100%, 0, 0); } }
-        .ticker-controls { position: absolute; right: 0; height: 100%; display: flex; background: rgba(255,255,255,0.3); backdrop-filter: blur(2px); }
-        .ticker-btn { width: 36px; height: 100%; border: none; background: transparent; font-size: 1rem; cursor: pointer; }
+        .ticker-controls { position: absolute; right: 0; height: 100%; display: flex; background: rgba(255,255,255,0.4); backdrop-filter: blur(4px); }
+        .ticker-btn { width: 42px; height: 100%; border: none; background: transparent; font-size: 1.2rem; cursor: pointer; }
 
         .post-list { list-style: none; padding: 0; margin: 0; }
-        .post-item { border-bottom: 1px solid var(--border); padding: 10px 0; }
-        .post-header-row { padding: 5px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; background: transparent; }
-        .post-title-text { font-weight: 700; font-size: 0.95rem; color: var(--text-main); display: flex; align-items: center; gap: 5px; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-right: 10px; }
-        .post-meta-info { font-size: 0.75rem; color: var(--text-sub); white-space: nowrap; }
-        .post-body-content { display: none; padding: 15px; background: rgba(0,0,0,0.02); border-top: 1px dashed var(--border); font-size: 0.95rem; line-height: 1.7; white-space: pre-wrap; color: var(--text-main); word-break: break-all; }
-        .comment-section { margin-top: 15px; border-top: 1px dashed var(--border); padding-top: 10px; background: rgba(0,0,0,0.015); border-radius: 8px; padding: 10px; }
-        .comment-item { display: flex; justify-content: space-between; align-items: flex-start; font-size: 0.85rem; padding: 6px 0; border-bottom: 1px solid rgba(0,0,0,0.05); }
-        .comment-meta { font-weight: bold; color: var(--primary); margin-right: 5px; min-width: 60px; font-size: 0.8rem; }
-        .comment-text { flex: 1; color: var(--text-main); word-break: break-all; }
-        .comment-del-btn { background: none; border: none; color: var(--text-sub); cursor: pointer; font-size: 0.7rem; padding: 0 5px; }
-        .comment-form { display: flex; gap: 5px; align-items: center; flex-wrap: wrap; margin-top: 10px; }
-        .comment-input-sm { width: 70px; padding: 8px; border: 1px solid var(--border); border-radius: 6px; font-size: 0.8rem; }
-        .comment-input-lg { flex: 1; padding: 8px; border: 1px solid var(--border); border-radius: 6px; font-size: 0.8rem; min-width: 120px; }
-        .comment-submit { padding: 8px 12px; background: var(--text-sub); color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 0.8rem; font-weight: bold; }
-
+        .post-item { border-bottom: 1px solid var(--border); padding: 12px 0; }
+        .post-header-row { padding: 5px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
+        .post-title-text { font-weight: 700; font-size: 1rem; color: var(--text-main); display: flex; align-items: center; gap: 6px; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-right: 10px; }
+        .post-meta-info { font-size: 0.8rem; color: var(--text-sub); white-space: nowrap; }
+        
         .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; text-align: center; }
-        .cal-day { padding: 8px 2px; border-radius: 8px; background: rgba(255,255,255,0.5); border: 1px solid var(--border); font-weight: 700; font-size: 0.85rem; cursor: pointer; }
+        .cal-day { padding: 10px 2px; border-radius: 8px; background: rgba(255,255,255,0.5); border: 1px solid var(--border); font-weight: 700; font-size: 0.9rem; cursor: pointer; min-height: 45px; display: flex; flex-direction: column; justify-content: center; align-items: center; }
         .cal-day.selected { background: var(--primary); color: white; border-color: var(--primary); }
-        .cal-day.has-data { border: 2px solid var(--success); }
-        .cal-dot { width: 4px; height: 4px; background-color: var(--success); border-radius: 50%; margin: 3px auto 0 auto; display: none; }
+        .cal-day.has-data { border: 2px solid var(--success); background: rgba(16, 185, 129, 0.1); }
+        .cal-dot { width: 6px; height: 6px; background-color: var(--success); border-radius: 50%; margin-top: 4px; display: none; }
         .cal-day.has-data .cal-dot { display: block; }
 
-        .bottom-nav { position: fixed; bottom: 0; left: 0; width: 100%; height: 65px; background: rgba(255,255,255,0.95); border-top: 1px solid var(--border); display: flex; justify-content: space-around; align-items: center; z-index: 1000; padding-bottom: env(safe-area-inset-bottom); }
-        .dark-mode .bottom-nav { background: rgba(30, 41, 59, 0.95); }
-        .nav-item { flex: 1; text-align: center; color: var(--text-sub); font-size: 0.7rem; cursor: pointer; display: flex; flex-direction: column; align-items: center; }
-        .nav-item.active { color: var(--primary); font-weight: 800; }
-        .page-num { padding: 5px 10px; border: 1px solid var(--border); cursor: pointer; border-radius: 5px; font-size: 0.8rem; margin: 0 2px; }
+        .bottom-nav { position: fixed; bottom: 0; left: 0; width: 100%; height: 70px; background: rgba(255,255,255,0.98); border-top: 1px solid var(--border); display: flex; justify-content: space-around; align-items: center; z-index: 1000; padding-bottom: env(safe-area-inset-bottom); box-shadow: 0 -2px 10px rgba(0,0,0,0.05); }
+        .dark-mode .bottom-nav { background: rgba(30, 41, 59, 0.98); }
+        .nav-item { flex: 1; text-align: center; color: var(--text-sub); font-size: 0.75rem; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+        .nav-item.active { color: var(--primary); font-weight: 800; transform: scale(1.05); transition: 0.2s; }
+        .page-num { padding: 8px 14px; border: 1px solid var(--border); cursor: pointer; border-radius: 8px; font-size: 0.9rem; margin: 0 3px; }
         .page-num.active { background: var(--primary); color: white; }
 
-        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 3000; justify-content: center; align-items: center; }
-        .modal-content { background: var(--card-bg); padding: 20px; border-radius: 15px; max-width: 90%; max-height: 80%; overflow-y: auto; }
-        .modal-img { max-width: 100%; border-radius: 5px; }
-        .guide-text { line-height: 1.8; font-size: 0.9rem; text-align: left; color: var(--text-main); white-space: pre-wrap; }
-        .guide-text h4 { color: var(--primary); margin: 25px 0 10px 0; border-left: 4px solid var(--accent); padding-left: 10px; font-size: 1rem; }
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 3000; justify-content: center; align-items: center; padding: 20px; }
+        .modal-content { background: var(--card-bg); padding: 20px; border-radius: 20px; max-width: 100%; max-height: 90%; overflow-y: auto; width: 100%; }
+        .modal-img { width: 100%; height: auto; border-radius: 10px; }
+        
+        .guide-text { line-height: 1.8; font-size: 0.95rem; text-align: left; color: var(--text-main); white-space: pre-wrap; }
         .hidden { display: none !important; }
-        .mini-btn { padding: 4px 8px; font-size: 0.75rem; border-radius: 6px; border: none; cursor: pointer; color: white; margin-left: 5px; }
-        .btn-del { background: var(--danger); } .btn-edit { background: var(--primary-light); }
-        #toast { position: fixed; bottom: 85px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.85); color: white; padding: 10px 20px; border-radius: 20px; font-size: 0.9rem; z-index: 5000; opacity: 0; transition: 0.3s; pointer-events: none; }
+        .mini-btn { padding: 5px 10px; font-size: 0.8rem; border-radius: 6px; border: none; cursor: pointer; color: white; margin-left: 5px; }
+        .btn-del { background: var(--danger); }
+        #toast { position: fixed; bottom: 90px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.85); color: white; padding: 12px 24px; border-radius: 30px; font-size: 0.95rem; z-index: 5000; opacity: 0; transition: 0.3s; pointer-events: none; width: max-content; max-width: 80%; text-align: center; }
         #toast.show { opacity: 1; }
         
-        .ticker-manage-item { display: flex; justify-content: space-between; align-items: center; padding: 10px; border-bottom: 1px solid var(--border); }
-        .ticker-manage-item span { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.9rem; }
+        /* === 모바일 9:16 최적화 레이아웃 === */
+        /* 기본적으로 flex-direction을 모바일 친화적으로 변경 */
+        .calc-layout { display: flex; gap: 15px; margin-bottom: 15px; }
+        
+        /* 모바일 화면 (폭 768px 이하) */
+        @media (max-width: 768px) {
+            .calc-layout { flex-direction: column; } /* 위아래 배치 */
+            .calc-left, .calc-right { width: 100%; }
+            .ref-table { font-size: 0.9rem; } /* 테이블 글씨 키움 */
+            .ref-table th, .ref-table td { padding: 8px; } /* 테이블 여백 확보 */
+            
+            /* 입력창들이 더 시원하게 보이도록 */
+            .wage-row label { font-size: 1rem; width: 80px; }
+            .input-field { font-size: 1.1rem; padding: 14px; }
+            
+            /* 버튼 터치 영역 확보 */
+            .action-btn { padding: 16px; font-size: 1.1rem; }
+            .nav-item { padding: 5px 0; }
+        }
+        
+        /* 일반적인 PC/태블릿 스타일 */
+        .calc-left { flex: 1; display: flex; flex-direction: column; justify-content: center; }
+        .calc-right { flex: 1; display: flex; flex-direction: column; justify-content: center; }
+        
+        .ref-table { width: 100%; border-collapse: collapse; font-size: 0.8rem; text-align: center; background: rgba(0,0,0,0.02); border-radius: 12px; overflow: hidden; height: 100%; border: 1px solid var(--border); }
+        .ref-table th { background: var(--primary); color: white; padding: 8px; font-weight: normal; }
+        .ref-table td { border: 1px solid var(--border); padding: 8px; color: var(--text-main); vertical-align: middle; }
+        .ref-table .highlight { background: rgba(245, 158, 11, 0.2); font-weight: bold; color: #b45309; }
+        .ticker-manage-item { display: flex; justify-content: space-between; align-items: center; padding: 12px; border-bottom: 1px solid var(--border); }
+        .ticker-manage-item span { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.95rem; }
     </style>
 </head>
 <body>
@@ -186,7 +196,7 @@
 
                     <div class="calc-layout">
                         <div class="calc-left">
-                            <div class="wage-row"><label>시급(기본)</label><input type="number" id="wageHourly" class="input-field" value="10320" style="text-align:right; font-weight:bold; color:#ef4444;" readonly></div>
+                            <div class="wage-row"><label>시급(기본)</label><input type="number" id="wageHourly" class="input-field" value="10320" style="text-align:right; font-weight:bold; color:#ef4444; font-size:1.2rem;" readonly></div>
                             <div class="wage-row"><label>⏳ 총 근무</label><input type="number" id="wageTotalHours" class="input-field" placeholder="H" style="text-align:right;"></div>
                             <div class="wage-row"><label>🕒 시작시각</label><input type="number" id="wageStartTime" class="input-field" value="8" placeholder="0~23" style="text-align:right;"></div>
                         </div>
@@ -201,41 +211,40 @@
                             </table>
                         </div>
                     </div>
-                    <p style="font-size:0.7rem; color:var(--text-sub); margin:0; text-align:center;">※ 현재 월에 맞춰 주/야간 시간이 자동 적용됩니다.</p>
-                    <p style="font-size:0.75rem; color:#ef4444; font-weight:bold; margin:2px 0 10px 0; text-align:center;">더블 오더로 겹치는 시간은 별도로 시간을 계산 하여야 합니다!!</p>
+                    <p style="font-size:0.8rem; color:var(--text-sub); margin:0; text-align:center;">※ 현재 월에 맞춰 주/야간 시간이 자동 적용됩니다.</p>
+                    <p style="font-size:0.85rem; color:#ef4444; font-weight:bold; margin:5px 0 15px 0; text-align:center;">더블 오더로 겹치는 시간은 별도로 시간을 계산 하여야 합니다!!</p>
 
-                    <div style="border-top:1px dashed var(--border); margin:10px 0; padding-top:10px;">
-                        <p style="font-size:0.75rem; color:var(--primary); font-weight:800; margin-bottom:8px;">✅ 추가 수당 시간 입력</p>
-                        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:5px;">
-                            <div class="wage-row"><label style="width:50px;">공휴일</label><input type="number" id="wageHoliday" class="input-field" placeholder="H"></div>
-                            <div class="wage-row"><label style="width:50px;">주말</label><input type="number" id="wageWeekend" class="input-field" placeholder="H"></div>
-                            <div class="wage-row"><label style="width:50px;">우천</label><input type="number" id="wageRain" class="input-field" placeholder="H"></div>
-                            <div class="wage-row"><label style="width:50px;">혹서기</label><input type="number" id="wageHotTime" class="input-field" placeholder="H"></div>
+                    <div style="border-top:1px dashed var(--border); margin:10px 0; padding-top:15px;">
+                        <p style="font-size:0.85rem; color:var(--primary); font-weight:800; margin-bottom:10px;">✅ 추가 수당 시간 입력</p>
+                        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+                            <div class="wage-row"><label style="width:60px;">공휴일</label><input type="number" id="wageHoliday" class="input-field" placeholder="H"></div>
+                            <div class="wage-row"><label style="width:60px;">주말</label><input type="number" id="wageWeekend" class="input-field" placeholder="H"></div>
+                            <div class="wage-row"><label style="width:60px;">우천</label><input type="number" id="wageRain" class="input-field" placeholder="H"></div>
+                            <div class="wage-row"><label style="width:60px;">혹서기</label><input type="number" id="wageHotTime" class="input-field" placeholder="H"></div>
                         </div>
                     </div>
 
-                    <select id="wageTaxType" class="input-field" style="margin-top:5px;">
+                    <select id="wageTaxType" class="input-field" style="margin-top:10px;">
                         <option value="0">공제 없음 (0%)</option>
                         <option value="0.033">프리랜서 (3.3%)</option>
                         <option value="0.094">4대보험 (9.4%)</option>
                     </select>
 
-                    <div style="display:flex; gap:8px; margin-top:10px;">
+                    <div style="display:flex; gap:10px; margin-top:15px;">
                         <button class="action-btn bg-calc" style="flex:2" onclick="calculateWage()">내역서 생성 및 계산</button>
                         <button class="action-btn bg-cancel" style="flex:1" onclick="resetWageForm()">초기화</button>
                     </div>
                     
                     <div id="wageResultBox" class="hidden wage-result-box">
-                        <h4 style="margin:0; text-align:center; color:var(--primary);">📋 임금 산정 내역서</h4>
+                        <h4 style="margin:0; text-align:center; color:var(--primary); font-size:1.1rem;">📋 임금 산정 내역서</h4>
                         <table class="spec-table">
                             <tbody id="wageSpecBody"></tbody>
                         </table>
                         <div id="wageTotal" class="wage-total">0원</div>
-                        <p style="font-size:0.7rem; color:var(--text-sub); text-align:center; margin-top:5px;">※ 2026년 3항업지부 임금표 기준</p>
+                        <p style="font-size:0.8rem; color:var(--text-sub); text-align:center; margin-top:5px;">※ 2026년 3항업지부 임금표 기준</p>
                     </div>
                 </div>
             </div>
-
 
 
             <div id="log-card" class="dash-card" style="border:1px solid var(--primary);">
@@ -243,29 +252,29 @@
                     <span class="dash-title" style="color:var(--primary);">📅 스마트 근무일지(짝지)</span><span class="toggle-icon">▼</span>
                 </div>
                 <div id="workLogArea" class="dash-content">
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-                        <button class="mini-btn" onclick="changeMonth(-1)">◀</button>
-                        <span id="calMonthYear" style="font-weight:bold;"></span>
-                        <button class="mini-btn" onclick="changeMonth(1)">▶</button>
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+                        <button class="mini-btn" style="padding:8px 15px; font-size:1rem;" onclick="changeMonth(-1)">◀</button>
+                        <span id="calMonthYear" style="font-weight:bold; font-size:1.1rem;"></span>
+                        <button class="mini-btn" style="padding:8px 15px; font-size:1rem;" onclick="changeMonth(1)">▶</button>
                     </div>
-                    <div style="display:grid; grid-template-columns:repeat(7,1fr); text-align:center; font-size:0.75rem; color:var(--text-sub); margin-bottom:5px;">
+                    <div style="display:grid; grid-template-columns:repeat(7,1fr); text-align:center; font-size:0.85rem; color:var(--text-sub); margin-bottom:8px; font-weight:bold;">
                         <span style="color:var(--danger)">일</span><span>월</span><span>화</span><span>수</span><span>목</span><span>금</span><span style="color:var(--primary)">토</span>
                     </div>
                     <div id="calendarGrid" class="calendar-grid"></div>
-                    <div id="dailyLogForm" class="hidden" style="margin-top:15px; padding:15px; background:rgba(0,0,0,0.03); border-radius:12px; border:1px solid var(--border);">
-                        <h4 id="selectedDateText" style="margin:0 0 10px 0; color:var(--primary); text-align:center;"></h4>
+                    <div id="dailyLogForm" class="hidden" style="margin-top:20px; padding:20px; background:rgba(0,0,0,0.03); border-radius:15px; border:1px solid var(--border);">
+                        <h4 id="selectedDateText" style="margin:0 0 15px 0; color:var(--primary); text-align:center; font-size:1.1rem;"></h4>
                         <div class="wage-row"><label>주간</label><input type="number" id="logDayHours" class="input-field" placeholder="시간(H)" step="0.5"></div>
                         <div class="wage-row"><label>야간</label><input type="number" id="logNightHours" class="input-field" placeholder="시간(H)" step="0.5"></div>
                         <textarea id="logMemo" class="input-field textarea-field" placeholder="작업 내용..."></textarea>
-                        <label style="font-size:0.8rem; font-weight:bold; display:block; margin-top:5px;">📷 현장 사진</label>
+                        <label style="font-size:0.9rem; font-weight:bold; display:block; margin-top:10px; margin-bottom:5px;">📷 현장 사진</label>
                         <input type="file" id="logImageInput" class="input-field" accept="image/*" onchange="previewLogImage(this)">
-                        <img id="logImagePreview" style="max-width:100%; border-radius:10px; margin-top:5px; display:none;" onclick="document.getElementById('imageModal').style.display='flex'; document.getElementById('modalImage').src=this.src;">
-                        <div style="display:flex; gap:8px; margin-top:15px;">
+                        <img id="logImagePreview" style="max-width:100%; border-radius:10px; margin-top:10px; display:none;" onclick="document.getElementById('imageModal').style.display='flex'; document.getElementById('modalImage').src=this.src;">
+                        <div style="display:flex; gap:10px; margin-top:20px;">
                             <button class="action-btn bg-submit" onclick="saveWorkLog()">저장하기</button>
                             <button class="action-btn bg-cancel" style="background:var(--danger);" onclick="deleteWorkLog()">삭제</button>
                         </div>
                     </div>
-                    <div id="monthlyTotalDisplay" style="text-align:center; margin-top:15px; font-weight:bold; color:var(--primary); border-top:1px dashed var(--border); padding-top:10px;">이번달 총액: 0원</div>
+                    <div id="monthlyTotalDisplay" style="text-align:center; margin-top:20px; font-weight:bold; color:var(--primary); font-size:1.2rem; border-top:1px dashed var(--border); padding-top:15px;">이번달 총액: 0원</div>
                 </div>
             </div>
         </div>
@@ -378,6 +387,7 @@
 
             for (let i = 0; i < totalHours; i++) {
                 let curr = (startHour + i) % 24;
+                
                 if (curr >= dayStartHour && curr < dayEndHour) dayCount++; 
                 else nightCount++;
 
@@ -433,6 +443,7 @@
             else { if(document.getElementById('row-jan')) document.getElementById('row-jan').classList.add('highlight'); }
         });
 
+        // [수정: 시급 초기화 방지]
         function resetWageForm(){
             document.querySelectorAll('#wage-card input').forEach(i=> { 
                 if(i.type !== 'radio' && i.id !== 'wageHourly') i.value=''; 
@@ -441,6 +452,36 @@
             document.getElementById('wageResultBox').classList.add('hidden');
         }
 
+        function loadAllData(){
+            loadBanner();
+            db.collection("notices").orderBy("timestamp","desc").onSnapshot(s=>{const l=document.getElementById("noticeList"); l.innerHTML=""; s.forEach(d=>{const x=d.data(); l.innerHTML+=`<li class="post-item" onclick="toggleContent('n-${d.id}')">📢 <strong>${x.title}</strong><div id="n-${d.id}" class="post-body-content">${x.content}<br><button class="mini-btn btn-del" onclick="delNotice('${d.id}',event)">삭제</button></div></li>`;})}); 
+            db.collection("posts").orderBy("timestamp","desc").onSnapshot(s=>{allPostsData=[]; s.forEach(d=>{allPostsData.push({...d.data(), id:d.id})}); renderBoardPage(1);}); 
+            db.collection("ships").orderBy("timestamp","desc").onSnapshot(s=>{allShipsData=[]; s.forEach(d=>{allShipsData.push({...d.data(), id:d.id})}); filteredShips=allShipsData; renderShipPage(1);}); 
+            db.collection("archives").orderBy("timestamp","desc").onSnapshot(s=>{const l=document.getElementById("fileList"); l.innerHTML=""; s.forEach(d=>{const x=d.data(); l.innerHTML+=`<li class="post-item"><a href="${x.url}" target="_blank">💾 ${x.title}</a><button class="mini-btn btn-del" onclick="delArchive('${d.id}',event)">×</button></li>`;})});
+        }
+        function renderBoardPage(p){currentBoardPage=p; const l=document.getElementById("boardList"); l.innerHTML=""; const start=(p-1)*postsPerPage; const end=start+postsPerPage; allPostsData.slice(start, end).forEach(x=>{l.innerHTML+=`<li class="post-item"><div class="post-header-row" onclick="toggleContent('p-${x.id}')"><span class="post-title-text">${x.title}</span><span class="post-meta-info">${x.timestamp ? new Date(x.timestamp.toDate()).toLocaleDateString() : ''}</span><button class="mini-btn btn-del" onclick="deletePost('${x.id}','${x.password}',event)">삭제</button></div><div id="p-${x.id}" class="post-body-content">${x.content}<div id="cmt-list-${x.id}" class="comment-section"></div><div class="comment-form"><input id="cmt-name-${x.id}" class="comment-input-sm" placeholder="닉네임"><input id="cmt-pw-${x.id}" class="comment-input-sm" type="password" placeholder="비번"><input id="cmt-txt-${x.id}" class="comment-input-lg" placeholder="댓글 내용..."><button class="comment-submit" onclick="addComment('${x.id}')">등록</button></div></div></li>`; loadComments(x.id);}); renderPagination("pagination", Math.ceil(allPostsData.length/postsPerPage), p, renderBoardPage);}
+        function loadComments(pid){if(commentUnsubscribes[pid]) commentUnsubscribes[pid](); commentUnsubscribes[pid]=db.collection('posts').doc(pid).collection('comments').orderBy('timestamp','asc').onSnapshot(s=>{const el=document.getElementById(`cmt-list-${pid}`); if(!el) return; el.innerHTML=""; s.forEach(d=>{const c=d.data(); el.innerHTML+=`<div class="comment-item"><span><span class="comment-meta">${c.name}:</span><span class="comment-text">${c.text}</span></span><button class="comment-del-btn" onclick="deleteComment('${pid}','${d.id}','${c.password}')">×</button></div>`;});});}
+        function showToast(m){const t=document.getElementById("toast"); t.innerText=m; t.classList.add("show"); setTimeout(()=>t.classList.remove("show"),3000);}
+        function toggleDashItem(id){const c=document.getElementById(id); const e=c.classList.contains('expanded'); document.querySelectorAll('.dash-card').forEach(x=>{x.classList.remove('expanded'); x.querySelector('.dash-content').style.display='none'}); if(!e){c.classList.add('expanded'); c.querySelector('.dash-content').style.display='block';}}
+        function toggleSection(id,el){document.getElementById(id).classList.toggle('collapsed');}
+        function toggleContent(id){const e=document.getElementById(id); e.style.display=(e.style.display==='block'?'none':'block');}
+        function toggleHidden(id){document.getElementById(id).classList.toggle('hidden');}
+        function toggleDarkMode(){document.body.classList.toggle('dark-mode');}
+        async function verifyAdmin(){const i=prompt("Admin PW:"); return i==="0346";}
+        function scrollToTop(){window.scrollTo({top:0,behavior:'smooth'});}
+        async function addNotice(){if(await verifyAdmin()){db.collection("notices").add({title:document.getElementById('noticeTitle').value, content:document.getElementById('noticeContent').value, timestamp:firebase.firestore.FieldValue.serverTimestamp()}).then(()=>{document.getElementById('noticeTitle').value=''; document.getElementById('noticeContent').value=''; showToast("공지 등록됨");});}}
+        async function delNotice(id,e){e.stopPropagation(); if(await verifyAdmin()) db.collection("notices").doc(id).delete();}
+        function addPost(){const t=document.getElementById('inputTitle').value, p=document.getElementById('inputPw').value, c=document.getElementById('inputContent').value; if(t&&p&&c){db.collection("posts").add({title:t, password:p, content:c, timestamp:firebase.firestore.FieldValue.serverTimestamp()}).then(()=>{document.getElementById('inputTitle').value=''; document.getElementById('inputPw').value=''; document.getElementById('inputContent').value=''; toggleHidden('boardForm'); showToast("작성 완료");});}}
+        async function deletePost(id,pw,e){e.stopPropagation(); if(prompt("비번")===pw||await verifyAdmin()) db.collection("posts").doc(id).delete();}
+        function addComment(pid){const n=document.getElementById(`cmt-name-${pid}`).value, p=document.getElementById(`cmt-pw-${pid}`).value, t=document.getElementById(`cmt-txt-${pid}`).value; if(n&&p&&t){db.collection('posts').doc(pid).collection('comments').add({name:n, password:p, text:t, timestamp:firebase.firestore.FieldValue.serverTimestamp()}).then(()=>{document.getElementById(`cmt-txt-${pid}`).value=""; showToast("댓글 등록됨");});}}
+        async function deleteComment(pid,cid,pw){if(prompt("비번")===pw||await verifyAdmin()) db.collection('posts').doc(pid).collection('comments').doc(cid).delete();}
+        function addShipInfo(){const n=document.getElementById('shipName').value, c=document.getElementById('shipOnboard').value, f=document.getElementById('shipFileInput').files[0]; const save=(u)=>{db.collection("ships").add({shipName:n, onboardFeat:c, imageUrl:u, timestamp:firebase.firestore.FieldValue.serverTimestamp()}).then(()=>{document.getElementById('shipName').value=''; document.getElementById('shipOnboard').value=''; document.getElementById('shipFileInput').value=''; toggleHidden('shipForm'); showToast("선박 등록됨");});}; if(f) storage.ref(`ships/${Date.now()}`).put(f).then(s=>s.ref.getDownloadURL()).then(u=>save(u)); else save(null);}
+        function renderShipPage(p){const l=document.getElementById("shipList"); l.innerHTML=""; filteredShips.slice((p-1)*postsPerPage, p*postsPerPage).forEach(x=>{l.innerHTML+=`<li class="post-item"><div onclick="toggleContent('s-${x.id}')">🚢 ${x.shipName}</div><div id="s-${x.id}" class="post-body-content">${x.onboardFeat}<br><button class="mini-btn btn-del" onclick="deleteShip('${x.id}',event)">삭제</button></div></li>`;});}
+        async function deleteShip(id,e){e.stopPropagation(); if(await verifyAdmin()) db.collection("ships").doc(id).delete();}
+        function uploadFile(){const f=document.getElementById('fileInput').files[0], t=document.getElementById('fileTitle').value; if(f&&t) storage.ref(`archives/${Date.now()}`).put(f).then(s=>s.ref.getDownloadURL()).then(u=>db.collection("archives").add({title:t, url:u, timestamp:firebase.firestore.FieldValue.serverTimestamp()})).then(()=>{showToast("업로드 성공"); document.getElementById('fileTitle').value=''; document.getElementById('fileInput').value='';}).catch(err=>{alert("업로드 실패: "+err.message);});}
+        async function delArchive(id,e){e.stopPropagation(); if(await verifyAdmin()) db.collection("archives").doc(id).delete();}
+        
+        // [수정: 클릭 시 바로 열리게 변경]
         function openLogImmediately(id){
             const c=document.getElementById(id); 
             const e=c.classList.contains('expanded'); 
@@ -449,6 +490,91 @@
                 c.classList.add('expanded'); 
                 c.querySelector('.dash-content').style.display='block'; 
                 renderCalendar(currentDate.getFullYear(), currentDate.getMonth());
+            }
+        }
+        
+        function openBusSchedule(){
+            const m = document.getElementById('imageModal');
+            const i = document.getElementById('modalImage');
+            i.src = 'http://pasc.dothome.co.kr/pnitbus.jpg';
+            m.style.display = 'flex';
+        }
+        function closeImageModal(){document.getElementById('imageModal').style.display='none';}
+        function previewLogImage(input){if(input.files&&input.files[0]){const r=new FileReader(); r.onload=e=>{const img=document.getElementById('logImagePreview'); img.src=e.target.result; img.style.display='block';}; r.readAsDataURL(input.files[0]);}}
+        function openPrivacy(){document.getElementById('privacyModal').style.display='flex';}
+
+        function loadBanner(){
+            db.collection('settings').doc('banner').onSnapshot(d=>{
+                if(d.exists) {
+                    const data = d.data();
+                    let adminMsg = data.adminMessage ? `📢 ${data.adminMessage}` : "";
+                    let userMsgs = data.userMessages || [];
+                    let displayArr = [];
+                    if (adminMsg) displayArr.push(adminMsg);
+                    userMsgs.forEach((msg, idx) => { displayArr.push(`${idx + 1}. ${msg}`); });
+                    const finalMsg = displayArr.length > 0 ? displayArr.join("   ///   ") : "🚨 안전 제일! 오늘도 무사고!";
+                    document.getElementById('tickerText').innerText = finalMsg;
+                }
+            });
+        }
+        function writeUserTicker(){
+            const m = prompt("안전 문구 등록 (최대 3개):"); 
+            if(m){
+                const docRef = db.collection('settings').doc('banner');
+                docRef.get().then((doc) => {
+                    let currentMsgs = [];
+                    if (doc.exists && doc.data().userMessages) {
+                        currentMsgs = doc.data().userMessages;
+                    }
+                    currentMsgs.unshift(m);
+                    if(currentMsgs.length > 3) currentMsgs = currentMsgs.slice(0, 3);
+                    return docRef.set({ userMessages: currentMsgs }, { merge: true });
+                }).then(() => showToast("등록되었습니다."));
+            }
+        }
+        async function setAdminTicker(){
+            if(await verifyAdmin()){
+                const m=prompt("관리자 공지 (항상 맨 앞):"); 
+                if(m) db.collection('settings').doc('banner').set({adminMessage:m},{merge:true}).then(()=>showToast("관리자 공지 등록됨"));
+            }
+        }
+        async function openTickerManager(){
+            if(await verifyAdmin()){
+                db.collection('settings').doc('banner').get().then(doc => {
+                    if(doc.exists) {
+                        const data = doc.data();
+                        const listEl = document.getElementById('tickerListContainer');
+                        listEl.innerHTML = "";
+                        if(data.adminMessage) {
+                            listEl.innerHTML += `<div class="ticker-manage-item"><span style="color:var(--danger); font-weight:bold;">[관리자] ${data.adminMessage}</span> <button class="mini-btn btn-del" onclick="deleteTickerMsg('admin', 0)">삭제</button></div>`;
+                        }
+                        if(data.userMessages && data.userMessages.length > 0) {
+                            data.userMessages.forEach((msg, idx) => {
+                                listEl.innerHTML += `<div class="ticker-manage-item"><span>${idx+1}. ${msg}</span> <button class="mini-btn btn-del" onclick="deleteTickerMsg('user', ${idx})">삭제</button></div>`;
+                            });
+                        }
+                        document.getElementById('tickerManageModal').style.display = 'flex';
+                    }
+                });
+            }
+        }
+        async function deleteTickerMsg(type, index) {
+            const docRef = db.collection('settings').doc('banner');
+            if(type === 'admin') {
+                await docRef.update({ adminMessage: firebase.firestore.FieldValue.delete() });
+            } else {
+                const doc = await docRef.get();
+                let msgs = doc.data().userMessages || [];
+                msgs.splice(index, 1);
+                await docRef.update({ userMessages: msgs });
+            }
+            showToast("삭제되었습니다.");
+            openTickerManager();
+        }
+        async function resetTicker(){
+            if(await verifyAdmin() && confirm("모든 공지를 초기화하시겠습니까?")) {
+                db.collection('settings').doc('banner').set({adminMessage:null, userMessages:[]});
+                showToast("초기화되었습니다.");
             }
         }
 
@@ -562,118 +688,15 @@
             document.getElementById('logImagePreview').style.display='none';
         }
 
-        function loadAllData(){
-            loadBanner();
-            db.collection("notices").orderBy("timestamp","desc").onSnapshot(s=>{const l=document.getElementById("noticeList"); l.innerHTML=""; s.forEach(d=>{const x=d.data(); l.innerHTML+=`<li class="post-item" onclick="toggleContent('n-${d.id}')">📢 <strong>${x.title}</strong><div id="n-${d.id}" class="post-body-content">${x.content}<br><button class="mini-btn btn-del" onclick="delNotice('${d.id}',event)">삭제</button></div></li>`;})}); 
-            db.collection("posts").orderBy("timestamp","desc").onSnapshot(s=>{allPostsData=[]; s.forEach(d=>{allPostsData.push({...d.data(), id:d.id})}); renderBoardPage(1);}); 
-            db.collection("ships").orderBy("timestamp","desc").onSnapshot(s=>{allShipsData=[]; s.forEach(d=>{allShipsData.push({...d.data(), id:d.id})}); filteredShips=allShipsData; renderShipPage(1);}); 
-            db.collection("archives").orderBy("timestamp","desc").onSnapshot(s=>{const l=document.getElementById("fileList"); l.innerHTML=""; s.forEach(d=>{const x=d.data(); l.innerHTML+=`<li class="post-item"><a href="${x.url}" target="_blank">💾 ${x.title}</a><button class="mini-btn btn-del" onclick="delArchive('${d.id}',event)">×</button></li>`;})});
-        }
-        function renderBoardPage(p){currentBoardPage=p; const l=document.getElementById("boardList"); l.innerHTML=""; const start=(p-1)*postsPerPage; const end=start+postsPerPage; allPostsData.slice(start, end).forEach(x=>{l.innerHTML+=`<li class="post-item"><div class="post-header-row" onclick="toggleContent('p-${x.id}')"><span class="post-title-text">${x.title}</span><span class="post-meta-info">${x.timestamp ? new Date(x.timestamp.toDate()).toLocaleDateString() : ''}</span><button class="mini-btn btn-del" onclick="deletePost('${x.id}','${x.password}',event)">삭제</button></div><div id="p-${x.id}" class="post-body-content">${x.content}<div id="cmt-list-${x.id}" class="comment-section"></div><div class="comment-form"><input id="cmt-name-${x.id}" class="comment-input-sm" placeholder="닉네임"><input id="cmt-pw-${x.id}" class="comment-input-sm" type="password" placeholder="비번"><input id="cmt-txt-${x.id}" class="comment-input-lg" placeholder="댓글 내용..."><button class="comment-submit" onclick="addComment('${x.id}')">등록</button></div></div></li>`; loadComments(x.id);}); renderPagination("pagination", Math.ceil(allPostsData.length/postsPerPage), p, renderBoardPage);}
-        function loadComments(pid){if(commentUnsubscribes[pid]) commentUnsubscribes[pid](); commentUnsubscribes[pid]=db.collection('posts').doc(pid).collection('comments').orderBy('timestamp','asc').onSnapshot(s=>{const el=document.getElementById(`cmt-list-${pid}`); if(!el) return; el.innerHTML=""; s.forEach(d=>{const c=d.data(); el.innerHTML+=`<div class="comment-item"><span><span class="comment-meta">${c.name}:</span><span class="comment-text">${c.text}</span></span><button class="comment-del-btn" onclick="deleteComment('${pid}','${d.id}','${c.password}')">×</button></div>`;});});}
-        function showToast(m){const t=document.getElementById("toast"); t.innerText=m; t.classList.add("show"); setTimeout(()=>t.classList.remove("show"),3000);}
-        function toggleDashItem(id){const c=document.getElementById(id); const e=c.classList.contains('expanded'); document.querySelectorAll('.dash-card').forEach(x=>{x.classList.remove('expanded'); x.querySelector('.dash-content').style.display='none'}); if(!e){c.classList.add('expanded'); c.querySelector('.dash-content').style.display='block';}}
-        function toggleSection(id,el){document.getElementById(id).classList.toggle('collapsed');}
-        function toggleContent(id){const e=document.getElementById(id); e.style.display=(e.style.display==='block'?'none':'block');}
-        function toggleHidden(id){document.getElementById(id).classList.toggle('hidden');}
-        function toggleDarkMode(){document.body.classList.toggle('dark-mode');}
-        async function verifyAdmin(){const i=prompt("Admin PW:"); return i==="0346";}
-        function scrollToTop(){window.scrollTo({top:0,behavior:'smooth'});}
-        async function addNotice(){if(await verifyAdmin()){db.collection("notices").add({title:document.getElementById('noticeTitle').value, content:document.getElementById('noticeContent').value, timestamp:firebase.firestore.FieldValue.serverTimestamp()}).then(()=>{document.getElementById('noticeTitle').value=''; document.getElementById('noticeContent').value=''; showToast("공지 등록됨");});}}
-        async function delNotice(id,e){e.stopPropagation(); if(await verifyAdmin()) db.collection("notices").doc(id).delete();}
-        function addPost(){const t=document.getElementById('inputTitle').value, p=document.getElementById('inputPw').value, c=document.getElementById('inputContent').value; if(t&&p&&c){db.collection("posts").add({title:t, password:p, content:c, timestamp:firebase.firestore.FieldValue.serverTimestamp()}).then(()=>{document.getElementById('inputTitle').value=''; document.getElementById('inputPw').value=''; document.getElementById('inputContent').value=''; toggleHidden('boardForm'); showToast("작성 완료");});}}
-        async function deletePost(id,pw,e){e.stopPropagation(); if(prompt("비번")===pw||await verifyAdmin()) db.collection("posts").doc(id).delete();}
-        function addComment(pid){const n=document.getElementById(`cmt-name-${pid}`).value, p=document.getElementById(`cmt-pw-${pid}`).value, t=document.getElementById(`cmt-txt-${pid}`).value; if(n&&p&&t){db.collection('posts').doc(pid).collection('comments').add({name:n, password:p, text:t, timestamp:firebase.firestore.FieldValue.serverTimestamp()}).then(()=>{document.getElementById(`cmt-txt-${pid}`).value=""; showToast("댓글 등록됨");});}}
-        async function deleteComment(pid,cid,pw){if(prompt("비번")===pw||await verifyAdmin()) db.collection('posts').doc(pid).collection('comments').doc(cid).delete();}
-        function addShipInfo(){const n=document.getElementById('shipName').value, c=document.getElementById('shipOnboard').value, f=document.getElementById('shipFileInput').files[0]; const save=(u)=>{db.collection("ships").add({shipName:n, onboardFeat:c, imageUrl:u, timestamp:firebase.firestore.FieldValue.serverTimestamp()}).then(()=>{document.getElementById('shipName').value=''; document.getElementById('shipOnboard').value=''; document.getElementById('shipFileInput').value=''; toggleHidden('shipForm'); showToast("선박 등록됨");});}; if(f) storage.ref(`ships/${Date.now()}`).put(f).then(s=>s.ref.getDownloadURL()).then(u=>save(u)); else save(null);}
-        function renderShipPage(p){const l=document.getElementById("shipList"); l.innerHTML=""; filteredShips.slice((p-1)*postsPerPage, p*postsPerPage).forEach(x=>{l.innerHTML+=`<li class="post-item"><div onclick="toggleContent('s-${x.id}')">🚢 ${x.shipName}</div><div id="s-${x.id}" class="post-body-content">${x.onboardFeat}<br><button class="mini-btn btn-del" onclick="deleteShip('${x.id}',event)">삭제</button></div></li>`;});}
-        async function deleteShip(id,e){e.stopPropagation(); if(await verifyAdmin()) db.collection("ships").doc(id).delete();}
-        function uploadFile(){const f=document.getElementById('fileInput').files[0], t=document.getElementById('fileTitle').value; if(f&&t) storage.ref(`archives/${Date.now()}`).put(f).then(s=>s.ref.getDownloadURL()).then(u=>db.collection("archives").add({title:t, url:u, timestamp:firebase.firestore.FieldValue.serverTimestamp()})).then(()=>{showToast("업로드 성공"); document.getElementById('fileTitle').value=''; document.getElementById('fileInput').value='';}).catch(err=>{alert("업로드 실패: "+err.message);});}
-        async function delArchive(id,e){e.stopPropagation(); if(await verifyAdmin()) db.collection("archives").doc(id).delete();}
-        
-        // PNC 버스 시간표 (모달)
-        function openBusSchedule(){
-            const m = document.getElementById('imageModal');
-            const i = document.getElementById('modalImage');
-            i.src = 'http://pasc.dothome.co.kr/pnitbus.jpg';
-            m.style.display = 'flex';
-        }
-        function closeImageModal(){document.getElementById('imageModal').style.display='none';}
-        function previewLogImage(input){if(input.files&&input.files[0]){const r=new FileReader(); r.onload=e=>{const img=document.getElementById('logImagePreview'); img.src=e.target.result; img.style.display='block';}; r.readAsDataURL(input.files[0]);}}
-        function openPrivacy(){document.getElementById('privacyModal').style.display='flex';}
-
-        function loadBanner(){
-            db.collection('settings').doc('banner').onSnapshot(d=>{
-                if(d.exists) {
-                    const data = d.data();
-                    let adminMsg = data.adminMessage ? `📢 ${data.adminMessage}` : "";
-                    let userMsgs = data.userMessages || [];
-                    let displayArr = [];
-                    if (adminMsg) displayArr.push(adminMsg);
-                    userMsgs.forEach((msg, idx) => { displayArr.push(`${idx + 1}. ${msg}`); });
-                    const finalMsg = displayArr.length > 0 ? displayArr.join("   ///   ") : "🚨 안전 제일! 오늘도 무사고!";
-                    document.getElementById('tickerText').innerText = finalMsg;
-                }
-            });
-        }
-        function writeUserTicker(){
-            const m = prompt("안전 문구 등록 (최대 3개):"); 
-            if(m){
-                const docRef = db.collection('settings').doc('banner');
-                docRef.get().then((doc) => {
-                    let currentMsgs = [];
-                    if (doc.exists && doc.data().userMessages) {
-                        currentMsgs = doc.data().userMessages;
-                    }
-                    currentMsgs.unshift(m);
-                    if(currentMsgs.length > 3) currentMsgs = currentMsgs.slice(0, 3);
-                    return docRef.set({ userMessages: currentMsgs }, { merge: true });
-                }).then(() => showToast("등록되었습니다."));
-            }
-        }
-        async function setAdminTicker(){
-            if(await verifyAdmin()){
-                const m=prompt("관리자 공지 (항상 맨 앞):"); 
-                if(m) db.collection('settings').doc('banner').set({adminMessage:m},{merge:true}).then(()=>showToast("관리자 공지 등록됨"));
-            }
-        }
-        async function openTickerManager(){
-            if(await verifyAdmin()){
-                db.collection('settings').doc('banner').get().then(doc => {
-                    if(doc.exists) {
-                        const data = doc.data();
-                        const listEl = document.getElementById('tickerListContainer');
-                        listEl.innerHTML = "";
-                        if(data.adminMessage) {
-                            listEl.innerHTML += `<div class="ticker-manage-item"><span style="color:var(--danger); font-weight:bold;">[관리자] ${data.adminMessage}</span> <button class="mini-btn btn-del" onclick="deleteTickerMsg('admin', 0)">삭제</button></div>`;
-                        }
-                        if(data.userMessages && data.userMessages.length > 0) {
-                            data.userMessages.forEach((msg, idx) => {
-                                listEl.innerHTML += `<div class="ticker-manage-item"><span>${idx+1}. ${msg}</span> <button class="mini-btn btn-del" onclick="deleteTickerMsg('user', ${idx})">삭제</button></div>`;
-                            });
-                        }
-                        document.getElementById('tickerManageModal').style.display = 'flex';
-                    }
-                });
-            }
-        }
-        async function deleteTickerMsg(type, index) {
-            const docRef = db.collection('settings').doc('banner');
-            if(type === 'admin') {
-                await docRef.update({ adminMessage: firebase.firestore.FieldValue.delete() });
-            } else {
-                const doc = await docRef.get();
-                let msgs = doc.data().userMessages || [];
-                msgs.splice(index, 1);
-                await docRef.update({ userMessages: msgs });
-            }
-            showToast("삭제되었습니다.");
-            openTickerManager();
-        }
-        async function resetTicker(){
-            if(await verifyAdmin() && confirm("모든 공지를 초기화하시겠습니까?")) {
-                db.collection('settings').doc('banner').set({adminMessage:null, userMessages:[]});
-                showToast("초기화되었습니다.");
+        function previewLogImage(input){
+            if(input.files && input.files[0]){
+                const r = new FileReader(); 
+                r.onload = e => {
+                    const img = document.getElementById('logImagePreview'); 
+                    img.src = e.target.result; 
+                    img.style.display = 'block';
+                }; 
+                r.readAsDataURL(input.files[0]);
             }
         }
 
