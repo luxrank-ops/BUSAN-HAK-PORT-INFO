@@ -12,7 +12,7 @@
     
     <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6024353303588422" crossorigin="anonymous"></script>
 
-    <link rel="icon" type="image/png" sizes="32x32" href="icon.png?v=final_complete_v1">
+    <link rel="icon" type="image/png" sizes="32x32" href="icon.png?v=final_fix_real_v55">
     <link rel="stylesheet" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.8/dist/web/static/pretendard.css" />
 
     <style>
@@ -44,19 +44,30 @@
         .collapsible-content { display: block; padding: 12px; }
         .collapsible-content.collapsed { display: none !important; }
 
-        /* [입력창 스타일] 100% 너비 적용 */
+        /* [입력창 스타일] 100% 너비 적용 (폰에서 잘림 방지) */
         .input-field { width: 100%; padding: 0 10px; margin-bottom: 0; border: 1px solid var(--border); border-radius: 8px; background: rgba(255,255,255,0.6); color: var(--text-main); font-size: 1rem; height: 40px; text-align: right; font-weight: bold; display: flex; align-items: center; }
         .textarea-field { height: 80px; resize: none; text-align: left; font-weight: normal; padding: 10px; }
         
         .action-btn { width: 100%; padding: 14px; border: none; border-radius: 10px; font-weight: 800; color: white; cursor: pointer; background: var(--primary); font-size: 1rem; margin-top: 5px; }
         .bg-submit { background: var(--success); } .bg-calc { background: linear-gradient(135deg, #ef4444, #b91c1c); } .bg-cancel { background: var(--text-sub); }
         
-        /* [입력 줄 레이아웃] */
         .wage-row { display: flex; align-items: center; margin-bottom: 8px; width: 100%; justify-content: space-between; }
         .wage-row label { width: auto; min-width: 60px; font-weight: 700; font-size: 0.9rem; white-space: nowrap; text-align: left; margin-right: 5px; flex-shrink: 0; }
         .wage-row .input-field { flex: 1; width: 100%; min-width: 0; }
         
         .allowance-grid { display: grid; grid-template-columns: 1fr 1fr; column-gap: 8px; row-gap: 2px; }
+
+        /* [레이아웃 보호] 모바일에서만 세로 배치하여 짤림 방지 */
+        .calc-layout { display: flex; gap: 10px; margin-bottom: 12px; }
+        .calc-left { flex: 1; display: flex; flex-direction: column; justify-content: center; }
+        .calc-right { flex: 1; display: flex; flex-direction: column; justify-content: center; }
+        
+        @media (max-width: 768px) {
+            .calc-layout { flex-direction: column; } 
+            .calc-left, .calc-right { width: 100%; } 
+            .input-field { font-size: 1.1rem; height: 44px; }
+            .action-btn { padding: 16px; font-size: 1.1rem; margin-top: 10px; }
+        }
 
         .wage-result-box { background: linear-gradient(135deg, #ffffff, #f9fafb); border: 2px solid var(--primary); border-radius: 10px; padding: 15px; margin-top: 15px; }
         .spec-table { width: 100%; border-collapse: collapse; margin: 8px 0; font-size: 0.85rem; }
@@ -70,14 +81,10 @@
         .role-selector input[type="radio"]:checked + label { background: var(--primary); color: white; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
         .role-selector input[type="radio"] { display: none; }
 
-        .terminal-block { background: rgba(0,0,0,0.03); border-radius: 8px; margin-bottom: 6px; border: 1px solid var(--border); overflow: hidden; }
-        .terminal-header { padding: 12px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; font-weight: 700; font-size: 0.9rem; }
-        .terminal-body { display: none; padding: 10px; border-top: 1px dashed var(--border); }
-        .terminal-actions { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; }
-        .terminal-btn { background: var(--card-bg); border: 1px solid var(--border); color: var(--text-main); padding: 10px 0; border-radius: 6px; text-decoration: none; font-size: 0.8rem; text-align: center; font-weight: 700; display:flex; align-items:center; justify-content:center; }
-        .btn-premium { grid-column: span 3; background: linear-gradient(135deg, #fffbeb, #fef3c7); border: 1px solid #fcd34d; color: #92400e; margin-top: 4px; }
-        .control-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-        .control-btn { background: var(--card-bg); border: 1px solid var(--border); color: var(--text-main); padding: 14px; border-radius: 10px; text-decoration: none; font-size: 0.9rem; font-weight: 700; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; }
+        .ref-table { width: 100%; border-collapse: collapse; font-size: 0.75rem; text-align: center; background: rgba(0,0,0,0.02); border-radius: 8px; overflow: hidden; height: 100%; border: 1px solid var(--border); }
+        .ref-table th { background: var(--primary); color: white; padding: 6px; font-weight: normal; }
+        .ref-table td { border: 1px solid var(--border); padding: 6px; color: var(--text-main); vertical-align: middle; }
+        .ref-table .highlight { background: rgba(245, 158, 11, 0.2); font-weight: bold; color: #b45309; }
 
         .ticker-container { background: var(--accent); color: #000; font-weight: 800; height: 38px; display: flex; align-items: center; overflow: hidden; position: relative; font-size: 0.85rem; border-bottom: 1px solid rgba(0,0,0,0.1); }
         .ticker-item { padding-left: 100%; animation: ticker 25s linear infinite; white-space: nowrap; line-height: 38px; }
@@ -85,29 +92,21 @@
         .ticker-controls { position: absolute; right: 0; height: 100%; display: flex; background: rgba(255,255,255,0.4); backdrop-filter: blur(4px); }
         .ticker-btn { width: 38px; height: 100%; border: none; background: transparent; font-size: 1.1rem; cursor: pointer; }
 
-        .post-list { list-style: none; padding: 0; margin: 0; }
-        .post-item { border-bottom: 1px solid var(--border); padding: 10px 0; }
-        .post-header-row { padding: 4px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
-        .post-title-text { font-weight: 700; font-size: 0.95rem; color: var(--text-main); display: flex; align-items: center; gap: 5px; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-right: 8px; }
-        .post-meta-info { font-size: 0.75rem; color: var(--text-sub); white-space: nowrap; }
-        .post-body-content { display: none; padding: 12px; background: rgba(0,0,0,0.02); border-top: 1px dashed var(--border); font-size: 0.9rem; line-height: 1.6; white-space: pre-wrap; color: var(--text-main); word-break: break-all; }
-        
-        .comment-section { margin-top: 10px; border-top: 1px dashed var(--border); padding-top: 8px; background: rgba(0,0,0,0.015); border-radius: 6px; padding: 8px; }
-        .comment-item { display: flex; justify-content: space-between; align-items: flex-start; font-size: 0.8rem; padding: 5px 0; border-bottom: 1px solid rgba(0,0,0,0.05); }
-        .comment-form { display: flex; gap: 4px; align-items: center; flex-wrap: wrap; margin-top: 8px; }
-        .comment-input-sm { width: 60px; padding: 6px; border: 1px solid var(--border); border-radius: 4px; font-size: 0.8rem; }
-        .comment-input-lg { flex: 1; padding: 6px; border: 1px solid var(--border); border-radius: 4px; font-size: 0.8rem; min-width: 100px; }
-        .comment-submit { padding: 6px 10px; background: var(--text-sub); color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.75rem; font-weight: bold; }
-
-        .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px; text-align: center; }
+        .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px; text-align: center; min-height: 250px; }
         .cal-day { padding: 8px 0; border-radius: 6px; background: rgba(255,255,255,0.5); border: 1px solid var(--border); font-weight: 700; font-size: 0.85rem; cursor: pointer; min-height: 40px; display: flex; flex-direction: column; justify-content: center; align-items: center; }
         .cal-day.selected { background: var(--primary); color: white; border-color: var(--primary); }
         .cal-day.has-data { border: 2px solid var(--success); background: rgba(16, 185, 129, 0.1); }
         .cal-dot { width: 5px; height: 5px; background-color: var(--success); border-radius: 50%; margin-top: 3px; display: none; }
         .cal-day.has-data .cal-dot { display: block; }
+        
+        /* [추가] 로그인 상태 바 */
+        .user-auth-bar { display: flex; justify-content: space-between; align-items: center; background: rgba(59, 130, 246, 0.1); padding: 10px; border-radius: 8px; margin-bottom: 10px; border: 1px solid var(--primary-light); }
+        .user-info { display: flex; flex-direction: column; }
+        .user-name { font-weight: 800; color: var(--primary); font-size: 0.9rem; }
+        .user-status { font-size: 0.75rem; color: var(--success); }
+        .logout-btn { background: var(--text-sub); color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 0.75rem; font-weight: bold; }
 
         .bottom-nav { position: fixed; bottom: 0; left: 0; width: 100%; height: 60px; background: rgba(255,255,255,0.98); border-top: 1px solid var(--border); display: flex; justify-content: space-around; align-items: center; z-index: 1000; padding-bottom: env(safe-area-inset-bottom); box-shadow: 0 -2px 10px rgba(0,0,0,0.05); }
-        .dark-mode .bottom-nav { background: rgba(30, 41, 59, 0.98); }
         .nav-item { flex: 1; text-align: center; color: var(--text-sub); font-size: 0.7rem; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 2px; }
         .nav-item.active { color: var(--primary); font-weight: 800; transform: scale(1.05); }
 
@@ -118,35 +117,30 @@
         #toast { position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.85); color: white; padding: 10px 20px; border-radius: 30px; font-size: 0.9rem; z-index: 5000; opacity: 0; transition: 0.3s; pointer-events: none; width: max-content; max-width: 80%; text-align: center; }
         #toast.show { opacity: 1; }
         
+        .terminal-block { background: rgba(0,0,0,0.03); border-radius: 8px; margin-bottom: 6px; border: 1px solid var(--border); overflow: hidden; }
+        .terminal-header { padding: 12px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; font-weight: 700; font-size: 0.9rem; }
+        .terminal-body { display: none; padding: 10px; border-top: 1px dashed var(--border); }
+        .terminal-actions { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+        .terminal-btn { background: var(--card-bg); border: 1px solid var(--border); color: var(--text-main); padding: 10px 0; border-radius: 6px; text-decoration: none; font-size: 0.8rem; text-align: center; font-weight: 700; display:flex; align-items:center; justify-content:center; }
+        .btn-premium { grid-column: span 3; background: linear-gradient(135deg, #fffbeb, #fef3c7); border: 1px solid #fcd34d; color: #92400e; margin-top: 4px; }
+        .control-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+        .control-btn { background: var(--card-bg); border: 1px solid var(--border); color: var(--text-main); padding: 14px; border-radius: 10px; text-decoration: none; font-size: 0.9rem; font-weight: 700; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; }
+        .post-list { list-style: none; padding: 0; margin: 0; }
+        .post-item { border-bottom: 1px solid var(--border); padding: 10px 0; }
+        .post-header-row { padding: 4px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
+        .post-title-text { font-weight: 700; font-size: 0.95rem; color: var(--text-main); display: flex; align-items: center; gap: 5px; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-right: 8px; }
+        .post-meta-info { font-size: 0.75rem; color: var(--text-sub); white-space: nowrap; }
+        .post-body-content { display: none; padding: 12px; background: rgba(0,0,0,0.02); border-top: 1px dashed var(--border); font-size: 0.9rem; line-height: 1.6; white-space: pre-wrap; color: var(--text-main); word-break: break-all; }
+        .comment-section { margin-top: 10px; border-top: 1px dashed var(--border); padding-top: 8px; background: rgba(0,0,0,0.015); border-radius: 6px; padding: 8px; }
+        .comment-item { display: flex; justify-content: space-between; align-items: flex-start; font-size: 0.8rem; padding: 5px 0; border-bottom: 1px solid rgba(0,0,0,0.05); }
+        .comment-form { display: flex; gap: 4px; align-items: center; flex-wrap: wrap; margin-top: 8px; }
+        .comment-input-sm { width: 60px; padding: 6px; border: 1px solid var(--border); border-radius: 4px; font-size: 0.8rem; }
+        .comment-input-lg { flex: 1; padding: 6px; border: 1px solid var(--border); border-radius: 4px; font-size: 0.8rem; min-width: 100px; }
+        .comment-submit { padding: 6px 10px; background: var(--text-sub); color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.75rem; font-weight: bold; }
         .ticker-manage-item { display: flex; justify-content: space-between; align-items: center; padding: 10px; border-bottom: 1px solid var(--border); }
         .ticker-manage-item span { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.9rem; }
         .page-num { padding: 6px 12px; border: 1px solid var(--border); cursor: pointer; border-radius: 6px; font-size: 0.85rem; margin: 0 2px; }
         .page-num.active { background: var(--primary); color: white; }
-
-        /* [사용자 프로필 바 추가] */
-        .user-auth-bar { display: flex; justify-content: space-between; align-items: center; background: rgba(59, 130, 246, 0.1); padding: 10px; border-radius: 8px; margin-bottom: 10px; border: 1px solid var(--primary-light); }
-        .user-info { display: flex; flex-direction: column; }
-        .user-name { font-weight: 800; color: var(--primary); font-size: 0.9rem; }
-        .user-status { font-size: 0.75rem; color: var(--success); }
-        .logout-btn { background: var(--text-sub); color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 0.75rem; font-weight: bold; }
-
-        /* [임금계산기 레이아웃 유지 - 모바일에서만 세로 배치] */
-        .calc-layout { display: flex; gap: 10px; margin-bottom: 12px; }
-        .calc-left { flex: 1; display: flex; flex-direction: column; justify-content: center; }
-        .calc-right { flex: 1; display: flex; flex-direction: column; justify-content: center; }
-        
-        .ref-table { width: 100%; border-collapse: collapse; font-size: 0.75rem; text-align: center; background: rgba(0,0,0,0.02); border-radius: 8px; overflow: hidden; height: 100%; border: 1px solid var(--border); }
-        .ref-table th { background: var(--primary); color: white; padding: 6px; font-weight: normal; }
-        .ref-table td { border: 1px solid var(--border); padding: 6px; color: var(--text-main); vertical-align: middle; }
-        .ref-table .highlight { background: rgba(245, 158, 11, 0.2); font-weight: bold; color: #b45309; }
-
-        @media (max-width: 768px) {
-            .calc-layout { flex-direction: column; } 
-            .calc-left, .calc-right { width: 100%; } 
-            .input-field { font-size: 1.1rem; height: 44px; }
-            .action-btn { padding: 16px; font-size: 1.1rem; margin-top: 10px; }
-            .ref-table { margin-top: 10px; }
-        }
     </style>
 </head>
 <body>
@@ -178,7 +172,6 @@
                         <input type="radio" id="role-skilled" name="workRole" value="skilled"><label for="role-skilled">🔧 기능공</label>
                         <input type="radio" id="role-onshore" name="workRole" value="onshore"><label for="role-onshore">🚛 육상</label>
                     </div>
-                    
                     <div class="calc-layout">
                         <div class="calc-left">
                             <div class="wage-row"><label>시급(기본)</label><input type="number" id="wageHourly" class="input-field" value="10320" style="text-align:right; font-weight:bold; color:#ef4444; font-size:1.1rem;" readonly></div>
@@ -196,7 +189,6 @@
                             </table>
                         </div>
                     </div>
-                    
                     <p style="font-size:0.75rem; color:var(--text-sub); margin:0; text-align:center;">※ 현재 월에 맞춰 주/야간 시간이 자동 적용됩니다.</p>
                     <p style="font-size:0.8rem; color:#ef4444; font-weight:bold; margin:4px 0 12px 0; text-align:center;">더블 오더로 겹치는 시간은 별도로 시간을 계산 하여야 합니다!!</p>
                     <div style="border-top:1px dashed var(--border); margin:10px 0; padding-top:12px;">
@@ -269,7 +261,7 @@
         <div class="card" style="border-left: 5px solid #3b82f6;">
             <div class="section-header tap-effect" onclick="toggleSection('t3-content', this)"><span class="section-title">⛴️ 3항업 (신항 남측) ▼</span></div>
             <div id="t3-content" class="collapsible-content collapsed">
-                <div class="terminal-block"><div class="terminal-header tap-effect" onclick="toggleContent('term-hjnc')">한진신항만 (HJNC) ▼</div><div id="term-hjnc" class="terminal-body"><div class="terminal-actions"><a href="https://www.hjnc.co.kr/esvc/vessel/berthScheduleT" target="_blank" class="terminal-btn">스케줄</a><a href="https://www.hjnc.co.kr/esvc/vessel/berthScheduleG" target="_blank" class="terminal-btn">차트</a><a href="https://www.hjnc.co.kr/esvc/vessel/vesselStatus" target="_blank" class="terminal-btn">현황</a><a href="http://bayplan.hjnc.co.kr" target="_blank" class="terminal-btn btn-premium">🧩 BAY</a></div></div></div>
+                <div class="terminal-block"><div class="terminal-header tap-effect" onclick="toggleContent('term-hjnc')">한진신항만 (HJNC) ▼</div><div id="term-hjnc" class="terminal-body"><div class="terminal-actions"><a href="https://www.hjnc.co.kr/esvc/vessel/berthScheduleT" target="_blank" class="terminal-btn">스케줄</a><a href="https://www.hjnc.co.kr/esvc/vessel/berthScheduleG" target="_blank" class="terminal-btn">차트</a><a href="https://www.hjnc.co.kr/esvc/vessel/vesselStatus" target="_blank" class="terminal-btn">현황</a><a href="http://bayplan.hjnc.co.kr" target="_blank" class="terminal-btn btn-premium">🧩 BAY PLAN (서비스)</a></div></div></div>
                 <div class="terminal-block"><div class="terminal-header tap-effect" onclick="toggleContent('term-bnct')">부산신항컨테이너 (BNCT) ▼</div><div id="term-bnct" class="terminal-body"><div class="terminal-actions"><a href="https://info.bnctkorea.com/esvc/vessel/berthScheduleT" target="_blank" class="terminal-btn">스케줄</a><a href="https://info.bnctkorea.com/esvc/vessel/berthScheduleG" target="_blank" class="terminal-btn">차트</a><a href="https://info.bnctkorea.com/esvc/vessel/vesselStatus" target="_blank" class="terminal-btn">현황</a></div></div></div>
                 <div class="terminal-block"><div class="terminal-header tap-effect" onclick="toggleContent('term-dgt')">동원로엑스 (DGT) ▼</div><div id="term-dgt" class="terminal-body"><div class="terminal-actions"><a href="https://www.dgtbusan.com/DGT/esvc/vessel/berthScheduleT" target="_blank" class="terminal-btn">스케줄</a><a href="https://www.dgtbusan.com/DGT/esvc/vessel/berthScheduleG" target="_blank" class="terminal-btn">차트</a><a href="https://www.dgtbusan.com/DGT/esvc/vessel/vesselStatus" target="_blank" class="terminal-btn">현황</a></div></div></div>
             </div>
@@ -312,7 +304,7 @@
     <div id="tickerManageModal" class="modal-overlay" onclick="document.getElementById('tickerManageModal').style.display='none'"><div class="modal-content" onclick="event.stopPropagation()"><h3 style="margin-top:0;">⚙️ 알림글 삭제</h3><div id="tickerListContainer"></div><button class="action-btn bg-cancel" onclick="document.getElementById('tickerManageModal').style.display='none'" style="margin-top:10px;">닫기</button></div></div>
 
     <script>
-        // 1. Firebase 초기화
+        // 1. Firebase 초기화 및 변수 선언
         const firebaseConfig = { apiKey: "AIzaSyBDXy5HcYW-IZQJ9ZDEivr_yi99AxhYme8", authDomain: "my-app-d8527.firebaseapp.com", projectId: "my-app-d8527", storageBucket: "my-app-d8527.firebasestorage.app", messagingSenderId: "667323279185", appId: "1:667323279185:web:cff6184aaa82e08d345570" };
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
@@ -322,7 +314,28 @@
         let currentDate = new Date();
         let currentWorkerId = localStorage.getItem('myWorkerId'); 
 
-        // [핵심 기능] 날짜 클릭 시 닉네임/비번 설정 및 로그인
+        // [복구] 클릭 기능 (임금계산기 등 카드 열고 닫기)
+        function toggleDashItem(id){ 
+            const c=document.getElementById(id);
+            if(!c) return; 
+            const e=c.classList.contains('expanded'); 
+            
+            // 다른 카드 모두 닫기
+            document.querySelectorAll('.dash-card').forEach(x=>{
+                x.classList.remove('expanded'); 
+                x.querySelector('.dash-content').style.display='none'
+            }); 
+            
+            // 현재 카드 열기 (이미 열려있으면 닫힌 상태로 유지됨)
+            if(!e){
+                c.classList.add('expanded'); 
+                c.querySelector('.dash-content').style.display='block'; 
+                // 근무일지인 경우 추가 로직
+                if(id==='log-card') openLogImmediately(id); 
+            }
+        }
+
+        // 2. 스마트 근무일지 (비번 보호 및 저장 로직)
         async function checkUserLogin() {
             if (currentWorkerId) {
                 updateUserBar();
@@ -336,6 +349,7 @@
             const doc = await userRef.get();
 
             if (doc.exists) {
+                // 기존 사용자: 비밀번호 확인
                 const pw = prompt(`'${name}'님의 비밀번호 4자리를 입력하세요:`);
                 if (pw === doc.data().password) {
                     loginSuccess(name);
@@ -345,6 +359,7 @@
                     return false;
                 }
             } else {
+                // 신규 사용자: 비밀번호 설정
                 const newPw = prompt(`'${name}'님은 처음이시네요!\n사용할 비밀번호 4자리를 설정해주세요:`);
                 if (newPw) {
                     await userRef.set({ password: newPw, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
@@ -387,17 +402,9 @@
             }
         }
 
-        function openLogImmediately(id){
-            const c=document.getElementById(id), e=c.classList.contains('expanded'); 
-            if (!e) {
-                document.querySelectorAll('.dash-card').forEach(x=>{x.classList.remove('expanded'); x.querySelector('.dash-content').style.display='none'}); 
-                c.classList.add('expanded'); 
-                c.querySelector('.dash-content').style.display='block'; 
-                renderCalendar(currentDate.getFullYear(), currentDate.getMonth());
-            } else {
-                c.classList.remove('expanded'); 
-                c.querySelector('.dash-content').style.display='none';
-            }
+        async function openLogImmediately(id){
+            // 토글 로직은 toggleDashItem에서 처리됨. 여기선 캘린더 렌더링만.
+            renderCalendar(currentDate.getFullYear(), currentDate.getMonth());
         }
 
         function renderCalendar(y, m){
@@ -438,7 +445,7 @@
             }
         }
 
-        // [핵심] 날짜 클릭 시 로그인/비번 확인 후 데이터 연동
+        // [핵심] 날짜 클릭 시 로그인 체크
         async function clickDate(dStr){
             if(!currentWorkerId) {
                 const loggedIn = await checkUserLogin();
