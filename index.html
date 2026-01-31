@@ -3,32 +3,22 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <meta name="description" content="부산항 현장직 필수 앱. 임금계산기, 스마트 근무일지(비밀번호 잠금), 선박 정보.">
+    <meta name="description" content="부산항 현장직 필수 앱. 임금계산기, 스마트 근무일지(비번잠금), 선박 정보.">
     <title>BUSAN HAK PORT INFO</title>
     
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-storage.js"></script>
     
-    <link rel="icon" type="image/png" sizes="32x32" href="icon.png?v=final_pw_v44">
+    <link rel="icon" type="image/png" sizes="32x32" href="icon.png?v=final_v45">
     <link rel="stylesheet" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.8/dist/web/static/pretendard.css" />
 
     <style>
-        /* === 전체 스타일 (모바일 S24 울트라 최적화) === */
-        :root { 
-            --primary: #1e3a8a; --primary-light: #3b82f6; --accent: #f59e0b; 
-            --bg-color: #f3f4f6; --card-bg: rgba(255, 255, 255, 0.99); 
-            --text-main: #1f2937; --text-sub: #6b7280; 
-            --border: rgba(229, 231, 235, 0.9); --danger: #ef4444; --success: #10b981; 
-        }
-        body.dark-mode { 
-            --primary: #60a5fa; --primary-light: #93c5fd; --accent: #fbbf24; 
-            --bg-color: #0f172a; --card-bg: rgba(30, 41, 59, 0.99); 
-            --text-main: #f3f4f6; --text-sub: #9ca3af; 
-            --border: rgba(55, 65, 81, 0.7); 
-        }
+        :root { --primary: #1e3a8a; --primary-light: #3b82f6; --accent: #f59e0b; --bg-color: #f3f4f6; --card-bg: rgba(255, 255, 255, 0.99); --text-main: #1f2937; --text-sub: #6b7280; --border: rgba(229, 231, 235, 0.9); --danger: #ef4444; --success: #10b981; }
+        body.dark-mode { --primary: #60a5fa; --primary-light: #93c5fd; --accent: #fbbf24; --bg-color: #0f172a; --card-bg: rgba(30, 41, 59, 0.99); --text-main: #f3f4f6; --text-sub: #9ca3af; --border: rgba(55, 65, 81, 0.7); }
+        
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; font-family: 'Pretendard', sans-serif; }
-        body { background-color: var(--bg-color); color: var(--text-main); margin: 0; padding: 0; padding-bottom: 100px; padding-top: env(safe-area-inset-top); font-size: 16px; transition: background 0.3s ease; }
+        body { background-color: var(--bg-color); color: var(--text-main); margin: 0; padding: 0; padding-bottom: 90px; padding-top: env(safe-area-inset-top); font-size: 16px; }
         
         header { background: linear-gradient(135deg, var(--primary), var(--primary-light)); color: white; padding: 14px 0; text-align: center; position: sticky; top: 0; z-index: 100; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
         header h1 { margin: 0; font-size: 1.2rem; font-weight: 900; }
@@ -36,9 +26,9 @@
         
         .container { width: 96%; max-width: 600px; margin: 10px auto; padding: 0; }
         
-        /* 대시보드 카드 레이아웃 */
+        /* 카드 디자인 */
         .dash-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; }
-        .dash-card { background: var(--card-bg); border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); border: 1px solid var(--border); overflow: hidden; transition: all 0.3s; display: flex; flex-direction: column; }
+        .dash-card { background: var(--card-bg); border-radius: 12px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); border: 1px solid var(--border); overflow: hidden; transition: all 0.3s; display: flex; flex-direction: column; }
         .dash-card.expanded { grid-column: span 2; }
         .dash-header { padding: 14px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.05); min-height: 55px; }
         .dash-card.expanded .dash-header { border-bottom: 1px solid var(--border); background: rgba(0,0,0,0.02); }
@@ -46,7 +36,7 @@
         .dash-content { display: none; padding: 14px; background: var(--card-bg); animation: fadeIn 0.2s; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
 
-        /* 입력창 및 버튼 (모바일 짤림 방지: width 100%) */
+        /* 입력창 디자인 (모바일 짤림 해결) */
         .input-field { width: 100%; padding: 0 10px; margin-bottom: 8px; border: 1px solid var(--border); border-radius: 8px; background: rgba(255,255,255,0.6); color: var(--text-main); font-size: 1rem; height: 44px; text-align: right; font-weight: bold; display: flex; align-items: center; }
         .textarea-field { height: 80px; resize: none; text-align: left; font-weight: normal; padding: 10px; }
         .action-btn { width: 100%; padding: 14px; border: none; border-radius: 10px; font-weight: 800; color: white; cursor: pointer; background: var(--primary); font-size: 1rem; margin-top: 5px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
@@ -56,7 +46,7 @@
         .wage-row label { width: 65px; min-width: 65px; font-weight: 700; font-size: 0.85rem; white-space: nowrap; text-align: left; }
         .wage-row .input-field { flex: 1; width: auto; margin-bottom: 0; }
         
-        /* 임금 계산기 레이아웃 (반응형: 좁으면 세로 배치) */
+        /* 임금 계산기 레이아웃 */
         .calc-layout { display: flex; gap: 10px; margin-bottom: 12px; }
         .calc-left { flex: 1; display: flex; flex-direction: column; justify-content: center; }
         .calc-right { flex: 1; display: flex; flex-direction: column; justify-content: center; }
@@ -77,28 +67,22 @@
         .spec-table td:last-child { text-align: right; font-weight: 700; font-size: 0.9rem; }
         .wage-total { font-size: 1.4rem; color: #c2410c; font-weight: 900; text-align: center; border-top: 2px solid var(--primary); padding-top: 10px; margin-top: 8px; }
 
-        /* 사용자 프로필 (비밀번호 기능 추가) */
+        /* 사용자 프로필 (비밀번호 기능) */
         .user-profile-bar { display: flex; justify-content: space-between; align-items: center; background: rgba(59, 130, 246, 0.1); padding: 12px; border-radius: 8px; margin-bottom: 15px; border: 1px solid var(--primary-light); }
         .user-info { display: flex; flex-direction: column; }
         .user-name { font-weight: 800; color: var(--primary); font-size: 0.95rem; }
         .user-status { font-size: 0.75rem; color: var(--success); }
         .logout-btn { background: var(--text-sub); color: white; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 0.8rem; font-weight: bold; }
 
-        /* 달력 스타일 */
-        .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px; text-align: center; }
+        /* 달력 스타일 (안보임 해결을 위해 min-height 추가) */
+        .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px; text-align: center; min-height: 250px; }
         .cal-day { padding: 8px 0; border-radius: 6px; background: rgba(255,255,255,0.5); border: 1px solid var(--border); font-weight: 700; font-size: 0.85rem; cursor: pointer; min-height: 45px; display: flex; flex-direction: column; justify-content: center; align-items: center; }
         .cal-day.selected { background: var(--primary); color: white; border-color: var(--primary); }
         .cal-day.has-data { border: 2px solid var(--success); background: rgba(16, 185, 129, 0.1); }
         .cal-dot { width: 5px; height: 5px; background-color: var(--success); border-radius: 50%; margin-top: 3px; display: none; }
         .cal-day.has-data .cal-dot { display: block; }
 
-        /* 기타 공통 */
-        .ticker-container { background: var(--accent); color: #000; font-weight: 800; height: 38px; display: flex; align-items: center; overflow: hidden; position: relative; font-size: 0.85rem; border-bottom: 1px solid rgba(0,0,0,0.1); }
-        .ticker-item { padding-left: 100%; animation: ticker 25s linear infinite; white-space: nowrap; line-height: 38px; }
-        @keyframes ticker { 100% { transform: translate3d(-100%, 0, 0); } }
-        .ticker-controls { position: absolute; right: 0; height: 100%; display: flex; background: rgba(255,255,255,0.4); backdrop-filter: blur(4px); }
-        .ticker-btn { width: 38px; height: 100%; border: none; background: transparent; font-size: 1.1rem; cursor: pointer; }
-        
+        /* 공통 */
         .card { background: var(--card-bg); border-radius: 12px; margin-bottom: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); border: 1px solid var(--border); overflow: hidden; }
         .bottom-nav { position: fixed; bottom: 0; left: 0; width: 100%; height: 60px; background: rgba(255,255,255,0.98); border-top: 1px solid var(--border); display: flex; justify-content: space-around; align-items: center; z-index: 1000; padding-bottom: env(safe-area-inset-bottom); box-shadow: 0 -2px 10px rgba(0,0,0,0.05); }
         .nav-item { flex: 1; text-align: center; color: var(--text-sub); font-size: 0.7rem; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 2px; }
@@ -110,30 +94,45 @@
         #toast { position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.85); color: white; padding: 10px 20px; border-radius: 30px; font-size: 0.9rem; z-index: 5000; opacity: 0; transition: 0.3s; pointer-events: none; width: max-content; max-width: 80%; text-align: center; }
         #toast.show { opacity: 1; }
 
-        /* [모바일 9:16 최적화] - 화면이 좁을 때 레이아웃 변경 */
         @media (max-width: 768px) {
             .calc-layout { flex-direction: column; } 
             .calc-left, .calc-right { width: 100%; } 
-            .input-field { font-size: 1.1rem; height: 46px; padding: 0 10px; } /* 높이 확보 */
+            .input-field { font-size: 1.1rem; height: 46px; padding: 0 10px; } 
             .wage-row label { width: 70px; font-size: 0.9rem; margin-right: 5px; } 
             .ref-table { margin-top: 10px; font-size: 0.9rem; }
             .ref-table th, .ref-table td { padding: 10px; }
             .action-btn { padding: 16px; font-size: 1.1rem; margin-top: 10px; }
         }
         
+        .ticker-container { background: var(--accent); color: #000; font-weight: 800; height: 38px; display: flex; align-items: center; overflow: hidden; position: relative; font-size: 0.85rem; border-bottom: 1px solid rgba(0,0,0,0.1); }
+        .ticker-item { padding-left: 100%; animation: ticker 25s linear infinite; white-space: nowrap; line-height: 38px; }
+        @keyframes ticker { 100% { transform: translate3d(-100%, 0, 0); } }
+        .ticker-controls { position: absolute; right: 0; height: 100%; display: flex; background: rgba(255,255,255,0.4); backdrop-filter: blur(4px); }
+        .ticker-btn { width: 38px; height: 100%; border: none; background: transparent; font-size: 1.1rem; cursor: pointer; }
         .terminal-block { background: rgba(0,0,0,0.03); border-radius: 8px; margin-bottom: 6px; border: 1px solid var(--border); overflow: hidden; }
         .terminal-header { padding: 12px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; font-weight: 700; font-size: 0.9rem; }
         .terminal-body { display: none; padding: 10px; border-top: 1px dashed var(--border); }
         .terminal-actions { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
         .terminal-btn { background: var(--card-bg); border: 1px solid var(--border); color: var(--text-main); padding: 10px 0; border-radius: 6px; text-decoration: none; font-size: 0.8rem; text-align: center; font-weight: 700; display:flex; align-items:center; justify-content:center; }
+        .control-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+        .control-btn { background: var(--card-bg); border: 1px solid var(--border); color: var(--text-main); padding: 14px; border-radius: 10px; text-decoration: none; font-size: 0.9rem; font-weight: 700; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; }
         .post-list { list-style: none; padding: 0; margin: 0; }
         .post-item { border-bottom: 1px solid var(--border); padding: 10px 0; }
         .post-header-row { padding: 4px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
         .post-title-text { font-weight: 700; font-size: 0.95rem; color: var(--text-main); display: flex; align-items: center; gap: 5px; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-right: 8px; }
         .post-meta-info { font-size: 0.75rem; color: var(--text-sub); white-space: nowrap; }
         .post-body-content { display: none; padding: 12px; background: rgba(0,0,0,0.02); border-top: 1px dashed var(--border); font-size: 0.9rem; line-height: 1.6; white-space: pre-wrap; color: var(--text-main); word-break: break-all; }
+        .comment-section { margin-top: 10px; border-top: 1px dashed var(--border); padding-top: 8px; background: rgba(0,0,0,0.015); border-radius: 6px; padding: 8px; }
+        .comment-item { display: flex; justify-content: space-between; align-items: flex-start; font-size: 0.8rem; padding: 5px 0; border-bottom: 1px solid rgba(0,0,0,0.05); }
+        .comment-form { display: flex; gap: 4px; align-items: center; flex-wrap: wrap; margin-top: 8px; }
+        .comment-input-sm { width: 60px; padding: 6px; border: 1px solid var(--border); border-radius: 4px; font-size: 0.8rem; }
+        .comment-input-lg { flex: 1; padding: 6px; border: 1px solid var(--border); border-radius: 4px; font-size: 0.8rem; min-width: 100px; }
+        .comment-submit { padding: 6px 10px; background: var(--text-sub); color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.75rem; font-weight: bold; }
+        .guide-text { line-height: 1.7; font-size: 0.9rem; text-align: left; color: var(--text-main); white-space: pre-wrap; }
         .ticker-manage-item { display: flex; justify-content: space-between; align-items: center; padding: 10px; border-bottom: 1px solid var(--border); }
         .ticker-manage-item span { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.9rem; }
+        .page-num { padding: 6px 12px; border: 1px solid var(--border); cursor: pointer; border-radius: 6px; font-size: 0.85rem; margin: 0 2px; }
+        .page-num.active { background: var(--primary); color: white; }
     </style>
 </head>
 <body>
@@ -220,7 +219,7 @@
                     <div id="userProfileBar" class="user-profile-bar" style="display:none;">
                         <div class="user-info">
                             <span id="currentUserDisplay" class="user-name"></span>
-                            <span class="user-status">🔒 안전하게 로그인됨</span>
+                            <span class="user-status">🔒 로그인됨</span>
                         </div>
                         <button class="logout-btn" onclick="logoutWorker()">로그아웃</button>
                     </div>
@@ -251,6 +250,7 @@
                 </div>
             </div>
         </div>
+
 
         <div class="card" style="border-left: 5px solid #3b82f6;">
             <div class="section-header tap-effect" onclick="toggleSection('t3-content')"><span class="section-title">⛴️ 3항업 (신항 남측) ▼</span></div>
@@ -298,7 +298,7 @@
     <div id="tickerManageModal" class="modal-overlay" onclick="document.getElementById('tickerManageModal').style.display='none'"><div class="modal-content" onclick="event.stopPropagation()"><h3 style="margin-top:0;">⚙️ 알림글 삭제</h3><div id="tickerListContainer"></div><button class="action-btn bg-cancel" onclick="document.getElementById('tickerManageModal').style.display='none'" style="margin-top:10px;">닫기</button></div></div>
 
     <script>
-        // 1. Firebase 초기화
+        // 1. Firebase 초기화 및 변수 선언 (가장 먼저 실행)
         const firebaseConfig = { apiKey: "AIzaSyBDXy5HcYW-IZQJ9ZDEivr_yi99AxhYme8", authDomain: "my-app-d8527.firebaseapp.com", projectId: "my-app-d8527", storageBucket: "my-app-d8527.firebasestorage.app", messagingSenderId: "667323279185", appId: "1:667323279185:web:cff6184aaa82e08d345570" };
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
@@ -308,7 +308,7 @@
         let currentDate = new Date();
         let currentWorkerId = localStorage.getItem('myWorkerId'); 
 
-        // 2. 스마트 근무일지 (비밀번호 로직 및 저장 오류 해결)
+        // 2. 스마트 근무일지 기능 (비밀번호 로직 및 저장 오류 해결)
         async function checkUserLogin() {
             if (currentWorkerId) {
                 document.getElementById('userProfileBar').style.display = 'flex';
@@ -360,7 +360,6 @@
                 localStorage.removeItem('myWorkerId');
                 document.getElementById('userProfileBar').style.display = 'none';
                 document.getElementById('workLogArea').querySelector('.dash-content').style.display = 'none';
-                // 화면 갱신을 위해 닫기
                 const c = document.getElementById('log-card');
                 c.classList.remove('expanded');
                 c.querySelector('.dash-content').style.display = 'none';
@@ -371,56 +370,64 @@
         async function openLogImmediately(id){
             const c=document.getElementById(id), e=c.classList.contains('expanded'); 
             
-            // 열려있으면 닫기
-            if(e) {
+            // 닫혀있을 때만 로그인 체크
+            if (!e) {
+                if (!currentWorkerId) {
+                    const loggedIn = await checkUserLogin();
+                    if (!loggedIn) return;
+                }
+                // 로그인 성공 시 열기
+                document.querySelectorAll('.dash-card').forEach(x=>{x.classList.remove('expanded'); x.querySelector('.dash-content').style.display='none'}); 
+                c.classList.add('expanded'); 
+                c.querySelector('.dash-content').style.display='block'; 
+                
+                // 달력 그리기 (지연 없이)
+                // 중요: 렌더링 먼저 하고 데이터를 불러옴
+                const g = document.getElementById('calendarGrid'); 
+                if(g.innerHTML === "") renderCalendar(currentDate.getFullYear(), currentDate.getMonth());
+            } else {
+                // 열려있으면 닫기
                 c.classList.remove('expanded'); 
                 c.querySelector('.dash-content').style.display='none';
-                return;
             }
-
-            // 닫혀있으면 로그인 체크 후 열기
-            if (!currentWorkerId) {
-                const loggedIn = await checkUserLogin();
-                if (!loggedIn) return;
-            }
-
-            document.querySelectorAll('.dash-card').forEach(x=>{x.classList.remove('expanded'); x.querySelector('.dash-content').style.display='none'}); 
-            c.classList.add('expanded'); 
-            c.querySelector('.dash-content').style.display='block'; 
-            renderCalendar(currentDate.getFullYear(), currentDate.getMonth());
         }
 
         function renderCalendar(y, m){
-            if(!currentWorkerId) return; 
             const g = document.getElementById('calendarGrid'); g.innerHTML = "";
             document.getElementById('calMonthYear').innerText = `${y}년 ${m+1}월`;
             const fD = new Date(y, m, 1).getDay(), lD = new Date(y, m+1, 0).getDate();
+            
+            // 빈 칸 채우기
             for(let i=0; i<fD; i++) g.innerHTML += `<div></div>`;
+            // 날짜 그리기
             for(let d=1; d<=lD; d++){
                 const dStr = `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
                 g.innerHTML += `<div id="cal-day-${d}" class="cal-day tap-effect" onclick="clickDate('${dStr}')">${d}<div class="cal-dot"></div></div>`;
             }
-            const sDate = `${y}-${String(m+1).padStart(2,'0')}-01`, eDate = `${y}-${String(m+1).padStart(2,'0')}-${lD}`;
-            
-            // 내 데이터만 가져오기
-            db.collection('work_logs')
-              .where('date', '>=', sDate)
-              .where('date', '<=', eDate)
-              .get().then(s => {
-                adminWorkLogs = {};
-                let total = 0;
-                s.forEach(doc => {
-                    const data = doc.data();
-                    if(data.workerId === currentWorkerId) {
-                        adminWorkLogs[data.date] = data; 
-                        const day = parseInt(data.date.split('-')[2]);
-                        const el = document.getElementById(`cal-day-${day}`);
-                        if(el) el.classList.add('has-data');
-                        total += (data.totalPay || 0);
-                    }
+
+            // 로그인 상태라면 데이터 불러오기
+            if(currentWorkerId) {
+                const sDate = `${y}-${String(m+1).padStart(2,'0')}-01`, eDate = `${y}-${String(m+1).padStart(2,'0')}-${lD}`;
+                
+                db.collection('work_logs')
+                  .where('date', '>=', sDate)
+                  .where('date', '<=', eDate)
+                  .get().then(s => {
+                    adminWorkLogs = {};
+                    let total = 0;
+                    s.forEach(doc => {
+                        const data = doc.data();
+                        if(data.workerId === currentWorkerId) {
+                            adminWorkLogs[data.date] = data; 
+                            const day = parseInt(data.date.split('-')[2]);
+                            const el = document.getElementById(`cal-day-${day}`);
+                            if(el) el.classList.add('has-data');
+                            total += (data.totalPay || 0);
+                        }
+                    });
+                    document.getElementById('monthlyTotalDisplay').innerText = `이번달 총액: ${total.toLocaleString()}원`;
                 });
-                document.getElementById('monthlyTotalDisplay').innerText = `이번달 총액: ${total.toLocaleString()}원`;
-            });
+            }
         }
 
         function clickDate(dStr){
@@ -435,7 +442,6 @@
             if(d && d.imageUrl){ img.src = d.imageUrl; img.style.display = 'block'; } else { img.style.display = 'none'; }
         }
 
-        // [중요 수정] 저장 로직 강화
         function saveWorkLog(){
             const btn = document.getElementById('saveLogBtn');
             btn.innerText = "저장 중...";
@@ -448,7 +454,6 @@
             const memo = document.getElementById('logMemo').value, file = document.getElementById('logImageInput').files[0];
             const pay = (dh*10320) + (nh*15480);
             
-            // 문서 ID를 닉네임+날짜 조합으로 유니크하게 생성
             const docId = `${currentWorkerId}_${dStr}`;
             
             let prevUrl = null;
@@ -469,7 +474,6 @@
             };
 
             if(file){
-                // 스토리지 경로에 닉네임 폴더 추가
                 const fileRef = storage.ref().child(`logs/${currentWorkerId}/${dStr}_${Date.now()}`); 
                 fileRef.put(file).then(snapshot => snapshot.ref.getDownloadURL()).then(url => saveDataToDB(url)).catch(err => {
                     alert("사진 업로드 실패 (스토리지 규칙을 확인하세요): " + err.message);
@@ -547,7 +551,6 @@
         function resetWageForm(){ document.querySelectorAll('#wage-card input').forEach(i=> { if(i.type !== 'radio' && i.id !== 'wageHourly') i.value=''; }); document.getElementById('wageResultBox').classList.add('hidden'); }
 
         // 4. 기타 기능
-        function toggleDashItem(id){ const c=document.getElementById(id), e=c.classList.contains('expanded'); document.querySelectorAll('.dash-card').forEach(x=>{x.classList.remove('expanded'); x.querySelector('.dash-content').style.display='none'}); if(!e){ c.classList.add('expanded'); c.querySelector('.dash-content').style.display='block'; } }
         function toggleSection(id){ document.getElementById(id).classList.toggle('collapsed'); }
         function toggleContent(id){ const e=document.getElementById(id); e.style.display=(e.style.display==='block'?'none':'block'); }
         function toggleHidden(id){ document.getElementById(id).classList.toggle('hidden'); }
@@ -571,6 +574,8 @@
         function deletePost(id,pw,e){ e.stopPropagation(); if(prompt("비번")===pw) db.collection("posts").doc(id).delete(); }
         function uploadFile(){ const f=document.getElementById('fileInput').files[0], t=document.getElementById('fileTitle').value; if(f&&t) storage.ref(`archives/${Date.now()}`).put(f).then(s=>s.ref.getDownloadURL()).then(u=>db.collection("archives").add({title:t, url:u, timestamp:firebase.firestore.FieldValue.serverTimestamp()})).then(()=>{alert("업로드됨"); document.getElementById('fileTitle').value='';}); }
         function delArchive(id,e){ e.stopPropagation(); verifyAdmin().then(r=>{ if(r) db.collection("archives").doc(id).delete(); }); }
+
+        function toggleDashItem(id){ const c=document.getElementById(id); const e=c.classList.contains('expanded'); document.querySelectorAll('.dash-card').forEach(x=>{x.classList.remove('expanded'); x.querySelector('.dash-content').style.display='none'}); if(!e){ c.classList.add('expanded'); c.querySelector('.dash-content').style.display='block'; if(id==='log-card') openLogImmediately(id); } else { c.classList.remove('expanded'); c.querySelector('.dash-content').style.display='none'; } }
 
         window.onload = () => { 
             loadAllData();
