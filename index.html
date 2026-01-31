@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <meta name="description" content="부산항 현장직 필수 앱. 임금계산기, 스마트 근무일지(개인보안), 선박위치 및 스케줄 조회.">
+    <meta name="description" content="부산항 현장직 필수 앱. 임금계산기, 스마트 근무일지(개인보안).">
     <title>BUSAN HAK PORT INFO</title>
     
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
@@ -12,11 +12,11 @@
     
     <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6024353303588422" crossorigin="anonymous"></script>
 
-    <link rel="icon" type="image/png" sizes="32x32" href="icon.png?v=final_restore_v61">
+    <link rel="icon" type="image/png" sizes="32x32" href="icon.png?v=final_date_click_v62">
     <link rel="stylesheet" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.8/dist/web/static/pretendard.css" />
 
     <style>
-        /* === 원본(v38) 디자인 복원 === */
+        /* === 원본(v38) 디자인 베이스 === */
         :root { --primary: #1e3a8a; --primary-light: #3b82f6; --accent: #f59e0b; --bg-color: #f3f4f6; --card-bg: rgba(255, 255, 255, 0.98); --text-main: #1f2937; --text-sub: #6b7280; --border: rgba(229, 231, 235, 0.9); --danger: #ef4444; --success: #10b981; }
         body.dark-mode { --primary: #60a5fa; --primary-light: #93c5fd; --accent: #fbbf24; --bg-color: #0f172a; --card-bg: rgba(30, 41, 59, 0.98); --text-main: #f3f4f6; --text-sub: #9ca3af; --border: rgba(55, 65, 81, 0.7); }
         
@@ -27,7 +27,7 @@
         header h1 { margin: 0; font-size: 1.2rem; font-weight: 900; }
         .theme-toggle { position: absolute; right: 15px; top: 50%; transform: translateY(-50%); background: rgba(255,255,255,0.2); border: none; width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 1.1rem; }
         
-        .container { width: 100%; max-width: 600px; margin: 0 auto; padding: 8px; }
+        .container { width: 96%; max-width: 600px; margin: 0 auto; padding: 8px; }
         
         .dash-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; }
         .dash-card { background: var(--card-bg); border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); border: 1px solid var(--border); overflow: hidden; }
@@ -45,22 +45,8 @@
         .collapsible-content { display: block; padding: 12px; }
         .collapsible-content.collapsed { display: none !important; }
 
-        /* [수정] 입력창 모바일 짤림 방지 (필수 수정) */
-        .input-field { 
-            width: 100%; 
-            padding: 0 10px; 
-            margin-bottom: 0; 
-            border: 1px solid var(--border); 
-            border-radius: 8px; 
-            background: rgba(255,255,255,0.6); 
-            color: var(--text-main); 
-            font-size: 1rem; 
-            height: 40px; 
-            text-align: right; 
-            font-weight: bold; 
-            display: flex; 
-            align-items: center;
-        }
+        /* [입력창 스타일] 모바일 짤림 방지용 Width 100% 적용 */
+        .input-field { width: 100%; padding: 0 10px; margin-bottom: 0; border: 1px solid var(--border); border-radius: 8px; background: rgba(255,255,255,0.6); color: var(--text-main); font-size: 1rem; height: 40px; text-align: right; font-weight: bold; display: flex; align-items: center; }
         .textarea-field { height: 80px; resize: none; text-align: left; font-weight: normal; padding: 10px; }
         
         .action-btn { width: 100%; padding: 14px; border: none; border-radius: 10px; font-weight: 800; color: white; cursor: pointer; background: var(--primary); font-size: 1rem; margin-top: 5px; }
@@ -69,8 +55,19 @@
         .wage-row { display: flex; align-items: center; margin-bottom: 8px; width: 100%; justify-content: space-between; }
         .wage-row label { width: auto; min-width: 60px; font-weight: 700; font-size: 0.9rem; white-space: nowrap; text-align: left; margin-right: 5px; flex-shrink: 0; }
         .wage-row .input-field { flex: 1; width: 100%; min-width: 0; }
-        
         .allowance-grid { display: grid; grid-template-columns: 1fr 1fr; column-gap: 8px; row-gap: 2px; }
+
+        /* [임금계산기 레이아웃] 모바일 세로 배치 */
+        .calc-layout { display: flex; gap: 10px; margin-bottom: 12px; }
+        .calc-left { flex: 1; display: flex; flex-direction: column; justify-content: center; }
+        .calc-right { flex: 1; display: flex; flex-direction: column; justify-content: center; }
+        
+        @media (max-width: 768px) {
+            .calc-layout { flex-direction: column; } 
+            .calc-left, .calc-right { width: 100%; } 
+            .input-field { font-size: 1.1rem; height: 44px; }
+            .action-btn { padding: 16px; font-size: 1.1rem; margin-top: 10px; }
+        }
 
         .wage-result-box { background: linear-gradient(135deg, #ffffff, #f9fafb); border: 2px solid var(--primary); border-radius: 10px; padding: 15px; margin-top: 15px; }
         .spec-table { width: 100%; border-collapse: collapse; margin: 8px 0; font-size: 0.85rem; }
@@ -84,7 +81,7 @@
         .role-selector input[type="radio"]:checked + label { background: var(--primary); color: white; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
         .role-selector input[type="radio"] { display: none; }
 
-        /* [중요] 사용자가 원했던 원본(v38) 항업 디자인 복구 */
+        /* [항업 블록 디자인 원본 복구] */
         .terminal-block { background: rgba(0,0,0,0.03); border-radius: 8px; margin-bottom: 6px; border: 1px solid var(--border); overflow: hidden; }
         .terminal-header { padding: 12px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; font-weight: 700; font-size: 0.9rem; }
         .terminal-body { display: none; padding: 10px; border-top: 1px dashed var(--border); }
@@ -92,23 +89,18 @@
         .terminal-btn { background: var(--card-bg); border: 1px solid var(--border); color: var(--text-main); padding: 10px 0; border-radius: 6px; text-decoration: none; font-size: 0.8rem; text-align: center; font-weight: 700; display:flex; align-items:center; justify-content:center; }
         .btn-premium { grid-column: span 3; background: linear-gradient(135deg, #fffbeb, #fef3c7); border: 1px solid #fcd34d; color: #92400e; margin-top: 4px; }
 
-        /* 임금계산기 레이아웃 (모바일에서만 세로 배치 - 짤림 방지 필수) */
-        .calc-layout { display: flex; gap: 10px; margin-bottom: 12px; }
-        .calc-left { flex: 1; display: flex; flex-direction: column; justify-content: center; }
-        .calc-right { flex: 1; display: flex; flex-direction: column; justify-content: center; }
-        
+        /* [로그인 정보 바 스타일] */
+        .user-auth-bar { display: flex; justify-content: space-between; align-items: center; background: rgba(59, 130, 246, 0.1); padding: 10px; border-radius: 8px; margin-bottom: 10px; border: 1px solid var(--primary-light); }
+        .user-info { display: flex; flex-direction: column; }
+        .user-name { font-weight: 800; color: var(--primary); font-size: 0.9rem; }
+        .user-status { font-size: 0.75rem; color: var(--success); }
+        .logout-btn { background: var(--text-sub); color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 0.75rem; font-weight: bold; }
+
+        /* 기타 스타일 */
         .ref-table { width: 100%; border-collapse: collapse; font-size: 0.75rem; text-align: center; background: rgba(0,0,0,0.02); border-radius: 8px; overflow: hidden; height: 100%; border: 1px solid var(--border); }
         .ref-table th { background: var(--primary); color: white; padding: 6px; font-weight: normal; }
         .ref-table td { border: 1px solid var(--border); padding: 6px; color: var(--text-main); vertical-align: middle; }
         .ref-table .highlight { background: rgba(245, 158, 11, 0.2); font-weight: bold; color: #b45309; }
-        
-        @media (max-width: 768px) {
-            .calc-layout { flex-direction: column; } 
-            .calc-left, .calc-right { width: 100%; } 
-            .input-field { font-size: 1.1rem; height: 44px; }
-            .action-btn { padding: 16px; font-size: 1.1rem; margin-top: 10px; }
-        }
-
         .control-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
         .control-btn { background: var(--card-bg); border: 1px solid var(--border); color: var(--text-main); padding: 14px; border-radius: 10px; text-decoration: none; font-size: 0.9rem; font-weight: 700; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; }
         .ticker-container { background: var(--accent); color: #000; font-weight: 800; height: 38px; display: flex; align-items: center; overflow: hidden; position: relative; font-size: 0.85rem; border-bottom: 1px solid rgba(0,0,0,0.1); }
@@ -151,13 +143,6 @@
         #toast.show { opacity: 1; }
         .ticker-manage-item { display: flex; justify-content: space-between; align-items: center; padding: 10px; border-bottom: 1px solid var(--border); }
         .ticker-manage-item span { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.9rem; }
-        
-        /* [추가] 로그인 상태 바 */
-        .user-auth-bar { display: flex; justify-content: space-between; align-items: center; background: rgba(59, 130, 246, 0.1); padding: 10px; border-radius: 8px; margin-bottom: 10px; border: 1px solid var(--primary-light); }
-        .user-info { display: flex; flex-direction: column; }
-        .user-name { font-weight: 800; color: var(--primary); font-size: 0.9rem; }
-        .user-status { font-size: 0.75rem; color: var(--success); }
-        .logout-btn { background: var(--text-sub); color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 0.75rem; font-weight: bold; }
     </style>
 </head>
 <body>
@@ -189,6 +174,7 @@
                         <input type="radio" id="role-skilled" name="workRole" value="skilled"><label for="role-skilled">🔧 기능공</label>
                         <input type="radio" id="role-onshore" name="workRole" value="onshore"><label for="role-onshore">🚛 육상</label>
                     </div>
+                    
                     <div class="calc-layout">
                         <div class="calc-left">
                             <div class="wage-row"><label>시급(기본)</label><input type="number" id="wageHourly" class="input-field" value="10320" style="text-align:right; font-weight:bold; color:#ef4444; font-size:1.1rem;" readonly></div>
@@ -206,6 +192,7 @@
                             </table>
                         </div>
                     </div>
+                    
                     <p style="font-size:0.75rem; color:var(--text-sub); margin:0; text-align:center;">※ 현재 월에 맞춰 주/야간 시간이 자동 적용됩니다.</p>
                     <p style="font-size:0.8rem; color:#ef4444; font-weight:bold; margin:4px 0 12px 0; text-align:center;">더블 오더로 겹치는 시간은 별도로 시간을 계산 하여야 합니다!!</p>
                     <div style="border-top:1px dashed var(--border); margin:10px 0; padding-top:12px;">
@@ -273,6 +260,7 @@
                 </div>
             </div>
         </div>
+
         <div class="card" style="border-left: 5px solid #3b82f6;">
             <div class="section-header tap-effect" onclick="toggleSection('t3-content', this)"><span class="section-title">⛴️ 3항업 (신항 남측) ▼</span></div>
             <div id="t3-content" class="collapsible-content collapsed">
@@ -319,7 +307,7 @@
     <div id="tickerManageModal" class="modal-overlay" onclick="document.getElementById('tickerManageModal').style.display='none'"><div class="modal-content" onclick="event.stopPropagation()"><h3 style="margin-top:0;">⚙️ 알림글 삭제</h3><div id="tickerListContainer"></div><button class="action-btn bg-cancel" onclick="document.getElementById('tickerManageModal').style.display='none'" style="margin-top:10px;">닫기</button></div></div>
 
     <script>
-        // 1. Firebase 초기화 및 변수 선언
+        // 1. Firebase 초기화
         const firebaseConfig = { apiKey: "AIzaSyBDXy5HcYW-IZQJ9ZDEivr_yi99AxhYme8", authDomain: "my-app-d8527.firebaseapp.com", projectId: "my-app-d8527", storageBucket: "my-app-d8527.firebasestorage.app", messagingSenderId: "667323279185", appId: "1:667323279185:web:cff6184aaa82e08d345570" };
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
@@ -329,7 +317,7 @@
         let currentDate = new Date();
         let currentWorkerId = localStorage.getItem('myWorkerId'); 
 
-        // [중요] 클릭 기능 (카드 열고 닫기)
+        // [복구 완료] 클릭 시 카드 열고 닫는 기능
         function toggleDashItem(id){ 
             const c=document.getElementById(id);
             if(!c) return; 
@@ -357,7 +345,7 @@
             }
         }
 
-        // 2. 스마트 근무일지 (비번 보호 및 저장 로직)
+        // [기능 추가] 로그인 로직
         async function checkUserLogin() {
             if (currentWorkerId) {
                 updateUserBar();
@@ -371,7 +359,6 @@
             const doc = await userRef.get();
 
             if (doc.exists) {
-                // 기존 사용자: 비밀번호 확인
                 const pw = prompt(`'${name}'님의 비밀번호 4자리를 입력하세요:`);
                 if (pw === doc.data().password) {
                     loginSuccess(name);
@@ -381,7 +368,6 @@
                     return false;
                 }
             } else {
-                // 신규 사용자: 비밀번호 설정
                 const newPw = prompt(`'${name}'님은 처음이시네요!\n사용할 비밀번호 4자리를 설정해주세요:`);
                 if (newPw) {
                     await userRef.set({ password: newPw, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
@@ -424,6 +410,7 @@
             }
         }
 
+        // 근무일지 즉시 열기
         function openLogImmediately(id){
             toggleDashItem(id);
         }
@@ -466,7 +453,7 @@
             }
         }
 
-        // [핵심] 날짜 클릭 시 로그인 -> 데이터 로드 -> 입력폼
+        // [핵심 기능] 날짜 클릭 시 로그인 -> 데이터 로드 -> 입력폼
         async function clickDate(dStr){
             if(!currentWorkerId) {
                 const loggedIn = await checkUserLogin();
@@ -516,14 +503,12 @@
                     alert("저장되었습니다!");
                     btn.innerText = "저장하기";
                     adminWorkLogs[dStr] = { date: dStr, workerId: currentWorkerId, dayHours: dh, nightHours: nh, memo: memo, totalPay: pay, imageUrl: url };
-                    
                     const day = parseInt(dStr.split('-')[2]);
                     document.getElementById(`cal-day-${day}`).classList.add('has-data');
                     
                     let total = 0;
                     Object.values(adminWorkLogs).forEach(log => total += (log.totalPay || 0));
                     document.getElementById('monthlyTotalDisplay').innerText = `이번달 총액: ${total.toLocaleString()}원`;
-                    
                 }).catch(err => {
                     alert("저장 실패: " + err.message);
                     btn.innerText = "저장하기";
