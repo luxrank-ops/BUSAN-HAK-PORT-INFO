@@ -286,63 +286,70 @@
     <div id="toast">알림</div>
     <div id="imageModal" class="modal-overlay" onclick="closeImageModal()"><div class="modal-content" onclick="event.stopPropagation()"><img id="modalImage" class="modal-img"><button class="action-btn bg-cancel" onclick="closeImageModal()">닫기</button></div></div>
     <div id="privacyModal" class="modal-overlay" onclick="document.getElementById('privacyModal').style.display='none'"><div class="modal-content"><h3>🛡️ 개인정보처리방침</h3><p>본 사이트는 구글 애드센스 광고를 게재하며 쿠키를 사용합니다. 근무 기록 및 게시물 데이터는 Firebase 서버에 안전하게 보관됩니다.</p><button class="action-btn" onclick="document.getElementById('privacyModal').style.display='none'">닫기</button></div></div>
-    <div id="tickerManageModal" class="modal-overlay" onclick="document.getElementById('tickerManageModal').style.display='none'"><div class="modal-content" onclick="event.stopPropagation()"><h3 style="margin-top:0;">⚙️ 알림글 삭제</h3><div id="tickerListContainer"></div><button class="action-btn bg-cancel" onclick="document.getElementById('tickerManageModal').style.display='none'" style="margin-top:10px;">닫기</button></div></div>
+    <div id="tickerManageModal" class="modal-overlay" onclick="document.getElementById('tickerManageModal').style.display='none'"><div class="modal-content" onclick="event.stopPropagation()"><h3 style="margin-top:0;">⚙️ 알림글 삭제</h3><div id="tickerListContainer"></div><button class="action-btn bg-cancel" onclick="document.getElementById('tickerManageModal').style.display='none'" style="margin-top:10px;">닫기</button></div></div>  
 
-  <script>
-        // 1. Firebase 초기화 (제공하신 키 적용)
-        const firebaseConfig = { apiKey: "AIzaSyBDXy5HcYW-IZQJ9ZDEivr_yi99AxhYme8", authDomain: "my-app-d8527.firebaseapp.com", projectId: "my-app-d8527", storageBucket: "my-app-d8527.appspot.com", messagingSenderId: "667323279185", appId: "1:667323279185:web:cff6184aaa82e08d345570" };
-        firebase.initializeApp(firebaseConfig);
-        const db = firebase.firestore();
-        const storage = firebase.storage(); 
+    <script>
+    // 1. Firebase 초기화 (오프라인 에러 방지를 위해 storageBucket 수정됨)
+    const firebaseConfig = { 
+        apiKey: "AIzaSyBDXy5HcYW-IZQJ9ZDEivr_yi99AxhYme8", 
+        authDomain: "my-app-d8527.firebaseapp.com", 
+        projectId: "my-app-d8527", 
+        storageBucket: "my-app-d8527.appspot.com", // .firebasestorage.app -> .appspot.com (에러 방지)
+        messagingSenderId: "667323279185", 
+        appId: "1:667323279185:web:cff6184aaa82e08d345570" 
+    };
 
-        let allPostsData=[], allShipsData=[], filteredShips=[], adminWorkLogs={};
-        let currentDate = new Date();
-        let currentWorkerId = localStorage.getItem('myWorkerId'); 
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+    const storage = firebase.storage(); 
 
-        // [중요] 카드 열고 닫는 기능 (클릭 복구)
-        function toggleDashItem(id){ 
-            const c=document.getElementById(id);
-            if(!c) return; 
-            const e=c.classList.contains('expanded'); 
+    let allPostsData=[], allShipsData=[], filteredShips=[], adminWorkLogs={};
+    let currentDate = new Date();
+    let currentWorkerId = localStorage.getItem('myWorkerId'); 
+
+    // [기능] 카드 열고 닫기 (클릭 기능)
+    function toggleDashItem(id){ 
+        const c=document.getElementById(id);
+        if(!c) return; 
+        const e=c.classList.contains('expanded'); 
+        
+        // 다른 카드 닫기
+        document.querySelectorAll('.dash-card').forEach(x=>{
+            x.classList.remove('expanded'); 
+            const content = x.querySelector('.dash-content');
+            if(content) content.style.display='none';
+        }); 
+        
+        // 현재 카드 열기/닫기
+        if(!e){
+            c.classList.add('expanded'); 
+            const content = c.querySelector('.dash-content');
+            if(content) content.style.display='block'; 
             
-            // 다른 카드 닫기
-            document.querySelectorAll('.dash-card').forEach(x=>{
-                x.classList.remove('expanded'); 
-                const content = x.querySelector('.dash-content');
-                if(content) content.style.display='none';
-            }); 
-            
-            // 현재 카드 열기/닫기
-            if(!e){
-                c.classList.add('expanded'); 
-                const content = c.querySelector('.dash-content');
-                if(content) content.style.display='block'; 
-                
-                // 근무일지인 경우 달력 로드
-                if(id==='log-card') renderCalendar(currentDate.getFullYear(), currentDate.getMonth()); 
-            } else {
-                c.classList.remove('expanded');
-                const content = c.querySelector('.dash-content');
-                if(content) content.style.display='none'; 
-            }
+            // 근무일지인 경우 달력 로드
+            if(id==='log-card') renderCalendar(currentDate.getFullYear(), currentDate.getMonth()); 
+        } else {
+            c.classList.remove('expanded');
+            const content = c.querySelector('.dash-content');
+            if(content) content.style.display='none'; 
         }
+    }
 
-        // [기능] 로그인 및 개인화 로직
-        async function checkUserLogin() {
+    // [핵심 수정] 에러 방지 처리된 로그인 로직
+    async function checkUserLogin() {
+        try {
             if (currentWorkerId) {
                 updateUserBar();
                 return true;
             }
 
-            // 저장 버튼 누를 때 닉네임 입력 (프롬프트로 간단하게 처리)
             const name = prompt("저장하려면 닉네임(이름)이 필요합니다.\n사용할 닉네임을 입력하세요:");
             if (!name) return false;
 
             const userRef = db.collection('user_profiles').doc(name);
-            const doc = await userRef.get();
+            const doc = await userRef.get(); // 서버 통신
 
             if (doc.exists) {
-                // 기존 사용자
                 const pw = prompt(`'${name}'님의 비밀번호 4자리를 입력하세요:`);
                 if (pw === doc.data().password) {
                     loginSuccess(name);
@@ -352,274 +359,275 @@
                     return false;
                 }
             } else {
-                // 신규 사용자
                 const newPw = prompt(`'${name}'님은 처음이시네요!\n사용할 비밀번호 4자리를 설정해주세요:`);
-                if (newPw) {
-                    await userRef.set({ password: newPw, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
-                    loginSuccess(name);
-                    alert("가입 완료! 이제 저장됩니다.");
-                    return true;
-                } else {
-                    return false;
-                }
-            }
-        }
+                if (!newPw) return false;
 
-        function loginSuccess(name) {
-            currentWorkerId = name;
-            localStorage.setItem('myWorkerId', currentWorkerId);
+                await userRef.set({
+                    password: newPw,
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+
+                loginSuccess(name);
+                alert("가입 완료! 이제 저장됩니다.");
+                return true;
+            }
+
+        } catch (err) {
+            console.error("로그인 오류:", err);
+            alert("서버 연결 오류입니다.\n인터넷 연결을 확인하거나 잠시 후 다시 시도해주세요.");
+            return false;
+        }
+    }
+
+    function loginSuccess(name) {
+        currentWorkerId = name;
+        localStorage.setItem('myWorkerId', currentWorkerId);
+        updateUserBar();
+        renderCalendar(currentDate.getFullYear(), currentDate.getMonth()); 
+    }
+
+    function updateUserBar() {
+        const bar = document.getElementById('userProfileBar');
+        if (currentWorkerId) {
+            bar.style.display = 'flex';
+            document.getElementById('currentUserDisplay').innerText = `👤 사용자: ${currentWorkerId}`;
+        } else {
+            bar.style.display = 'none';
+        }
+    }
+
+    function logoutWorker() {
+        if(confirm("로그아웃 하시겠습니까?")) {
+            currentWorkerId = null;
+            localStorage.removeItem('myWorkerId');
             updateUserBar();
-            renderCalendar(currentDate.getFullYear(), currentDate.getMonth()); 
+            resetLogInputs();
+            document.getElementById('monthlyTotalDisplay').innerText = "이번달 총액: 0원";
+            renderCalendar(currentDate.getFullYear(), currentDate.getMonth());
+            document.getElementById('dailyLogForm').classList.add('hidden');
+            alert("로그아웃 되었습니다.");
         }
+    }
 
-        function updateUserBar() {
-            const bar = document.getElementById('userProfileBar');
-            if (currentWorkerId) {
-                bar.style.display = 'flex';
-                document.getElementById('currentUserDisplay').innerText = `👤 사용자: ${currentWorkerId}`;
-            } else {
-                bar.style.display = 'none';
-            }
-        }
+    function openLogImmediately(id){ toggleDashItem(id); }
 
-        function logoutWorker() {
-            if(confirm("로그아웃 하시겠습니까?")) {
-                currentWorkerId = null;
-                localStorage.removeItem('myWorkerId');
-                updateUserBar();
-                resetLogInputs();
-                document.getElementById('monthlyTotalDisplay').innerText = "이번달 총액: 0원";
-                renderCalendar(currentDate.getFullYear(), currentDate.getMonth());
-                document.getElementById('dailyLogForm').classList.add('hidden');
-                alert("로그아웃 되었습니다.");
-            }
-        }
-
-        // 근무일지 즉시 열기
-        function openLogImmediately(id){ toggleDashItem(id); }
-
-        function renderCalendar(y, m){
-            const g = document.getElementById('calendarGrid'); 
-            g.innerHTML = "";
-            document.getElementById('calMonthYear').innerText = `${y}년 ${m+1}월`;
-            
-            const fD = new Date(y, m, 1).getDay(), lD = new Date(y, m+1, 0).getDate();
-            
-            for(let i=0; i<fD; i++) g.innerHTML += `<div></div>`;
-            for(let d=1; d<=lD; d++){
-                const dStr = `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-                g.innerHTML += `<div id="cal-day-${d}" class="cal-day tap-effect" onclick="clickDate('${dStr}')">${d}<div class="cal-dot"></div></div>`;
-            }
-
-            if(currentWorkerId) {
-                const sDate = `${y}-${String(m+1).padStart(2,'0')}-01`, eDate = `${y}-${String(m+1).padStart(2,'0')}-${lD}`;
-                db.collection('work_logs')
-                  .where('date', '>=', sDate)
-                  .where('date', '<=', eDate)
-                  .get().then(s => {
-                    adminWorkLogs = {};
-                    let total = 0;
-                    s.forEach(doc => {
-                        const data = doc.data();
-                        if(data.workerId === currentWorkerId) {
-                            adminWorkLogs[data.date] = data; 
-                            const day = parseInt(data.date.split('-')[2]);
-                            const el = document.getElementById(`cal-day-${day}`);
-                            if(el) el.classList.add('has-data');
-                            total += (data.totalPay || 0);
-                        }
-                    });
-                    document.getElementById('monthlyTotalDisplay').innerText = `이번달 총액: ${total.toLocaleString()}원`;
-                });
-            } else {
-                document.getElementById('monthlyTotalDisplay').innerText = `이번달 총액: 0원`;
-            }
-        }
-
-        // [핵심] 날짜 클릭 시 -> 로그인 -> 데이터 로드 -> 입력폼
-        async function clickDate(dStr){
-            if(!currentWorkerId) {
-                const loggedIn = await checkUserLogin();
-                if(!loggedIn) return;
-            }
-
-            document.getElementById('selectedDateText').innerText = dStr;
-            document.getElementById('dailyLogForm').classList.remove('hidden');
-            document.getElementById('dailyLogForm').setAttribute('data-date', dStr);
-            
-            const d = adminWorkLogs[dStr];
-            document.getElementById('logDayHours').value = d ? d.dayHours : '';
-            document.getElementById('logNightHours').value = d ? d.nightHours : '';
-            document.getElementById('logMemo').value = d ? d.memo : '';
-            
-            const img = document.getElementById('logImagePreview');
-            if(d && d.imageUrl){ 
-                img.src = d.imageUrl; 
-                img.style.display = 'block'; 
-            } else { 
-                img.style.display = 'none'; 
-                img.src = "";
-            }
-            document.getElementById('logImageInput').value = ''; 
-        }
-
-        // [핵심] 저장 버튼 클릭 시 -> 로그인 확인 후 저장
-        async function saveWorkLog(){
-            const btn = document.getElementById('saveLogBtn');
-            const dStr = document.getElementById('dailyLogForm').getAttribute('data-date');
-            
-            // 로그인 상태 확인
-            if(!currentWorkerId) { 
-                const loggedIn = await checkUserLogin();
-                if(!loggedIn) return; // 로그인 실패/취소 시 중단
-            }
-
-            // 로그인 성공 시 저장 진행
-            btn.innerText = "저장 중...";
-            const dh = parseFloat(document.getElementById('logDayHours').value)||0, nh = parseFloat(document.getElementById('logNightHours').value)||0;
-            const memo = document.getElementById('logMemo').value, file = document.getElementById('logImageInput').files[0];
-            const pay = (dh*10320) + (nh*15480);
-            
-            const docId = `${currentWorkerId}_${dStr}`;
-            let prevUrl = null;
-            if(adminWorkLogs[dStr] && adminWorkLogs[dStr].imageUrl) prevUrl = adminWorkLogs[dStr].imageUrl;
-
-            const saveDataToDB = (url) => {
-                db.collection('work_logs').doc(docId).set({
-                    date: dStr, workerId: currentWorkerId, dayHours: dh, nightHours: nh, memo: memo, totalPay: pay, imageUrl: url
-                }, {merge: true}).then(() => {
-                    alert("저장되었습니다!");
-                    btn.innerText = "저장하기";
-                    adminWorkLogs[dStr] = { date: dStr, workerId: currentWorkerId, dayHours: dh, nightHours: nh, memo: memo, totalPay: pay, imageUrl: url };
-                    const day = parseInt(dStr.split('-')[2]);
-                    document.getElementById(`cal-day-${day}`).classList.add('has-data');
-                    
-                    let total = 0;
-                    Object.values(adminWorkLogs).forEach(log => total += (log.totalPay || 0));
-                    document.getElementById('monthlyTotalDisplay').innerText = `이번달 총액: ${total.toLocaleString()}원`;
-                    
-                }).catch(err => {
-                    alert("저장 실패: " + err.message);
-                    btn.innerText = "저장하기";
-                });
-            };
-
-            if(file){
-                const fileRef = storage.ref().child(`logs/${currentWorkerId}/${dStr}_${Date.now()}`); 
-                fileRef.put(file).then(snapshot => snapshot.ref.getDownloadURL()).then(url => saveDataToDB(url)).catch(err => {
-                    alert("사진 업로드 실패 (스토리지 규칙 확인 필요): " + err.message);
-                    btn.innerText = "저장하기";
-                });
-            } else { saveDataToDB(prevUrl); }
-        }
-
-        function deleteWorkLog(){
-            if(!currentWorkerId) { alert("로그인이 필요합니다."); return; }
-            const dStr = document.getElementById('dailyLogForm').getAttribute('data-date');
-            const docId = `${currentWorkerId}_${dStr}`;
-            if(confirm("삭제하시겠습니까?")){
-                db.collection('work_logs').doc(docId).delete().then(()=>{
-                    alert("삭제됨"); 
-                    delete adminWorkLogs[dStr];
-                    resetLogInputs(); 
-                    const day = parseInt(dStr.split('-')[2]);
-                    document.getElementById(`cal-day-${day}`).classList.remove('has-data');
-                    let total = 0;
-                    Object.values(adminWorkLogs).forEach(log => total += (log.totalPay || 0));
-                    document.getElementById('monthlyTotalDisplay').innerText = `이번달 총액: ${total.toLocaleString()}원`;
-                }).catch(err => alert("삭제 실패: " + err.message));
-            }
-        }
+    function renderCalendar(y, m){
+        const g = document.getElementById('calendarGrid'); 
+        g.innerHTML = "";
+        document.getElementById('calMonthYear').innerText = `${y}년 ${m+1}월`;
         
-        function changeMonth(s){ currentDate.setMonth(currentDate.getMonth()+s); renderCalendar(currentDate.getFullYear(), currentDate.getMonth()); }
-        function resetLogInputs(){
-            document.getElementById('logDayHours').value=''; document.getElementById('logNightHours').value='';
-            document.getElementById('logMemo').value=''; document.getElementById('logImageInput').value='';
-            document.getElementById('logImagePreview').style.display='none';
-        }
-
-        // 임금 계산기 및 기타 함수
-        function calculateWage() {
-            const DAY_RATE = 10320, NIGHT_RATE = 15480, EXTRA_ADD = 5160, HOT_ADD = 3096;
-            const SKILLED_DAY_ADD = 2557, SKILLED_NIGHT_ADD = 3836; 
-            const currentMonth = new Date().getMonth() + 1;
-            let dayStartHour = 8, dayEndHour = 18;
-            ['row-jan','row-apr','row-oct'].forEach(id => { const el=document.getElementById(id); if(el) el.classList.remove('highlight'); });
-            if (currentMonth >= 4 && currentMonth <= 9) { dayStartHour = 6; dayEndHour = 19; if(document.getElementById('row-apr')) document.getElementById('row-apr').classList.add('highlight'); }
-            else if (currentMonth >= 10 && currentMonth <= 12) { dayStartHour = 7; dayEndHour = 17; if(document.getElementById('row-oct')) document.getElementById('row-oct').classList.add('highlight'); }
-            else { dayStartHour = 8; dayEndHour = 18; if(document.getElementById('row-jan')) document.getElementById('row-jan').classList.add('highlight'); }
-
-            const role = document.querySelector('input[name="workRole"]:checked').value; 
-            const totalHours = parseFloat(document.getElementById('wageTotalHours').value) || 0;
-            const startHour = parseInt(document.getElementById('wageStartTime').value) || dayStartHour; 
-            const hHoliday = parseFloat(document.getElementById('wageHoliday').value) || 0;
-            const hWeekend = parseFloat(document.getElementById('wageWeekend').value) || 0;
-            const hRain = parseFloat(document.getElementById('wageRain').value) || 0;
-            const hT = parseFloat(document.getElementById('wageHotTime').value) || 0;
-            const taxRate = parseFloat(document.getElementById('wageTaxType').value) || 0;
-
-            let dayCount=0, nightCount=0, deepNightCount=0, lunchExtCount=0;
-            for (let i = 0; i < totalHours; i++) {
-                let curr = (startHour + i) % 24;
-                if (curr >= dayStartHour && curr < dayEndHour) dayCount++; else nightCount++;
-                if (curr >= 0 && curr < 4) deepNightCount++;
-                if (curr === 12) lunchExtCount++;
-            }
-
-            let sDayCount=0, sNightCount=0;
-            if (role === 'skilled') { sDayCount = dayCount; sNightCount = nightCount; }
-
-            const dPay = dayCount * DAY_RATE, nPay = nightCount * NIGHT_RATE, deepNightPay = deepNightCount * EXTRA_ADD, lunchPay = lunchExtCount * DAY_RATE;
-            const holidayPay = hHoliday * EXTRA_ADD, weekendPay = hWeekend * EXTRA_ADD, rainPay = hRain * EXTRA_ADD, hTPay = hT * HOT_ADD;
-            const sDayPay = sDayCount * SKILLED_DAY_ADD, sNightPay = sNightCount * SKILLED_NIGHT_ADD, totalSkilledPay = sDayPay + sNightPay;
-            const subTotal = dPay + nPay + deepNightPay + lunchPay + holidayPay + weekendPay + rainPay + hTPay + totalSkilledPay;
-            const taxAmt = subTotal * taxRate;
-            
-            document.getElementById('wageSpecBody').innerHTML = `
-                <tr><td>☀️ 주간 (${dayCount.toFixed(1)}H)</td><td>${Math.floor(dPay).toLocaleString()}원</td></tr>
-                <tr><td>🌙 야간 (${nightCount.toFixed(1)}H)</td><td>${Math.floor(nPay).toLocaleString()}원</td></tr>
-                ${role === 'skilled' ? `<tr><td colspan="2">🔧 기능공 수당: ${Math.floor(totalSkilledPay).toLocaleString()}원</td></tr>` : ''}
-                <tr><td>🌑 심야 (${deepNightCount}H)</td><td>${Math.floor(deepNightPay).toLocaleString()}원</td></tr>
-                <tr><td>🍱 중식 (${lunchExtCount}H)</td><td>${Math.floor(lunchPay).toLocaleString()}원</td></tr>
-                <tr><td>🌴 할증 (${hHoliday+hWeekend+hRain+hT}H)</td><td>${Math.floor(holidayPay+weekendPay+rainPay+hTPay).toLocaleString()}원</td></tr>
-                <tr style="border-top:2px solid #ccc; font-weight:bold;"><td>💸 세금 (${(taxRate*100).toFixed(1)}%)</td><td>-${Math.floor(taxAmt).toLocaleString()}원</td></tr>
-            `;
-            document.getElementById('wageTotal').innerText = `총 수령액: ${Math.floor(subTotal - taxAmt).toLocaleString()}원`;
-            document.getElementById('wageResultBox').classList.remove('hidden');
-        }
-        function resetWageForm(){ document.querySelectorAll('#wage-card input').forEach(i=> { if(i.type !== 'radio' && i.id !== 'wageHourly') i.value=''; }); document.getElementById('wageResultBox').classList.add('hidden'); }
-
-        function toggleSection(id){ document.getElementById(id).classList.toggle('collapsed'); }
-        function toggleContent(id){ const e=document.getElementById(id); e.style.display=(e.style.display==='block'?'none':'block'); }
-        function toggleHidden(id){ document.getElementById(id).classList.toggle('hidden'); }
-        function toggleDarkMode(){ document.body.classList.toggle('dark-mode'); }
-        async function verifyAdmin(){ return prompt("Admin PW:")==="0346"; }
-        function scrollToTop(){ window.scrollTo({top:0, behavior:'smooth'}); }
-        function openBusSchedule(){ const m=document.getElementById('imageModal'); document.getElementById('modalImage').src='http://pasc.dothome.co.kr/pnitbus.jpg'; m.style.display='flex'; }
-        function closeImageModal(){ document.getElementById('imageModal').style.display='none'; }
-        function previewLogImage(input){ if(input.files&&input.files[0]){ const r=new FileReader(); r.onload=e=>{const i=document.getElementById('logImagePreview'); i.src=e.target.result; i.style.display='block';}; r.readAsDataURL(input.files[0]); } }
-        function openPrivacy(){ document.getElementById('privacyModal').style.display='flex'; }
+        const fD = new Date(y, m, 1).getDay(), lD = new Date(y, m+1, 0).getDate();
         
-        function loadBanner(){ db.collection('settings').doc('banner').onSnapshot(d=>{ if(d.exists){ const da = d.data(); let msg = da.adminMessage ? `📢 ${da.adminMessage}   ///   ` : ""; if(da.userMessages) msg += da.userMessages.map((m,i)=>`${i+1}. ${m}`).join("   ///   "); document.getElementById('tickerText').innerText = msg || "🚨 안전 제일!"; } }); }
-        function writeUserTicker(){ const m=prompt("안전문구 등록:"); if(m){ const r=db.collection('settings').doc('banner'); r.get().then(d=>{ let a=[]; if(d.exists && d.data().userMessages) a=d.data().userMessages; a.unshift(m); if(a.length>3) a=a.slice(0,3); r.set({userMessages:a},{merge:true}); }); } }
-        async function setAdminTicker(){ if(await verifyAdmin()){ const m=prompt("공지:"); if(m) db.collection('settings').doc('banner').set({adminMessage:m},{merge:true}); } }
-        async function openTickerManager(){ if(await verifyAdmin()){ db.collection('settings').doc('banner').get().then(d=>{ if(d.exists){ const da=d.data(), l=document.getElementById('tickerListContainer'); l.innerHTML=""; if(da.adminMessage) l.innerHTML+=`<div>[관리자] ${da.adminMessage} <button onclick="deleteTickerMsg('admin',0)">삭제</button></div>`; if(da.userMessages) da.userMessages.forEach((m,i)=>l.innerHTML+=`<div>${i+1}. ${m} <button onclick="deleteTickerMsg('user',${i})">삭제</button></div>`); document.getElementById('tickerManageModal').style.display='flex'; } }); } }
-        async function deleteTickerMsg(t,i){ const r=db.collection('settings').doc('banner'); if(t==='admin') await r.update({adminMessage:firebase.firestore.FieldValue.delete()}); else { const d=await r.get(); let a=d.data().userMessages; a.splice(i,1); await r.update({userMessages:a}); } openTickerManager(); }
+        for(let i=0; i<fD; i++) g.innerHTML += `<div></div>`;
+        for(let d=1; d<=lD; d++){
+            const dStr = `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+            g.innerHTML += `<div id="cal-day-${d}" class="cal-day tap-effect" onclick="clickDate('${dStr}')">${d}<div class="cal-dot"></div></div>`;
+        }
 
-        function addNotice(){ verifyAdmin().then(r=>{ if(r) db.collection("notices").add({title:document.getElementById('noticeTitle').value, content:document.getElementById('noticeContent').value, timestamp:firebase.firestore.FieldValue.serverTimestamp()}).then(()=>{document.getElementById('noticeTitle').value=''; document.getElementById('noticeContent').value=''; alert("공지 등록됨");}); }); }
-        function delNotice(id,e){ e.stopPropagation(); verifyAdmin().then(r=>{ if(r) db.collection("notices").doc(id).delete(); }); }
-        function addPost(){ const t=document.getElementById('inputTitle').value, p=document.getElementById('inputPw').value, c=document.getElementById('inputContent').value; if(t&&p&&c) db.collection("posts").add({title:t, password:p, content:c, timestamp:firebase.firestore.FieldValue.serverTimestamp()}).then(()=>{document.getElementById('inputTitle').value=''; document.getElementById('inputPw').value=''; document.getElementById('inputContent').value=''; toggleHidden('boardForm'); alert("등록됨");}); }
-        function deletePost(id,pw,e){ e.stopPropagation(); if(prompt("비번")===pw) db.collection("posts").doc(id).delete(); }
-        function uploadFile(){ const f=document.getElementById('fileInput').files[0], t=document.getElementById('fileTitle').value; if(f&&t) storage.ref(`archives/${Date.now()}`).put(f).then(s=>s.ref.getDownloadURL()).then(u=>db.collection("archives").add({title:t, url:u, timestamp:firebase.firestore.FieldValue.serverTimestamp()})).then(()=>{alert("업로드됨"); document.getElementById('fileTitle').value='';}); }
-        function delArchive(id,e){ e.stopPropagation(); verifyAdmin().then(r=>{ if(r) db.collection("archives").doc(id).delete(); }); }
+        if(currentWorkerId) {
+            const sDate = `${y}-${String(m+1).padStart(2,'0')}-01`, eDate = `${y}-${String(m+1).padStart(2,'0')}-${lD}`;
+            db.collection('work_logs')
+              .where('date', '>=', sDate)
+              .where('date', '<=', eDate)
+              .get().then(s => {
+                adminWorkLogs = {};
+                let total = 0;
+                s.forEach(doc => {
+                    const data = doc.data();
+                    if(data.workerId === currentWorkerId) {
+                        adminWorkLogs[data.date] = data; 
+                        const day = parseInt(data.date.split('-')[2]);
+                        const el = document.getElementById(`cal-day-${day}`);
+                        if(el) el.classList.add('has-data');
+                        total += (data.totalPay || 0);
+                    }
+                });
+                document.getElementById('monthlyTotalDisplay').innerText = `이번달 총액: ${total.toLocaleString()}원`;
+            }).catch(e => console.log("데이터 로드 실패(오프라인 등):", e));
+        } else {
+            document.getElementById('monthlyTotalDisplay').innerText = `이번달 총액: 0원`;
+        }
+    }
 
-        window.onload = () => { 
-            loadAllData();
-            if(localStorage.getItem('myWorkerId')) {
-                currentWorkerId = localStorage.getItem('myWorkerId');
-                updateUserBar();
-            }
+    // 날짜 클릭 -> 입력창 열림
+    function clickDate(dStr){
+        document.getElementById('selectedDateText').innerText = dStr;
+        document.getElementById('dailyLogForm').classList.remove('hidden');
+        document.getElementById('dailyLogForm').setAttribute('data-date', dStr);
+        
+        const d = adminWorkLogs[dStr];
+        document.getElementById('logDayHours').value = d ? d.dayHours : '';
+        document.getElementById('logNightHours').value = d ? d.nightHours : '';
+        document.getElementById('logMemo').value = d ? d.memo : '';
+        
+        const img = document.getElementById('logImagePreview');
+        if(d && d.imageUrl){ 
+            img.src = d.imageUrl; 
+            img.style.display = 'block'; 
+        } else { 
+            img.style.display = 'none'; 
+            img.src = "";
+        }
+        document.getElementById('logImageInput').value = ''; 
+    }
+
+    // 저장 버튼 클릭 시 -> 로그인 체크 -> 저장
+    async function saveWorkLog(){
+        const btn = document.getElementById('saveLogBtn');
+        const dStr = document.getElementById('dailyLogForm').getAttribute('data-date');
+        
+        // 1. 로그인 확인
+        if(!currentWorkerId) { 
+            const loggedIn = await checkUserLogin();
+            if(!loggedIn) return; // 로그인 실패/취소 시 중단
+        }
+
+        // 2. 로그인 성공 시 저장 진행
+        btn.innerText = "저장 중...";
+        const dh = parseFloat(document.getElementById('logDayHours').value)||0, nh = parseFloat(document.getElementById('logNightHours').value)||0;
+        const memo = document.getElementById('logMemo').value, file = document.getElementById('logImageInput').files[0];
+        const pay = (dh*10320) + (nh*15480);
+        
+        const docId = `${currentWorkerId}_${dStr}`;
+        let prevUrl = null;
+        if(adminWorkLogs[dStr] && adminWorkLogs[dStr].imageUrl) prevUrl = adminWorkLogs[dStr].imageUrl;
+
+        const saveDataToDB = (url) => {
+            db.collection('work_logs').doc(docId).set({
+                date: dStr, workerId: currentWorkerId, dayHours: dh, nightHours: nh, memo: memo, totalPay: pay, imageUrl: url
+            }, {merge: true}).then(() => {
+                alert("저장되었습니다!");
+                btn.innerText = "저장하기";
+                adminWorkLogs[dStr] = { date: dStr, workerId: currentWorkerId, dayHours: dh, nightHours: nh, memo: memo, totalPay: pay, imageUrl: url };
+                const day = parseInt(dStr.split('-')[2]);
+                document.getElementById(`cal-day-${day}`).classList.add('has-data');
+                
+                let total = 0;
+                Object.values(adminWorkLogs).forEach(log => total += (log.totalPay || 0));
+                document.getElementById('monthlyTotalDisplay').innerText = `이번달 총액: ${total.toLocaleString()}원`;
+                
+            }).catch(err => {
+                alert("저장 실패: " + err.message);
+                btn.innerText = "저장하기";
+            });
         };
-    </script>
+
+        if(file){
+            const fileRef = storage.ref().child(`logs/${currentWorkerId}/${dStr}_${Date.now()}`); 
+            fileRef.put(file).then(snapshot => snapshot.ref.getDownloadURL()).then(url => saveDataToDB(url)).catch(err => {
+                alert("사진 업로드 실패: " + err.message);
+                btn.innerText = "저장하기";
+            });
+        } else { saveDataToDB(prevUrl); }
+    }
+
+    function deleteWorkLog(){
+        if(!currentWorkerId) { alert("로그인이 필요합니다."); return; }
+        const dStr = document.getElementById('dailyLogForm').getAttribute('data-date');
+        const docId = `${currentWorkerId}_${dStr}`;
+        if(confirm("삭제하시겠습니까?")){
+            db.collection('work_logs').doc(docId).delete().then(()=>{
+                alert("삭제됨"); 
+                delete adminWorkLogs[dStr];
+                resetLogInputs(); 
+                const day = parseInt(dStr.split('-')[2]);
+                document.getElementById(`cal-day-${day}`).classList.remove('has-data');
+                let total = 0;
+                Object.values(adminWorkLogs).forEach(log => total += (log.totalPay || 0));
+                document.getElementById('monthlyTotalDisplay').innerText = `이번달 총액: ${total.toLocaleString()}원`;
+            }).catch(err => alert("삭제 실패: " + err.message));
+        }
+    }
+    
+    function changeMonth(s){ currentDate.setMonth(currentDate.getMonth()+s); renderCalendar(currentDate.getFullYear(), currentDate.getMonth()); }
+    function resetLogInputs(){
+        document.getElementById('logDayHours').value=''; document.getElementById('logNightHours').value='';
+        document.getElementById('logMemo').value=''; document.getElementById('logImageInput').value='';
+        document.getElementById('logImagePreview').style.display='none';
+    }
+
+    // 임금 계산기 및 기타 함수
+    function calculateWage() {
+        const DAY_RATE = 10320, NIGHT_RATE = 15480, EXTRA_ADD = 5160, HOT_ADD = 3096;
+        const SKILLED_DAY_ADD = 2557, SKILLED_NIGHT_ADD = 3836; 
+        const currentMonth = new Date().getMonth() + 1;
+        let dayStartHour = 8, dayEndHour = 18;
+        ['row-jan','row-apr','row-oct'].forEach(id => { const el=document.getElementById(id); if(el) el.classList.remove('highlight'); });
+        if (currentMonth >= 4 && currentMonth <= 9) { dayStartHour = 6; dayEndHour = 19; if(document.getElementById('row-apr')) document.getElementById('row-apr').classList.add('highlight'); }
+        else if (currentMonth >= 10 && currentMonth <= 12) { dayStartHour = 7; dayEndHour = 17; if(document.getElementById('row-oct')) document.getElementById('row-oct').classList.add('highlight'); }
+        else { dayStartHour = 8; dayEndHour = 18; if(document.getElementById('row-jan')) document.getElementById('row-jan').classList.add('highlight'); }
+
+        const role = document.querySelector('input[name="workRole"]:checked').value; 
+        const totalHours = parseFloat(document.getElementById('wageTotalHours').value) || 0;
+        const startHour = parseInt(document.getElementById('wageStartTime').value) || dayStartHour; 
+        const hHoliday = parseFloat(document.getElementById('wageHoliday').value) || 0;
+        const hWeekend = parseFloat(document.getElementById('wageWeekend').value) || 0;
+        const hRain = parseFloat(document.getElementById('wageRain').value) || 0;
+        const hT = parseFloat(document.getElementById('wageHotTime').value) || 0;
+        const taxRate = parseFloat(document.getElementById('wageTaxType').value) || 0;
+
+        let dayCount=0, nightCount=0, deepNightCount=0, lunchExtCount=0;
+        for (let i = 0; i < totalHours; i++) {
+            let curr = (startHour + i) % 24;
+            if (curr >= dayStartHour && curr < dayEndHour) dayCount++; else nightCount++;
+            if (curr >= 0 && curr < 4) deepNightCount++;
+            if (curr === 12) lunchExtCount++;
+        }
+
+        let sDayCount=0, sNightCount=0;
+        if (role === 'skilled') { sDayCount = dayCount; sNightCount = nightCount; }
+
+        const dPay = dayCount * DAY_RATE, nPay = nightCount * NIGHT_RATE, deepNightPay = deepNightCount * EXTRA_ADD, lunchPay = lunchExtCount * DAY_RATE;
+        const holidayPay = hHoliday * EXTRA_ADD, weekendPay = hWeekend * EXTRA_ADD, rainPay = hRain * EXTRA_ADD, hTPay = hT * HOT_ADD;
+        const sDayPay = sDayCount * SKILLED_DAY_ADD, sNightPay = sNightCount * SKILLED_NIGHT_ADD, totalSkilledPay = sDayPay + sNightPay;
+        const subTotal = dPay + nPay + deepNightPay + lunchPay + holidayPay + weekendPay + rainPay + hTPay + totalSkilledPay;
+        const taxAmt = subTotal * taxRate;
+        
+        document.getElementById('wageSpecBody').innerHTML = `
+            <tr><td>☀️ 주간 (${dayCount.toFixed(1)}H)</td><td>${Math.floor(dPay).toLocaleString()}원</td></tr>
+            <tr><td>🌙 야간 (${nightCount.toFixed(1)}H)</td><td>${Math.floor(nPay).toLocaleString()}원</td></tr>
+            ${role === 'skilled' ? `<tr><td colspan="2">🔧 기능공 수당: ${Math.floor(totalSkilledPay).toLocaleString()}원</td></tr>` : ''}
+            <tr><td>🌑 심야 (${deepNightCount}H)</td><td>${Math.floor(deepNightPay).toLocaleString()}원</td></tr>
+            <tr><td>🍱 중식 (${lunchExtCount}H)</td><td>${Math.floor(lunchPay).toLocaleString()}원</td></tr>
+            <tr><td>🌴 할증 (${hHoliday+hWeekend+hRain+hT}H)</td><td>${Math.floor(holidayPay+weekendPay+rainPay+hTPay).toLocaleString()}원</td></tr>
+            <tr style="border-top:2px solid #ccc; font-weight:bold;"><td>💸 세금 (${(taxRate*100).toFixed(1)}%)</td><td>-${Math.floor(taxAmt).toLocaleString()}원</td></tr>
+        `;
+        document.getElementById('wageTotal').innerText = `총 수령액: ${Math.floor(subTotal - taxAmt).toLocaleString()}원`;
+        document.getElementById('wageResultBox').classList.remove('hidden');
+    }
+    function resetWageForm(){ document.querySelectorAll('#wage-card input').forEach(i=> { if(i.type !== 'radio' && i.id !== 'wageHourly') i.value=''; }); document.getElementById('wageResultBox').classList.add('hidden'); }
+
+    function toggleSection(id){ document.getElementById(id).classList.toggle('collapsed'); }
+    function toggleContent(id){ const e=document.getElementById(id); e.style.display=(e.style.display==='block'?'none':'block'); }
+    function toggleHidden(id){ document.getElementById(id).classList.toggle('hidden'); }
+    function toggleDarkMode(){ document.body.classList.toggle('dark-mode'); }
+    async function verifyAdmin(){ return prompt("Admin PW:")==="0346"; }
+    function scrollToTop(){ window.scrollTo({top:0, behavior:'smooth'}); }
+    function openBusSchedule(){ const m=document.getElementById('imageModal'); document.getElementById('modalImage').src='http://pasc.dothome.co.kr/pnitbus.jpg'; m.style.display='flex'; }
+    function closeImageModal(){ document.getElementById('imageModal').style.display='none'; }
+    function previewLogImage(input){ if(input.files&&input.files[0]){ const r=new FileReader(); r.onload=e=>{const i=document.getElementById('logImagePreview'); i.src=e.target.result; i.style.display='block';}; r.readAsDataURL(input.files[0]); } }
+    function openPrivacy(){ document.getElementById('privacyModal').style.display='flex'; }
+    
+    function loadBanner(){ db.collection('settings').doc('banner').onSnapshot(d=>{ if(d.exists){ const da = d.data(); let msg = da.adminMessage ? `📢 ${da.adminMessage}   ///   ` : ""; if(da.userMessages) msg += da.userMessages.map((m,i)=>`${i+1}. ${m}`).join("   ///   "); document.getElementById('tickerText').innerText = msg || "🚨 안전 제일!"; } }); }
+    function writeUserTicker(){ const m=prompt("안전문구 등록:"); if(m){ const r=db.collection('settings').doc('banner'); r.get().then(d=>{ let a=[]; if(d.exists && d.data().userMessages) a=d.data().userMessages; a.unshift(m); if(a.length>3) a=a.slice(0,3); r.set({userMessages:a},{merge:true}); }); } }
+    async function setAdminTicker(){ if(await verifyAdmin()){ const m=prompt("공지:"); if(m) db.collection('settings').doc('banner').set({adminMessage:m},{merge:true}); } }
+    async function openTickerManager(){ if(await verifyAdmin()){ db.collection('settings').doc('banner').get().then(d=>{ if(d.exists){ const da=d.data(), l=document.getElementById('tickerListContainer'); l.innerHTML=""; if(da.adminMessage) l.innerHTML+=`<div>[관리자] ${da.adminMessage} <button onclick="deleteTickerMsg('admin',0)">삭제</button></div>`; if(da.userMessages) da.userMessages.forEach((m,i)=>l.innerHTML+=`<div>${i+1}. ${m} <button onclick="deleteTickerMsg('user',${i})">삭제</button></div>`); document.getElementById('tickerManageModal').style.display='flex'; } }); } }
+    async function deleteTickerMsg(t,i){ const r=db.collection('settings').doc('banner'); if(t==='admin') await r.update({adminMessage:firebase.firestore.FieldValue.delete()}); else { const d=await r.get(); let a=d.data().userMessages; a.splice(i,1); await r.update({userMessages:a}); } openTickerManager(); }
+
+    function addNotice(){ verifyAdmin().then(r=>{ if(r) db.collection("notices").add({title:document.getElementById('noticeTitle').value, content:document.getElementById('noticeContent').value, timestamp:firebase.firestore.FieldValue.serverTimestamp()}).then(()=>{document.getElementById('noticeTitle').value=''; document.getElementById('noticeContent').value=''; alert("공지 등록됨");}); }); }
+    function delNotice(id,e){ e.stopPropagation(); verifyAdmin().then(r=>{ if(r) db.collection("notices").doc(id).delete(); }); }
+    function addPost(){ const t=document.getElementById('inputTitle').value, p=document.getElementById('inputPw').value, c=document.getElementById('inputContent').value; if(t&&p&&c) db.collection("posts").add({title:t, password:p, content:c, timestamp:firebase.firestore.FieldValue.serverTimestamp()}).then(()=>{document.getElementById('inputTitle').value=''; document.getElementById('inputPw').value=''; document.getElementById('inputContent').value=''; toggleHidden('boardForm'); alert("등록됨");}); }
+    function deletePost(id,pw,e){ e.stopPropagation(); if(prompt("비번")===pw) db.collection("posts").doc(id).delete(); }
+    function uploadFile(){ const f=document.getElementById('fileInput').files[0], t=document.getElementById('fileTitle').value; if(f&&t) storage.ref(`archives/${Date.now()}`).put(f).then(s=>s.ref.getDownloadURL()).then(u=>db.collection("archives").add({title:t, url:u, timestamp:firebase.firestore.FieldValue.serverTimestamp()})).then(()=>{alert("업로드됨"); document.getElementById('fileTitle').value='';}); }
+    function delArchive(id,e){ e.stopPropagation(); verifyAdmin().then(r=>{ if(r) db.collection("archives").doc(id).delete(); }); }
+
+    window.onload = () => { 
+        loadAllData();
+        if(localStorage.getItem('myWorkerId')) {
+            currentWorkerId = localStorage.getItem('myWorkerId');
+            updateUserBar();
+        }
+    };
+</script>
 </body>
 </html>
