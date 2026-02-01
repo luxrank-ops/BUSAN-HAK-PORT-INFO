@@ -1,375 +1,284 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>선원 통합 관리 시스템</title>
-    
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
+<meta charset="UTF-8">
+<title>선원 통합 관리 시스템</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <style>
-        /* 기본 스타일 */
-        body { font-family: 'Pretendard', sans-serif; margin: 0; background: #f5f5f5; color: #333; }
-        
-        /* 다크모드 */
-        body.dark-mode { background: #121212; color: #eee; }
-        body.dark-mode header { background: #1f1f1f; border-bottom: 1px solid #333; }
-        body.dark-mode .card { background: #1e1e1e; border: 1px solid #333; }
-        body.dark-mode input, body.dark-mode textarea { background: #2c2c2c; color: #fff; border: 1px solid #444; }
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
 
-        /* 헤더 */
-        header { background: #003366; color: #fff; padding: 15px; text-align: center; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 5px rgba(0,0,0,0.1); display: flex; justify-content: space-between; align-items: center; }
-        header h2 { margin: 0; font-size: 1.1rem; }
-
-        /* 레이아웃 컨테이너 */
-        .container { max-width: 600px; margin: 0 auto; padding: 10px; }
-        
-        /* 카드 스타일 (섹션 대체) */
-        .card { background: #fff; border-radius: 10px; padding: 15px; margin-bottom: 15px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
-        .card h3 { margin-top: 0; border-bottom: 2px solid #003366; padding-bottom: 8px; color: #003366; font-size: 1rem; }
-        body.dark-mode .card h3 { color: #4fc3f7; border-color: #4fc3f7; }
-
-        /* 입력 폼 스타일 */
-        input, textarea { width: 100%; padding: 10px; margin: 5px 0; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; }
-        textarea { height: 80px; resize: none; }
-        
-        /* 버튼 스타일 */
-        button { width: 100%; padding: 12px; background: #003366; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; margin-top: 5px; }
-        button:hover { background: #002244; }
-        .mini-btn { width: auto; padding: 4px 8px; font-size: 12px; margin-left: 5px; }
-        .btn-del { background: #c0392b; }
-        .mode-btn { width: auto; background: rgba(255,255,255,0.2); padding: 6px 12px; font-size: 0.8rem; }
-
-        /* 리스트 아이템 */
-        ul { list-style: none; padding: 0; margin: 0; }
-        .post-item { border-bottom: 1px solid #eee; padding: 10px 0; }
-        .post-header-row { display: flex; justify-content: space-between; align-items: center; cursor: pointer; }
-        .post-body-content { display: none; margin-top: 10px; padding: 10px; background: rgba(0,0,0,0.03); border-radius: 4px; white-space: pre-wrap; }
-        
-        /* 모달 (로그인 팝업용) */
-        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center; }
-        .modal-content { background: #fff; padding: 20px; border-radius: 10px; width: 80%; max-width: 300px; text-align: center; }
-        .modal-content h4 { margin-top: 0; color: #003366; }
-    </style>
+<style>
+body { font-family: Arial, sans-serif; margin:0; background:#f5f5f5; }
+.dark-mode { background:#121212; color:#eee; }
+header { background:#003366; color:#fff; padding:12px; text-align:center; }
+section { padding:15px; }
+input, textarea, button { margin:5px 0; padding:8px; width:100%; box-sizing:border-box; }
+ul { list-style:none; padding:0; }
+.post-item { background:#fff; margin-bottom:10px; padding:10px; border-radius:6px; }
+.dark-mode .post-item { background:#1f1f1f; }
+.post-header-row { display:flex; justify-content:space-between; cursor:pointer; }
+.post-body-content { display:none; margin-top:8px; }
+.mini-btn { padding:4px 8px; font-size:12px; }
+.btn-del { background:#c0392b; color:#fff; border:none; }
+</style>
 </head>
 
-    <body>
-    <header>
-        <h2>🚢 선원 통합 관리</h2>
-        <button class="mode-btn" onclick="toggleDarkMode()">🌙 모드</button>
-    </header>
+<body>
 
-    <div class="container">
-        
-        <div class="card">
-            <h3>📢 공지사항 (관리자)</h3>
-            <input id="noticeTitle" placeholder="제목">
-            <textarea id="noticeContent" placeholder="내용"></textarea>
-            <button onclick="addNotice()">공지 등록</button>
-            <ul id="noticeList"></ul>
+<header>
+  <h2>🚢 선원 통합 관리 시스템</h2>
+  <button onclick="toggleDarkMode()">🌙 다크모드</button>
+</header>
+
+<section>
+<h3>📢 공지사항</h3>
+<input id="noticeTitle" placeholder="제목">
+<textarea id="noticeContent" placeholder="내용"></textarea>
+<button onclick="addNotice()">공지 등록</button>
+<ul id="noticeList"></ul>
+</section>
+
+<section>
+<h3>💬 익명 게시판</h3>
+<input id="postTitle" placeholder="제목">
+<textarea id="postContent" placeholder="내용"></textarea>
+<input id="postPw" type="password" placeholder="삭제 비밀번호">
+<button onclick="addPost()">글 등록</button>
+<ul id="boardList"></ul>
+</section>
+
+<section>
+<h3>🚢 선박 정보</h3>
+<input id="shipName" placeholder="선박명">
+<textarea id="shipOnboard" placeholder="승선 정보"></textarea>
+<button onclick="addShipInfo()">선박 등록</button>
+<input id="shipSearch" placeholder="검색" oninput="filterShips()">
+<ul id="shipList"></ul>
+</section>
+
+<section>
+<h3>📂 자료실</h3>
+<input id="fileTitle" placeholder="자료 제목">
+<input type="file" id="fileInput" accept=".pdf,.jpg,.png,.docx">
+<button onclick="uploadFile()">업로드</button>
+<ul id="fileList"></ul>
+</section>
+
+<script>
+/* ===============================
+   Firebase 설정 (사용자 제공)
+================================ */
+const firebaseConfig = {
+  apiKey: "AIzaSyBDXy5HcYW-IZQJ9ZDEivr_yi99AxhYme8",
+  authDomain: "my-app-d8527.firebaseapp.com",
+  projectId: "my-app-d8527",
+  storageBucket: "my-app-d8527.firebasestorage.app",
+  messagingSenderId: "667323279185",
+  appId: "1:667323279185:web:cff6184aaa82e08d345570"
+};
+
+firebase.initializeApp(firebaseConfig);
+
+const db = firebase.firestore();
+const storage = firebase.storage();
+
+let allShipsData = [];
+let filteredShips = [];
+
+/* ===============================
+   공통
+================================ */
+function toggleDarkMode(){
+  document.body.classList.toggle("dark-mode");
+  localStorage.setItem(
+    "darkMode",
+    document.body.classList.contains("dark-mode")
+  );
+}
+if(localStorage.getItem("darkMode")==="true"){
+  document.body.classList.add("dark-mode");
+}
+
+async function verifyAdmin(){
+  const pw = prompt("관리자 비밀번호:");
+  const doc = await db.collection("settings").doc("admin").get();
+  return doc.exists && doc.data().pw === pw;
+}
+
+/* ===============================
+   공지사항
+================================ */
+async function addNotice(){
+  if(!await verifyAdmin()) return alert("관리자 권한 필요");
+  db.collection("notices").add({
+    title: noticeTitle.value,
+    content: noticeContent.value,
+    timestamp: firebase.firestore.FieldValue.serverTimestamp()
+  });
+}
+
+function delNotice(id,e){
+  e.stopPropagation();
+  db.collection("notices").doc(id).delete();
+}
+
+function loadNotices(){
+  db.collection("notices").orderBy("timestamp","desc")
+  .onSnapshot(snap=>{
+    noticeList.innerHTML="";
+    snap.forEach(d=>{
+      const n=d.data();
+      noticeList.innerHTML+=`
+      <li class="post-item">
+        <div class="post-header-row">
+          <b>${n.title}</b>
+          <button class="mini-btn btn-del"
+            onclick="delNotice('${d.id}',event)">삭제</button>
         </div>
-
-        <div class="card">
-            <h3>💬 익명 게시판</h3>
-            <input id="postTitle" placeholder="제목">
-            <textarea id="postContent" placeholder="내용"></textarea>
-            <input id="postPw" type="password" placeholder="삭제 비밀번호 (필수)">
-            <button onclick="addPost()">글 등록</button>
-            <ul id="boardList"></ul>
+        <div class="post-body-content" style="display:block">
+          ${n.content}
         </div>
+      </li>`;
+    });
+  });
+}
 
-        <div class="card">
-            <h3>🚢 선박 정보</h3>
-            <div style="display:flex; gap:5px; margin-bottom:10px;">
-                <input id="shipSearch" placeholder="선박명 검색..." oninput="filterShips()">
-            </div>
-            <div style="background:#f9f9f9; padding:10px; border-radius:6px; border:1px dashed #ccc;">
-                <input id="shipName" placeholder="선박명 (등록용)">
-                <textarea id="shipOnboard" placeholder="승선 정보 입력"></textarea>
-                <button onclick="addShipInfo()" style="background:#27ae60;">선박 정보 등록/수정</button>
-            </div>
-            <ul id="shipList"></ul>
+/* ===============================
+   게시판
+================================ */
+function addPost(){
+  db.collection("posts").add({
+    title: postTitle.value,
+    content: postContent.value,
+    password: postPw.value,
+    timestamp: firebase.firestore.FieldValue.serverTimestamp()
+  });
+}
+
+function deletePost(id,pw,e){
+  e.stopPropagation();
+  if(prompt("비밀번호 입력")===pw){
+    db.collection("posts").doc(id).delete();
+  }
+}
+
+function loadPosts(){
+  db.collection("posts").orderBy("timestamp","desc")
+  .onSnapshot(snap=>{
+    boardList.innerHTML="";
+    snap.forEach(d=>{
+      const p=d.data();
+      boardList.innerHTML+=`
+      <li class="post-item">
+        <div class="post-header-row"
+          onclick="this.nextElementSibling.style.display=
+          this.nextElementSibling.style.display==='block'?'none':'block'">
+          <b>${p.title}</b><span>익명</span>
         </div>
-
-        <div class="card">
-            <h3>📂 자료실</h3>
-            <input id="fileTitle" placeholder="자료 제목">
-            <input type="file" id="fileInput">
-            <button onclick="uploadFile()" style="background:#e67e22;">파일 업로드</button>
-            <ul id="fileList"></ul>
+        <div class="post-body-content">
+          ${p.content}
+          <button class="mini-btn btn-del"
+            onclick="deletePost('${d.id}','${p.password}',event)">삭제</button>
         </div>
+      </li>`;
+    });
+  });
+}
 
-        <div class="card">
-            <h3>📅 스마트 근무일지</h3>
-            
-            <input id="logDate" type="date" style="text-align:center; font-weight:bold;">
-            <div style="display:flex; gap:5px;">
-                <input type="number" id="logDay" placeholder="주간(H)" step="0.5">
-                <input type="number" id="logNight" placeholder="야간(H)" step="0.5">
-            </div>
-            <textarea id="logMemo" placeholder="작업 내용을 입력하세요..."></textarea>
-            
-            <button onclick="trySaveWorkLog()" style="background:#d32f2f;">내용 저장하기</button>
-            
-            <div style="margin-top:15px; border-top:1px solid #eee; padding-top:10px;">
-                <h4 style="margin:0 0 10px 0;">📋 저장된 기록</h4>
-                <ul id="workLogList"></ul>
-            </div>
-        </div>
+/* ===============================
+   선박
+================================ */
+function addShipInfo(){
+  if(!shipName.value) return;
+  db.collection("ships").doc(shipName.value).set({
+    name: shipName.value,
+    onboard: shipOnboard.value,
+    updated: firebase.firestore.FieldValue.serverTimestamp()
+  });
+}
 
-    </div>
+function loadShips(){
+  db.collection("ships").orderBy("updated","desc")
+  .onSnapshot(snap=>{
+    allShipsData=[];
+    snap.forEach(d=>allShipsData.push(d.data()));
+    filteredShips=[...allShipsData];
+    renderShips();
+  });
+}
 
-    <div id="loginModal" class="modal-overlay">
-        <div class="modal-content">
-            <h4>🔐 본인 확인 및 설정</h4>
-            <p style="font-size:0.85rem; color:#666; margin-bottom:10px;">
-                처음이면 닉네임과 비번이 <strong>자동 설정</strong>되고,<br>
-                기존 회원이면 <strong>로그인</strong> 됩니다.
-            </p>
-            <input id="modalNick" placeholder="닉네임 (예: 홍길동)">
-            <input id="modalPw" type="password" placeholder="비밀번호 4자리">
-            <button onclick="confirmLoginAndSave()">확인 및 저장</button>
-            <button onclick="closeModal()" style="background:#888; margin-top:5px;">취소</button>
-        </div>
-    </div>
+function renderShips(){
+  shipList.innerHTML="";
+  filteredShips.forEach(s=>{
+    shipList.innerHTML+=`
+    <li class="post-item">
+      <b>${s.name}</b>
+      <div style="display:block">${s.onboard}</div>
+    </li>`;
+  });
+}
 
-      <script>
-    // 🔥 사용자님의 Firebase 설정값 적용 완료 🔥
-    const firebaseConfig = { 
-        apiKey: "AIzaSyBDXy5HcYW-IZQJ9ZDEivr_yi99AxhYme8", 
-        authDomain: "my-app-d8527.firebaseapp.com", 
-        projectId: "my-app-d8527", 
-        storageBucket: "my-app-d8527.firebasestorage.app", 
-        messagingSenderId: "667323279185", 
-        appId: "1:667323279185:web:cff6184aaa82e08d345570" 
-    };
+function filterShips(){
+  const q=shipSearch.value.toLowerCase();
+  filteredShips=allShipsData.filter(
+    s=>s.name.toLowerCase().includes(q)
+  );
+  renderShips();
+}
 
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.firestore();
-    const storage = firebase.storage();
+/* ===============================
+   자료실
+================================ */
+function uploadFile(){
+  const f=fileInput.files[0];
+  if(!f) return;
+  const ref=storage.ref("files/"+Date.now()+"_"+f.name);
+  ref.put(f).then(snap=>{
+    snap.ref.getDownloadURL().then(url=>{
+      db.collection("archives").add({
+        title:fileTitle.value,
+        url,
+        timestamp: firebase.firestore.FieldValue.serverTimestamp()
+      });
+    });
+  });
+}
 
-    let allShipsData = [], filteredShips = [];
-    let currentWorkerId = null; // 로그인 상태 변수
+function delArchive(id,e){
+  e.stopPropagation();
+  db.collection("archives").doc(id).delete();
+}
 
-    /* ========== 1. 스마트 근무일지 로직 (핵심) ========== */
-    
-    // (1) 저장 버튼 클릭 시 실행
-    function trySaveWorkLog() {
-        const date = document.getElementById('logDate').value;
-        const day = document.getElementById('logDay').value;
-        const night = document.getElementById('logNight').value;
-        const memo = document.getElementById('logMemo').value;
+function loadFiles(){
+  db.collection("archives").orderBy("timestamp","desc")
+  .onSnapshot(snap=>{
+    fileList.innerHTML="";
+    snap.forEach(d=>{
+      const f=d.data();
+      fileList.innerHTML+=`
+      <li class="post-item">
+        <a href="${f.url}" target="_blank">${f.title}</a>
+        <button class="mini-btn btn-del"
+          onclick="delArchive('${d.id}',event)">삭제</button>
+      </li>`;
+    });
+  });
+}
 
-        // 필수 입력 확인
-        if(!date) return alert("날짜를 선택해주세요.");
-        if(!day && !night && !memo) return alert("근무 시간이나 내용을 입력해주세요.");
-
-        // 로그인이 되어 있다면 바로 저장
-        if(currentWorkerId) {
-            saveLogToDB();
-        } else {
-            // 로그인이 안 되어 있으면 모달창 띄움
-            document.getElementById('loginModal').style.display = 'flex';
-        }
-    }
-
-    // (2) 모달창에서 '확인 및 저장' 클릭 시 실행
-    async function confirmLoginAndSave() {
-        const nick = document.getElementById('modalNick').value.trim();
-        const pw = document.getElementById('modalPw').value.trim();
-
-        if(!nick || !pw) return alert("닉네임과 비밀번호를 입력해주세요.");
-
-        try {
-            const userRef = db.collection('workers').doc(nick);
-            const doc = await userRef.get();
-
-            if(doc.exists) {
-                // 기존 회원 -> 비밀번호 확인
-                if(doc.data().password === pw) {
-                    currentWorkerId = nick;
-                    alert(`반갑습니다, ${nick}님! 로그인되었습니다.`);
-                    closeModal();
-                    saveLogToDB(); // 로그인 성공 후 즉시 저장
-                    loadMyLogs();  // 내 기록 불러오기
-                } else {
-                    alert("비밀번호가 틀렸습니다.");
-                }
-            } else {
-                // 신규 회원 -> 가입 후 저장
-                await userRef.set({
-                    password: pw,
-                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
-                });
-                currentWorkerId = nick;
-                alert(`환영합니다! '${nick}'님으로 설정되었습니다.`);
-                closeModal();
-                saveLogToDB(); // 가입 성공 후 즉시 저장
-                loadMyLogs();
-            }
-        } catch(e) {
-            console.error(e);
-            alert("오류가 발생했습니다: " + e.message);
-        }
-    }
-
-    // (3) 실제 DB에 저장하는 함수
-    function saveLogToDB() {
-        if(!currentWorkerId) return;
-
-        const date = document.getElementById('logDate').value;
-        const data = {
-            date: date,
-            dayHours: document.getElementById('logDay').value,
-            nightHours: document.getElementById('logNight').value,
-            memo: document.getElementById('logMemo').value,
-            workerId: currentWorkerId, // 닉네임과 연동
-            timestamp: firebase.firestore.FieldValue.serverTimestamp()
-        };
-
-        // 닉네임_날짜 조합으로 문서 ID 생성 (덮어쓰기 가능)
-        db.collection('work_logs').doc(`${currentWorkerId}_${date}`).set(data)
-        .then(() => {
-            alert("✅ 저장되었습니다!");
-            // 입력창 초기화
-            document.getElementById('logDay').value = "";
-            document.getElementById('logNight').value = "";
-            document.getElementById('logMemo').value = "";
-        })
-        .catch((error) => {
-            console.error("Error writing document: ", error);
-            alert("저장 실패");
-        });
-    }
-
-    // (4) 내 기록 불러오기 (로그인 시 자동 실행)
-    function loadMyLogs() {
-        if(!currentWorkerId) return;
-
-        db.collection('work_logs')
-          .where('workerId', '==', currentWorkerId)
-          .orderBy('date', 'desc')
-          .limit(10) // 최근 10개만 표시
-          .onSnapshot(snapshot => {
-              const list = document.getElementById('workLogList');
-              list.innerHTML = "";
-              snapshot.forEach(doc => {
-                  const d = doc.data();
-                  list.innerHTML += `
-                  <li class="post-item" style="font-size:0.9rem;">
-                      <strong>${d.date}</strong><br>
-                      ☀️주간: ${d.dayHours || 0}H / 🌙야간: ${d.nightHours || 0}H<br>
-                      📝 ${d.memo || '-'}
-                  </li>`;
-              });
-          });
-    }
-
-    function closeModal() {
-        document.getElementById('loginModal').style.display = 'none';
-        document.getElementById('modalPw').value = ""; 
-    }
-
-
-    /* ========== 기타 기능 (공지, 게시판 등) ========== */
-    
-    function toggleDarkMode(){ document.body.classList.toggle("dark-mode"); }
-    
-    async function verifyAdmin(){ 
-        return prompt("관리자 비번:") === "1234"; // 임시 비번
-    }
-
-    // 공지사항
-    function addNotice(){ verifyAdmin().then(isAuth => { if(isAuth) {
-        db.collection("notices").add({
-            title: document.getElementById('noticeTitle').value,
-            content: document.getElementById('noticeContent').value,
-            timestamp: firebase.firestore.FieldValue.serverTimestamp()
-        }).then(()=>alert("등록됨"));
-    }})}
-    
-    function loadNotices(){
-        db.collection("notices").orderBy("timestamp","desc").onSnapshot(s => {
-            const l = document.getElementById('noticeList'); l.innerHTML="";
-            s.forEach(d => { l.innerHTML+=`<li class="post-item"><b>${d.data().title}</b><br>${d.data().content}</li>`; });
-        });
-    }
-
-    // 게시판
-    function addPost(){
-        db.collection("posts").add({
-            title: document.getElementById('postTitle').value,
-            content: document.getElementById('postContent').value,
-            password: document.getElementById('postPw').value,
-            timestamp: firebase.firestore.FieldValue.serverTimestamp()
-        }).then(()=>alert("등록됨"));
-    }
-    
-    function loadPosts(){
-        db.collection("posts").orderBy("timestamp","desc").onSnapshot(s => {
-            const l = document.getElementById('boardList'); l.innerHTML="";
-            s.forEach(d => { l.innerHTML+=`<li class="post-item"><b>${d.data().title}</b><br>${d.data().content}</li>`; });
-        });
-    }
-
-    // 선박
-    function addShipInfo(){
-        const name = document.getElementById('shipName').value;
-        if(name) db.collection("ships").doc(name).set({
-            name: name, onboard: document.getElementById('shipOnboard').value,
-            updated: firebase.firestore.FieldValue.serverTimestamp()
-        }).then(()=>alert("저장됨"));
-    }
-    
-    function loadShips(){
-        db.collection("ships").orderBy("updated","desc").onSnapshot(s => {
-            allShipsData=[]; s.forEach(d => allShipsData.push(d.data()));
-            filterShips(); 
-        });
-    }
-    
-    function filterShips(){
-        const q = document.getElementById('shipSearch').value.toLowerCase();
-        const list = document.getElementById('shipList'); list.innerHTML="";
-        allShipsData.filter(s => s.name.toLowerCase().includes(q)).forEach(s => {
-            list.innerHTML+=`<li class="post-item"><b>${s.name}</b><br>${s.onboard}</li>`;
-        });
-    }
-
-    // 자료실
-    function uploadFile(){
-        const f = document.getElementById('fileInput').files[0];
-        if(f) storage.ref("files/"+Date.now()+"_"+f.name).put(f).then(s => s.ref.getDownloadURL())
-        .then(u => db.collection("archives").add({
-            title: document.getElementById('fileTitle').value, url: u, timestamp: firebase.firestore.FieldValue.serverTimestamp()
-        })).then(()=>alert("업로드됨"));
-    }
-    
-    function loadFiles(){
-        db.collection("archives").orderBy("timestamp","desc").onSnapshot(s => {
-            const l = document.getElementById('fileList'); l.innerHTML="";
-            s.forEach(d => { l.innerHTML+=`<li class="post-item"><a href="${d.data().url}" target="_blank">${d.data().title}</a></li>`; });
-        });
-    }
-
-    // 유틸리티: 토글
-    function toggleContent(element) {
-        const content = element.nextElementSibling;
-        if (content) {
-            content.style.display = content.style.display === 'block' ? 'none' : 'block';
-        }
-    }
-
-    // 초기화
-    window.onload = function() {
-        document.getElementById('logDate').valueAsDate = new Date();
-        loadNotices();
-        loadPosts();
-        loadShips();
-        loadFiles();
-    };
+/* ===============================
+   초기 로드
+================================ */
+function loadAllData(){
+  loadNotices();
+  loadPosts();
+  loadShips();
+  loadFiles();
+}
+window.onload = loadAllData;
 </script>
+
 </body>
-</html>  
+</html>
