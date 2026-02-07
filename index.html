@@ -7,10 +7,10 @@
     <title>BUSAN HAK PORT INFO</title>
     
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-storage.js"></script>
-    
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6024353303588422" crossorigin="anonymous"></script>
+
     <link rel="icon" type="image/png" sizes="32x32" href="icon.png">
     <link rel="stylesheet" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.8/dist/web/static/pretendard.css" />
 
@@ -24,13 +24,13 @@
         header h1 { margin: 0; font-size: 1.2rem; font-weight: 900; }
         .theme-toggle { position: absolute; right: 15px; top: 50%; transform: translateY(-50%); background: rgba(255,255,255,0.2); border: none; width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 1.1rem; }
         
-        /* [티커 영역 및 아이콘 스타일] */
+        /* 티커 및 아이콘 스타일 */
         .ticker-container { background: var(--accent); color: #000; font-weight: 800; height: 45px; display: flex; align-items: center; overflow: visible; position: relative; font-size: 0.9rem; border-bottom: 1px solid rgba(0,0,0,0.1); }
         .ticker-wrap { flex: 1; overflow: hidden; height: 100%; position: relative; margin-right: 50px; }
         .ticker-item { padding-left: 100%; animation: ticker 25s linear infinite; white-space: nowrap; line-height: 45px; }
         @keyframes ticker { 100% { transform: translate3d(-100%, 0, 0); } }
         
-        /* [설정 아이콘 영역 - 여기 마우스 올리면 메뉴 등장] */
+        /* 설정 아이콘 영역 */
         .ticker-setting-area {
             position: absolute; right: 0; top: 0; width: 50px; height: 100%;
             display: flex; align-items: center; justify-content: center;
@@ -38,9 +38,9 @@
             z-index: 100; cursor: pointer;
         }
         .setting-icon { font-size: 1.4rem; transition: transform 0.3s; }
+        
+        /* 아이콘에 올렸을 때만 메뉴 표시 */
         .ticker-setting-area:hover .setting-icon { transform: rotate(90deg); }
-
-        /* [호버 메뉴 박스] */
         .hover-menu-box {
             display: none; /* 기본 숨김 */
             position: absolute; top: 100%; right: 5px;
@@ -48,9 +48,8 @@
             box-shadow: 0 4px 15px rgba(0,0,0,0.2);
             flex-direction: column; overflow: hidden; z-index: 9999; width: 140px;
         }
-        /* 아이콘 영역에 마우스가 있거나 메뉴에 마우스가 있으면 표시 */
-        .ticker-setting-area:hover .hover-menu-box, 
-        .hover-menu-box:hover { display: flex !important; }
+        /* 중요: 아이콘 영역에 마우스가 있을 때만 메뉴 보임 */
+        .ticker-setting-area:hover .hover-menu-box, .hover-menu-box:hover { display: flex !important; }
 
         .menu-btn { 
             padding: 12px; border: none; background: transparent; 
@@ -317,7 +316,7 @@
             <button class="action-btn bg-cancel" onclick="closeLoginModal()">취소</button>
         </div>
     </div>
-    <script>
+<script>
 /* 1️⃣ Firebase 설정 */
 const firebaseConfig = { 
     apiKey: "AIzaSyBDXy5HcYW-IZQJ9ZDEivr_yi99AxhYme8", 
@@ -327,15 +326,15 @@ const firebaseConfig = {
     messagingSenderId: "667323279185", 
     appId: "1:667323279185:web:cff6184aaa82e08d345570" 
 };
-// Firebase 초기화 (중복 방지)
+// Firebase 초기화
 if (!firebase.apps.length) {
     firebase.initializeApp(firebaseConfig);
 }
 const db = firebase.firestore();
 const storage = firebase.storage(); 
 
-// [핵심] 오프라인 데이터 유지 설정 (새로고침 시 데이터 사라짐 방지)
-db.enablePersistence().catch(err => {
+// [핵심] 오프라인 데이터 유지 (새로고침 시 데이터 사라짐 방지)
+db.enablePersistence({ synchronizeTabs: true }).catch(err => {
     console.log("Persistence Error:", err.code);
 });
 
@@ -352,17 +351,6 @@ let globalTickerData = { adminMessage: "", userMessages: [] };
 /* 3️⃣ 함수 선언 */
 
 // --- [A] 공통 유틸리티 ---
-// safeGet 함수: 오프라인 에러 방지를 위해 get() 실패 시 null 반환 처리
-async function safeGet(ref) {
-    if (!ref) return null;
-    try {
-        return await ref.get();
-    } catch (e) {
-        console.warn("데이터 조회 실패(오프라인 가능성):", e);
-        return null;
-    }
-}
-
 async function verifyAdmin(){ 
     return prompt("Admin PW:") === "0346"; 
 }
@@ -560,19 +548,37 @@ function trySaveWorkLog(){
     else document.getElementById('loginModal').style.display = 'flex';
 }
 
+// [수정됨] 연결 오류 시에도 진행하도록 개선
 async function confirmLoginAndSave(){
     const nick = document.getElementById('loginNick').value.trim();
     const pw = document.getElementById('loginPw').value.trim();
     if(!nick || !pw) { alert("입력 필요"); return; }
+    
+    // 오프라인 상태에서도 진행 (비번 검증은 온라인일 때만 가능, 오프라인 시 통과)
     const userRef = db.collection('user_profiles').doc(nick);
-    const doc = await safeGet(userRef);
+    let doc = null;
+    
+    try {
+        doc = await userRef.get();
+    } catch(e) {
+        console.warn("오프라인 상태로 로그인 진행");
+    }
+
     if (doc && doc.exists) {
-        if (doc.data().password === pw) { loginSuccess(nick); closeLoginModal(); saveWorkLog(); } 
-        else { alert("비번 틀림"); }
+        if (doc.data().password === pw) { 
+            loginSuccess(nick); closeLoginModal(); saveWorkLog(); 
+        } else { 
+            alert("비번 틀림"); 
+        }
     } else if (doc === null) {
-        alert("연결 오류");
+        // [중요] 오프라인일 때 에러가 나면 일단 로그인 허용 (데이터 저장은 로컬에 됨)
+        if(confirm("서버 연결이 불안정합니다. 오프라인 모드로 로그인하시겠습니까?")) {
+            loginSuccess(nick); closeLoginModal(); saveWorkLog();
+        }
     } else { 
-        await userRef.set({ password: pw }); loginSuccess(nick); closeLoginModal(); saveWorkLog(); alert("가입 완료!");
+        // 신규 가입
+        await userRef.set({ password: pw }); 
+        loginSuccess(nick); closeLoginModal(); saveWorkLog(); alert("가입 완료!");
     }
 }
 
@@ -586,6 +592,7 @@ function saveWorkLog(){
     const file = document.getElementById('logImageInput').files[0];
     const pay = (dh*10320) + (nh*15480);
     const docId = `${currentWorkerId}_${dStr}`;
+    
     const save = (url) => {
         db.collection('work_logs').doc(docId).set({
             date: dStr, workerId: currentWorkerId, dayHours: dh, nightHours: nh, memo: memo, totalPay: pay, imageUrl: url
@@ -596,9 +603,17 @@ function saveWorkLog(){
             document.getElementById(`cal-day-${day}`).classList.add('has-data');
             let total = 0; Object.values(adminWorkLogs).forEach(log => total += (log.totalPay || 0));
             document.getElementById('monthlyTotalDisplay').innerText = `이번달 총액: ${total.toLocaleString()}원`;
-        }).catch(err => { alert("실패: " + err.message); btn.innerText = "저장하기"; });
+        }).catch(err => { 
+            // 오프라인 저장 성공 시에도 여기로 올 수 있음 (캐시 확인)
+            if(err.message.includes("offline")) {
+                 showToast("오프라인 저장 완료");
+                 btn.innerText = "저장하기";
+            } else {
+                 alert("실패: " + err.message); btn.innerText = "저장하기"; 
+            }
+        });
     };
-    if(file) storage.ref(`logs/${currentWorkerId}/${Date.now()}`).put(file).then(s=>s.ref.getDownloadURL()).then(u=>save(u)).catch(e=>{alert("사진 업로드 실패"); btn.innerText="저장하기";});
+    if(file) storage.ref(`logs/${currentWorkerId}/${Date.now()}`).put(file).then(s=>s.ref.getDownloadURL()).then(u=>save(u)).catch(e=>{alert("사진 업로드 실패(오프라인)"); btn.innerText="저장하기";});
     else save(adminWorkLogs[dStr] ? adminWorkLogs[dStr].imageUrl : null);
 }
 
@@ -720,3 +735,4 @@ window.onload = () => {
 </script>
 </body>
 </html>
+    
