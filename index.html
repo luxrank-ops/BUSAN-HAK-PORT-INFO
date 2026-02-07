@@ -7,10 +7,10 @@
     <title>BUSAN HAK PORT INFO</title>
     
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-storage.js"></script>
-    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6024353303588422" crossorigin="anonymous"></script>
-
+    
     <link rel="icon" type="image/png" sizes="32x32" href="icon.png">
     <link rel="stylesheet" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.8/dist/web/static/pretendard.css" />
 
@@ -24,32 +24,33 @@
         header h1 { margin: 0; font-size: 1.2rem; font-weight: 900; }
         .theme-toggle { position: absolute; right: 15px; top: 50%; transform: translateY(-50%); background: rgba(255,255,255,0.2); border: none; width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 1.1rem; }
         
-        /* 티커 및 아이콘 스타일 (수정됨) */
+        /* [티커 영역 및 아이콘 스타일] */
         .ticker-container { background: var(--accent); color: #000; font-weight: 800; height: 45px; display: flex; align-items: center; overflow: visible; position: relative; font-size: 0.9rem; border-bottom: 1px solid rgba(0,0,0,0.1); }
         .ticker-wrap { flex: 1; overflow: hidden; height: 100%; position: relative; margin-right: 50px; }
         .ticker-item { padding-left: 100%; animation: ticker 25s linear infinite; white-space: nowrap; line-height: 45px; }
         @keyframes ticker { 100% { transform: translate3d(-100%, 0, 0); } }
         
-        /* 설정 아이콘 영역 */
+        /* [설정 아이콘 영역 - 여기 마우스 올리면 메뉴 등장] */
         .ticker-setting-area {
             position: absolute; right: 0; top: 0; width: 50px; height: 100%;
             display: flex; align-items: center; justify-content: center;
             background: rgba(255,255,255,0.15); border-left: 1px solid rgba(0,0,0,0.05);
             z-index: 100; cursor: pointer;
         }
-        .setting-icon { font-size: 1.2rem; transition: transform 0.3s; }
-        
-        /* 아이콘에 올렸을 때만 메뉴 표시 */
+        .setting-icon { font-size: 1.4rem; transition: transform 0.3s; }
         .ticker-setting-area:hover .setting-icon { transform: rotate(90deg); }
+
+        /* [호버 메뉴 박스] */
         .hover-menu-box {
             display: none; /* 기본 숨김 */
             position: absolute; top: 100%; right: 5px;
             background: var(--card-bg); border: 1px solid var(--border); border-radius: 8px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.15);
-            flex-direction: column; overflow: hidden; z-index: 200; width: 140px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            flex-direction: column; overflow: hidden; z-index: 9999; width: 140px;
         }
-        /* 중요: 아이콘 영역에 마우스가 있을 때만 메뉴 보임 */
-        .ticker-setting-area:hover .hover-menu-box, .hover-menu-box:hover { display: flex; }
+        /* 아이콘 영역에 마우스가 있거나 메뉴에 마우스가 있으면 표시 */
+        .ticker-setting-area:hover .hover-menu-box, 
+        .hover-menu-box:hover { display: flex !important; }
 
         .menu-btn { 
             padding: 12px; border: none; background: transparent; 
@@ -326,30 +327,38 @@ const firebaseConfig = {
     messagingSenderId: "667323279185", 
     appId: "1:667323279185:web:cff6184aaa82e08d345570" 
 };
-firebase.initializeApp(firebaseConfig);
-
-/* 2️⃣ 전역 변수 */
+// Firebase 초기화 (중복 방지)
+if (!firebase.apps.length) {
+    firebase.initializeApp(firebaseConfig);
+}
 const db = firebase.firestore();
 const storage = firebase.storage(); 
 
+// [핵심] 오프라인 데이터 유지 설정 (새로고침 시 데이터 사라짐 방지)
+db.enablePersistence().catch(err => {
+    console.log("Persistence Error:", err.code);
+});
+
+/* 2️⃣ 전역 변수 */
 let allPostsData=[], allShipsData=[], filteredShips=[], adminWorkLogs={};
 let currentDate = new Date();
 let currentWorkerId = localStorage.getItem('myWorkerId'); 
 let commentUnsubscribes = {};
 const postsPerPage = 5;
 
-// [중요] 티커 데이터 로컬 저장용 (오프라인 오류 방지)
+// [중요] 티커 데이터 로컬 저장용
 let globalTickerData = { adminMessage: "", userMessages: [] };
 
 /* 3️⃣ 함수 선언 */
 
 // --- [A] 공통 유틸리티 ---
+// safeGet 함수: 오프라인 에러 방지를 위해 get() 실패 시 null 반환 처리
 async function safeGet(ref) {
     if (!ref) return null;
     try {
         return await ref.get();
     } catch (e) {
-        console.warn("데이터 조회 실패:", e);
+        console.warn("데이터 조회 실패(오프라인 가능성):", e);
         return null;
     }
 }
@@ -382,9 +391,9 @@ function toggleDarkMode(){ document.body.classList.toggle('dark-mode'); }
 function scrollToTop(){ window.scrollTo({top:0, behavior:'smooth'}); }
 function showToast(m){const t=document.getElementById("toast"); t.innerText=m; t.classList.add("show"); setTimeout(()=>t.classList.remove("show"),3000);}
 
-// --- [B] 흐르는 배너 관리 (오프라인 오류 해결 및 기능 강화) ---
+// --- [B] 흐르는 배너 관리 (오류 수정됨) ---
 
-// 1. 배너 로드 (실시간 리스너 + 로컬 변수 업데이트)
+// 1. 배너 로드 (실시간 리스너 사용 - 데이터 변경 시 자동 갱신)
 function loadBanner(){ 
     db.collection('settings').doc('banner').onSnapshot((doc) => {
         if(!doc.exists) {
@@ -392,13 +401,13 @@ function loadBanner(){
              return;
         }
         
-        globalTickerData = doc.data(); // [핵심] 로컬 변수에 저장
+        globalTickerData = doc.data(); // 로컬 변수에 최신 데이터 저장
         
         let msg = "";
         // 관리자 공지 우선 표시
         if(globalTickerData.adminMessage) msg += `📢 ${globalTickerData.adminMessage}   ///   `;
         
-        // 사용자 메시지
+        // 사용자 메시지 (배열)
         if(globalTickerData.userMessages && globalTickerData.userMessages.length > 0) {
             msg += globalTickerData.userMessages.map((m,i) => `${i+1}. ${m}`).join("   ///   ");
         }
@@ -407,24 +416,26 @@ function loadBanner(){
     });
 }
 
-// 2. 일반 등록 (get() 대신 로컬 변수 사용하여 오류 방지)
+// 2. 일반 등록 (서버 fetch 없이 로컬 데이터 기반으로 즉시 업데이트)
 function writeUserTicker(){ 
     const m = prompt("현장 안전 문구를 입력해주세요:");
     if(!m) return;
     
-    // 로컬 데이터 사용
+    // 로컬에 있는 최신 데이터 사용 (네트워크 호출 최소화)
     let msgs = globalTickerData.userMessages || [];
-    msgs.unshift(m); // 맨 앞에 추가
     
-    // 3개 제한
+    // 배열 맨 앞에 추가
+    msgs.unshift(m); 
+    
+    // 3개 제한 (밀어내기)
     if(msgs.length > 3) {
         msgs = msgs.slice(0, 3);
     }
     
-    // 덮어쓰기 (set + merge)
+    // Firestore에 덮어쓰기 (set + merge)
     db.collection('settings').doc('banner').set({ userMessages: msgs }, { merge: true })
         .then(() => showToast("등록되었습니다."))
-        .catch((e) => alert("등록 실패: " + e.message));
+        .catch((e) => alert("등록 실패 (권한 또는 네트워크): " + e.message));
 }
 
 // 3. 관리자 등록
@@ -447,8 +458,7 @@ function renderTickerList() {
     const listContainer = document.getElementById('tickerListContainer');
     listContainer.innerHTML = '<div style="padding:10px; text-align:center;">로딩 중...</div>';
     
-    // 로컬 데이터를 바로 렌더링해도 되지만, 확실하게 하기 위해 로컬 변수 사용
-    const data = globalTickerData; 
+    const data = globalTickerData; // 로컬 데이터 사용
     listContainer.innerHTML = ""; 
     let hasData = false;
 
@@ -481,18 +491,19 @@ function renderTickerList() {
 async function deleteTickerMsg(type, index){ 
     if(!confirm("삭제하시겠습니까?")) return;
 
-    // 로컬 데이터 선반영 (UI 즉시 갱신 효과)
     if(type === 'admin') {
-        delete globalTickerData.adminMessage;
-        db.collection('settings').doc('banner').update({ adminMessage: firebase.firestore.FieldValue.delete() });
+        // 관리자 메시지 삭제
+        delete globalTickerData.adminMessage; // 로컬 반영
+        await db.collection('settings').doc('banner').update({ adminMessage: firebase.firestore.FieldValue.delete() });
     } else {
+        // 일반 메시지 삭제
         if(globalTickerData.userMessages) {
-            globalTickerData.userMessages.splice(index, 1);
-            db.collection('settings').doc('banner').update({ userMessages: globalTickerData.userMessages });
+            globalTickerData.userMessages.splice(index, 1); // 로컬 반영
+            await db.collection('settings').doc('banner').update({ userMessages: globalTickerData.userMessages });
         }
     }
     
-    // 리스트 즉시 다시 그리기
+    // 리스트 즉시 다시 그리기 (UI 갱신)
     renderTickerList();
     showToast("삭제되었습니다.");
 }
@@ -690,6 +701,13 @@ function openPrivacy(){ document.getElementById('privacyModal').style.display='f
 
 /* 4️⃣ 실행 */
 window.onload = () => {
+    // 캐시 문제 해결을 위한 서비스 워커 해제 (필수)
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.getRegistrations().then(function(registrations) {
+            for(let registration of registrations) { registration.unregister(); }
+        });
+    }
+
     loadBanner();
     try {
         db.collection("notices").orderBy("timestamp","desc").onSnapshot(s=>{const l=document.getElementById("noticeList"); l.innerHTML=""; s.forEach(d=>{const x=d.data(); l.innerHTML+=`<li class="post-item" onclick="toggleContent('n-${d.id}')">📢 <strong>${x.title}</strong><div id="n-${d.id}" class="post-body-content">${x.content}<br><button class="mini-btn btn-del" onclick="delNotice('${d.id}',event)">삭제</button></div></li>`;})}); 
