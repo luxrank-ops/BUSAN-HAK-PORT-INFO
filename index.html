@@ -9,14 +9,14 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-storage.js"></script>
-    
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6024353303588422" crossorigin="anonymous"></script>
+
     <link rel="icon" type="image/png" sizes="32x32" href="icon.png">
     <link rel="stylesheet" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.8/dist/web/static/pretendard.css" />
 
     <style>
         :root { --primary: #1e3a8a; --primary-light: #3b82f6; --accent: #f59e0b; --bg-color: #f3f4f6; --card-bg: rgba(255, 255, 255, 0.98); --text-main: #1f2937; --text-sub: #6b7280; --border: rgba(229, 231, 235, 0.9); --danger: #ef4444; --success: #10b981; }
         body.dark-mode { --primary: #60a5fa; --primary-light: #93c5fd; --accent: #fbbf24; --bg-color: #0f172a; --card-bg: rgba(30, 41, 59, 0.98); --text-main: #f3f4f6; --text-sub: #9ca3af; --border: rgba(55, 65, 81, 0.7); }
-        
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; font-family: 'Pretendard', sans-serif; }
         body { background-color: var(--bg-color); color: var(--text-main); margin: 0; padding: 0; padding-bottom: 90px; padding-top: env(safe-area-inset-top); font-size: 16px; }
         
@@ -24,56 +24,62 @@
         header h1 { margin: 0; font-size: 1.2rem; font-weight: 900; }
         .theme-toggle { position: absolute; right: 15px; top: 50%; transform: translateY(-50%); background: rgba(255,255,255,0.2); border: none; width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 1.1rem; }
         
-        .container { width: 96%; max-width: 600px; margin: 0 auto; padding: 8px; }
+        /* [수정됨] 티커 및 호버 메뉴 스타일 */
+        .ticker-container { background: var(--accent); color: #000; font-weight: 800; height: 45px; display: flex; align-items: center; overflow: hidden; position: relative; font-size: 0.9rem; border-bottom: 1px solid rgba(0,0,0,0.1); cursor: pointer; }
+        .ticker-item { padding-left: 100%; animation: ticker 25s linear infinite; white-space: nowrap; line-height: 45px; }
+        @keyframes ticker { 100% { transform: translate3d(-100%, 0, 0); } }
         
+        /* 호버 시 나타나는 메뉴 */
+        .ticker-hover-menu {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.85); /* 반투명 검정 배경 */
+            display: none; /* 기본 숨김 */
+            justify-content: center; align-items: center; gap: 10px;
+            z-index: 50; backdrop-filter: blur(2px);
+        }
+        .ticker-container:hover .ticker-hover-menu { display: flex; } /* 마우스 올리면 보임 */
+        
+        .menu-btn { padding: 6px 12px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; color: white; font-size: 0.85rem; transition: transform 0.1s; }
+        .btn-user { background: #3b82f6; } /* 파랑 */
+        .btn-admin { background: #ef4444; } /* 빨강 */
+        .btn-del { background: #6b7280; } /* 회색 */
+        .menu-btn:active { transform: scale(0.95); }
+
+        /* 기존 스타일 유지 */
+        .container { width: 96%; max-width: 600px; margin: 0 auto; padding: 8px; }
         .dash-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; }
         .dash-card { background: var(--card-bg); border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); border: 1px solid var(--border); overflow: hidden; }
         .dash-card.expanded { grid-column: span 2; }
-        
         .dash-header { padding: 14px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.05); min-height: 50px; }
-        .dash-card.expanded .dash-header { border-bottom: 1px solid var(--border); background: rgba(0,0,0,0.02); }
-        .dash-title { font-size: 1rem; font-weight: 800; color: var(--text-main); display: flex; align-items: center; gap: 6px; }
         .dash-content { display: none; padding: 12px; background: var(--card-bg); animation: fadeIn 0.2s; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
-
         .card { background: var(--card-bg); border-radius: 12px; margin-bottom: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); border: 1px solid var(--border); overflow: hidden; }
         .section-header { display: flex; justify-content: space-between; align-items: center; padding: 12px 14px; cursor: pointer; border-bottom: 1px solid var(--border); }
-        .section-title { font-size: 1rem; font-weight: 800; display:flex; align-items:center; gap:6px; }
         .collapsible-content { display: block; padding: 12px; }
         .collapsible-content.collapsed { display: none !important; }
-
+        
         .input-field { width: 100%; padding: 0 10px; margin-bottom: 0; border: 1px solid var(--border); border-radius: 8px; background: rgba(255,255,255,0.6); color: var(--text-main); font-size: 1rem; height: 40px; text-align: right; font-weight: bold; display: flex; align-items: center; }
         .textarea-field { height: 80px; resize: none; text-align: left; font-weight: normal; padding: 10px; }
         .action-btn { width: 100%; padding: 14px; border: none; border-radius: 10px; font-weight: 800; color: white; cursor: pointer; background: var(--primary); font-size: 1rem; margin-top: 5px; }
         .bg-submit { background: var(--success); } .bg-calc { background: linear-gradient(135deg, #ef4444, #b91c1c); } .bg-cancel { background: var(--text-sub); }
-        
         .wage-row { display: flex; align-items: center; margin-bottom: 8px; width: 100%; justify-content: space-between; }
-        .wage-row label { width: auto; min-width: 60px; font-weight: 700; font-size: 0.9rem; white-space: nowrap; text-align: left; margin-right: 5px; flex-shrink: 0; }
-        .wage-row .input-field { flex: 1; width: 100%; min-width: 0; }
+        .wage-row label { width: auto; min-width: 60px; font-weight: 700; margin-right: 5px; }
         .allowance-grid { display: grid; grid-template-columns: 1fr 1fr; column-gap: 8px; row-gap: 2px; }
-
         .calc-layout { display: flex; gap: 10px; margin-bottom: 12px; }
         .calc-left { flex: 1; display: flex; flex-direction: column; justify-content: center; }
         .calc-right { flex: 1; display: flex; flex-direction: column; justify-content: center; }
-        @media (max-width: 768px) { .calc-layout { flex-direction: column; } .calc-left, .calc-right { width: 100%; } .input-field { font-size: 1.1rem; height: 44px; } .action-btn { padding: 16px; font-size: 1.1rem; margin-top: 10px; } }
-
         .wage-result-box { background: linear-gradient(135deg, #ffffff, #f9fafb); border: 2px solid var(--primary); border-radius: 10px; padding: 15px; margin-top: 15px; }
         .spec-table { width: 100%; border-collapse: collapse; margin: 8px 0; font-size: 0.85rem; }
-        .spec-table tr { border-bottom: 1px solid #edf2f7; }
         .spec-table td { padding: 6px 0; color: var(--text-main); }
-        .spec-table td:last-child { text-align: right; font-weight: 700; font-size: 0.95rem; }
         .wage-total { font-size: 1.5rem; color: #c2410c; font-weight: 900; text-align: center; border-top: 2px solid var(--primary); padding-top: 10px; margin-top: 10px; }
-
         .role-selector { display: flex; gap: 4px; margin-bottom: 12px; background: rgba(0,0,0,0.05); padding: 4px; border-radius: 10px; }
-        .role-selector label { flex: 1; text-align: center; padding: 10px 0; border-radius: 8px; font-weight: 700; cursor: pointer; font-size: 0.9rem; transition: all 0.2s; color: var(--text-sub); }
-        .role-selector input[type="radio"]:checked + label { background: var(--primary); color: white; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        .role-selector label { flex: 1; text-align: center; padding: 10px 0; border-radius: 8px; font-weight: 700; cursor: pointer; color: var(--text-sub); }
+        .role-selector input[type="radio"]:checked + label { background: var(--primary); color: white; }
         .role-selector input[type="radio"] { display: none; }
-
         .ref-table { width: 100%; border-collapse: collapse; font-size: 0.75rem; text-align: center; background: rgba(0,0,0,0.02); border-radius: 8px; overflow: hidden; height: 100%; border: 1px solid var(--border); }
-        .ref-table th { background: var(--primary); color: white; padding: 6px; font-weight: normal; }
-        .ref-table td { border: 1px solid var(--border); padding: 6px; color: var(--text-main); vertical-align: middle; }
+        .ref-table th { background: var(--primary); color: white; padding: 6px; }
+        .ref-table td { border: 1px solid var(--border); padding: 6px; color: var(--text-main); }
         .ref-table .highlight { background: rgba(245, 158, 11, 0.2); font-weight: bold; color: #b45309; }
-
+        
         .terminal-block { background: rgba(0,0,0,0.03); border-radius: 8px; margin-bottom: 6px; border: 1px solid var(--border); overflow: hidden; }
         .terminal-header { padding: 12px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; font-weight: 700; font-size: 0.9rem; }
         .terminal-body { display: none; padding: 10px; border-top: 1px dashed var(--border); }
@@ -82,58 +88,42 @@
         .btn-premium { grid-column: span 3; background: linear-gradient(135deg, #fffbeb, #fef3c7); border: 1px solid #fcd34d; color: #92400e; margin-top: 4px; }
         .control-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
         .control-btn { background: var(--card-bg); border: 1px solid var(--border); color: var(--text-main); padding: 14px; border-radius: 10px; text-decoration: none; font-size: 0.9rem; font-weight: 700; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; }
-
-        .ticker-container { background: var(--accent); color: #000; font-weight: 800; height: 38px; display: flex; align-items: center; overflow: hidden; position: relative; font-size: 0.85rem; border-bottom: 1px solid rgba(0,0,0,0.1); }
-        .ticker-item { padding-left: 100%; animation: ticker 25s linear infinite; white-space: nowrap; line-height: 38px; }
-        @keyframes ticker { 100% { transform: translate3d(-100%, 0, 0); } }
-        .ticker-controls { position: absolute; right: 0; height: 100%; display: flex; background: rgba(255,255,255,0.4); backdrop-filter: blur(4px); }
-        .ticker-btn { width: 38px; height: 100%; border: none; background: transparent; font-size: 1.1rem; cursor: pointer; }
-
         .post-list { list-style: none; padding: 0; margin: 0; }
         .post-item { border-bottom: 1px solid var(--border); padding: 10px 0; }
         .post-header-row { padding: 4px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
         .post-title-text { font-weight: 700; font-size: 0.95rem; color: var(--text-main); display: flex; align-items: center; gap: 5px; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-right: 8px; }
         .post-meta-info { font-size: 0.75rem; color: var(--text-sub); white-space: nowrap; }
         .post-body-content { display: none; padding: 12px; background: rgba(0,0,0,0.02); border-top: 1px dashed var(--border); font-size: 0.9rem; line-height: 1.6; white-space: pre-wrap; color: var(--text-main); word-break: break-all; }
-        
         .comment-section { margin-top: 10px; border-top: 1px dashed var(--border); padding-top: 8px; background: rgba(0,0,0,0.015); border-radius: 6px; padding: 8px; }
         .comment-item { display: flex; justify-content: space-between; align-items: flex-start; font-size: 0.8rem; padding: 5px 0; border-bottom: 1px solid rgba(0,0,0,0.05); }
         .comment-form { display: flex; gap: 4px; align-items: center; flex-wrap: wrap; margin-top: 8px; }
         .comment-input-sm { width: 60px; padding: 6px; border: 1px solid var(--border); border-radius: 4px; font-size: 0.8rem; }
         .comment-input-lg { flex: 1; padding: 6px; border: 1px solid var(--border); border-radius: 4px; font-size: 0.8rem; min-width: 100px; }
         .comment-submit { padding: 6px 10px; background: var(--text-sub); color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.75rem; font-weight: bold; }
-        
         .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px; text-align: center; }
         .cal-day { padding: 8px 0; border-radius: 6px; background: rgba(255,255,255,0.5); border: 1px solid var(--border); font-weight: 700; font-size: 0.85rem; cursor: pointer; min-height: 40px; display: flex; flex-direction: column; justify-content: center; align-items: center; }
-        .cal-day.selected { background: var(--primary); color: white; border-color: var(--primary); }
         .cal-day.has-data { border: 2px solid var(--success); background: rgba(16, 185, 129, 0.1); }
         .cal-dot { width: 5px; height: 5px; background-color: var(--success); border-radius: 50%; margin-top: 3px; display: none; }
         .cal-day.has-data .cal-dot { display: block; }
-        
         .bottom-nav { position: fixed; bottom: 0; left: 0; width: 100%; height: 60px; background: rgba(255,255,255,0.98); border-top: 1px solid var(--border); display: flex; justify-content: space-around; align-items: center; z-index: 1000; padding-bottom: env(safe-area-inset-bottom); box-shadow: 0 -2px 10px rgba(0,0,0,0.05); }
-        .dark-mode .bottom-nav { background: rgba(30, 41, 59, 0.98); }
         .nav-item { flex: 1; text-align: center; color: var(--text-sub); font-size: 0.7rem; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 2px; }
         .nav-item.active { color: var(--primary); font-weight: 800; transform: scale(1.05); }
-
         .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 3000; justify-content: center; align-items: center; padding: 15px; }
         .modal-content { background: var(--card-bg); padding: 15px; border-radius: 16px; max-width: 100%; max-height: 85%; overflow-y: auto; width: 100%; }
         .modal-img { width: 100%; height: auto; border-radius: 8px; }
         .hidden { display: none !important; }
-        #toast { position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.85); color: white; padding: 10px 20px; border-radius: 30px; font-size: 0.9rem; z-index: 5000; opacity: 0; transition: 0.3s; pointer-events: none; width: max-content; max-width: 80%; text-align: center; }
+        #toast { position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.85); color: white; padding: 10px 20px; border-radius: 30px; font-size: 0.9rem; z-index: 5000; opacity: 0; transition: 0.3s; pointer-events: none; }
         #toast.show { opacity: 1; }
         .ticker-manage-item { display: flex; justify-content: space-between; align-items: center; padding: 10px; border-bottom: 1px solid var(--border); }
-        .ticker-manage-item span { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.9rem; }
         .page-num { padding: 6px 12px; border: 1px solid var(--border); cursor: pointer; border-radius: 6px; font-size: 0.85rem; margin: 0 2px; }
         .page-num.active { background: var(--primary); color: white; }
         .mini-btn { padding: 4px 8px; font-size: 0.75rem; border-radius: 4px; border: none; cursor: pointer; color: white; margin-left: 4px; }
-        .btn-del { background: var(--danger); }
-        
-        /* [추가] 로그인 정보 바 스타일 */
+        .btn-del-mini { background: var(--danger); }
         .user-auth-bar { display: flex; justify-content: space-between; align-items: center; background: rgba(59, 130, 246, 0.1); padding: 10px; border-radius: 8px; margin-bottom: 10px; border: 1px solid var(--primary-light); }
-        .user-info { display: flex; flex-direction: column; }
         .user-name { font-weight: 800; color: var(--primary); font-size: 0.9rem; }
         .user-status { font-size: 0.75rem; color: var(--success); }
         .logout-btn { background: var(--text-sub); color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 0.75rem; font-weight: bold; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
     </style>
 </head>
 <body>
@@ -145,10 +135,11 @@
 
     <div id="safetyTicker" class="ticker-container">
         <div class="ticker-wrap"><div id="tickerText" class="ticker-item">🚨 안전 제일! 오늘도 무사고!</div></div>
-        <div class="ticker-controls">
-            <button class="ticker-btn tap-effect" onclick="writeUserTicker()">🗣️</button>
-            <button class="ticker-btn tap-effect" onclick="setAdminTicker()">📢</button>
-            <button class="ticker-btn tap-effect" onclick="openTickerManager()">⚙️</button>
+        
+        <div class="ticker-hover-menu">
+            <button class="menu-btn btn-user" onclick="writeUserTicker()">일반등록</button>
+            <button class="menu-btn btn-admin" onclick="setAdminTicker()">관리자등록</button>
+            <button class="menu-btn btn-del" onclick="openTickerManager()">등록삭제</button>
         </div>
     </div>
 
@@ -332,37 +323,37 @@ const postsPerPage = 5;
 /* 3️⃣ 함수 선언 */
 
 // --- [A] 공통 유틸리티 ---
-// (safeGet 함수 제거: 더 이상 사용하지 않음)
+async function safeGet(ref) {
+    if (!ref) return null;
+    try {
+        return await ref.get();
+    } catch (e) {
+        console.warn("데이터 조회 실패:", e);
+        return null;
+    }
+}
 
-// 관리자 인증
 async function verifyAdmin(){ 
     return prompt("Admin PW:") === "0346"; 
 }
 
-// 메뉴 카드 열고 닫기 (클릭 기능 핵심)
 function toggleDashItem(id){ 
     const c = document.getElementById(id);
     if(!c) return; 
     const e = c.classList.contains('expanded'); 
-    
-    // 다른 카드 닫기
     document.querySelectorAll('.dash-card').forEach(x=>{
         x.classList.remove('expanded'); 
         const content = x.querySelector('.dash-content');
         if(content) content.style.display='none';
     }); 
-    
-    // 현재 카드 토글
     if(!e){
         c.classList.add('expanded'); 
         const content = c.querySelector('.dash-content');
         if(content) content.style.display='block'; 
-        // 근무일지인 경우 달력 로드
         if(id === 'log-card') renderCalendar(currentDate.getFullYear(), currentDate.getMonth()); 
     }
 }
 
-// 기타 토글 기능
 function toggleSection(id){ document.getElementById(id).classList.toggle('collapsed'); }
 function toggleContent(id){ const e=document.getElementById(id); e.style.display=(e.style.display==='block'?'none':'block'); }
 function toggleHidden(id){ document.getElementById(id).classList.toggle('hidden'); }
@@ -370,9 +361,8 @@ function toggleDarkMode(){ document.body.classList.toggle('dark-mode'); }
 function scrollToTop(){ window.scrollTo({top:0, behavior:'smooth'}); }
 function showToast(m){const t=document.getElementById("toast"); t.innerText=m; t.classList.add("show"); setTimeout(()=>t.classList.remove("show"),3000);}
 
-// --- [B] 흐르는 배너 (실시간) ---
+// --- [B] 흐르는 배너 (로직 전면 수정됨) ---
 function loadBanner(){ 
-    // 기존 safeGet 대신 onSnapshot으로 실시간 수신
     db.collection('settings').doc('banner').onSnapshot((doc) => {
         if(!doc.exists) {
              document.getElementById('tickerText').innerText = "🚨 안전 제일! 오늘도 무사고!";
@@ -385,9 +375,6 @@ function loadBanner(){
             msg += data.userMessages.map((m,i) => `${i+1}. ${m}`).join("   ///   ");
         }
         document.getElementById('tickerText').innerText = msg || "🚨 안전 제일! 오늘도 무사고!";
-    }, (error) => {
-        console.log("배너 로드 실패 (권한 등): ", error);
-        // 에러 발생 시 조용히 기본값 유지
     });
 }
 
@@ -395,27 +382,21 @@ function writeUserTicker(){
     const m = prompt("현장 안전 문구를 입력해주세요:");
     if(!m) return;
     
+    // [수정됨] 단순 업데이트 방식으로 변경 (안정성 확보)
     const docRef = db.collection('settings').doc('banner');
-    db.runTransaction((transaction) => {
-        return transaction.get(docRef).then((sfDoc) => {
-            if (!sfDoc.exists) {
-                transaction.set(docRef, { userMessages: [m] });
-            } else {
-                let msgs = sfDoc.data().userMessages || [];
-                msgs.unshift(m);
-                if(msgs.length > 5) msgs = msgs.slice(0,5);
-                transaction.update(docRef, { userMessages: msgs });
-            }
-        });
+    docRef.get().then((doc) => {
+        let msgs = [];
+        if (doc.exists && doc.data().userMessages) {
+            msgs = doc.data().userMessages;
+        }
+        msgs.unshift(m); // 맨 앞에 추가
+        if(msgs.length > 5) msgs = msgs.slice(0,5); // 5개 제한
+        
+        return docRef.set({ userMessages: msgs }, { merge: true });
     }).then(() => {
         alert("등록되었습니다.");
     }).catch((error) => {
-        console.error("Error: ", error);
-        if(error.code === 'permission-denied') {
-            alert("권한이 없습니다. Firebase Console > Firestore Database > 규칙(Rules)을 확인하세요.");
-        } else {
-            alert("등록 실패: " + error.message);
-        }
+        alert("등록 실패: " + error.message);
     });
 }
 
@@ -427,13 +408,14 @@ async function setAdminTicker(){
 }
 
 async function openTickerManager(){ 
+    // 삭제 기능은 누구나 접근 가능하게 할지, 관리자만 할지 선택 (현재: 관리자만)
     if(await verifyAdmin()){ 
         db.collection('settings').doc('banner').get().then(d=>{ 
             if(d.exists){ 
                 const da=d.data(), l=document.getElementById('tickerListContainer'); 
                 l.innerHTML=""; 
-                if(da.adminMessage) l.innerHTML+=`<div>[관리자] ${da.adminMessage} <button onclick="deleteTickerMsg('admin',0)">삭제</button></div>`; 
-                if(da.userMessages) da.userMessages.forEach((m,i)=>l.innerHTML+=`<div>${i+1}. ${m} <button onclick="deleteTickerMsg('user',${i})">삭제</button></div>`); 
+                if(da.adminMessage) l.innerHTML+=`<div>[관리자] ${da.adminMessage} <button onclick="deleteTickerMsg('admin',0)" class="mini-btn btn-del-mini">삭제</button></div>`; 
+                if(da.userMessages) da.userMessages.forEach((m,i)=>l.innerHTML+=`<div>${i+1}. ${m} <button onclick="deleteTickerMsg('user',${i})" class="mini-btn btn-del-mini">삭제</button></div>`); 
                 document.getElementById('tickerManageModal').style.display='flex'; 
             } 
         }); 
@@ -449,7 +431,13 @@ async function deleteTickerMsg(t,i){
         a.splice(i,1); 
         await r.update({userMessages:a}); 
     } 
-    openTickerManager(); 
+    // 삭제 후 리스트 갱신
+    const d = await r.get();
+    const da = d.data();
+    const l = document.getElementById('tickerListContainer');
+    l.innerHTML=""; 
+    if(da.adminMessage) l.innerHTML+=`<div>[관리자] ${da.adminMessage} <button onclick="deleteTickerMsg('admin',0)" class="mini-btn btn-del-mini">삭제</button></div>`; 
+    if(da.userMessages) da.userMessages.forEach((m,i)=>l.innerHTML+=`<div>${i+1}. ${m} <button onclick="deleteTickerMsg('user',${i})" class="mini-btn btn-del-mini">삭제</button></div>`);
 }
 
 // --- [C] 스마트 근무일지 ---
@@ -457,15 +445,12 @@ function renderCalendar(y, m){
     const g = document.getElementById('calendarGrid'); 
     g.innerHTML = "";
     document.getElementById('calMonthYear').innerText = `${y}년 ${m+1}월`;
-    
     const fD = new Date(y, m, 1).getDay(), lD = new Date(y, m+1, 0).getDate();
-    
     for(let i=0; i<fD; i++) g.innerHTML += `<div></div>`;
     for(let d=1; d<=lD; d++){
         const dStr = `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
         g.innerHTML += `<div id="cal-day-${d}" class="cal-day tap-effect" onclick="clickDate('${dStr}')">${d}<div class="cal-dot"></div></div>`;
     }
-
     if(currentWorkerId) {
         const sDate = `${y}-${String(m+1).padStart(2,'0')}-01`, eDate = `${y}-${String(m+1).padStart(2,'0')}-${lD}`;
         db.collection('work_logs').where('date', '>=', sDate).where('date', '<=', eDate).get().then(s => {
@@ -492,12 +477,10 @@ function clickDate(dStr){
     document.getElementById('selectedDateText').innerText = dStr;
     document.getElementById('dailyLogForm').classList.remove('hidden');
     document.getElementById('dailyLogForm').setAttribute('data-date', dStr);
-    
     const d = adminWorkLogs[dStr];
     document.getElementById('logDayHours').value = d ? d.dayHours : '';
     document.getElementById('logNightHours').value = d ? d.nightHours : '';
     document.getElementById('logMemo').value = d ? d.memo : '';
-    
     const img = document.getElementById('logImagePreview');
     if(d && d.imageUrl){ img.src = d.imageUrl; img.style.display = 'block'; } 
     else { img.style.display = 'none'; img.src = ""; }
@@ -513,20 +496,15 @@ async function confirmLoginAndSave(){
     const nick = document.getElementById('loginNick').value.trim();
     const pw = document.getElementById('loginPw').value.trim();
     if(!nick || !pw) { alert("입력 필요"); return; }
-
     const userRef = db.collection('user_profiles').doc(nick);
-    const doc = await userRef.get().catch(e => null); // 에러 무시
-
+    const doc = await safeGet(userRef);
     if (doc && doc.exists) {
-        if (doc.data().password === pw) {
-            loginSuccess(nick); closeLoginModal(); saveWorkLog(); 
-        } else { alert("비번 틀림"); }
+        if (doc.data().password === pw) { loginSuccess(nick); closeLoginModal(); saveWorkLog(); } 
+        else { alert("비번 틀림"); }
     } else if (doc === null) {
-        alert("연결 오류. 다시 시도해주세요.");
+        alert("연결 오류");
     } else { 
-        await userRef.set({ password: pw });
-        loginSuccess(nick); closeLoginModal(); saveWorkLog();
-        alert("가입 완료!");
+        await userRef.set({ password: pw }); loginSuccess(nick); closeLoginModal(); saveWorkLog(); alert("가입 완료!");
     }
 }
 
@@ -540,7 +518,6 @@ function saveWorkLog(){
     const file = document.getElementById('logImageInput').files[0];
     const pay = (dh*10320) + (nh*15480);
     const docId = `${currentWorkerId}_${dStr}`;
-
     const save = (url) => {
         db.collection('work_logs').doc(docId).set({
             date: dStr, workerId: currentWorkerId, dayHours: dh, nightHours: nh, memo: memo, totalPay: pay, imageUrl: url
@@ -553,14 +530,11 @@ function saveWorkLog(){
             document.getElementById('monthlyTotalDisplay').innerText = `이번달 총액: ${total.toLocaleString()}원`;
         }).catch(err => { alert("실패: " + err.message); btn.innerText = "저장하기"; });
     };
-
     if(file) storage.ref(`logs/${currentWorkerId}/${Date.now()}`).put(file).then(s=>s.ref.getDownloadURL()).then(u=>save(u)).catch(e=>{alert("사진 업로드 실패"); btn.innerText="저장하기";});
     else save(adminWorkLogs[dStr] ? adminWorkLogs[dStr].imageUrl : null);
 }
 
-function loginSuccess(name) {
-    currentWorkerId = name; localStorage.setItem('myWorkerId', currentWorkerId); updateUserBar(); renderCalendar(currentDate.getFullYear(), currentDate.getMonth());
-}
+function loginSuccess(name) { currentWorkerId = name; localStorage.setItem('myWorkerId', currentWorkerId); updateUserBar(); renderCalendar(currentDate.getFullYear(), currentDate.getMonth()); }
 function closeLoginModal(){ document.getElementById('loginModal').style.display = 'none'; }
 function updateUserBar() {
     const bar = document.getElementById('userProfileBar');
@@ -597,20 +571,16 @@ function calculateWage() {
     const totalHours = parseFloat(document.getElementById('wageTotalHours').value) || 0;
     const startHour = parseInt(document.getElementById('wageStartTime').value) || 8; 
     const taxRate = parseFloat(document.getElementById('wageTaxType').value) || 0;
-    
-    // 할증 시간
     const hHoliday = parseFloat(document.getElementById('wageHoliday').value) || 0;
     const hWeekend = parseFloat(document.getElementById('wageWeekend').value) || 0;
     const hRain = parseFloat(document.getElementById('wageRain').value) || 0;
     const hT = parseFloat(document.getElementById('wageHotTime').value) || 0;
-
     const currentMonth = new Date().getMonth() + 1;
     let dayStartHour = 8, dayEndHour = 18;
     ['row-jan','row-apr','row-oct'].forEach(id => document.getElementById(id)?.classList.remove('highlight'));
     if (currentMonth >= 4 && currentMonth <= 9) { dayStartHour = 6; dayEndHour = 19; document.getElementById('row-apr')?.classList.add('highlight'); }
     else if (currentMonth >= 10 && currentMonth <= 12) { dayStartHour = 7; dayEndHour = 17; document.getElementById('row-oct')?.classList.add('highlight'); }
     else { document.getElementById('row-jan')?.classList.add('highlight'); }
-
     let dayCount=0, nightCount=0, deepNightCount=0, lunchExtCount=0;
     for (let i = 0; i < totalHours; i++) {
         let curr = (startHour + i) % 24;
@@ -618,18 +588,14 @@ function calculateWage() {
         if (curr >= 0 && curr < 4) deepNightCount++;
         if (curr === 12) lunchExtCount++;
     }
-
     let sDayCount=0, sNightCount=0;
     if (role === 'skilled') { sDayCount = dayCount; sNightCount = nightCount; }
-
     const DAY_RATE = 10320, NIGHT_RATE = 15480, EXTRA_ADD = 5160, HOT_ADD = 3096;
     const SKILLED_DAY_ADD = 2557, SKILLED_NIGHT_ADD = 3836;
-
     const subTotal = (dayCount * DAY_RATE) + (nightCount * NIGHT_RATE) + (deepNightCount * EXTRA_ADD) + (lunchExtCount * DAY_RATE) + 
                      ((hHoliday + hWeekend + hRain) * EXTRA_ADD) + (hT * HOT_ADD) + 
                      (sDayCount * SKILLED_DAY_ADD) + (sNightCount * SKILLED_NIGHT_ADD);
     const taxAmt = subTotal * taxRate;
-    
     document.getElementById('wageSpecBody').innerHTML = `
         <tr><td>☀️ 주간 (${dayCount.toFixed(1)}H)</td><td>${Math.floor(dayCount * DAY_RATE).toLocaleString()}원</td></tr>
         <tr><td>🌙 야간 (${nightCount.toFixed(1)}H)</td><td>${Math.floor(nightCount * NIGHT_RATE).toLocaleString()}원</td></tr>
@@ -667,25 +633,15 @@ function openPrivacy(){ document.getElementById('privacyModal').style.display='f
 
 /* 4️⃣ 실행 */
 window.onload = () => {
-    // 배너 로드 (실시간)
     loadBanner();
-    
-    // 리스너 등록 시 에러 처리
     try {
         db.collection("notices").orderBy("timestamp","desc").onSnapshot(s=>{const l=document.getElementById("noticeList"); l.innerHTML=""; s.forEach(d=>{const x=d.data(); l.innerHTML+=`<li class="post-item" onclick="toggleContent('n-${d.id}')">📢 <strong>${x.title}</strong><div id="n-${d.id}" class="post-body-content">${x.content}<br><button class="mini-btn btn-del" onclick="delNotice('${d.id}',event)">삭제</button></div></li>`;})}); 
         db.collection("posts").orderBy("timestamp","desc").onSnapshot(s=>{allPostsData=[]; s.forEach(d=>{allPostsData.push({...d.data(), id:d.id})}); renderBoardPage(1);}); 
         db.collection("ships").orderBy("timestamp","desc").onSnapshot(s=>{allShipsData=[]; s.forEach(d=>{allShipsData.push({...d.data(), id:d.id})}); filteredShips=allShipsData; renderShipPage(1);}); 
         db.collection("archives").orderBy("timestamp","desc").onSnapshot(s=>{const l=document.getElementById("fileList"); l.innerHTML=""; s.forEach(d=>{const x=d.data(); l.innerHTML+=`<li class="post-item"><a href="${x.url}" target="_blank">💾 ${x.title}</a><button class="mini-btn btn-del" onclick="delArchive('${d.id}',event)">×</button></li>`;})});
-    } catch(err) {
-        console.warn("실시간 연결 오류:", err);
-    }
-    
-    if(localStorage.getItem('myWorkerId')) {
-        currentWorkerId = localStorage.getItem('myWorkerId');
-        updateUserBar();
-    }
+    } catch(err) { console.warn("실시간 연결 오류:", err); }
+    if(localStorage.getItem('myWorkerId')) { currentWorkerId = localStorage.getItem('myWorkerId'); updateUserBar(); }
 };
 </script>
 </body>
 </html>
-                    
