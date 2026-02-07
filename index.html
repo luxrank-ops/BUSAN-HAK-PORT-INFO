@@ -325,14 +325,15 @@ let commentUnsubscribes = {};
 
 /* 3️⃣ 함수 선언 */
 
-// --- [A] 공통 유틸리티 ---
-// 안전한 데이터 조회 (서버 연결 실패 방지)
+// --- [A] 공통 유틸리티 (수정됨: 오류 원인 해결) ---
+// 안전한 데이터 조회 (서버 연결 실패 방지 및 무한 루프 차단)
 async function safeGet(ref) {
+    if (!ref) return null;
     try {
         return await ref.get();
     } catch (e) {
-        console.error(e);
-        alert("서버 연결 실패. 인터넷 상태를 확인해주세요.");
+        console.warn("데이터 조회 실패 (네트워크 또는 권한 문제):", e);
+        // alert("서버 연결 실패..."); // [수정] 반복적인 경고창 차단
         return null;
     }
 }
@@ -465,7 +466,9 @@ async function confirmLoginAndSave(){
         } else {
             alert("비밀번호가 틀렸습니다.");
         }
-    } else if (doc) { // 신규 가입
+    } else if (doc === null) { 
+        alert("서버 연결 상태를 확인해주세요."); 
+    } else { // 신규 가입
         await userRef.set({ password: pw, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
         loginSuccess(nick);
         closeLoginModal();
@@ -630,7 +633,11 @@ function resetWageForm(){
 // 배너 로드 (safeGet 사용)
 async function loadBanner(){ 
     const d = await safeGet(db.collection('settings').doc('banner'));
-    if(!d || !d.exists) return; 
+    if(!d || !d.exists) {
+        // 데이터가 없으면 기본값 표시
+        document.getElementById('tickerText').innerText = "🚨 안전 제일! 오늘도 무사고!";
+        return; 
+    }
     const da = d.data();
     let msg = da.adminMessage ? `📢 ${da.adminMessage}   ///   ` : "";
     if(da.userMessages) msg += da.userMessages.map((m,i)=>`${i+1}. ${m}`).join("   ///   ");
@@ -664,11 +671,18 @@ function openPrivacy(){ document.getElementById('privacyModal').style.display='f
 
 /* 4️⃣ 실행 */
 window.onload = () => {
+    // 배너 로드: 에러가 나더라도 무시하고 기본값 표시하도록 수정됨
     loadBanner();
-    db.collection("notices").orderBy("timestamp","desc").onSnapshot(s=>{const l=document.getElementById("noticeList"); l.innerHTML=""; s.forEach(d=>{const x=d.data(); l.innerHTML+=`<li class="post-item" onclick="toggleContent('n-${d.id}')">📢 <strong>${x.title}</strong><div id="n-${d.id}" class="post-body-content">${x.content}<br><button class="mini-btn btn-del" onclick="delNotice('${d.id}',event)">삭제</button></div></li>`;})}); 
-    db.collection("posts").orderBy("timestamp","desc").onSnapshot(s=>{allPostsData=[]; s.forEach(d=>{allPostsData.push({...d.data(), id:d.id})}); renderBoardPage(1);}); 
-    db.collection("ships").orderBy("timestamp","desc").onSnapshot(s=>{allShipsData=[]; s.forEach(d=>{allShipsData.push({...d.data(), id:d.id})}); filteredShips=allShipsData; renderShipPage(1);}); 
-    db.collection("archives").orderBy("timestamp","desc").onSnapshot(s=>{const l=document.getElementById("fileList"); l.innerHTML=""; s.forEach(d=>{const x=d.data(); l.innerHTML+=`<li class="post-item"><a href="${x.url}" target="_blank">💾 ${x.title}</a><button class="mini-btn btn-del" onclick="delArchive('${d.id}',event)">×</button></li>`;})});
+    
+    // 리스너 등록 시 에러 핸들링 추가
+    try {
+        db.collection("notices").orderBy("timestamp","desc").onSnapshot(s=>{const l=document.getElementById("noticeList"); l.innerHTML=""; s.forEach(d=>{const x=d.data(); l.innerHTML+=`<li class="post-item" onclick="toggleContent('n-${d.id}')">📢 <strong>${x.title}</strong><div id="n-${d.id}" class="post-body-content">${x.content}<br><button class="mini-btn btn-del" onclick="delNotice('${d.id}',event)">삭제</button></div></li>`;})}); 
+        db.collection("posts").orderBy("timestamp","desc").onSnapshot(s=>{allPostsData=[]; s.forEach(d=>{allPostsData.push({...d.data(), id:d.id})}); renderBoardPage(1);}); 
+        db.collection("ships").orderBy("timestamp","desc").onSnapshot(s=>{allShipsData=[]; s.forEach(d=>{allShipsData.push({...d.data(), id:d.id})}); filteredShips=allShipsData; renderShipPage(1);}); 
+        db.collection("archives").orderBy("timestamp","desc").onSnapshot(s=>{const l=document.getElementById("fileList"); l.innerHTML=""; s.forEach(d=>{const x=d.data(); l.innerHTML+=`<li class="post-item"><a href="${x.url}" target="_blank">💾 ${x.title}</a><button class="mini-btn btn-del" onclick="delArchive('${d.id}',event)">×</button></li>`;})});
+    } catch(err) {
+        console.warn("실시간 데이터 연결 실패:", err);
+    }
     
     if(localStorage.getItem('myWorkerId')) {
         currentWorkerId = localStorage.getItem('myWorkerId');
@@ -678,3 +692,4 @@ window.onload = () => {
 </script>
 </body>
 </html>
+
