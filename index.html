@@ -24,13 +24,13 @@
         header h1 { margin: 0; font-size: 1.2rem; font-weight: 900; }
         .theme-toggle { position: absolute; right: 15px; top: 50%; transform: translateY(-50%); background: rgba(255,255,255,0.2); border: none; width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 1.1rem; }
         
-        /* 티커 및 설정 아이콘 스타일 */
+        /* [티커 영역 스타일] */
         .ticker-container { background: var(--accent); color: #000; font-weight: 800; height: 45px; display: flex; align-items: center; overflow: visible; position: relative; font-size: 0.9rem; border-bottom: 1px solid rgba(0,0,0,0.1); }
         .ticker-wrap { flex: 1; overflow: hidden; height: 100%; position: relative; margin-right: 50px; }
         .ticker-item { padding-left: 100%; animation: ticker 25s linear infinite; white-space: nowrap; line-height: 45px; }
         @keyframes ticker { 100% { transform: translate3d(-100%, 0, 0); } }
         
-        /* 설정 아이콘 (우측 상단 고정) */
+        /* [설정 아이콘 영역 - 여기만 호버하면 메뉴 나옴] */
         .ticker-setting-area {
             position: absolute; right: 0; top: 0; width: 50px; height: 100%;
             display: flex; align-items: center; justify-content: center;
@@ -40,13 +40,15 @@
         .setting-icon { font-size: 1.2rem; transition: transform 0.3s; }
         .ticker-setting-area:hover .setting-icon { transform: rotate(90deg); }
 
-        /* 아이콘 호버 시 나타나는 드롭다운 메뉴 */
+        /* [호버 메뉴 박스] */
         .hover-menu-box {
-            display: none; position: absolute; top: 100%; right: 5px;
+            display: none; /* 기본 숨김 */
+            position: absolute; top: 100%; right: 5px;
             background: var(--card-bg); border: 1px solid var(--border); border-radius: 8px;
             box-shadow: 0 4px 15px rgba(0,0,0,0.15);
             flex-direction: column; overflow: hidden; z-index: 200; width: 140px;
         }
+        /* 아이콘 영역에 마우스가 있거나, 메뉴 자체에 마우스가 있을 때 표시 */
         .ticker-setting-area:hover .hover-menu-box, .hover-menu-box:hover { display: flex; }
 
         .menu-btn { 
@@ -60,7 +62,7 @@
         .btn-del-menu { color: var(--danger); }
         .btn-del-menu:hover { background: var(--danger); color: white; }
 
-        /* 공통 스타일 */
+        /* 기존 스타일 (건드리지 않음) */
         .container { width: 96%; max-width: 600px; margin: 0 auto; padding: 8px; }
         .dash-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; }
         .dash-card { background: var(--card-bg); border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); border: 1px solid var(--border); overflow: hidden; }
@@ -167,6 +169,7 @@
                     <span class="dash-title" style="color:var(--danger);">💰 임금계산기</span><span class="toggle-icon">▼</span>
                 </div>
                 <div class="dash-content" style="display:none;">
+
                     <div class="role-selector">
                         <input type="radio" id="role-main" name="workRole" value="main" checked><label for="role-main">🚢 본선</label>
                         <input type="radio" id="role-skilled" name="workRole" value="skilled"><label for="role-skilled">🔧 기능공</label>
@@ -313,8 +316,8 @@
             <button class="action-btn" onclick="confirmLoginAndSave()">확인 및 저장</button>
             <button class="action-btn bg-cancel" onclick="closeLoginModal()">취소</button>
         </div>
-    </div>
-    <script>
+     </div>
+     <script>
 /* 1️⃣ Firebase 설정 */
 const firebaseConfig = { 
     apiKey: "AIzaSyBDXy5HcYW-IZQJ9ZDEivr_yi99AxhYme8", 
@@ -341,7 +344,12 @@ const postsPerPage = 5;
 // --- [A] 공통 유틸리티 ---
 async function safeGet(ref) {
     if (!ref) return null;
-    try { return await ref.get(); } catch (e) { console.warn("데이터 조회 실패:", e); return null; }
+    try {
+        return await ref.get();
+    } catch (e) {
+        console.warn("데이터 조회 실패:", e);
+        return null;
+    }
 }
 
 async function verifyAdmin(){ 
@@ -372,9 +380,7 @@ function toggleDarkMode(){ document.body.classList.toggle('dark-mode'); }
 function scrollToTop(){ window.scrollTo({top:0, behavior:'smooth'}); }
 function showToast(m){const t=document.getElementById("toast"); t.innerText=m; t.classList.add("show"); setTimeout(()=>t.classList.remove("show"),3000);}
 
-// --- [B] 흐르는 배너 관리 (수정됨: 즉시 반영 및 렌더링 분리) ---
-
-// 1. 배너 로드 (실시간)
+// --- [B] 흐르는 배너 관리 (수정됨: 일반등록 로직 단순화 & 3개 제한) ---
 function loadBanner(){ 
     db.collection('settings').doc('banner').onSnapshot((doc) => {
         if(!doc.exists) {
@@ -383,35 +389,50 @@ function loadBanner(){
         }
         const data = doc.data();
         let msg = "";
+        
+        // 관리자 공지 우선 표시
         if(data.adminMessage) msg += `📢 ${data.adminMessage}   ///   `;
+        
+        // 사용자 메시지 (최신순)
         if(data.userMessages && data.userMessages.length > 0) {
             msg += data.userMessages.map((m,i) => `${i+1}. ${m}`).join("   ///   ");
         }
+        
         document.getElementById('tickerText').innerText = msg || "🚨 안전 제일! 오늘도 무사고!";
     });
 }
 
-// 2. 일반 등록 (배열 불러와서 수정 후 덮어쓰기)
 function writeUserTicker(){ 
     const m = prompt("현장 안전 문구를 입력해주세요:");
     if(!m) return;
     
+    // [핵심 수정] runTransaction 대신 get -> set 방식으로 변경하여 오류 최소화
     const docRef = db.collection('settings').doc('banner');
-    db.runTransaction(async (t) => {
-        const doc = await t.get(docRef);
+    
+    docRef.get().then((doc) => {
         let msgs = [];
-        if (doc.exists) msgs = doc.data().userMessages || [];
+        if (doc.exists) {
+            msgs = doc.data().userMessages || [];
+        }
         
-        msgs.unshift(m); // 맨 앞에 추가
-        if(msgs.length > 3) msgs = msgs.slice(0, 3); // 3개 유지
+        // 새 메시지 맨 앞에 추가
+        msgs.unshift(m);
         
-        t.set(docRef, { userMessages: msgs }, { merge: true });
+        // [기능 구현] 3개까지만 유지 (밀어내기)
+        if(msgs.length > 3) {
+            msgs = msgs.slice(0, 3);
+        }
+        
+        // 변경된 배열 저장 (merge: true로 다른 필드 영향 없음)
+        return docRef.set({ userMessages: msgs }, { merge: true });
     }).then(() => {
         showToast("등록되었습니다.");
-    }).catch((e) => alert("등록 실패: " + e.message));
+    }).catch((error) => {
+        console.error("Error writing document: ", error);
+        alert("등록 실패: " + error.message);
+    });
 }
 
-// 3. 관리자 등록
 async function setAdminTicker(){ 
     if(await verifyAdmin()){ 
         const m = prompt("관리자 공지 등록:");
@@ -419,83 +440,39 @@ async function setAdminTicker(){
     } 
 }
 
-// 4. 삭제 팝업 열기 (열 때 리스트 렌더링 호출)
 async function openTickerManager(){ 
     if(await verifyAdmin()){ 
-        document.getElementById('tickerManageModal').style.display='flex'; 
-        renderTickerList(); // 팝업 열 때 리스트 그리기
+        db.collection('settings').doc('banner').get().then(d=>{ 
+            if(d.exists){ 
+                const da=d.data(), l=document.getElementById('tickerListContainer'); 
+                l.innerHTML=""; 
+                if(da.adminMessage) l.innerHTML+=`<div>[관리자] ${da.adminMessage} <button onclick="deleteTickerMsg('admin',0)" class="mini-btn btn-del-mini">삭제</button></div>`; 
+                if(da.userMessages) da.userMessages.forEach((m,i)=>l.innerHTML+=`<div>${i+1}. ${m} <button onclick="deleteTickerMsg('user',${i})" class="mini-btn btn-del-mini">삭제</button></div>`); 
+                document.getElementById('tickerManageModal').style.display='flex'; 
+            } 
+        }); 
     } 
 }
 
-// 5. 리스트 렌더링 함수 (재사용)
-function renderTickerList() {
-    const listContainer = document.getElementById('tickerListContainer');
-    listContainer.innerHTML = '<div style="padding:10px; text-align:center;">로딩 중...</div>';
+async function deleteTickerMsg(t,i){ 
+    const r=db.collection('settings').doc('banner'); 
+    if(t==='admin') await r.update({adminMessage:firebase.firestore.FieldValue.delete()}); 
+    else { 
+        const d=await r.get(); 
+        let a=d.data().userMessages; 
+        a.splice(i,1); 
+        await r.update({userMessages:a}); 
+    } 
     
-    db.collection('settings').doc('banner').get().then(d => {
-        listContainer.innerHTML = ""; // 초기화
-        if (d.exists) {
-            const data = d.data();
-            let hasData = false;
-
-            if (data.adminMessage) {
-                hasData = true;
-                listContainer.innerHTML += `
-                    <div class="ticker-manage-item" style="display:flex; justify-content:space-between; align-items:center; padding:8px; border-bottom:1px solid #eee;">
-                        <span style="font-weight:bold; color:red; flex:1;">📢 [관리자] ${data.adminMessage}</span>
-                        <button onclick="deleteTickerMsg('admin', 0)" class="mini-btn btn-del-mini">삭제</button>
-                    </div>`;
-            }
-
-            if (data.userMessages && data.userMessages.length > 0) {
-                hasData = true;
-                data.userMessages.forEach((m, i) => {
-                    listContainer.innerHTML += `
-                        <div class="ticker-manage-item" style="display:flex; justify-content:space-between; align-items:center; padding:8px; border-bottom:1px solid #eee;">
-                            <span style="flex:1;">${i + 1}. ${m}</span>
-                            <button onclick="deleteTickerMsg('user', ${i})" class="mini-btn btn-del-mini">삭제</button>
-                        </div>`;
-                });
-            }
-
-            if (!hasData) {
-                listContainer.innerHTML = '<div style="padding:10px; text-align:center; color:#888;">등록된 내용이 없습니다.</div>';
-            }
-        } else {
-            listContainer.innerHTML = '<div style="padding:10px; text-align:center; color:#888;">등록된 내용이 없습니다.</div>';
-        }
-    });
-}
-
-// 6. 삭제 기능 (삭제 후 즉시 리스트 갱신)
-async function deleteTickerMsg(type, index){ 
-    if(!confirm("정말 삭제하시겠습니까?")) return;
-
-    const ref = db.collection('settings').doc('banner');
-    
-    try {
-        if(type === 'admin') {
-            await ref.update({ adminMessage: firebase.firestore.FieldValue.delete() });
-        } else {
-            await db.runTransaction(async (t) => {
-                const doc = await t.get(ref);
-                if (!doc.exists) return;
-                const data = doc.data();
-                let msgs = data.userMessages || [];
-                
-                if (index >= 0 && index < msgs.length) {
-                    msgs.splice(index, 1);
-                    t.update(ref, { userMessages: msgs });
-                }
-            });
-        }
-        // [중요] 삭제 후 리스트 다시 그리기
-        renderTickerList();
-        showToast("삭제되었습니다.");
-    } catch(e) {
-        console.error(e);
-        alert("삭제 실패: " + e.message);
-    }
+    // 삭제 후 목록 즉시 갱신
+    setTimeout(() => {
+        r.get().then(d=>{
+             const da=d.data(), l=document.getElementById('tickerListContainer');
+             l.innerHTML="";
+             if(da.adminMessage) l.innerHTML+=`<div>[관리자] ${da.adminMessage} <button onclick="deleteTickerMsg('admin',0)" class="mini-btn btn-del-mini">삭제</button></div>`; 
+             if(da.userMessages) da.userMessages.forEach((m,i)=>l.innerHTML+=`<div>${i+1}. ${m} <button onclick="deleteTickerMsg('user',${i})" class="mini-btn btn-del-mini">삭제</button></div>`);
+        });
+    }, 500);
 }
 
 // --- [C] 스마트 근무일지 ---
