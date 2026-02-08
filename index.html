@@ -316,24 +316,28 @@
             <button class="action-btn bg-cancel" onclick="closeLoginModal()">취소</button>
         </div>
     </div>
-    <script>
-/* 1️⃣ Firebase 설정 */
+<script>
+/* 1️⃣ Firebase 설정 (여기가 잘못되어 있었습니다. busan-hak-port로 수정함) */
 const firebaseConfig = { 
-    apiKey: "AIzaSyBDXy5HcYW-IZQJ9ZDEivr_yi99AxhYme8", 
-    authDomain: "my-app-d8527.firebaseapp.com", 
-    projectId: "my-app-d8527", 
-    storageBucket: "my-app-d8527.appspot.com", 
+    apiKey: "AIzaSyBWFZr9TE9yybZJCJjEXSsv1YCpGkVb0kA", 
+    authDomain: "busan-hak-port.firebaseapp.com", 
+    projectId: "busan-hak-port", 
+    storageBucket: "busan-hak-port.appspot.com", 
     messagingSenderId: "667323279185", 
     appId: "1:667323279185:web:cff6184aaa82e08d345570" 
 };
+
+// Firebase 초기화 (중복 방지)
 if (!firebase.apps.length) {
     firebase.initializeApp(firebaseConfig);
 }
 const db = firebase.firestore();
 const storage = firebase.storage(); 
 
+// [핵심] 오프라인 데이터 유지 (새로고침 시 데이터 사라짐 방지)
 db.enablePersistence({ synchronizeTabs: true }).catch(err => {
-    console.log("Persistence Error:", err.code);
+    // 이미 활성화되었거나 브라우저 호환 문제 시 조용히 넘어감
+    console.log("Persistence status:", err.code);
 });
 
 /* 2️⃣ 전역 변수 */
@@ -342,6 +346,8 @@ let currentDate = new Date();
 let currentWorkerId = localStorage.getItem('myWorkerId'); 
 let commentUnsubscribes = {};
 const postsPerPage = 5;
+
+// [중요] 티커 데이터 로컬 저장용
 let globalTickerData = { adminMessage: "", userMessages: [] };
 
 /* 3️⃣ 함수 선언 */
@@ -392,12 +398,16 @@ function loadBanner(){
              document.getElementById('tickerText').innerText = "🚨 안전 제일! 오늘도 무사고!";
              return;
         }
+        
         globalTickerData = doc.data(); 
+        
         let msg = "";
         if(globalTickerData.adminMessage) msg += `📢 ${globalTickerData.adminMessage}   ///   `;
+        
         if(globalTickerData.userMessages && globalTickerData.userMessages.length > 0) {
             msg += globalTickerData.userMessages.map((m,i) => `${i+1}. ${m}`).join("   ///   ");
         }
+        
         document.getElementById('tickerText').innerText = msg || "🚨 안전 제일! 오늘도 무사고!";
     });
 }
@@ -405,12 +415,17 @@ function loadBanner(){
 function writeUserTicker(){ 
     const m = prompt("현장 안전 문구를 입력해주세요:");
     if(!m) return;
+    
     let msgs = globalTickerData.userMessages || [];
     msgs.unshift(m); 
-    if(msgs.length > 3) { msgs = msgs.slice(0, 3); }
+    
+    if(msgs.length > 3) {
+        msgs = msgs.slice(0, 3);
+    }
+    
     db.collection('settings').doc('banner').set({ userMessages: msgs }, { merge: true })
         .then(() => showToast("등록되었습니다."))
-        .catch((e) => alert("등록 실패 (권한 또는 네트워크): " + e.message));
+        .catch((e) => alert("등록 실패: " + e.message));
 }
 
 async function setAdminTicker(){ 
@@ -430,9 +445,11 @@ async function openTickerManager(){
 function renderTickerList() {
     const listContainer = document.getElementById('tickerListContainer');
     listContainer.innerHTML = '<div style="padding:10px; text-align:center;">로딩 중...</div>';
+    
     const data = globalTickerData; 
     listContainer.innerHTML = ""; 
     let hasData = false;
+
     if (data.adminMessage) {
         hasData = true;
         listContainer.innerHTML += `
@@ -441,6 +458,7 @@ function renderTickerList() {
                 <button onclick="deleteTickerMsg('admin', 0)" class="mini-btn btn-del-mini">삭제</button>
             </div>`;
     }
+
     if (data.userMessages && data.userMessages.length > 0) {
         hasData = true;
         data.userMessages.forEach((m, i) => {
@@ -451,11 +469,15 @@ function renderTickerList() {
                 </div>`;
         });
     }
-    if (!hasData) { listContainer.innerHTML = '<div style="padding:10px; text-align:center; color:#888;">등록된 내용이 없습니다.</div>'; }
+
+    if (!hasData) {
+        listContainer.innerHTML = '<div style="padding:10px; text-align:center; color:#888;">등록된 내용이 없습니다.</div>';
+    }
 }
 
 async function deleteTickerMsg(type, index){ 
     if(!confirm("삭제하시겠습니까?")) return;
+
     if(type === 'admin') {
         delete globalTickerData.adminMessage; 
         await db.collection('settings').doc('banner').update({ adminMessage: firebase.firestore.FieldValue.delete() });
@@ -465,6 +487,7 @@ async function deleteTickerMsg(type, index){
             await db.collection('settings').doc('banner').update({ userMessages: globalTickerData.userMessages });
         }
     }
+    
     renderTickerList();
     showToast("삭제되었습니다.");
 }
@@ -502,7 +525,7 @@ function renderCalendar(y, m){
     }
 }
 
-// [핵심] 사진 실패시 텍스트만 저장하는 로직 추가
+// [핵심] 사진 저장 로직 (올바른 Config 적용으로 해결 예상)
 function saveWorkLog(){
     const btn = document.getElementById('saveLogBtn');
     btn.innerText = "저장 중...";
@@ -514,7 +537,6 @@ function saveWorkLog(){
     const pay = (dh*10320) + (nh*15480);
     const docId = `${currentWorkerId}_${dStr}`;
     
-    // DB 저장 함수
     const save = (url) => {
         db.collection('work_logs').doc(docId).set({
             date: dStr, workerId: currentWorkerId, dayHours: dh, nightHours: nh, memo: memo, totalPay: pay, imageUrl: url
@@ -540,16 +562,16 @@ function saveWorkLog(){
         });
     };
 
-    // 사진 업로드 로직 (실패 시 텍스트만 저장)
     if(file) {
+        // busan-hak-port 프로젝트의 storageBucket으로 업로드 시도
         storage.ref(`logs/${currentWorkerId}/${Date.now()}`).put(file)
         .then(s => s.ref.getDownloadURL())
         .then(u => save(u))
         .catch(e => {
             console.error(e);
-            // [수정] 실패 시 사용자에게 묻고 텍스트만 저장
-            if(confirm("사진 업로드는 인터넷이 필요합니다.\n사진을 제외하고 내용만 저장하시겠습니까?")) {
-                save(adminWorkLogs[dStr] ? adminWorkLogs[dStr].imageUrl : null); // 기존 이미지 유지 또는 없음
+            // 업로드 실패 시 물어보기
+            if(confirm("사진 서버 연결 실패 (인터넷 상태 또는 권한 문제).\n사진 없이 내용만 저장하시겠습니까?")) {
+                save(adminWorkLogs[dStr] ? adminWorkLogs[dStr].imageUrl : null); 
             } else {
                 btn.innerText = "저장하기";
             }
@@ -695,6 +717,13 @@ function openPrivacy(){ document.getElementById('privacyModal').style.display='f
 
 /* 4️⃣ 실행 */
 window.onload = () => {
+    // 캐시 문제 해결을 위한 서비스 워커 해제 (필수)
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.getRegistrations().then(function(registrations) {
+            for(let registration of registrations) { registration.unregister(); }
+        });
+    }
+
     loadBanner();
     try {
         db.collection("notices").orderBy("timestamp","desc").onSnapshot(s=>{const l=document.getElementById("noticeList"); l.innerHTML=""; s.forEach(d=>{const x=d.data(); l.innerHTML+=`<li class="post-item" onclick="toggleContent('n-${d.id}')">📢 <strong>${x.title}</strong><div id="n-${d.id}" class="post-body-content">${x.content}<br><button class="mini-btn btn-del" onclick="delNotice('${d.id}',event)">삭제</button></div></li>`;})}); 
