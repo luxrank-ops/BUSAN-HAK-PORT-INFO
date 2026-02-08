@@ -114,16 +114,11 @@
         .comment-input-sm { width: 60px; padding: 6px; border: 1px solid var(--border); border-radius: 4px; font-size: 0.8rem; }
         .comment-input-lg { flex: 1; padding: 6px; border: 1px solid var(--border); border-radius: 4px; font-size: 0.8rem; min-width: 100px; }
         .comment-submit { padding: 6px 10px; background: var(--text-sub); color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.75rem; font-weight: bold; }
-        
         .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px; text-align: center; }
         .cal-day { padding: 8px 0; border-radius: 6px; background: rgba(255,255,255,0.5); border: 1px solid var(--border); font-weight: 700; font-size: 0.85rem; cursor: pointer; min-height: 40px; display: flex; flex-direction: column; justify-content: center; align-items: center; }
-        .cal-day.selected { background: var(--primary); color: white; border-color: var(--primary); }
-        
-        /* [녹색 점 스타일] */
         .cal-day.has-data { border: 2px solid var(--success); background: rgba(16, 185, 129, 0.1); }
         .cal-dot { width: 5px; height: 5px; background-color: var(--success); border-radius: 50%; margin-top: 3px; display: none; }
         .cal-day.has-data .cal-dot { display: block; }
-        
         .bottom-nav { position: fixed; bottom: 0; left: 0; width: 100%; height: 60px; background: rgba(255,255,255,0.98); border-top: 1px solid var(--border); display: flex; justify-content: space-around; align-items: center; z-index: 1000; padding-bottom: env(safe-area-inset-bottom); box-shadow: 0 -2px 10px rgba(0,0,0,0.05); }
         .nav-item { flex: 1; text-align: center; color: var(--text-sub); font-size: 0.7rem; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 2px; }
         .nav-item.active { color: var(--primary); font-weight: 800; transform: scale(1.05); }
@@ -156,7 +151,6 @@
 
     <div id="safetyTicker" class="ticker-container">
         <div class="ticker-wrap"><div id="tickerText" class="ticker-item">🚨 안전 제일! 오늘도 무사고!</div></div>
-        
         <div class="ticker-setting-area">
             <div class="setting-icon">➕</div>
             <div class="hover-menu-box">
@@ -332,14 +326,12 @@ const firebaseConfig = {
     messagingSenderId: "667323279185", 
     appId: "1:667323279185:web:cff6184aaa82e08d345570" 
 };
-// Firebase 초기화
 if (!firebase.apps.length) {
     firebase.initializeApp(firebaseConfig);
 }
 const db = firebase.firestore();
 const storage = firebase.storage(); 
 
-// [핵심] 오프라인 데이터 유지 (새로고침 시 데이터 사라짐 방지)
 db.enablePersistence({ synchronizeTabs: true }).catch(err => {
     console.log("Persistence Error:", err.code);
 });
@@ -350,13 +342,21 @@ let currentDate = new Date();
 let currentWorkerId = localStorage.getItem('myWorkerId'); 
 let commentUnsubscribes = {};
 const postsPerPage = 5;
-
-// [중요] 티커 데이터 로컬 저장용
 let globalTickerData = { adminMessage: "", userMessages: [] };
 
 /* 3️⃣ 함수 선언 */
 
 // --- [A] 공통 유틸리티 ---
+async function safeGet(ref) {
+    if (!ref) return null;
+    try {
+        return await ref.get();
+    } catch (e) {
+        console.warn("데이터 조회 실패:", e);
+        return null;
+    }
+}
+
 async function verifyAdmin(){ 
     return prompt("Admin PW:") === "0346"; 
 }
@@ -385,54 +385,34 @@ function toggleDarkMode(){ document.body.classList.toggle('dark-mode'); }
 function scrollToTop(){ window.scrollTo({top:0, behavior:'smooth'}); }
 function showToast(m){const t=document.getElementById("toast"); t.innerText=m; t.classList.add("show"); setTimeout(()=>t.classList.remove("show"),3000);}
 
-// --- [B] 흐르는 배너 관리 (오류 수정됨) ---
-
-// 1. 배너 로드 (실시간 리스너 사용 - 데이터 변경 시 자동 갱신)
+// --- [B] 흐르는 배너 관리 ---
 function loadBanner(){ 
     db.collection('settings').doc('banner').onSnapshot((doc) => {
         if(!doc.exists) {
              document.getElementById('tickerText').innerText = "🚨 안전 제일! 오늘도 무사고!";
              return;
         }
-        
-        globalTickerData = doc.data(); // 로컬 변수에 최신 데이터 저장
-        
+        globalTickerData = doc.data(); 
         let msg = "";
-        // 관리자 공지 우선 표시
         if(globalTickerData.adminMessage) msg += `📢 ${globalTickerData.adminMessage}   ///   `;
-        
-        // 사용자 메시지 (배열)
         if(globalTickerData.userMessages && globalTickerData.userMessages.length > 0) {
             msg += globalTickerData.userMessages.map((m,i) => `${i+1}. ${m}`).join("   ///   ");
         }
-        
         document.getElementById('tickerText').innerText = msg || "🚨 안전 제일! 오늘도 무사고!";
     });
 }
 
-// 2. 일반 등록 (서버 fetch 없이 로컬 데이터 기반으로 즉시 업데이트)
 function writeUserTicker(){ 
     const m = prompt("현장 안전 문구를 입력해주세요:");
     if(!m) return;
-    
-    // 로컬에 있는 최신 데이터 사용 (네트워크 호출 최소화)
     let msgs = globalTickerData.userMessages || [];
-    
-    // 배열 맨 앞에 추가
     msgs.unshift(m); 
-    
-    // 3개 제한 (밀어내기)
-    if(msgs.length > 3) {
-        msgs = msgs.slice(0, 3);
-    }
-    
-    // Firestore에 덮어쓰기 (set + merge)
+    if(msgs.length > 3) { msgs = msgs.slice(0, 3); }
     db.collection('settings').doc('banner').set({ userMessages: msgs }, { merge: true })
         .then(() => showToast("등록되었습니다."))
         .catch((e) => alert("등록 실패 (권한 또는 네트워크): " + e.message));
 }
 
-// 3. 관리자 등록
 async function setAdminTicker(){ 
     if(await verifyAdmin()){ 
         const m = prompt("관리자 공지 등록:");
@@ -440,7 +420,6 @@ async function setAdminTicker(){
     } 
 }
 
-// 4. 삭제 관리 (리스트 렌더링 포함)
 async function openTickerManager(){ 
     if(await verifyAdmin()){ 
         document.getElementById('tickerManageModal').style.display='flex'; 
@@ -451,11 +430,9 @@ async function openTickerManager(){
 function renderTickerList() {
     const listContainer = document.getElementById('tickerListContainer');
     listContainer.innerHTML = '<div style="padding:10px; text-align:center;">로딩 중...</div>';
-    
-    const data = globalTickerData; // 로컬 데이터 사용
+    const data = globalTickerData; 
     listContainer.innerHTML = ""; 
     let hasData = false;
-
     if (data.adminMessage) {
         hasData = true;
         listContainer.innerHTML += `
@@ -464,7 +441,6 @@ function renderTickerList() {
                 <button onclick="deleteTickerMsg('admin', 0)" class="mini-btn btn-del-mini">삭제</button>
             </div>`;
     }
-
     if (data.userMessages && data.userMessages.length > 0) {
         hasData = true;
         data.userMessages.forEach((m, i) => {
@@ -475,34 +451,25 @@ function renderTickerList() {
                 </div>`;
         });
     }
-
-    if (!hasData) {
-        listContainer.innerHTML = '<div style="padding:10px; text-align:center; color:#888;">등록된 내용이 없습니다.</div>';
-    }
+    if (!hasData) { listContainer.innerHTML = '<div style="padding:10px; text-align:center; color:#888;">등록된 내용이 없습니다.</div>'; }
 }
 
-// 5. 삭제 로직 (즉시 반영)
 async function deleteTickerMsg(type, index){ 
     if(!confirm("삭제하시겠습니까?")) return;
-
     if(type === 'admin') {
-        // 관리자 메시지 삭제
-        delete globalTickerData.adminMessage; // 로컬 반영
+        delete globalTickerData.adminMessage; 
         await db.collection('settings').doc('banner').update({ adminMessage: firebase.firestore.FieldValue.delete() });
     } else {
-        // 일반 메시지 삭제
         if(globalTickerData.userMessages) {
-            globalTickerData.userMessages.splice(index, 1); // 로컬 반영
+            globalTickerData.userMessages.splice(index, 1); 
             await db.collection('settings').doc('banner').update({ userMessages: globalTickerData.userMessages });
         }
     }
-    
-    // 리스트 즉시 다시 그리기 (UI 갱신)
     renderTickerList();
     showToast("삭제되었습니다.");
 }
 
-// --- [C] 스마트 근무일지 (저장 후 즉시 확인 로직 통합) ---
+// --- [C] 스마트 근무일지 ---
 function renderCalendar(y, m){
     const g = document.getElementById('calendarGrid'); 
     g.innerHTML = "";
@@ -535,7 +502,7 @@ function renderCalendar(y, m){
     }
 }
 
-// [핵심] 저장 후 즉시 확인을 위해 로컬 데이터 즉시 업데이트
+// [핵심] 사진 실패시 텍스트만 저장하는 로직 추가
 function saveWorkLog(){
     const btn = document.getElementById('saveLogBtn');
     btn.innerText = "저장 중...";
@@ -547,29 +514,21 @@ function saveWorkLog(){
     const pay = (dh*10320) + (nh*15480);
     const docId = `${currentWorkerId}_${dStr}`;
     
+    // DB 저장 함수
     const save = (url) => {
         db.collection('work_logs').doc(docId).set({
             date: dStr, workerId: currentWorkerId, dayHours: dh, nightHours: nh, memo: memo, totalPay: pay, imageUrl: url
         }, {merge: true}).then(() => {
             showToast("저장됨"); btn.innerText = "저장하기";
-            
-            // [즉시 반영 1] 로컬 데이터 업데이트
             adminWorkLogs[dStr] = { date: dStr, workerId: currentWorkerId, dayHours: dh, nightHours: nh, memo: memo, totalPay: pay, imageUrl: url };
-            
-            // [즉시 반영 2] 달력에 녹색 점 추가
             const day = parseInt(dStr.split('-')[2]);
             document.getElementById(`cal-day-${day}`).classList.add('has-data');
-            
-            // [즉시 반영 3] 총액 재계산
             let total = 0; Object.values(adminWorkLogs).forEach(log => total += (log.totalPay || 0));
             document.getElementById('monthlyTotalDisplay').innerText = `이번달 총액: ${total.toLocaleString()}원`;
-            
         }).catch(err => { 
-            // 오프라인 저장 성공 시에도 여기로 올 수 있음
             if(err.message.includes("offline")) {
                  showToast("오프라인 저장 완료");
                  btn.innerText = "저장하기";
-                 // 오프라인이어도 로컬 반영은 동일하게 수행
                  adminWorkLogs[dStr] = { date: dStr, workerId: currentWorkerId, dayHours: dh, nightHours: nh, memo: memo, totalPay: pay, imageUrl: url };
                  const day = parseInt(dStr.split('-')[2]);
                  document.getElementById(`cal-day-${day}`).classList.add('has-data');
@@ -580,16 +539,30 @@ function saveWorkLog(){
             }
         });
     };
-    if(file) storage.ref(`logs/${currentWorkerId}/${Date.now()}`).put(file).then(s=>s.ref.getDownloadURL()).then(u=>save(u)).catch(e=>{alert("사진 업로드 실패(오프라인)"); btn.innerText="저장하기";});
-    else save(adminWorkLogs[dStr] ? adminWorkLogs[dStr].imageUrl : null);
+
+    // 사진 업로드 로직 (실패 시 텍스트만 저장)
+    if(file) {
+        storage.ref(`logs/${currentWorkerId}/${Date.now()}`).put(file)
+        .then(s => s.ref.getDownloadURL())
+        .then(u => save(u))
+        .catch(e => {
+            console.error(e);
+            // [수정] 실패 시 사용자에게 묻고 텍스트만 저장
+            if(confirm("사진 업로드는 인터넷이 필요합니다.\n사진을 제외하고 내용만 저장하시겠습니까?")) {
+                save(adminWorkLogs[dStr] ? adminWorkLogs[dStr].imageUrl : null); // 기존 이미지 유지 또는 없음
+            } else {
+                btn.innerText = "저장하기";
+            }
+        });
+    } else { 
+        save(adminWorkLogs[dStr] ? adminWorkLogs[dStr].imageUrl : null); 
+    }
 }
 
 function clickDate(dStr){
     document.getElementById('selectedDateText').innerText = dStr;
     document.getElementById('dailyLogForm').classList.remove('hidden');
     document.getElementById('dailyLogForm').setAttribute('data-date', dStr);
-    
-    // 로컬 데이터(adminWorkLogs)에서 즉시 불러오기
     const d = adminWorkLogs[dStr];
     document.getElementById('logDayHours').value = d ? d.dayHours : '';
     document.getElementById('logNightHours').value = d ? d.nightHours : '';
@@ -605,7 +578,6 @@ function trySaveWorkLog(){
     else document.getElementById('loginModal').style.display = 'flex';
 }
 
-// [수정됨] 연결 오류 시에도 강제 로그인 허용 (오프라인 모드)
 async function confirmLoginAndSave(){
     const nick = document.getElementById('loginNick').value.trim();
     const pw = document.getElementById('loginPw').value.trim();
@@ -613,28 +585,14 @@ async function confirmLoginAndSave(){
     
     const userRef = db.collection('user_profiles').doc(nick);
     let doc = null;
-    
-    try {
-        doc = await userRef.get();
-    } catch(e) {
-        console.warn("오프라인 상태로 로그인 진행");
-    }
+    try { doc = await userRef.get(); } catch(e) { console.warn("오프라인 상태로 로그인 진행"); }
 
     if (doc && doc.exists) {
-        if (doc.data().password === pw) { 
-            loginSuccess(nick); closeLoginModal(); saveWorkLog(); 
-        } else { 
-            alert("비번 틀림"); 
-        }
+        if (doc.data().password === pw) { loginSuccess(nick); closeLoginModal(); saveWorkLog(); } else { alert("비번 틀림"); }
     } else if (doc === null) {
-        // [중요] 오프라인일 때 에러가 나면 일단 로그인 허용 (데이터 저장은 로컬에 됨)
-        if(confirm("서버 연결이 불안정합니다. 오프라인 모드로 로그인하시겠습니까?")) {
-            loginSuccess(nick); closeLoginModal(); saveWorkLog();
-        }
+        if(confirm("서버 연결이 불안정합니다. 오프라인 모드로 로그인하시겠습니까?")) { loginSuccess(nick); closeLoginModal(); saveWorkLog(); }
     } else { 
-        // 신규 가입
-        await userRef.set({ password: pw }); 
-        loginSuccess(nick); closeLoginModal(); saveWorkLog(); alert("가입 완료!");
+        await userRef.set({ password: pw }); loginSuccess(nick); closeLoginModal(); saveWorkLog(); alert("가입 완료!");
     }
 }
 
@@ -737,13 +695,6 @@ function openPrivacy(){ document.getElementById('privacyModal').style.display='f
 
 /* 4️⃣ 실행 */
 window.onload = () => {
-    // 캐시 문제 해결을 위한 서비스 워커 해제 (필수)
-    if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.getRegistrations().then(function(registrations) {
-            for(let registration of registrations) { registration.unregister(); }
-        });
-    }
-
     loadBanner();
     try {
         db.collection("notices").orderBy("timestamp","desc").onSnapshot(s=>{const l=document.getElementById("noticeList"); l.innerHTML=""; s.forEach(d=>{const x=d.data(); l.innerHTML+=`<li class="post-item" onclick="toggleContent('n-${d.id}')">📢 <strong>${x.title}</strong><div id="n-${d.id}" class="post-body-content">${x.content}<br><button class="mini-btn btn-del" onclick="delNotice('${d.id}',event)">삭제</button></div></li>`;})}); 
