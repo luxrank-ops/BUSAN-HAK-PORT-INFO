@@ -24,13 +24,11 @@
         header h1 { margin: 0; font-size: 1.2rem; font-weight: 900; }
         .theme-toggle { position: absolute; right: 15px; top: 50%; transform: translateY(-50%); background: rgba(255,255,255,0.2); border: none; width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 1.1rem; }
         
-        /* 티커 및 아이콘 스타일 */
         .ticker-container { background: var(--accent); color: #000; font-weight: 800; height: 45px; display: flex; align-items: center; overflow: visible; position: relative; font-size: 0.9rem; border-bottom: 1px solid rgba(0,0,0,0.1); }
         .ticker-wrap { flex: 1; overflow: hidden; height: 100%; position: relative; margin-right: 50px; }
         .ticker-item { padding-left: 100%; animation: ticker 25s linear infinite; white-space: nowrap; line-height: 45px; }
         @keyframes ticker { 100% { transform: translate3d(-100%, 0, 0); } }
         
-        /* 설정 아이콘 영역 */
         .ticker-setting-area {
             position: absolute; right: 0; top: 0; width: 50px; height: 100%;
             display: flex; align-items: center; justify-content: center;
@@ -38,12 +36,10 @@
             z-index: 100; cursor: pointer;
         }
         .setting-icon { font-size: 1.4rem; transition: transform 0.3s; }
-        
-        /* 아이콘에 올렸을 때만 메뉴 표시 */
         .ticker-setting-area:hover .setting-icon { transform: rotate(90deg); }
+
         .hover-menu-box {
-            display: none; /* 기본 숨김 */
-            position: absolute; top: 100%; right: 5px;
+            display: none; position: absolute; top: 100%; right: 5px;
             background: var(--card-bg); border: 1px solid var(--border); border-radius: 8px;
             box-shadow: 0 4px 15px rgba(0,0,0,0.2);
             flex-direction: column; overflow: hidden; z-index: 9999; width: 140px;
@@ -61,7 +57,6 @@
         .btn-del-menu { color: var(--danger); }
         .btn-del-menu:hover { background: var(--danger); color: white; }
 
-        /* 공통 스타일 */
         .container { width: 96%; max-width: 600px; margin: 0 auto; padding: 8px; }
         .dash-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; }
         .dash-card { background: var(--card-bg); border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); border: 1px solid var(--border); overflow: hidden; }
@@ -129,7 +124,6 @@
         #toast { position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.85); color: white; padding: 10px 20px; border-radius: 30px; font-size: 0.9rem; z-index: 5000; opacity: 0; transition: 0.3s; pointer-events: none; }
         #toast.show { opacity: 1; }
         .ticker-manage-item { display: flex; justify-content: space-between; align-items: center; padding: 10px; border-bottom: 1px solid var(--border); }
-        .ticker-manage-item span { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.9rem; }
         .page-num { padding: 6px 12px; border: 1px solid var(--border); cursor: pointer; border-radius: 6px; font-size: 0.85rem; margin: 0 2px; }
         .page-num.active { background: var(--primary); color: white; }
         .mini-btn { padding: 4px 8px; font-size: 0.75rem; border-radius: 4px; border: none; cursor: pointer; color: white; margin-left: 4px; }
@@ -143,7 +137,6 @@
     </style>
 </head>
 <body>
-
     <header>
         <h1>BUSAN HAK PORT</h1>
         <button class="theme-toggle tap-effect" onclick="toggleDarkMode()">🌙</button>
@@ -316,17 +309,16 @@
             <button class="action-btn bg-cancel" onclick="closeLoginModal()">취소</button>
         </div>
     </div>
-<script>
-/* 1️⃣ Firebase 설정 (여기가 잘못되어 있었습니다. busan-hak-port로 수정함) */
+    <script>
+/* 1️⃣ Firebase 설정 */
 const firebaseConfig = { 
-    apiKey: "AIzaSyBWFZr9TE9yybZJCJjEXSsv1YCpGkVb0kA", 
-    authDomain: "busan-hak-port.firebaseapp.com", 
-    projectId: "busan-hak-port", 
-    storageBucket: "busan-hak-port.appspot.com", 
+    apiKey: "AIzaSyBDXy5HcYW-IZQJ9ZDEivr_yi99AxhYme8", 
+    authDomain: "my-app-d8527.firebaseapp.com", 
+    projectId: "my-app-d8527", 
+    storageBucket: "my-app-d8527.appspot.com", 
     messagingSenderId: "667323279185", 
     appId: "1:667323279185:web:cff6184aaa82e08d345570" 
 };
-
 // Firebase 초기화 (중복 방지)
 if (!firebase.apps.length) {
     firebase.initializeApp(firebaseConfig);
@@ -334,10 +326,9 @@ if (!firebase.apps.length) {
 const db = firebase.firestore();
 const storage = firebase.storage(); 
 
-// [핵심] 오프라인 데이터 유지 (새로고침 시 데이터 사라짐 방지)
+// 오프라인 영속성 활성화
 db.enablePersistence({ synchronizeTabs: true }).catch(err => {
-    // 이미 활성화되었거나 브라우저 호환 문제 시 조용히 넘어감
-    console.log("Persistence status:", err.code);
+    console.warn("Persistence Error:", err.code);
 });
 
 /* 2️⃣ 전역 변수 */
@@ -391,23 +382,20 @@ function toggleDarkMode(){ document.body.classList.toggle('dark-mode'); }
 function scrollToTop(){ window.scrollTo({top:0, behavior:'smooth'}); }
 function showToast(m){const t=document.getElementById("toast"); t.innerText=m; t.classList.add("show"); setTimeout(()=>t.classList.remove("show"),3000);}
 
-// --- [B] 흐르는 배너 관리 ---
+// --- [B] 흐르는 배너 관리 (수정됨: 삭제 즉시 반영) ---
+
 function loadBanner(){ 
     db.collection('settings').doc('banner').onSnapshot((doc) => {
         if(!doc.exists) {
              document.getElementById('tickerText').innerText = "🚨 안전 제일! 오늘도 무사고!";
              return;
         }
-        
         globalTickerData = doc.data(); 
-        
         let msg = "";
         if(globalTickerData.adminMessage) msg += `📢 ${globalTickerData.adminMessage}   ///   `;
-        
         if(globalTickerData.userMessages && globalTickerData.userMessages.length > 0) {
             msg += globalTickerData.userMessages.map((m,i) => `${i+1}. ${m}`).join("   ///   ");
         }
-        
         document.getElementById('tickerText').innerText = msg || "🚨 안전 제일! 오늘도 무사고!";
     });
 }
@@ -415,14 +403,9 @@ function loadBanner(){
 function writeUserTicker(){ 
     const m = prompt("현장 안전 문구를 입력해주세요:");
     if(!m) return;
-    
     let msgs = globalTickerData.userMessages || [];
     msgs.unshift(m); 
-    
-    if(msgs.length > 3) {
-        msgs = msgs.slice(0, 3);
-    }
-    
+    if(msgs.length > 3) msgs = msgs.slice(0, 3);
     db.collection('settings').doc('banner').set({ userMessages: msgs }, { merge: true })
         .then(() => showToast("등록되었습니다."))
         .catch((e) => alert("등록 실패: " + e.message));
@@ -446,6 +429,7 @@ function renderTickerList() {
     const listContainer = document.getElementById('tickerListContainer');
     listContainer.innerHTML = '<div style="padding:10px; text-align:center;">로딩 중...</div>';
     
+    // 로컬 데이터를 즉시 불러옴 (지워지는 즉시 갱신됨)
     const data = globalTickerData; 
     listContainer.innerHTML = ""; 
     let hasData = false;
@@ -479,15 +463,16 @@ async function deleteTickerMsg(type, index){
     if(!confirm("삭제하시겠습니까?")) return;
 
     if(type === 'admin') {
-        delete globalTickerData.adminMessage; 
+        delete globalTickerData.adminMessage;
         await db.collection('settings').doc('banner').update({ adminMessage: firebase.firestore.FieldValue.delete() });
     } else {
         if(globalTickerData.userMessages) {
-            globalTickerData.userMessages.splice(index, 1); 
+            globalTickerData.userMessages.splice(index, 1);
             await db.collection('settings').doc('banner').update({ userMessages: globalTickerData.userMessages });
         }
     }
     
+    // [중요] 삭제 후 팝업 내부 목록을 즉시 다시 그립니다.
     renderTickerList();
     showToast("삭제되었습니다.");
 }
@@ -525,62 +510,6 @@ function renderCalendar(y, m){
     }
 }
 
-// [핵심] 사진 저장 로직 (올바른 Config 적용으로 해결 예상)
-function saveWorkLog(){
-    const btn = document.getElementById('saveLogBtn');
-    btn.innerText = "저장 중...";
-    const dStr = document.getElementById('dailyLogForm').getAttribute('data-date');
-    const dh = parseFloat(document.getElementById('logDayHours').value)||0;
-    const nh = parseFloat(document.getElementById('logNightHours').value)||0;
-    const memo = document.getElementById('logMemo').value;
-    const file = document.getElementById('logImageInput').files[0];
-    const pay = (dh*10320) + (nh*15480);
-    const docId = `${currentWorkerId}_${dStr}`;
-    
-    const save = (url) => {
-        db.collection('work_logs').doc(docId).set({
-            date: dStr, workerId: currentWorkerId, dayHours: dh, nightHours: nh, memo: memo, totalPay: pay, imageUrl: url
-        }, {merge: true}).then(() => {
-            showToast("저장됨"); btn.innerText = "저장하기";
-            adminWorkLogs[dStr] = { date: dStr, workerId: currentWorkerId, dayHours: dh, nightHours: nh, memo: memo, totalPay: pay, imageUrl: url };
-            const day = parseInt(dStr.split('-')[2]);
-            document.getElementById(`cal-day-${day}`).classList.add('has-data');
-            let total = 0; Object.values(adminWorkLogs).forEach(log => total += (log.totalPay || 0));
-            document.getElementById('monthlyTotalDisplay').innerText = `이번달 총액: ${total.toLocaleString()}원`;
-        }).catch(err => { 
-            if(err.message.includes("offline")) {
-                 showToast("오프라인 저장 완료");
-                 btn.innerText = "저장하기";
-                 adminWorkLogs[dStr] = { date: dStr, workerId: currentWorkerId, dayHours: dh, nightHours: nh, memo: memo, totalPay: pay, imageUrl: url };
-                 const day = parseInt(dStr.split('-')[2]);
-                 document.getElementById(`cal-day-${day}`).classList.add('has-data');
-                 let total = 0; Object.values(adminWorkLogs).forEach(log => total += (log.totalPay || 0));
-                 document.getElementById('monthlyTotalDisplay').innerText = `이번달 총액: ${total.toLocaleString()}원`;
-            } else {
-                 alert("실패: " + err.message); btn.innerText = "저장하기"; 
-            }
-        });
-    };
-
-    if(file) {
-        // busan-hak-port 프로젝트의 storageBucket으로 업로드 시도
-        storage.ref(`logs/${currentWorkerId}/${Date.now()}`).put(file)
-        .then(s => s.ref.getDownloadURL())
-        .then(u => save(u))
-        .catch(e => {
-            console.error(e);
-            // 업로드 실패 시 물어보기
-            if(confirm("사진 서버 연결 실패 (인터넷 상태 또는 권한 문제).\n사진 없이 내용만 저장하시겠습니까?")) {
-                save(adminWorkLogs[dStr] ? adminWorkLogs[dStr].imageUrl : null); 
-            } else {
-                btn.innerText = "저장하기";
-            }
-        });
-    } else { 
-        save(adminWorkLogs[dStr] ? adminWorkLogs[dStr].imageUrl : null); 
-    }
-}
-
 function clickDate(dStr){
     document.getElementById('selectedDateText').innerText = dStr;
     document.getElementById('dailyLogForm').classList.remove('hidden');
@@ -604,18 +533,42 @@ async function confirmLoginAndSave(){
     const nick = document.getElementById('loginNick').value.trim();
     const pw = document.getElementById('loginPw').value.trim();
     if(!nick || !pw) { alert("입력 필요"); return; }
-    
     const userRef = db.collection('user_profiles').doc(nick);
-    let doc = null;
-    try { doc = await userRef.get(); } catch(e) { console.warn("오프라인 상태로 로그인 진행"); }
-
+    const doc = await safeGet(userRef);
     if (doc && doc.exists) {
-        if (doc.data().password === pw) { loginSuccess(nick); closeLoginModal(); saveWorkLog(); } else { alert("비번 틀림"); }
+        if (doc.data().password === pw) { loginSuccess(nick); closeLoginModal(); saveWorkLog(); } 
+        else { alert("비번 틀림"); }
     } else if (doc === null) {
         if(confirm("서버 연결이 불안정합니다. 오프라인 모드로 로그인하시겠습니까?")) { loginSuccess(nick); closeLoginModal(); saveWorkLog(); }
     } else { 
         await userRef.set({ password: pw }); loginSuccess(nick); closeLoginModal(); saveWorkLog(); alert("가입 완료!");
     }
+}
+
+function saveWorkLog(){
+    const btn = document.getElementById('saveLogBtn');
+    btn.innerText = "저장 중...";
+    const dStr = document.getElementById('dailyLogForm').getAttribute('data-date');
+    const dh = parseFloat(document.getElementById('logDayHours').value)||0;
+    const nh = parseFloat(document.getElementById('logNightHours').value)||0;
+    const memo = document.getElementById('logMemo').value;
+    const file = document.getElementById('logImageInput').files[0];
+    const pay = (dh*10320) + (nh*15480);
+    const docId = `${currentWorkerId}_${dStr}`;
+    const save = (url) => {
+        db.collection('work_logs').doc(docId).set({
+            date: dStr, workerId: currentWorkerId, dayHours: dh, nightHours: nh, memo: memo, totalPay: pay, imageUrl: url
+        }, {merge: true}).then(() => {
+            showToast("저장됨"); btn.innerText = "저장하기";
+            adminWorkLogs[dStr] = { date: dStr, workerId: currentWorkerId, dayHours: dh, nightHours: nh, memo: memo, totalPay: pay, imageUrl: url };
+            const day = parseInt(dStr.split('-')[2]);
+            document.getElementById(`cal-day-${day}`).classList.add('has-data');
+            let total = 0; Object.values(adminWorkLogs).forEach(log => total += (log.totalPay || 0));
+            document.getElementById('monthlyTotalDisplay').innerText = `이번달 총액: ${total.toLocaleString()}원`;
+        }).catch(err => { alert("실패: " + err.message); btn.innerText = "저장하기"; });
+    };
+    if(file) storage.ref(`logs/${currentWorkerId}/${Date.now()}`).put(file).then(s=>s.ref.getDownloadURL()).then(u=>save(u)).catch(e=>{alert("사진 업로드 실패"); btn.innerText="저장하기";});
+    else save(adminWorkLogs[dStr] ? adminWorkLogs[dStr].imageUrl : null);
 }
 
 function loginSuccess(name) { currentWorkerId = name; localStorage.setItem('myWorkerId', currentWorkerId); updateUserBar(); renderCalendar(currentDate.getFullYear(), currentDate.getMonth()); }
@@ -717,13 +670,6 @@ function openPrivacy(){ document.getElementById('privacyModal').style.display='f
 
 /* 4️⃣ 실행 */
 window.onload = () => {
-    // 캐시 문제 해결을 위한 서비스 워커 해제 (필수)
-    if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.getRegistrations().then(function(registrations) {
-            for(let registration of registrations) { registration.unregister(); }
-        });
-    }
-
     loadBanner();
     try {
         db.collection("notices").orderBy("timestamp","desc").onSnapshot(s=>{const l=document.getElementById("noticeList"); l.innerHTML=""; s.forEach(d=>{const x=d.data(); l.innerHTML+=`<li class="post-item" onclick="toggleContent('n-${d.id}')">📢 <strong>${x.title}</strong><div id="n-${d.id}" class="post-body-content">${x.content}<br><button class="mini-btn btn-del" onclick="delNotice('${d.id}',event)">삭제</button></div></li>`;})}); 
