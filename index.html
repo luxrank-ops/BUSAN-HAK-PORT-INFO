@@ -134,6 +134,19 @@
         .user-status { font-size: 0.75rem; color: var(--success); }
         .logout-btn { background: var(--text-sub); color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 0.75rem; font-weight: bold; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* [추가] 게시판 테이블 스타일 */
+        .board-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; margin-top: 10px; table-layout: fixed; }
+        .board-table th { border-bottom: 2px solid var(--border); padding: 10px 4px; color: var(--text-sub); font-weight: 700; text-align: center; background: rgba(0,0,0,0.02); font-size: 0.85rem; }
+        .board-table td { border-bottom: 1px solid var(--border); padding: 12px 4px; color: var(--text-main); vertical-align: middle; }
+        /* 제목 컬럼 */
+        .board-title { text-align: left; font-weight: 600; cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding-left: 8px; }
+        /* 날짜 컬럼 */
+        .board-date { text-align: center; font-size: 0.75rem; color: var(--text-sub); width: 70px; white-space: nowrap; }
+        /* 내용이 열리는 행 (기본 숨김) */
+        .board-content-row { display: none; background: rgba(0,0,0,0.015); }
+        .board-content-row.show { display: table-row; }
+        .board-content-box { padding: 15px 10px; text-align: left; word-break: break-all; font-size: 0.95rem; line-height: 1.6; white-space: pre-wrap; color: var(--text-main); }
     </style>
 </head>
 <body>
@@ -214,7 +227,6 @@
                     </div>
                 </div>
             </div>
-
             <div id="log-card" class="dash-card" style="border:1px solid var(--primary);">
                 <div class="dash-header tap-effect" onclick="toggleDashItem('log-card')">
                     <span class="dash-title" style="color:var(--primary);">📅 스마트 근무일지(짝지)</span><span class="toggle-icon">▼</span>
@@ -286,7 +298,33 @@
 
         <div class="dash-grid">
             <div id="notice-card" class="dash-card"><div class="dash-header tap-effect" onclick="toggleDashItem('notice-card')">📢 공지사항 ▼</div><div class="dash-content"><div style="margin-bottom:10px; background:rgba(239,68,68,0.05); padding:10px; border-radius:8px;"><input type="text" id="noticeTitle" class="input-field" placeholder="제목"><textarea id="noticeContent" class="input-field textarea-field" placeholder="내용"></textarea><button class="action-btn bg-submit" onclick="addNotice()">공지 등록 (Admin)</button></div><ul id="noticeList" class="post-list" style="margin-top:10px;"></ul></div></div>
-            <div id="board-card" class="dash-card"><div class="dash-header tap-effect" onclick="toggleDashItem('board-card')">💬 익명게시판 ▼</div><div class="dash-content"><button class="action-btn" style="background:var(--text-sub); margin-bottom:10px;" onclick="toggleHidden('boardForm')">✍️ 글쓰기</button><div id="boardForm" class="hidden"><input type="text" id="inputTitle" class="input-field" placeholder="제목"><input type="password" id="inputPw" class="input-field" placeholder="비번"><textarea id="inputContent" class="input-field textarea-field" placeholder="내용"></textarea><button class="action-btn bg-submit" onclick="addPost()">등록</button></div><ul id="boardList" class="post-list"></ul><div id="pagination" style="display:flex; justify-content:center; gap:5px; margin-top:10px;"></div></div></div>
+            
+            <div id="board-card" class="dash-card">
+                <div class="dash-header tap-effect" onclick="toggleDashItem('board-card')">💬 익명게시판 ▼</div>
+                <div class="dash-content">
+                    <button class="action-btn" style="background:var(--text-sub); margin-bottom:10px;" onclick="toggleHidden('boardForm')">✍️ 글쓰기</button>
+                    <div id="boardForm" class="hidden">
+                        <input type="text" id="inputTitle" class="input-field" placeholder="제목">
+                        <input type="password" id="inputPw" class="input-field" placeholder="비번">
+                        <textarea id="inputContent" class="input-field textarea-field" placeholder="내용"></textarea>
+                        <button class="action-btn bg-submit" onclick="addPost()">등록</button>
+                    </div>
+                    
+                    <table class="board-table">
+                        <thead>
+                            <tr>
+                                <th style="width: auto;">제 목</th>
+                                <th style="width: 75px;">날짜</th>
+                            </tr>
+                        </thead>
+                        <tbody id="boardList">
+                            </tbody>
+                    </table>
+                    
+                    <div id="pagination" style="display:flex; justify-content:center; gap:5px; margin-top:10px;"></div>
+                </div>
+            </div>
+
             <div id="ship-card" class="dash-card"><div class="dash-header tap-effect" onclick="toggleDashItem('ship-card')">🚢 선박정보 ▼</div><div class="dash-content"><div style="display:flex; gap:5px; margin-bottom:10px;"><input type="text" id="shipSearch" class="input-field" placeholder="선박 검색" onkeyup="filterShips()" style="margin-bottom:0;"><button class="action-btn" style="width:auto;" onclick="filterShips()">🔍</button></div><a href="https://www.marinetraffic.com/" target="_blank" class="action-btn" style="background:#0284c7; text-align:center; display:block; text-decoration:none; margin-bottom:10px; padding:12px;">🌍 실시간 선박 위치 확인</a><button class="action-btn" style="background:var(--accent); margin-bottom:10px;" onclick="toggleHidden('shipForm')">📝 선박 정보 신규 등록</button><div id="shipForm" class="hidden"><input type="text" id="shipName" class="input-field" placeholder="선박명"><textarea id="shipOnboard" class="input-field textarea-field" placeholder="작업내용"></textarea><input type="file" id="shipFileInput" class="input-field"><button id="shipSubmitBtn" class="action-btn bg-submit" onclick="addShipInfo()">등록/수정</button></div><ul id="shipList" class="post-list"></ul></div></div>
             <div id="file-card" class="dash-card"><div class="dash-header tap-effect" onclick="toggleDashItem('file-card')">📂 자료실 ▼</div><div class="dash-content"><input type="text" id="fileTitle" class="input-field" placeholder="파일 제목"><input type="file" id="fileInput" class="input-field"><button class="action-btn bg-submit" onclick="uploadFile()">업로드</button><ul id="fileList" class="post-list" style="margin-top:10px;"></ul></div></div>
         </div>
@@ -382,8 +420,7 @@ function toggleDarkMode(){ document.body.classList.toggle('dark-mode'); }
 function scrollToTop(){ window.scrollTo({top:0, behavior:'smooth'}); }
 function showToast(m){const t=document.getElementById("toast"); t.innerText=m; t.classList.add("show"); setTimeout(()=>t.classList.remove("show"),3000);}
 
-// --- [B] 흐르는 배너 관리 (수정됨: 삭제 즉시 반영) ---
-
+// --- [B] 흐르는 배너 관리 ---
 function loadBanner(){ 
     db.collection('settings').doc('banner').onSnapshot((doc) => {
         if(!doc.exists) {
@@ -428,40 +465,24 @@ async function openTickerManager(){
 function renderTickerList() {
     const listContainer = document.getElementById('tickerListContainer');
     listContainer.innerHTML = '<div style="padding:10px; text-align:center;">로딩 중...</div>';
-    
-    // 로컬 데이터를 즉시 불러옴 (지워지는 즉시 갱신됨)
     const data = globalTickerData; 
     listContainer.innerHTML = ""; 
     let hasData = false;
-
     if (data.adminMessage) {
         hasData = true;
-        listContainer.innerHTML += `
-            <div class="ticker-manage-item" style="display:flex; justify-content:space-between; align-items:center; padding:8px; border-bottom:1px solid #eee;">
-                <span style="font-weight:bold; color:red; flex:1;">📢 [관리자] ${data.adminMessage}</span>
-                <button onclick="deleteTickerMsg('admin', 0)" class="mini-btn btn-del-mini">삭제</button>
-            </div>`;
+        listContainer.innerHTML += `<div class="ticker-manage-item" style="display:flex; justify-content:space-between; align-items:center; padding:8px; border-bottom:1px solid #eee;"><span style="font-weight:bold; color:red; flex:1;">📢 [관리자] ${data.adminMessage}</span><button onclick="deleteTickerMsg('admin', 0)" class="mini-btn btn-del-mini">삭제</button></div>`;
     }
-
     if (data.userMessages && data.userMessages.length > 0) {
         hasData = true;
         data.userMessages.forEach((m, i) => {
-            listContainer.innerHTML += `
-                <div class="ticker-manage-item" style="display:flex; justify-content:space-between; align-items:center; padding:8px; border-bottom:1px solid #eee;">
-                    <span style="flex:1;">${i + 1}. ${m}</span>
-                    <button onclick="deleteTickerMsg('user', ${i})" class="mini-btn btn-del-mini">삭제</button>
-                </div>`;
+            listContainer.innerHTML += `<div class="ticker-manage-item" style="display:flex; justify-content:space-between; align-items:center; padding:8px; border-bottom:1px solid #eee;"><span style="flex:1;">${i + 1}. ${m}</span><button onclick="deleteTickerMsg('user', ${i})" class="mini-btn btn-del-mini">삭제</button></div>`;
         });
     }
-
-    if (!hasData) {
-        listContainer.innerHTML = '<div style="padding:10px; text-align:center; color:#888;">등록된 내용이 없습니다.</div>';
-    }
+    if (!hasData) listContainer.innerHTML = '<div style="padding:10px; text-align:center; color:#888;">등록된 내용이 없습니다.</div>';
 }
 
 async function deleteTickerMsg(type, index){ 
     if(!confirm("삭제하시겠습니까?")) return;
-
     if(type === 'admin') {
         delete globalTickerData.adminMessage;
         await db.collection('settings').doc('banner').update({ adminMessage: firebase.firestore.FieldValue.delete() });
@@ -471,8 +492,6 @@ async function deleteTickerMsg(type, index){
             await db.collection('settings').doc('banner').update({ userMessages: globalTickerData.userMessages });
         }
     }
-    
-    // [중요] 삭제 후 팝업 내부 목록을 즉시 다시 그립니다.
     renderTickerList();
     showToast("삭제되었습니다.");
 }
@@ -633,13 +652,7 @@ function calculateWage() {
                      ((hHoliday + hWeekend + hRain) * EXTRA_ADD) + (hT * HOT_ADD) + 
                      (sDayCount * SKILLED_DAY_ADD) + (sNightCount * SKILLED_NIGHT_ADD);
     const taxAmt = subTotal * taxRate;
-    document.getElementById('wageSpecBody').innerHTML = `
-        <tr><td>☀️ 주간 (${dayCount.toFixed(1)}H)</td><td>${Math.floor(dayCount * DAY_RATE).toLocaleString()}원</td></tr>
-        <tr><td>🌙 야간 (${nightCount.toFixed(1)}H)</td><td>${Math.floor(nightCount * NIGHT_RATE).toLocaleString()}원</td></tr>
-        ${role === 'skilled' ? `<tr><td colspan="2">🔧 기능공 수당 추가</td></tr>` : ''}
-        <tr><td>🌴 할증 (${hHoliday+hWeekend+hRain+hT}H)</td><td>${Math.floor((hHoliday+hWeekend+hRain)*EXTRA_ADD + hT*HOT_ADD).toLocaleString()}원</td></tr>
-        <tr style="border-top:2px solid #ccc; font-weight:bold;"><td>💸 세금 (${(taxRate*100).toFixed(1)}%)</td><td>-${Math.floor(taxAmt).toLocaleString()}원</td></tr>
-    `;
+    document.getElementById('wageSpecBody').innerHTML = `<tr><td>☀️ 주간 (${dayCount.toFixed(1)}H)</td><td>${Math.floor(dayCount * DAY_RATE).toLocaleString()}원</td></tr><tr><td>🌙 야간 (${nightCount.toFixed(1)}H)</td><td>${Math.floor(nightCount * NIGHT_RATE).toLocaleString()}원</td></tr>${role === 'skilled' ? `<tr><td colspan="2">🔧 기능공 수당 추가</td></tr>` : ''}<tr><td>🌴 할증 (${hHoliday+hWeekend+hRain+hT}H)</td><td>${Math.floor((hHoliday+hWeekend+hRain)*EXTRA_ADD + hT*HOT_ADD).toLocaleString()}원</td></tr><tr style="border-top:2px solid #ccc; font-weight:bold;"><td>💸 세금 (${(taxRate*100).toFixed(1)}%)</td><td>-${Math.floor(taxAmt).toLocaleString()}원</td></tr>`;
     document.getElementById('wageTotal').innerText = `총 수령액: ${Math.floor(subTotal - taxAmt).toLocaleString()}원`;
     document.getElementById('wageResultBox').classList.remove('hidden');
 }
@@ -660,7 +673,72 @@ async function deleteShip(id,e){e.stopPropagation(); if(await verifyAdmin()) db.
 function uploadFile(){ const f=document.getElementById('fileInput').files[0], t=document.getElementById('fileTitle').value; if(f&&t) storage.ref(`archives/${Date.now()}`).put(f).then(s=>s.ref.getDownloadURL()).then(u=>db.collection("archives").add({title:t, url:u, timestamp:firebase.firestore.FieldValue.serverTimestamp()})).then(()=>{showToast("업로드됨"); document.getElementById('fileTitle').value='';}); }
 function delArchive(id,e){ e.stopPropagation(); verifyAdmin().then(r=>{ if(r) db.collection("archives").doc(id).delete(); }); }
 
-function renderBoardPage(p){currentBoardPage=p; const l=document.getElementById("boardList"); l.innerHTML=""; const start=(p-1)*postsPerPage; const end=start+postsPerPage; allPostsData.slice(start, end).forEach(x=>{l.innerHTML+=`<li class="post-item"><div class="post-header-row" onclick="toggleContent('p-${x.id}')"><span class="post-title-text">${x.title}</span><span class="post-meta-info">${x.timestamp ? new Date(x.timestamp.toDate()).toLocaleDateString() : ''}</span><button class="mini-btn btn-del" onclick="deletePost('${x.id}','${x.password}',event)">삭제</button></div><div id="p-${x.id}" class="post-body-content">${x.content}<div id="cmt-list-${x.id}" class="comment-section"></div><div class="comment-form"><input id="cmt-name-${x.id}" class="comment-input-sm" placeholder="닉네임"><input id="cmt-pw-${x.id}" class="comment-input-sm" type="password" placeholder="비번"><input id="cmt-txt-${x.id}" class="comment-input-lg" placeholder="댓글 내용..."><button class="comment-submit" onclick="addComment('${x.id}')">등록</button></div></div></li>`; loadComments(x.id);});}
+/* [수정] 게시판 렌더링 함수 (테이블 모드) */
+function renderBoardPage(p){
+    currentBoardPage = p; 
+    const l = document.getElementById("boardList"); 
+    l.innerHTML = ""; 
+    const start = (p-1) * postsPerPage; 
+    const end = start + postsPerPage; 
+    const pageData = allPostsData.slice(start, end);
+
+    if(pageData.length === 0) {
+        l.innerHTML = "<tr><td colspan='2' style='text-align:center; padding:20px; color:var(--text-sub);'>게시글이 없습니다.</td></tr>";
+        document.getElementById("pagination").innerHTML = "";
+        return;
+    }
+
+    pageData.forEach(x => {
+        let dateStr = "";
+        if(x.timestamp) {
+            const d = x.timestamp.toDate();
+            dateStr = `${d.getMonth()+1}.${d.getDate()}`;
+        }
+        const rowId = `p-${x.id}`;
+        const html = `
+        <tr onclick="toggleBoardRow('${rowId}')" style="cursor:pointer;">
+            <td class="board-title">${x.title} <span style="font-size:0.7rem; color:var(--primary); margin-left:4px;">▼</span></td>
+            <td class="board-date">${dateStr}</td>
+        </tr>
+        <tr id="${rowId}" class="board-content-row">
+            <td colspan="2" class="board-content-box">
+                <div style="margin-bottom:15px;">${x.content}</div>
+                <div style="text-align:right; border-bottom:1px dashed var(--border); padding-bottom:10px; margin-bottom:10px;">
+                    <button class="mini-btn btn-del" onclick="deletePost('${x.id}','${x.password}',event)">🗑️ 글 삭제</button>
+                </div>
+                <div id="cmt-list-${x.id}" class="comment-section"></div>
+                <div class="comment-form">
+                    <input id="cmt-name-${x.id}" class="comment-input-sm" placeholder="닉네임">
+                    <input id="cmt-pw-${x.id}" class="comment-input-sm" type="password" placeholder="비번">
+                    <input id="cmt-txt-${x.id}" class="comment-input-lg" placeholder="댓글 내용...">
+                    <button class="comment-submit" onclick="addComment('${x.id}')">등록</button>
+                </div>
+            </td>
+        </tr>`;
+        l.innerHTML += html;
+        loadComments(x.id);
+    });
+    renderPagination(p);
+}
+
+/* [추가] 테이블 행 토글 함수 */
+function toggleBoardRow(id) {
+    const el = document.getElementById(id);
+    if(el.classList.contains('show')) el.classList.remove('show');
+    else el.classList.add('show');
+}
+
+/* [추가] 페이지네이션 버튼 렌더링 함수 */
+function renderPagination(curr) {
+    const total = Math.ceil(allPostsData.length / postsPerPage);
+    const el = document.getElementById('pagination');
+    if(!el) return;
+    el.innerHTML = "";
+    for(let i=1; i<=total; i++){
+        el.innerHTML += `<span class="page-num ${i===curr?'active':''}" onclick="renderBoardPage(${i})">${i}</span>`;
+    }
+}
+
 function loadComments(pid){if(commentUnsubscribes[pid]) commentUnsubscribes[pid](); commentUnsubscribes[pid]=db.collection('posts').doc(pid).collection('comments').orderBy('timestamp','asc').onSnapshot(s=>{const el=document.getElementById(`cmt-list-${pid}`); if(!el) return; el.innerHTML=""; s.forEach(d=>{const c=d.data(); el.innerHTML+=`<div class="comment-item"><span><span class="comment-meta">${c.name}:</span><span class="comment-text">${c.text}</span></span><button class="comment-del-btn" onclick="deleteComment('${pid}','${d.id}','${c.password}')">×</button></div>`;});});}
 function renderShipPage(p){const l=document.getElementById("shipList"); l.innerHTML=""; filteredShips.slice((p-1)*postsPerPage, p*postsPerPage).forEach(x=>{l.innerHTML+=`<li class="post-item"><div onclick="toggleContent('s-${x.id}')">🚢 ${x.shipName}</div><div id="s-${x.id}" class="post-body-content">${x.onboardFeat}<br><button class="mini-btn btn-del" onclick="deleteShip('${x.id}',event)">삭제</button></div></li>`;});}
 function filterShips(){ const q=document.getElementById('shipSearch').value; filteredShips=allShipsData.filter(s=>s.shipName.includes(q)); renderShipPage(1); }
