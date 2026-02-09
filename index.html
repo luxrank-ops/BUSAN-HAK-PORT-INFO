@@ -531,16 +531,59 @@ function loginSuccess(name) { currentWorkerId = name; localStorage.setItem('myWo
 function closeLoginModal(){ document.getElementById('loginModal').style.display = 'none'; }
 function updateUserBar() { document.getElementById('userProfileBar').style.display = currentWorkerId ? 'flex' : 'none'; if(currentWorkerId) document.getElementById('currentUserDisplay').innerText = `👤 ${currentWorkerId}`; }
 function logoutWorker() { if(confirm("로그아웃?")) { currentWorkerId = null; localStorage.removeItem('myWorkerId'); updateUserBar(); renderCalendar(currentDate.getFullYear(), currentDate.getMonth()); document.getElementById('dailyLogForm').classList.add('hidden'); } }
-function deleteWorkLog(){
-    if(!currentWorkerId || !confirm("삭제?")) return;
+/* [수정] 근무일지 삭제 함수 (오류 해결 및 기능 강화) */
+function deleteWorkLog() {
+    // 1. 로그인 상태 확인 (안 되어 있으면 알림)
+    if (!currentWorkerId) {
+        alert("로그인이 필요합니다. (상단 '내 저장소' 확인)");
+        return;
+    }
+
+    // 2. 삭제 확인
+    if (!confirm("정말 이 근무 기록을 삭제하시겠습니까?")) return;
+
     const dStr = document.getElementById('dailyLogForm').getAttribute('data-date');
-    db.collection('work_logs').doc(`${currentWorkerId}_${dStr}`).delete().then(()=>{
-        showToast("삭제됨"); delete adminWorkLogs[dStr];
-        document.getElementById(`cal-day-${parseInt(dStr.split('-')[2])}`).classList.remove('has-data');
-        document.getElementById('logDayHours').value=''; document.getElementById('logNightHours').value=''; document.getElementById('logMemo').value='';
-        let total = 0; Object.values(adminWorkLogs).forEach(log => total += (log.totalPay || 0));
-        document.getElementById('monthlyTotalDisplay').innerText = `이번달 총액: ${total.toLocaleString()}원`;
-    });
+    if (!dStr) {
+        alert("선택된 날짜 오류입니다. 날짜를 다시 클릭해주세요.");
+        return;
+    }
+
+    // 3. 데이터 삭제 시도
+    db.collection('work_logs').doc(`${currentWorkerId}_${dStr}`).delete()
+        .then(() => {
+            showToast("삭제되었습니다.");
+
+            // 로컬 데이터에서 제거
+            if (adminWorkLogs[dStr]) {
+                delete adminWorkLogs[dStr];
+            }
+
+            // 달력에서 '점' 제거
+            const dayPart = parseInt(dStr.split('-')[2]);
+            const dayEl = document.getElementById(`cal-day-${dayPart}`);
+            if (dayEl) dayEl.classList.remove('has-data');
+
+            // 입력칸 및 이미지 초기화
+            document.getElementById('logDayHours').value = '';
+            document.getElementById('logNightHours').value = '';
+            document.getElementById('logMemo').value = '';
+            document.getElementById('logImageInput').value = ''; // 파일 선택값 초기화
+            
+            const imgPreview = document.getElementById('logImagePreview');
+            if (imgPreview) {
+                imgPreview.src = '';
+                imgPreview.style.display = 'none';
+            }
+
+            // 월 합계 재계산
+            let total = 0;
+            Object.values(adminWorkLogs).forEach(log => total += (log.totalPay || 0));
+            document.getElementById('monthlyTotalDisplay').innerText = `이번달 총액: ${total.toLocaleString()}원`;
+        })
+        .catch((error) => {
+            console.error("삭제 실패:", error);
+            alert("삭제에 실패했습니다. 네트워크를 확인해주세요.\n내용: " + error.message);
+        });
 }
 function changeMonth(s){ currentDate.setMonth(currentDate.getMonth()+s); renderCalendar(currentDate.getFullYear(), currentDate.getMonth()); }
 function previewLogImage(input){ if(input.files&&input.files[0]){ const r=new FileReader(); r.onload=e=>{const i=document.getElementById('logImagePreview'); i.src=e.target.result; i.style.display='block';}; r.readAsDataURL(input.files[0]); } }
@@ -704,3 +747,4 @@ window.onload = () => {
 </script>
 </body>
 </html>
+
