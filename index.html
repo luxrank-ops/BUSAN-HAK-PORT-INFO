@@ -140,7 +140,7 @@
         .board-table th { border-bottom: 2px solid var(--border); padding: 10px 4px; color: var(--text-sub); font-weight: 700; text-align: center; background: rgba(0,0,0,0.02); font-size: 0.85rem; }
         .board-table td { border-bottom: 1px solid var(--border); padding: 12px 4px; color: var(--text-main); vertical-align: middle; }
         
-        /* [추가/수정] 컬럼별 스타일 (글번호, 제목, 날짜, 닉네임) */
+        /* 컬럼별 스타일 */
         .board-no { text-align: center; width: 40px; color: var(--text-sub); font-size: 0.75rem; }
         .board-title { text-align: left; font-weight: 600; cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding-left: 8px; width: auto; }
         .board-date { text-align: center; font-size: 0.7rem; color: var(--text-sub); width: 100px; white-space: nowrap; }
@@ -229,28 +229,22 @@
                     </div>
                 </div>
             </div>
+            
             <div id="log-card" class="dash-card" style="border:1px solid var(--primary);">
                 <div class="dash-header tap-effect" onclick="toggleDashItem('log-card')">
                     <span class="dash-title" style="color:var(--primary);">📅 스마트 근무일지(짝지)</span><span class="toggle-icon">▼</span>
                 </div>
                 <div id="workLogArea" class="dash-content">
-                    
                     <div id="userProfileBar" class="user-auth-bar" style="display:none;">
-                        <div class="user-info">
-                            <span id="currentUserDisplay" class="user-name"></span>
-                            <span class="user-status">🔒 내 저장소</span>
-                        </div>
+                        <div class="user-info"><span id="currentUserDisplay" class="user-name"></span><span class="user-status">🔒 내 저장소</span></div>
                         <button class="logout-btn" onclick="logoutWorker()">로그아웃</button>
                     </div>
-
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
                         <button class="mini-btn" style="padding:6px 12px; font-size:1rem;" onclick="changeMonth(-1)">◀</button>
                         <span id="calMonthYear" style="font-weight:bold; font-size:1.1rem;"></span>
                         <button class="mini-btn" style="padding:6px 12px; font-size:1rem;" onclick="changeMonth(1)">▶</button>
                     </div>
-                    
                     <div id="calendarGrid" class="calendar-grid"></div>
-                    
                     <div id="dailyLogForm" class="hidden" style="margin-top:20px; padding:15px; background:rgba(0,0,0,0.03); border-radius:12px; border:1px solid var(--border);">
                         <h4 id="selectedDateText" style="margin:0 0 10px 0; color:var(--primary); text-align:center; font-size:1.1rem;"></h4>
                         <div class="wage-row"><label>주간</label><input type="number" id="logDayHours" class="input-field" placeholder="시간(H)" step="0.5"></div>
@@ -268,7 +262,6 @@
                 </div>
             </div>
         </div>
-
         <div class="card" style="border-left: 5px solid #3b82f6;">
             <div class="section-header tap-effect" onclick="toggleSection('t3-content', this)"><span class="section-title">⛴️ 3항업 (신항 남측) ▼</span></div>
             <div id="t3-content" class="collapsible-content collapsed">
@@ -304,7 +297,6 @@
             <div id="board-card" class="dash-card">
                 <div class="dash-header tap-effect" onclick="toggleDashItem('board-card')">💬 익명게시판 ▼</div>
                 <div class="dash-content">
-                    
                     <table class="board-table">
                         <thead>
                             <tr>
@@ -317,7 +309,6 @@
                         <tbody id="boardList"></tbody>
                     </table>
                     <div id="pagination" style="display:flex; justify-content:center; gap:5px; margin-top:10px; margin-bottom: 15px;"></div>
-
                     <button class="action-btn" style="background:var(--text-sub); margin-bottom:10px;" onclick="toggleHidden('boardForm')">✍️ 글쓰기</button>
                     <div id="boardForm" class="hidden">
                         <div style="display:flex; gap:5px;">
@@ -328,7 +319,6 @@
                         <textarea id="inputContent" class="input-field textarea-field" placeholder="내용"></textarea>
                         <button class="action-btn bg-submit" onclick="addPost()">등록</button>
                     </div>
-
                 </div>
             </div>
 
@@ -509,7 +499,6 @@ async function confirmLoginAndSave(){
     loginSuccess(nick); closeLoginModal(); saveWorkLog();
 }
 
-/* [수정] 저장 기능: 버튼 피드백 및 실시간 UI 갱신 */
 function saveWorkLog(){
     const btn = document.getElementById('saveLogBtn');
     btn.innerText = "저장 중...";
@@ -568,7 +557,6 @@ function closeLoginModal(){ document.getElementById('loginModal').style.display 
 function updateUserBar() { document.getElementById('userProfileBar').style.display = currentWorkerId ? 'flex' : 'none'; if(currentWorkerId) document.getElementById('currentUserDisplay').innerText = `👤 ${currentWorkerId}`; }
 function logoutWorker() { if(confirm("로그아웃?")) { currentWorkerId = null; localStorage.removeItem('myWorkerId'); updateUserBar(); renderCalendar(currentDate.getFullYear(), currentDate.getMonth()); document.getElementById('dailyLogForm').classList.add('hidden'); } }
 
-/* [수정] 삭제 기능: 즉시 UI 반영 */
 function deleteWorkLog(){
     if(!currentWorkerId) { alert("로그인이 필요합니다."); return; }
     if(!confirm("정말 삭제하시겠습니까?")) return;
@@ -649,7 +637,7 @@ function resetWageForm(){
 function addNotice(){ verifyAdmin().then(r=>{ if(r) db.collection("notices").add({title:document.getElementById('noticeTitle').value, content:document.getElementById('noticeContent').value, timestamp:firebase.firestore.FieldValue.serverTimestamp()}).then(()=>{document.getElementById('noticeTitle').value=''; document.getElementById('noticeContent').value=''; showToast("공지 등록됨");}); }); }
 function delNotice(id,e){ e.stopPropagation(); verifyAdmin().then(r=>{ if(r) db.collection("notices").doc(id).delete(); }); }
 
-/* [수정 적용됨] 게시글 등록 함수 */
+/* [수정] 게시글 등록 (입력창 초기화 강화) */
 function addPost() {
     const nickEl = document.getElementById('inputNick');
     const titleEl = document.getElementById('inputTitle');
@@ -669,6 +657,7 @@ function addPost() {
             content: contentVal,
             timestamp: firebase.firestore.FieldValue.serverTimestamp()
         }).then(() => {
+            // 입력창 초기화
             nickEl.value = '';
             titleEl.value = '';
             pwEl.value = '';
@@ -691,7 +680,7 @@ async function deleteShip(id,e){e.stopPropagation(); if(await verifyAdmin()) db.
 function uploadFile(){ const f=document.getElementById('fileInput').files[0], t=document.getElementById('fileTitle').value; if(f&&t) storage.ref(`archives/${Date.now()}`).put(f).then(s=>s.ref.getDownloadURL()).then(u=>db.collection("archives").add({title:t, url:u, timestamp:firebase.firestore.FieldValue.serverTimestamp()})).then(()=>{showToast("업로드됨"); document.getElementById('fileTitle').value='';}); }
 function delArchive(id,e){ e.stopPropagation(); verifyAdmin().then(r=>{ if(r) db.collection("archives").doc(id).delete(); }); }
 
-/* [수정 적용됨] 게시판 렌더링 함수 */
+/* [수정] 게시판 렌더링 (날짜상세, 닉네임, 글번호) */
 function renderBoardPage(p){
     currentBoardPage = p; 
     const l = document.getElementById("boardList"); l.innerHTML = ""; 
@@ -761,8 +750,3 @@ window.onload = () => {
     if(localStorage.getItem('myWorkerId')) { currentWorkerId = localStorage.getItem('myWorkerId'); updateUserBar(); }
 };
 </script>
-</body>
-</html>
-
-
-
