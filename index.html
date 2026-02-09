@@ -141,10 +141,10 @@
         .board-table td { border-bottom: 1px solid var(--border); padding: 12px 4px; color: var(--text-main); vertical-align: middle; }
         
         /* 컬럼별 스타일 */
-        .board-no { text-align: center; width: 40px; color: var(--text-sub); font-size: 0.75rem; }
+        .board-no { text-align: center; width: 35px; color: var(--text-sub); font-size: 0.75rem; }
         .board-title { text-align: left; font-weight: 600; cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding-left: 8px; width: auto; }
-        .board-date { text-align: center; font-size: 0.7rem; color: var(--text-sub); width: 100px; white-space: nowrap; }
-        .board-nick { text-align: center; font-size: 0.75rem; color: var(--text-sub); width: 60px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .board-date { text-align: center; font-size: 0.7rem; color: var(--text-sub); width: 90px; white-space: nowrap; }
+        .board-nick { text-align: center; font-size: 0.75rem; color: var(--text-sub); width: 50px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         
         .board-content-row { display: none; background: rgba(0,0,0,0.015); }
         .board-content-row.show { display: table-row; }
@@ -229,7 +229,6 @@
                     </div>
                 </div>
             </div>
-            
             <div id="log-card" class="dash-card" style="border:1px solid var(--primary);">
                 <div class="dash-header tap-effect" onclick="toggleDashItem('log-card')">
                     <span class="dash-title" style="color:var(--primary);">📅 스마트 근무일지(짝지)</span><span class="toggle-icon">▼</span>
@@ -262,6 +261,7 @@
                 </div>
             </div>
         </div>
+
         <div class="card" style="border-left: 5px solid #3b82f6;">
             <div class="section-header tap-effect" onclick="toggleSection('t3-content', this)"><span class="section-title">⛴️ 3항업 (신항 남측) ▼</span></div>
             <div id="t3-content" class="collapsible-content collapsed">
@@ -448,7 +448,7 @@ async function deleteTickerMsg(type, index){
     renderTickerList(); showToast("삭제됨");
 }
 
-// --- [C] 근무일지 (실시간 반영 기능 강화) ---
+// --- [C] 근무일지 (저장/삭제 시 자동 새로고침 적용) ---
 function renderCalendar(y, m){
     const g = document.getElementById('calendarGrid'); g.innerHTML = "";
     document.getElementById('calMonthYear').innerText = `${y}년 ${m+1}월`;
@@ -499,6 +499,7 @@ async function confirmLoginAndSave(){
     loginSuccess(nick); closeLoginModal(); saveWorkLog();
 }
 
+/* [수정] 저장 기능: 저장 성공 시 달력 데이터 재로드 */
 function saveWorkLog(){
     const btn = document.getElementById('saveLogBtn');
     btn.innerText = "저장 중...";
@@ -517,24 +518,16 @@ function saveWorkLog(){
         
         db.collection('work_logs').doc(docId).set(logData, {merge: true}).then(() => {
             btn.innerText = "✅ 저장 완료!";
-            const oldBg = btn.style.background;
             btn.style.background = "var(--success)";
             
             showToast("저장되었습니다.");
 
-            adminWorkLogs[dStr] = logData;
-            
-            const dayPart = parseInt(dStr.split('-')[2]);
-            const dayEl = document.getElementById(`cal-day-${dayPart}`);
-            if(dayEl) dayEl.classList.add('has-data');
-
-            let total = 0; 
-            Object.values(adminWorkLogs).forEach(log => total += (log.totalPay || 0));
-            document.getElementById('monthlyTotalDisplay').innerText = `이번달 총액: ${total.toLocaleString()}원`;
+            // [중요] 저장 후 달력 데이터를 새로 받아와서 화면 갱신 (동기화)
+            renderCalendar(currentDate.getFullYear(), currentDate.getMonth());
 
             setTimeout(() => { 
                 btn.innerText = "저장하기"; 
-                btn.style.background = oldBg;
+                btn.style.background = "#ef4444"; 
                 btn.disabled = false;
             }, 1500);
 
@@ -552,6 +545,7 @@ function closeLoginModal(){ document.getElementById('loginModal').style.display 
 function updateUserBar() { document.getElementById('userProfileBar').style.display = currentWorkerId ? 'flex' : 'none'; if(currentWorkerId) document.getElementById('currentUserDisplay').innerText = `👤 ${currentWorkerId}`; }
 function logoutWorker() { if(confirm("로그아웃?")) { currentWorkerId = null; localStorage.removeItem('myWorkerId'); updateUserBar(); renderCalendar(currentDate.getFullYear(), currentDate.getMonth()); document.getElementById('dailyLogForm').classList.add('hidden'); } }
 
+/* [수정] 삭제 기능: 삭제 성공 시 달력 데이터 재로드 */
 function deleteWorkLog(){
     if(!currentWorkerId) { alert("로그인이 필요합니다."); return; }
     if(!confirm("정말 삭제하시겠습니까?")) return;
@@ -561,12 +555,7 @@ function deleteWorkLog(){
     db.collection('work_logs').doc(`${currentWorkerId}_${dStr}`).delete().then(()=>{
         showToast("삭제되었습니다.");
         
-        if(adminWorkLogs[dStr]) delete adminWorkLogs[dStr];
-        
-        const dayPart = parseInt(dStr.split('-')[2]);
-        const dayEl = document.getElementById(`cal-day-${dayPart}`);
-        if(dayEl) dayEl.classList.remove('has-data');
-
+        // 입력창 초기화
         document.getElementById('logDayHours').value=''; 
         document.getElementById('logNightHours').value=''; 
         document.getElementById('logMemo').value='';
@@ -574,9 +563,8 @@ function deleteWorkLog(){
         const imgPreview = document.getElementById('logImagePreview');
         if(imgPreview) { imgPreview.src = ''; imgPreview.style.display = 'none'; }
 
-        let total = 0; 
-        Object.values(adminWorkLogs).forEach(log => total += (log.totalPay || 0));
-        document.getElementById('monthlyTotalDisplay').innerText = `이번달 총액: ${total.toLocaleString()}원`;
+        // [중요] 삭제 후 달력 데이터를 새로 받아와서 화면 갱신 (동기화)
+        renderCalendar(currentDate.getFullYear(), currentDate.getMonth());
 
     }).catch(err => alert("삭제 실패: " + err.message));
 }
