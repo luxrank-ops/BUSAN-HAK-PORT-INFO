@@ -135,15 +135,12 @@
         .logout-btn { background: var(--text-sub); color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 0.75rem; font-weight: bold; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
 
-        /* [추가] 게시판 테이블 스타일 */
+        /* 게시판 테이블 스타일 */
         .board-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; margin-top: 10px; table-layout: fixed; }
         .board-table th { border-bottom: 2px solid var(--border); padding: 10px 4px; color: var(--text-sub); font-weight: 700; text-align: center; background: rgba(0,0,0,0.02); font-size: 0.85rem; }
         .board-table td { border-bottom: 1px solid var(--border); padding: 12px 4px; color: var(--text-main); vertical-align: middle; }
-        /* 제목 컬럼 */
         .board-title { text-align: left; font-weight: 600; cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding-left: 8px; }
-        /* 날짜 컬럼 */
         .board-date { text-align: center; font-size: 0.75rem; color: var(--text-sub); width: 70px; white-space: nowrap; }
-        /* 내용이 열리는 행 (기본 숨김) */
         .board-content-row { display: none; background: rgba(0,0,0,0.015); }
         .board-content-row.show { display: table-row; }
         .board-content-box { padding: 15px 10px; text-align: left; word-break: break-all; font-size: 0.95rem; line-height: 1.6; white-space: pre-wrap; color: var(--text-main); }
@@ -316,8 +313,11 @@
 
                     <button class="action-btn" style="background:var(--text-sub); margin-bottom:10px;" onclick="toggleHidden('boardForm')">✍️ 글쓰기</button>
                     <div id="boardForm" class="hidden">
+                        <div style="display:flex; gap:5px;">
+                            <input type="text" id="inputNick" class="input-field" placeholder="닉네임" style="flex:1;">
+                            <input type="password" id="inputPw" class="input-field" placeholder="비번" style="flex:1;">
+                        </div>
                         <input type="text" id="inputTitle" class="input-field" placeholder="제목">
-                        <input type="password" id="inputPw" class="input-field" placeholder="비번">
                         <textarea id="inputContent" class="input-field textarea-field" placeholder="내용"></textarea>
                         <button class="action-btn bg-submit" onclick="addPost()">등록</button>
                     </div>
@@ -582,23 +582,27 @@ function resetWageForm(){
 function addNotice(){ verifyAdmin().then(r=>{ if(r) db.collection("notices").add({title:document.getElementById('noticeTitle').value, content:document.getElementById('noticeContent').value, timestamp:firebase.firestore.FieldValue.serverTimestamp()}).then(()=>{document.getElementById('noticeTitle').value=''; document.getElementById('noticeContent').value=''; showToast("공지 등록됨");}); }); }
 function delNotice(id,e){ e.stopPropagation(); verifyAdmin().then(r=>{ if(r) db.collection("notices").doc(id).delete(); }); }
 
-/* [수정 적용됨] 게시글 등록 함수 */
+/* [수정 적용됨] 게시글 등록 함수 (닉네임 포함) */
 function addPost() {
+    const nickEl = document.getElementById('inputNick');
     const titleEl = document.getElementById('inputTitle');
     const pwEl = document.getElementById('inputPw');
     const contentEl = document.getElementById('inputContent');
 
+    const nickVal = nickEl.value;
     const titleVal = titleEl.value;
     const pwVal = pwEl.value;
     const contentVal = contentEl.value;
 
-    if (titleVal && pwVal && contentVal) {
+    if (nickVal && titleVal && pwVal && contentVal) {
         db.collection("posts").add({
+            nick: nickVal,
             title: titleVal,
             password: pwVal,
             content: contentVal,
             timestamp: firebase.firestore.FieldValue.serverTimestamp()
         }).then(() => {
+            nickEl.value = '';
             titleEl.value = '';
             pwEl.value = '';
             contentEl.value = '';
@@ -608,7 +612,7 @@ function addPost() {
             alert("등록 실패: " + error.message);
         });
     } else {
-        alert("모든 내용을 입력해주세요.");
+        alert("닉네임, 제목, 비밀번호, 내용을 모두 입력해주세요.");
     }
 }
 
@@ -620,7 +624,7 @@ async function deleteShip(id,e){e.stopPropagation(); if(await verifyAdmin()) db.
 function uploadFile(){ const f=document.getElementById('fileInput').files[0], t=document.getElementById('fileTitle').value; if(f&&t) storage.ref(`archives/${Date.now()}`).put(f).then(s=>s.ref.getDownloadURL()).then(u=>db.collection("archives").add({title:t, url:u, timestamp:firebase.firestore.FieldValue.serverTimestamp()})).then(()=>{showToast("업로드됨"); document.getElementById('fileTitle').value='';}); }
 function delArchive(id,e){ e.stopPropagation(); verifyAdmin().then(r=>{ if(r) db.collection("archives").doc(id).delete(); }); }
 
-/* 게시판 렌더링 */
+/* [수정 적용됨] 게시판 렌더링 함수 (작성자 표시) */
 function renderBoardPage(p){
     currentBoardPage = p; 
     const l = document.getElementById("boardList"); l.innerHTML = ""; 
@@ -633,12 +637,17 @@ function renderBoardPage(p){
         let dateStr = "";
         if(x.timestamp) { const d = x.timestamp.toDate(); dateStr = `${d.getMonth()+1}.${d.getDate()}`; }
         const rowId = `p-${x.id}`;
+        const authorName = x.nick || '익명';
+
         l.innerHTML += `
         <tr onclick="toggleBoardRow('${rowId}')" style="cursor:pointer;">
             <td class="board-title">${x.title} <span style="font-size:0.7rem; color:var(--primary); margin-left:4px;">▼</span></td><td class="board-date">${dateStr}</td>
         </tr>
         <tr id="${rowId}" class="board-content-row">
             <td colspan="2" class="board-content-box">
+                <div style="border-bottom:1px dashed var(--border); padding-bottom:8px; margin-bottom:10px; font-size:0.9rem;">
+                    <span style="font-weight:bold; color:var(--primary);">👤 ${authorName}</span>
+                </div>
                 <div style="margin-bottom:15px;">${x.content}</div>
                 <div style="text-align:right; border-bottom:1px dashed var(--border); padding-bottom:10px; margin-bottom:10px;"><button class="mini-btn btn-del" onclick="deletePost('${x.id}','${x.password}',event)">🗑️ 글 삭제</button></div>
                 <div id="cmt-list-${x.id}" class="comment-section"></div>
@@ -678,4 +687,3 @@ window.onload = () => {
 </script>
 </body>
 </html>
-
