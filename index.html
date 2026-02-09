@@ -299,7 +299,7 @@
         <div class="dash-grid">
             <div id="notice-card" class="dash-card"><div class="dash-header tap-effect" onclick="toggleDashItem('notice-card')">📢 공지사항 ▼</div><div class="dash-content"><div style="margin-bottom:10px; background:rgba(239,68,68,0.05); padding:10px; border-radius:8px;"><input type="text" id="noticeTitle" class="input-field" placeholder="제목"><textarea id="noticeContent" class="input-field textarea-field" placeholder="내용"></textarea><button class="action-btn bg-submit" onclick="addNotice()">공지 등록 (Admin)</button></div><ul id="noticeList" class="post-list" style="margin-top:10px;"></ul></div></div>
             
-           <div id="board-card" class="dash-card">
+            <div id="board-card" class="dash-card">
                 <div class="dash-header tap-effect" onclick="toggleDashItem('board-card')">💬 익명게시판 ▼</div>
                 <div class="dash-content">
                     
@@ -310,8 +310,7 @@
                                 <th style="width: 75px;">날짜</th>
                             </tr>
                         </thead>
-                        <tbody id="boardList">
-                            </tbody>
+                        <tbody id="boardList"></tbody>
                     </table>
                     <div id="pagination" style="display:flex; justify-content:center; gap:5px; margin-top:10px; margin-bottom: 15px;"></div>
 
@@ -323,21 +322,6 @@
                         <button class="action-btn bg-submit" onclick="addPost()">등록</button>
                     </div>
 
-                </div>
-            </div>
-                    
-                    <table class="board-table">
-                        <thead>
-                            <tr>
-                                <th style="width: auto;">제 목</th>
-                                <th style="width: 75px;">날짜</th>
-                            </tr>
-                        </thead>
-                        <tbody id="boardList">
-                            </tbody>
-                    </table>
-                    
-                    <div id="pagination" style="display:flex; justify-content:center; gap:5px; margin-top:10px;"></div>
                 </div>
             </div>
 
@@ -680,7 +664,6 @@ function resetWageForm(){
 // --- [E] 공지/게시판/선박/자료 ---
 function addNotice(){ verifyAdmin().then(r=>{ if(r) db.collection("notices").add({title:document.getElementById('noticeTitle').value, content:document.getElementById('noticeContent').value, timestamp:firebase.firestore.FieldValue.serverTimestamp()}).then(()=>{document.getElementById('noticeTitle').value=''; document.getElementById('noticeContent').value=''; showToast("공지 등록됨");}); }); }
 function delNotice(id,e){ e.stopPropagation(); verifyAdmin().then(r=>{ if(r) db.collection("notices").doc(id).delete(); }); }
-// ... (이전 addNotice, delNotice 함수 등 동일) ...
 
 /* [수정] 게시글 등록 함수 (입력창 초기화 포함) */
 function addPost() {
@@ -699,8 +682,6 @@ function addPost() {
             t.value = '';
             p.value = '';
             c.value = '';
-            
-            // 입력폼 닫기 및 알림
             toggleHidden('boardForm');
             showToast("등록되었습니다.");
         }).catch((error) => {
@@ -711,7 +692,6 @@ function addPost() {
     }
 }
 
-// ... (이후 deletePost, addComment 등 나머지 함수 동일) ...
 function deletePost(id,pw,e){ e.stopPropagation(); if(prompt("비번")===pw) db.collection("posts").doc(id).delete(); }
 function addComment(pid){const n=document.getElementById(`cmt-name-${pid}`).value, p=document.getElementById(`cmt-pw-${pid}`).value, t=document.getElementById(`cmt-txt-${pid}`).value; if(n&&p&&t){db.collection('posts').doc(pid).collection('comments').add({name:n, password:p, text:t, timestamp:firebase.firestore.FieldValue.serverTimestamp()}).then(()=>{document.getElementById(`cmt-txt-${pid}`).value=""; showToast("댓글 등록됨");});}}
 async function deleteComment(pid,cid,pw){if(prompt("비번")===pw||await verifyAdmin()) db.collection('posts').doc(pid).collection('comments').doc(cid).delete();}
@@ -807,4 +787,3 @@ window.onload = () => {
 </script>
 </body>
 </html>
-
