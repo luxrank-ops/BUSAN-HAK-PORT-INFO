@@ -139,10 +139,13 @@
         .board-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; margin-top: 10px; table-layout: fixed; }
         .board-table th { border-bottom: 2px solid var(--border); padding: 10px 4px; color: var(--text-sub); font-weight: 700; text-align: center; background: rgba(0,0,0,0.02); font-size: 0.85rem; }
         .board-table td { border-bottom: 1px solid var(--border); padding: 12px 4px; color: var(--text-main); vertical-align: middle; }
-        .board-title { text-align: left; font-weight: 600; cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding-left: 8px; }
-        .board-date { text-align: center; font-size: 0.75rem; color: var(--text-sub); width: 50px; white-space: nowrap; }
-        /* [추가] 닉네임 컬럼 스타일 */
+        
+        /* [추가/수정] 컬럼별 스타일 (글번호, 제목, 날짜, 닉네임) */
+        .board-no { text-align: center; width: 40px; color: var(--text-sub); font-size: 0.75rem; }
+        .board-title { text-align: left; font-weight: 600; cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding-left: 8px; width: auto; }
+        .board-date { text-align: center; font-size: 0.7rem; color: var(--text-sub); width: 100px; white-space: nowrap; }
         .board-nick { text-align: center; font-size: 0.75rem; color: var(--text-sub); width: 60px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        
         .board-content-row { display: none; background: rgba(0,0,0,0.015); }
         .board-content-row.show { display: table-row; }
         .board-content-box { padding: 15px 10px; text-align: left; word-break: break-all; font-size: 0.95rem; line-height: 1.6; white-space: pre-wrap; color: var(--text-main); }
@@ -305,8 +308,9 @@
                     <table class="board-table">
                         <thead>
                             <tr>
+                                <th style="width: 40px;">No.</th>
                                 <th style="width: auto;">제 목</th>
-                                <th style="width: 50px;">날짜</th>
+                                <th style="width: 100px;">날짜</th>
                                 <th style="width: 60px;">닉네임</th>
                             </tr>
                         </thead>
@@ -587,13 +591,11 @@ function delNotice(id,e){ e.stopPropagation(); verifyAdmin().then(r=>{ if(r) db.
 
 /* [수정 적용됨] 게시글 등록 함수 */
 function addPost() {
-    // 요소 가져오기
     const nickEl = document.getElementById('inputNick');
     const titleEl = document.getElementById('inputTitle');
     const pwEl = document.getElementById('inputPw');
     const contentEl = document.getElementById('inputContent');
 
-    // 값 가져오기
     const nickVal = nickEl.value;
     const titleVal = titleEl.value;
     const pwVal = pwEl.value;
@@ -607,12 +609,10 @@ function addPost() {
             content: contentVal,
             timestamp: firebase.firestore.FieldValue.serverTimestamp()
         }).then(() => {
-            // [중요] 입력창 초기화
             nickEl.value = '';
             titleEl.value = '';
             pwEl.value = '';
             contentEl.value = '';
-            
             toggleHidden('boardForm');
             showToast("등록되었습니다.");
         }).catch((error) => {
@@ -638,23 +638,33 @@ function renderBoardPage(p){
     const start = (p-1) * postsPerPage; const end = start + postsPerPage; 
     const pageData = allPostsData.slice(start, end);
 
-    if(pageData.length === 0) { l.innerHTML = "<tr><td colspan='3' style='text-align:center; padding:20px; color:var(--text-sub);'>게시글이 없습니다.</td></tr>"; document.getElementById("pagination").innerHTML = ""; return; }
+    if(pageData.length === 0) { l.innerHTML = "<tr><td colspan='4' style='text-align:center; padding:20px; color:var(--text-sub);'>게시글이 없습니다.</td></tr>"; document.getElementById("pagination").innerHTML = ""; return; }
 
-    pageData.forEach(x => {
+    pageData.forEach((x, i) => {
         let dateStr = "";
-        if(x.timestamp) { const d = x.timestamp.toDate(); dateStr = `${d.getMonth()+1}.${d.getDate()}`; }
+        if(x.timestamp) { 
+            const d = x.timestamp.toDate();
+            const year = d.getFullYear();
+            const month = String(d.getMonth() + 1).padStart(2, '0');
+            const day = String(d.getDate()).padStart(2, '0');
+            const hour = String(d.getHours()).padStart(2, '0');
+            const min = String(d.getMinutes()).padStart(2, '0');
+            dateStr = `${year}/${month}/${day} ${hour}:${min}`; 
+        }
         const rowId = `p-${x.id}`;
         const authorName = x.nick || '익명';
+        // [수정] 글번호 계산: 전체개수 - (현재페이지-1 * 페이지당개수) - 현재인덱스
+        const postNum = allPostsData.length - ((currentBoardPage - 1) * postsPerPage) - i;
 
-        // [제목 | 날짜 | 닉네임] 순서
         l.innerHTML += `
         <tr onclick="toggleBoardRow('${rowId}')" style="cursor:pointer;">
+            <td class="board-no">${postNum}</td>
             <td class="board-title">${x.title} <span style="font-size:0.7rem; color:var(--primary); margin-left:4px;">▼</span></td>
             <td class="board-date">${dateStr}</td>
             <td class="board-nick">${authorName}</td>
         </tr>
         <tr id="${rowId}" class="board-content-row">
-            <td colspan="3" class="board-content-box">
+            <td colspan="4" class="board-content-box">
                 <div style="margin-bottom:15px;">${x.content}</div>
                 <div style="text-align:right; border-bottom:1px dashed var(--border); padding-bottom:10px; margin-bottom:10px;"><button class="mini-btn btn-del" onclick="deletePost('${x.id}','${x.password}',event)">🗑️ 글 삭제</button></div>
                 <div id="cmt-list-${x.id}" class="comment-section"></div>
