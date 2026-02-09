@@ -516,27 +516,22 @@ function saveWorkLog(){
         const logData = { date: dStr, workerId: currentWorkerId, dayHours: dh, nightHours: nh, memo: memo, totalPay: pay, imageUrl: url };
         
         db.collection('work_logs').doc(docId).set(logData, {merge: true}).then(() => {
-            // 1. 버튼 피드백 (녹색 변경)
             btn.innerText = "✅ 저장 완료!";
             const oldBg = btn.style.background;
             btn.style.background = "var(--success)";
             
-            // 2. 알림
             showToast("저장되었습니다.");
 
-            // 3. 로컬 데이터 및 UI 즉시 반영 (새로고침 불필요)
             adminWorkLogs[dStr] = logData;
             
             const dayPart = parseInt(dStr.split('-')[2]);
             const dayEl = document.getElementById(`cal-day-${dayPart}`);
             if(dayEl) dayEl.classList.add('has-data');
 
-            // 4. 총액 재계산
             let total = 0; 
             Object.values(adminWorkLogs).forEach(log => total += (log.totalPay || 0));
             document.getElementById('monthlyTotalDisplay').innerText = `이번달 총액: ${total.toLocaleString()}원`;
 
-            // 5. 버튼 복귀
             setTimeout(() => { 
                 btn.innerText = "저장하기"; 
                 btn.style.background = oldBg;
@@ -566,15 +561,12 @@ function deleteWorkLog(){
     db.collection('work_logs').doc(`${currentWorkerId}_${dStr}`).delete().then(()=>{
         showToast("삭제되었습니다.");
         
-        // 1. 로컬 데이터 삭제
         if(adminWorkLogs[dStr]) delete adminWorkLogs[dStr];
         
-        // 2. 달력 점 제거 (실시간)
         const dayPart = parseInt(dStr.split('-')[2]);
         const dayEl = document.getElementById(`cal-day-${dayPart}`);
         if(dayEl) dayEl.classList.remove('has-data');
 
-        // 3. 입력창 초기화
         document.getElementById('logDayHours').value=''; 
         document.getElementById('logNightHours').value=''; 
         document.getElementById('logMemo').value='';
@@ -582,7 +574,6 @@ function deleteWorkLog(){
         const imgPreview = document.getElementById('logImagePreview');
         if(imgPreview) { imgPreview.src = ''; imgPreview.style.display = 'none'; }
 
-        // 4. 총액 재계산
         let total = 0; 
         Object.values(adminWorkLogs).forEach(log => total += (log.totalPay || 0));
         document.getElementById('monthlyTotalDisplay').innerText = `이번달 총액: ${total.toLocaleString()}원`;
@@ -637,7 +628,7 @@ function resetWageForm(){
 function addNotice(){ verifyAdmin().then(r=>{ if(r) db.collection("notices").add({title:document.getElementById('noticeTitle').value, content:document.getElementById('noticeContent').value, timestamp:firebase.firestore.FieldValue.serverTimestamp()}).then(()=>{document.getElementById('noticeTitle').value=''; document.getElementById('noticeContent').value=''; showToast("공지 등록됨");}); }); }
 function delNotice(id,e){ e.stopPropagation(); verifyAdmin().then(r=>{ if(r) db.collection("notices").doc(id).delete(); }); }
 
-/* [수정] 게시글 등록 (입력창 초기화 강화) */
+/* [수정 적용됨] 게시글 등록 함수 */
 function addPost() {
     const nickEl = document.getElementById('inputNick');
     const titleEl = document.getElementById('inputTitle');
@@ -657,7 +648,6 @@ function addPost() {
             content: contentVal,
             timestamp: firebase.firestore.FieldValue.serverTimestamp()
         }).then(() => {
-            // 입력창 초기화
             nickEl.value = '';
             titleEl.value = '';
             pwEl.value = '';
@@ -680,7 +670,7 @@ async function deleteShip(id,e){e.stopPropagation(); if(await verifyAdmin()) db.
 function uploadFile(){ const f=document.getElementById('fileInput').files[0], t=document.getElementById('fileTitle').value; if(f&&t) storage.ref(`archives/${Date.now()}`).put(f).then(s=>s.ref.getDownloadURL()).then(u=>db.collection("archives").add({title:t, url:u, timestamp:firebase.firestore.FieldValue.serverTimestamp()})).then(()=>{showToast("업로드됨"); document.getElementById('fileTitle').value='';}); }
 function delArchive(id,e){ e.stopPropagation(); verifyAdmin().then(r=>{ if(r) db.collection("archives").doc(id).delete(); }); }
 
-/* [수정] 게시판 렌더링 (날짜상세, 닉네임, 글번호) */
+/* [수정 적용됨] 게시판 렌더링 함수 */
 function renderBoardPage(p){
     currentBoardPage = p; 
     const l = document.getElementById("boardList"); l.innerHTML = ""; 
@@ -750,3 +740,5 @@ window.onload = () => {
     if(localStorage.getItem('myWorkerId')) { currentWorkerId = localStorage.getItem('myWorkerId'); updateUserBar(); }
 };
 </script>
+</body>
+</html>
