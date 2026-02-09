@@ -458,7 +458,7 @@ async function deleteTickerMsg(type, index){
     renderTickerList(); showToast("삭제됨");
 }
 
-// --- [C] 스마트 근무일지 (저장/삭제 기능 강화) ---
+// --- [C] 근무일지 (실시간 반영 기능 강화) ---
 function renderCalendar(y, m){
     const g = document.getElementById('calendarGrid'); g.innerHTML = "";
     document.getElementById('calMonthYear').innerText = `${y}년 ${m+1}월`;
@@ -477,7 +477,8 @@ function renderCalendar(y, m){
                 if(data.workerId === currentWorkerId) {
                     adminWorkLogs[data.date] = data; 
                     const day = parseInt(data.date.split('-')[2]);
-                    document.getElementById(`cal-day-${day}`)?.classList.add('has-data');
+                    const el = document.getElementById(`cal-day-${day}`);
+                    if(el) el.classList.add('has-data');
                     total += (data.totalPay || 0);
                 }
             });
@@ -508,11 +509,11 @@ async function confirmLoginAndSave(){
     loginSuccess(nick); closeLoginModal(); saveWorkLog();
 }
 
-/* [수정] 저장 기능: 버튼 문구 변경 및 완료 피드백 강화 */
+/* [수정] 저장 기능: 버튼 피드백 및 실시간 UI 갱신 */
 function saveWorkLog(){
     const btn = document.getElementById('saveLogBtn');
     btn.innerText = "저장 중...";
-    btn.disabled = true; // 중복 클릭 방지
+    btn.disabled = true;
 
     const dStr = document.getElementById('dailyLogForm').getAttribute('data-date');
     const dh = parseFloat(document.getElementById('logDayHours').value)||0;
@@ -523,36 +524,40 @@ function saveWorkLog(){
     const docId = `${currentWorkerId}_${dStr}`;
 
     const save = (url) => {
-        db.collection('work_logs').doc(docId).set({
-            date: dStr, workerId: currentWorkerId, dayHours: dh, nightHours: nh, memo: memo, totalPay: pay, imageUrl: url
-        }, {merge: true}).then(() => {
-            // 1. 알림 토스트
-            showToast("저장 완료되었습니다.");
-            
-            // 2. 버튼 피드백 (초록색 + 텍스트 변경)
+        const logData = { date: dStr, workerId: currentWorkerId, dayHours: dh, nightHours: nh, memo: memo, totalPay: pay, imageUrl: url };
+        
+        db.collection('work_logs').doc(docId).set(logData, {merge: true}).then(() => {
+            // 1. 버튼 피드백 (녹색 변경)
             btn.innerText = "✅ 저장 완료!";
-            const originalBg = btn.style.background;
+            const oldBg = btn.style.background;
             btn.style.background = "var(--success)";
-
-            // 3. 로컬 데이터 및 UI 즉시 갱신
-            adminWorkLogs[dStr] = { date: dStr, workerId: currentWorkerId, dayHours: dh, nightHours: nh, memo: memo, totalPay: pay, imageUrl: url };
-            document.getElementById(`cal-day-${parseInt(dStr.split('-')[2])}`).classList.add('has-data');
             
+            // 2. 알림
+            showToast("저장되었습니다.");
+
+            // 3. 로컬 데이터 및 UI 즉시 반영 (새로고침 불필요)
+            adminWorkLogs[dStr] = logData;
+            
+            const dayPart = parseInt(dStr.split('-')[2]);
+            const dayEl = document.getElementById(`cal-day-${dayPart}`);
+            if(dayEl) dayEl.classList.add('has-data');
+
+            // 4. 총액 재계산
             let total = 0; 
             Object.values(adminWorkLogs).forEach(log => total += (log.totalPay || 0));
             document.getElementById('monthlyTotalDisplay').innerText = `이번달 총액: ${total.toLocaleString()}원`;
 
-            // 4. 버튼 복구 (1.5초 뒤)
-            setTimeout(() => {
-                btn.innerText = "저장하기";
-                btn.style.background = originalBg;
+            // 5. 버튼 복귀
+            setTimeout(() => { 
+                btn.innerText = "저장하기"; 
+                btn.style.background = oldBg;
                 btn.disabled = false;
             }, 1500);
 
         }).catch(err => { 
-            alert("실패: " + err.message); 
+            alert("저장 실패: " + err.message); 
             btn.innerText = "저장하기"; 
-            btn.disabled = false; 
+            btn.disabled = false;
         });
     };
     if(file) storage.ref(`logs/${currentWorkerId}/${Date.now()}`).put(file).then(s=>s.ref.getDownloadURL()).then(u=>save(u)); else save(adminWorkLogs[dStr] ? adminWorkLogs[dStr].imageUrl : null);
@@ -563,25 +568,25 @@ function closeLoginModal(){ document.getElementById('loginModal').style.display 
 function updateUserBar() { document.getElementById('userProfileBar').style.display = currentWorkerId ? 'flex' : 'none'; if(currentWorkerId) document.getElementById('currentUserDisplay').innerText = `👤 ${currentWorkerId}`; }
 function logoutWorker() { if(confirm("로그아웃?")) { currentWorkerId = null; localStorage.removeItem('myWorkerId'); updateUserBar(); renderCalendar(currentDate.getFullYear(), currentDate.getMonth()); document.getElementById('dailyLogForm').classList.add('hidden'); } }
 
-/* [수정] 삭제 기능: 실시간 UI 반영 로직 강화 */
+/* [수정] 삭제 기능: 즉시 UI 반영 */
 function deleteWorkLog(){
     if(!currentWorkerId) { alert("로그인이 필요합니다."); return; }
-    if(!confirm("정말 이 근무 기록을 삭제하시겠습니까?")) return;
+    if(!confirm("정말 삭제하시겠습니까?")) return;
 
     const dStr = document.getElementById('dailyLogForm').getAttribute('data-date');
     
     db.collection('work_logs').doc(`${currentWorkerId}_${dStr}`).delete().then(()=>{
         showToast("삭제되었습니다.");
         
-        // 1. 로컬 데이터에서 제거
-        delete adminWorkLogs[dStr];
+        // 1. 로컬 데이터 삭제
+        if(adminWorkLogs[dStr]) delete adminWorkLogs[dStr];
         
-        // 2. 달력의 '점' 제거
+        // 2. 달력 점 제거 (실시간)
         const dayPart = parseInt(dStr.split('-')[2]);
         const dayEl = document.getElementById(`cal-day-${dayPart}`);
         if(dayEl) dayEl.classList.remove('has-data');
 
-        // 3. 입력 필드 및 이미지 초기화
+        // 3. 입력창 초기화
         document.getElementById('logDayHours').value=''; 
         document.getElementById('logNightHours').value=''; 
         document.getElementById('logMemo').value='';
@@ -593,6 +598,7 @@ function deleteWorkLog(){
         let total = 0; 
         Object.values(adminWorkLogs).forEach(log => total += (log.totalPay || 0));
         document.getElementById('monthlyTotalDisplay').innerText = `이번달 총액: ${total.toLocaleString()}원`;
+
     }).catch(err => alert("삭제 실패: " + err.message));
 }
 
@@ -757,5 +763,6 @@ window.onload = () => {
 </script>
 </body>
 </html>
+
 
 
