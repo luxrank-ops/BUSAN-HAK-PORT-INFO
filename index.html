@@ -499,7 +499,7 @@ async function confirmLoginAndSave(){
     loginSuccess(nick); closeLoginModal(); saveWorkLog();
 }
 
-/* [수정] 저장 기능: 저장 성공 시 달력 데이터 재로드 */
+/* [수정] 저장 기능: 사진 업로드 에러 확인 기능 추가 */
 function saveWorkLog(){
     const btn = document.getElementById('saveLogBtn');
     btn.innerText = "저장 중...";
@@ -513,16 +513,27 @@ function saveWorkLog(){
     const pay = (dh*10320) + (nh*15480);
     const docId = `${currentWorkerId}_${dStr}`;
 
+    // 내부 저장 함수 (Firestore 데이터 저장)
     const save = (url) => {
         const logData = { date: dStr, workerId: currentWorkerId, dayHours: dh, nightHours: nh, memo: memo, totalPay: pay, imageUrl: url };
         
         db.collection('work_logs').doc(docId).set(logData, {merge: true}).then(() => {
             btn.innerText = "✅ 저장 완료!";
             btn.style.background = "var(--success)";
-            
             showToast("저장되었습니다.");
 
-            // [중요] 저장 후 달력 데이터를 새로 받아와서 화면 갱신 (동기화)
+            // 데이터 동기화
+            adminWorkLogs[dStr] = logData;
+            const dayPart = parseInt(dStr.split('-')[2]);
+            const dayEl = document.getElementById(`cal-day-${dayPart}`);
+            if(dayEl) dayEl.classList.add('has-data');
+
+            // 총액 갱신
+            let total = 0; 
+            Object.values(adminWorkLogs).forEach(log => total += (log.totalPay || 0));
+            document.getElementById('monthlyTotalDisplay').innerText = `이번달 총액: ${total.toLocaleString()}원`;
+
+            // 달력 강제 새로고침
             renderCalendar(currentDate.getFullYear(), currentDate.getMonth());
 
             setTimeout(() => { 
@@ -532,12 +543,29 @@ function saveWorkLog(){
             }, 1500);
 
         }).catch(err => { 
-            alert("저장 실패: " + err.message); 
+            alert("데이터 저장 실패: " + err.message); 
             btn.innerText = "저장하기"; 
             btn.disabled = false;
         });
     };
-    if(file) storage.ref(`logs/${currentWorkerId}/${Date.now()}`).put(file).then(s=>s.ref.getDownloadURL()).then(u=>save(u)); else save(adminWorkLogs[dStr] ? adminWorkLogs[dStr].imageUrl : null);
+
+    // [핵심 수정] 이미지 업로드 로직 + 에러 핸들링 추가
+    if(file) {
+        // 파일이 있을 경우: 업로드 시도 -> URL 획득 -> save 호출
+        storage.ref(`logs/${currentWorkerId}/${Date.now()}`).put(file)
+            .then(s => s.ref.getDownloadURL())
+            .then(u => save(u))
+            .catch(error => {
+                // 여기가 중요합니다: 업로드 실패 원인을 알려줍니다.
+                console.error("Upload Error:", error);
+                alert("사진 업로드 실패!\n원인: " + error.message + "\n(Tip: Firebase Storage 규칙을 확인해보세요)");
+                btn.innerText = "저장하기";
+                btn.disabled = false;
+            });
+    } else {
+        // 파일이 없을 경우: 기존 URL 유지하며 저장
+        save(adminWorkLogs[dStr] ? adminWorkLogs[dStr].imageUrl : null);
+    }
 }
 
 function loginSuccess(name) { currentWorkerId = name; localStorage.setItem('myWorkerId', currentWorkerId); updateUserBar(); renderCalendar(currentDate.getFullYear(), currentDate.getMonth()); }
@@ -730,3 +758,4 @@ window.onload = () => {
 </script>
 </body>
 </html>
+
