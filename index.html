@@ -855,11 +855,20 @@ window.onload = () => {
 db.collection("notices").orderBy("timestamp","desc").onSnapshot(s => {
     const l = document.getElementById("noticeList"); 
     l.innerHTML = ""; 
+    const badge = document.getElementById("noticeBadge");
     
+    // 등록된 공지가 없을 경우의 처리
+    if (s.empty) {
+        l.innerHTML = "<tr><td colspan='3' style='text-align:center; padding:20px; color:var(--text-sub);'>등록된 공지가 없습니다.</td></tr>";
+        if(badge) badge.classList.add("hidden");
+        return;
+    }
+
     let isNew = false;
     const now = new Date();
+    let index = 0;
 
-    s.forEach((d, index) => {
+    s.forEach(d => {
         const x = d.data(); 
         let dateStr = "";
         
@@ -867,10 +876,10 @@ db.collection("notices").orderBy("timestamp","desc").onSnapshot(s => {
             const dt = x.timestamp.toDate();
             dateStr = `${dt.getFullYear()}/${String(dt.getMonth()+1).padStart(2,'0')}/${String(dt.getDate()).padStart(2,'0')}`;
             
-            // [추가된 로직] 가장 최근 글(index 0)이 24시간 이내인지 확인
+            // 가장 최근 글(index 0)이 24시간 이내인지 확인
             if (index === 0) {
                 const diffTime = now.getTime() - dt.getTime();
-                if (diffTime < 24 * 60 * 60 * 1000) { // 24시간(ms) 기준
+                if (diffTime < 24 * 60 * 60 * 1000) { 
                     isNew = true;
                 }
             }
@@ -891,10 +900,10 @@ db.collection("notices").orderBy("timestamp","desc").onSnapshot(s => {
                 </div>
             </td>
         </tr>`;
+        index++;
     });
 
     // 뱃지 보이기/숨기기 처리
-    const badge = document.getElementById("noticeBadge");
     if(badge) {
         if(isNew) badge.classList.remove("hidden");
         else badge.classList.add("hidden");
@@ -909,6 +918,7 @@ db.collection("notices").orderBy("timestamp","desc").onSnapshot(s => {
 </script>
 </body>
 </html>
+
 
 
 
