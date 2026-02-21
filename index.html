@@ -793,7 +793,12 @@ function renderPagination(curr) {
 function loadComments(pid){if(commentUnsubscribes[pid]) commentUnsubscribes[pid](); commentUnsubscribes[pid]=db.collection('posts').doc(pid).collection('comments').orderBy('timestamp','asc').onSnapshot(s=>{const el=document.getElementById(`cmt-list-${pid}`); if(!el) return; el.innerHTML=""; s.forEach(d=>{const c=d.data(); el.innerHTML+=`<div class="comment-item"><span><span class="comment-meta">${c.name}:</span><span class="comment-text">${c.text}</span></span><button class="comment-del-btn" onclick="deleteComment('${pid}','${d.id}','${c.password}')">×</button></div>`;});});}
 function renderShipPage(p){const l=document.getElementById("shipList"); l.innerHTML=""; filteredShips.slice((p-1)*postsPerPage, p*postsPerPage).forEach(x=>{l.innerHTML+=`<li class="post-item"><div onclick="toggleContent('s-${x.id}')">🚢 ${x.shipName}</div><div id="s-${x.id}" class="post-body-content">${x.onboardFeat}<br><button class="mini-btn btn-del" onclick="deleteShip('${x.id}',event)">삭제</button></div></li>`;});}
 function filterShips(){ const q=document.getElementById('shipSearch').value; filteredShips=allShipsData.filter(s=>s.shipName.includes(q)); renderShipPage(1); }
-function openBusSchedule(){ const m=document.getElementById('imageModal'); document.getElementById('modalImage').src='gs://busan-hak-port.firebasestorage.app/KakaoTalk_20260129_001114789.jpg'; m.style.display='flex'; }
+function openBusSchedule(){ 
+    const m=document.getElementById('imageModal'); 
+    // 파이어베이스 공식 웹 다운로드 주소로 변환하여 적용했습니다.
+    document.getElementById('modalImage').src='https://firebasestorage.googleapis.com/v0/b/busan-hak-port.firebasestorage.app/o/KakaoTalk_20260129_001114789.jpg?alt=media'; 
+    m.style.display='flex'; 
+}
 function closeImageModal(){ document.getElementById('imageModal').style.display='none'; }
 function openPrivacy(){ document.getElementById('privacyModal').style.display='flex'; }
 
@@ -811,6 +816,7 @@ window.onload = () => {
 </script>
 </body>
 </html>
+
 
 
 
