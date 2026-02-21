@@ -422,7 +422,7 @@ const firebaseConfig = {
     apiKey: "AIzaSyBWFZr9TE9yybZJCJjEXSsv1YCpGkVb0kA",
     authDomain: "busan-hak-port.firebaseapp.com",
     projectId: "busan-hak-port",
-    // 👇 이 부분을 다시 .firebasestorage.app 으로 변경해 주세요!
+    // 👇 반드시 .firebasestorage.app 으로 끝나야 합니다! (오타 주의)
     storageBucket: "busan-hak-port.firebasestorage.app", 
     messagingSenderId: "616469111502",
     appId: "1:616469111502:web:6f3c94b15e444e04c7669f",
@@ -806,7 +806,6 @@ function deletePost(id,pw,e){ e.stopPropagation(); if(prompt("비번")===pw) db.
 function addComment(pid){const n=document.getElementById(`cmt-name-${pid}`).value, p=document.getElementById(`cmt-pw-${pid}`).value, t=document.getElementById(`cmt-txt-${pid}`).value; if(n&&p&&t){db.collection('posts').doc(pid).collection('comments').add({name:n, password:p, text:t, timestamp:firebase.firestore.FieldValue.serverTimestamp()}).then(()=>{document.getElementById(`cmt-txt-${pid}`).value=""; showToast("댓글 등록됨");});}}
 async function deleteComment(pid,cid,pw){if(prompt("비번")===pw||await verifyAdmin()) db.collection('posts').doc(pid).collection('comments').doc(cid).delete();}
 /* 1. 선박 등록 함수: 사진 업로드 진행 상황을 버튼에 표시합니다 */
-/* 1. 선박 등록 함수: 사진 업로드 진행 상황을 버튼에 표시합니다 */
 function addShipInfo() {
     const n = document.getElementById('shipName').value.trim();
     const c = document.getElementById('shipOnboard').value.trim();
@@ -859,19 +858,21 @@ function renderShipPage(p) {
     const pageData = filteredShips.slice((p-1)*postsPerPage, p*postsPerPage);
     
     pageData.forEach(x => {
-        // [🔥 핵심] 이 줄이 있어야 사진이 화면에 꽉 차게 보입니다!
-        let photoHtml = x.imageUrl ? `<img src="${x.imageUrl}" style="width:100%; border-radius:10px; margin-top:10px; box-shadow:0 4px 10px rgba(0,0,0,0.2);" onclick="document.getElementById('imageModal').style.display='flex'; document.getElementById('modalImage').src=this.src;">` : '';
+        // 사진이 있을 때만 큼지막하게 보여줍니다
+        let photoHtml = x.imageUrl ? `<img src="${x.imageUrl}" style="width:100%; border-radius:10px; margin-top:10px; border:1px solid #eee;">` : `<p style="color:#ccc; font-size:0.8rem;">[등록된 사진 없음]</p>`;
         
         l.innerHTML += `
-        <li class="post-item" style="background:var(--card-bg); margin-bottom:10px; border-radius:12px; border:1px solid var(--border);">
-            <div class="post-header-row" onclick="toggleContent('s-${x.id}')" style="padding:15px; cursor:pointer;">
-                <div class="post-title-text" style="font-size:1.1rem; font-weight:bold;">🚢 ${x.shipName}</div>
+        <li class="post-item" style="border-bottom: 2px solid var(--border);">
+            <div class="post-header-row" onclick="toggleContent('s-${x.id}')">
+                <div class="post-title-text">🚢 ${x.shipName || '미기입 선박'}</div>
                 <span style="color:var(--primary);">▼</span>
             </div>
-            <div id="s-${x.id}" class="post-body-content" style="padding:0 15px 15px 15px; display:none;">
-                <div style="white-space:pre-wrap; color:var(--text-main); font-size:1rem; border-top:1px dashed var(--border); padding-top:10px;">${x.onboardFeat}</div>
-                ${photoHtml} <div style="text-align:right; margin-top:15px;">
-                    <button class="mini-btn btn-del" style="background:var(--danger); padding:8px 15px;" onclick="deleteShip('${x.id}',event)">🗑️ 삭제(Admin)</button>
+            <div id="s-${x.id}" class="post-body-content" style="display:none; padding:15px;">
+                <div style="font-weight:bold; color:var(--secondary); margin-bottom:5px;">작업내용:</div>
+                <div style="white-space:pre-wrap;">${x.onboardFeat || '내용 없음'}</div>
+                ${photoHtml}
+                <div style="text-align:right; margin-top:10px;">
+                    <button class="mini-btn btn-del" onclick="deleteShip('${x.id}',event)">🗑️ 삭제</button>
                 </div>
             </div>
         </li>`;
@@ -933,8 +934,6 @@ function renderPagination(curr) {
     for(let i=1; i<=total; i++){ el.innerHTML += `<span class="page-num ${i===curr?'active':''}" onclick="renderBoardPage(${i})">${i}</span>`; }
 }
 function loadComments(pid){if(commentUnsubscribes[pid]) commentUnsubscribes[pid](); commentUnsubscribes[pid]=db.collection('posts').doc(pid).collection('comments').orderBy('timestamp','asc').onSnapshot(s=>{const el=document.getElementById(`cmt-list-${pid}`); if(!el) return; el.innerHTML=""; s.forEach(d=>{const c=d.data(); el.innerHTML+=`<div class="comment-item"><span><span class="comment-meta">${c.name}:</span><span class="comment-text">${c.text}</span></span><button class="comment-del-btn" onclick="deleteComment('${pid}','${d.id}','${c.password}')">×</button></div>`;});});}
-function renderShipPage(p){const l=document.getElementById("shipList"); l.innerHTML=""; filteredShips.slice((p-1)*postsPerPage, p*postsPerPage).forEach(x=>{l.innerHTML+=`<li class="post-item"><div onclick="toggleContent('s-${x.id}')">🚢 ${x.shipName}</div><div id="s-${x.id}" class="post-body-content">${x.onboardFeat}<br><button class="mini-btn btn-del" onclick="deleteShip('${x.id}',event)">삭제</button></div></li>`;});}
-function filterShips(){ const q=document.getElementById('shipSearch').value; filteredShips=allShipsData.filter(s=>s.shipName.includes(q)); renderShipPage(1); }
 function openBusSchedule(){ 
     const m=document.getElementById('imageModal'); 
     // 파이어베이스 공식 웹 다운로드 주소로 변환하여 적용했습니다.
@@ -1043,23 +1042,3 @@ db.collection("posts").orderBy("timestamp","desc").onSnapshot(s => {
 </script>
 </body>
 </html>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
