@@ -914,7 +914,6 @@ db.collection("notices").orderBy("timestamp","desc").onSnapshot(s => {
         else badge.classList.add("hidden");
     }
 });
-        /* 변경 전 코드: db.collection("posts").orderBy("timestamp","desc").onSnapshot(...) 한 줄 전체 */
 
 /* 변경 후 (아래 코드로 덮어쓰기) */
 db.collection("posts").orderBy("timestamp","desc").onSnapshot(s => {
@@ -950,6 +949,7 @@ db.collection("posts").orderBy("timestamp","desc").onSnapshot(s => {
 </script>
 </body>
 </html>
+
 
 
 
