@@ -370,8 +370,33 @@
             </div>
 
             <div id="ship-card" class="dash-card"><div class="dash-header tap-effect" onclick="toggleDashItem('ship-card')">🚢 선박정보 ▼</div><div class="dash-content"><div style="display:flex; gap:5px; margin-bottom:10px;"><input type="text" id="shipSearch" class="input-field" placeholder="선박 검색" onkeyup="filterShips()" style="margin-bottom:0;"><button class="action-btn" style="width:auto;" onclick="filterShips()">🔍</button></div><a href="https://www.marinetraffic.com/" target="_blank" class="action-btn" style="background:#0284c7; text-align:center; display:block; text-decoration:none; margin-bottom:10px; padding:12px;">🌍 실시간 선박 위치 확인</a><button class="action-btn" style="background:var(--accent); margin-bottom:10px;" onclick="toggleHidden('shipForm')">📝 선박 정보 신규 등록</button><div id="shipForm" class="hidden"><input type="text" id="shipName" class="input-field" placeholder="선박명"><textarea id="shipOnboard" class="input-field textarea-field" placeholder="작업내용"></textarea><input type="file" id="shipFileInput" class="input-field"><button id="shipSubmitBtn" class="action-btn bg-submit" onclick="addShipInfo()">등록/수정</button></div><ul id="shipList" class="post-list"></ul></div></div>
-            <div id="file-card" class="dash-card"><div class="dash-header tap-effect" onclick="toggleDashItem('file-card')">📂 자료실 ▼</div><div class="dash-content"><input type="text" id="fileTitle" class="input-field" placeholder="파일 제목"><input type="file" id="fileInput" class="input-field"><button class="action-btn bg-submit" onclick="uploadFile()">업로드</button><ul id="fileList" class="post-list" style="margin-top:10px;"></ul></div></div>
+            <div id="archive-card" class="dash-card">
+    <div class="dash-header tap-effect" onclick="toggleDashItem('archive-card')">
+        <span>📂 자료실 <span id="archiveBadge" class="badge-new hidden">NEW</span></span>
+        <span>▼</span>
+    </div>
+    <div class="dash-content">
+        <table class="board-table" style="margin-top:0;">
+            <thead>
+                <tr>
+                    <th style="width: auto;">파일명 (클릭 시 다운로드)</th>
+                    <th style="width: 80px;">관리</th>
+                </tr>
+            </thead>
+            <tbody id="fileList"></tbody>
+        </table>
+        
+        <button class="action-btn" style="background:var(--text-sub); margin-top:15px; margin-bottom:10px;" onclick="toggleHidden('archiveForm')">💾 파일 업로드 (Admin)</button>
+        
+        <div id="archiveForm" class="hidden">
+            <div style="margin-bottom:10px; background:rgba(59,130,246,0.05); padding:10px; border-radius:8px; border:1px solid rgba(59,130,246,0.2);">
+                <input type="text" id="archiveTitle" class="input-field" placeholder="파일 설명 (예: 셔틀버스 시간표)">
+                <input type="file" id="archiveFile" class="input-field">
+                <button id="archiveSubmitBtn" class="action-btn bg-submit" onclick="addArchive()">업로드 완료</button>
+            </div>
         </div>
+    </div>
+</div>
 
         <footer><p>© 2026 BUSAN HAK PORT INFO. All rights reserved.</p><div style="margin-top:10px;"><span class="footer-link" onclick="openPrivacy()">개인정보처리방침</span></div></footer>
     </div>
@@ -1018,6 +1043,7 @@ db.collection("posts").orderBy("timestamp","desc").onSnapshot(s => {
 </script>
 </body>
 </html>
+
 
 
 
