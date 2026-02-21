@@ -397,6 +397,51 @@
         </div>
     </div>
 </div>
+<div id="info-card" class="dash-card">
+    <div class="dash-header tap-effect" onclick="toggleDashItem('info-card')">
+        <span>ℹ️ 서비스 안내 및 이용약관</span>
+        <span>▼</span>
+    </div>
+    <div class="dash-content" style="font-size: 0.85rem; line-height: 1.6; color: var(--text-main);">
+        
+        <section style="margin-bottom: 20px; padding: 10px; background: rgba(0,0,0,0.02); border-radius: 8px;">
+            <h4 style="color: var(--primary); margin-bottom: 10px;">🚢 부산항 통합 가이드 (Busan Port Guide)</h4>
+            <p>본 플랫폼은 부산항 신항 및 북항에서 근무하는 항만 근로자(라싱, 스테베도어 등)를 위해 개발된 <strong>현장 맞춤형 통합 관리 시스템</strong>입니다. 근로자의 권익 보호와 현장 업무의 효율성을 극대화하기 위해 다음과 같은 전문 기능을 제공합니다.</p>
+            <ul style="padding-left: 20px; margin-top: 5px;">
+                <li><strong>정밀 임금 계산</strong>: 야간, 주말, 할증 및 기능공 수당을 포함한 자동 계산 로직 적용.</li>
+                <li><strong>클라우드 근무일지</strong>: 현장 사진 증빙 및 실시간 데이터 보관 기능.</li>
+                <li><strong>항만 인프라 연동</strong>: 터미널 실시간 선석 현황(PNC, HJNC, BPTC 등) 및 셔틀버스 정보 실시간 동기화.</li>
+            </ul>
+        </section>
+
+        <div style="border-top: 1px solid var(--border); padding-top: 15px;">
+            <h5 style="font-weight: bold;">[이용약관 및 책임고지]</h5>
+            <p style="font-size: 0.75rem; color: var(--text-sub);">
+                1. 본 서비스는 부산항 현장 근로자의 편의를 위한 비영리 목적으로 운영됩니다. <br>
+                2. 임금 계산 결과는 참고용이며, 실제 급여명세서와 차이가 있을 수 있습니다. <br>
+                3. 익명 게시판 및 티커 이용 시 타인의 명예를 훼손하는 행위는 엄격히 금지됩니다. <br>
+                4. 서비스 내 제공되는 외부 정보(기상, 도선 등)의 정확성은 해당 기관의 사정에 따라 다를 수 있습니다.
+            </p>
+        </div>
+
+        <div style="margin-top: 15px; padding: 10px; border: 1px dashed var(--border); border-radius: 5px;">
+            <h5 style="font-weight: bold;">[개인정보 처리방침]</h5>
+            <p style="font-size: 0.75rem; color: var(--text-sub);">
+                - 본 앱은 사용자의 닉네임과 비밀번호를 서비스 로그인을 위한 최소한의 용도로만 수집합니다. <br>
+                - 수집된 데이터는 제3자에게 제공되지 않으며, 사용자 요청 시 즉시 삭제 가능합니다. <br>
+                - 구글 애드센스 등 광고 서비스 이용 시 브라우저 쿠키가 사용될 수 있음을 알려드립니다.
+            </p>
+        </div>
+
+        <div style="margin-top: 15px; text-align: center; border-top: 1px solid var(--border); padding-top: 10px;">
+            <p style="font-size: 0.75rem; color: var(--text-sub);">
+                개발 및 운영: 이춘학 (Chun-hak Lee)<br>
+                문의: luxrank-ops 공식 채널 <br>
+                © 2026 BUSAN HAK PORT INFO. All Rights Reserved.
+            </p>
+        </div>
+    </div>
+</div>            
 
         <footer><p>© 2026 BUSAN HAK PORT INFO. All rights reserved.</p><div style="margin-top:10px;"><span class="footer-link" onclick="openPrivacy()">개인정보처리방침</span></div></footer>
     </div>
@@ -1094,6 +1139,7 @@ db.collection("posts").orderBy("timestamp","desc").onSnapshot(s => {
 </script>
 </body>
 </html>
+
 
 
 
