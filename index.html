@@ -188,11 +188,12 @@
 
     <div class="container">
         
-        <div class="dash-grid">
-            <div id="wage-card" class="dash-card expanded" style="border:1px solid var(--danger);">
-                <div class="dash-header tap-effect" onclick="toggleDashItem('wage-card')">
-                    <span class="dash-title" style="color:var(--danger);">💰 임금계산기</span><span class="toggle-icon">▼</span>
-                </div>
+      <div class="dash-grid">
+    <div id="wage-card" class="dash-card" style="border:1px solid var(--danger);">
+        <div class="dash-header tap-effect" onclick="toggleDashItem('wage-card')">
+            <span class="dash-title" style="color:var(--danger);">💰 임금계산기</span>
+            <span class="toggle-icon">▼</span>
+        </div>
                 <div class="dash-content" style="display:none;">
                     <div class="role-selector">
                         <input type="radio" id="role-main" name="workRole" value="main" checked><label for="role-main">🚢 본선</label>
@@ -1257,6 +1258,7 @@ db.collection("posts").orderBy("timestamp","desc").onSnapshot(s => {
 </script>
 </body>
 </html>
+
 
 
 
