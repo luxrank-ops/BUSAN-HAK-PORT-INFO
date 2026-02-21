@@ -292,7 +292,16 @@
         <div class="card" style="border-left: 5px solid var(--primary);"><div class="section-header tap-effect" onclick="toggleSection('ads-info-1', this)"><span class="section-title">📘 부산항 이용 및 안전 근무 가이드 ▼</span></div><div id="ads-info-1" class="collapsible-content collapsed"><div class="guide-text"><h4>📌 2026년 부산항 터미널 출입 및 보안 규정</h4><p>부산항 내 모든 터미널(PNC, HJNC, BCT 등)은 국가 중요 보안 시설로 지정되어 출입 시 사전 등록이 필수입니다.</p><h4>🌧️ 기상 악화 시 하역 작업 중단 기준</h4><p>항만 업무는 풍속과 강수량에 민감합니다. 통상 순간풍속 15m/s 초과 시 안벽 크레인(QC) 작업이 일시 중단됩니다.</p></div></div></div>
 
         <div class="dash-grid">
-            <div id="notice-card" class="dash-card"><div class="dash-header tap-effect" onclick="toggleDashItem('notice-card')">📢 공지사항 ▼</div><div class="dash-content"><div style="margin-bottom:10px; background:rgba(239,68,68,0.05); padding:10px; border-radius:8px;"><input type="text" id="noticeTitle" class="input-field" placeholder="제목"><textarea id="noticeContent" class="input-field textarea-field" placeholder="내용"></textarea><button class="action-btn bg-submit" onclick="addNotice()">공지 등록 (Admin)</button></div><ul id="noticeList" class="post-list" style="margin-top:10px;"></ul></div></div>
+            <div id="notice-card" class="dash-card"><div class="dash-header tap-effect" onclick="toggleDashItem('notice-card')">📢 공지사항 ▼</div><div class="dash-content"><div style="margin-bottom:10px; background:rgba(239,68,68,0.05); padding:10px; border-radius:8px;"><input type="text" id="noticeTitle" class="input-field" placeholder="제목"><textarea id="noticeContent" class="input-field textarea-field" placeholder="내용"></textarea><button class="action-btn bg-submit" onclick="addNotice()">공지 등록 (Admin)</button></div><table class="board-table" style="margin-top:10px;">
+    <thead>
+        <tr>
+            <th style="width: 45px;">분류</th>
+            <th style="width: auto;">공지 제목</th>
+            <th style="width: 90px;">등록일</th>
+        </tr>
+    </thead>
+    <tbody id="noticeList"></tbody>
+</table></div></div>
             
             <div id="board-card" class="dash-card">
                 <div class="dash-header tap-effect" onclick="toggleDashItem('board-card')">💬 익명게시판 ▼</div>
@@ -815,6 +824,7 @@ window.onload = () => {
 </script>
 </body>
 </html>
+
 
 
 
