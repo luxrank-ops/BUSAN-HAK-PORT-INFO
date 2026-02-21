@@ -846,81 +846,81 @@ function previewLogImage(input){ if(input.files&&input.files[0]){ const r=new Fi
 // --- [D] 임금계산기 ---
 function calculateWage() {
     try {
-        // 1. 입력값 읽어오기 (오빠의 입력창 ID와 맞췄습니다)
-        const dayHours = parseFloat(document.getElementById('dayHours').value) || 0;
-        const nightHours = parseFloat(document.getElementById('nightHours').value) || 0;
-        const isSkilled = document.getElementById('skilledCheck').checked;
-        const extraPay = parseFloat(document.getElementById('extraPay').value) || 0;
-        const taxRate = parseFloat(document.getElementById('taxRate').value) || 0;
+        // 1. 오빠의 HTML ID에 맞춰 데이터 가져오기
+        const totalHours = parseFloat(document.getElementById('wageTotalHours').value) || 0;
+        const startTime = parseInt(document.getElementById('wageStartTime').value) || 8;
+        const isSkilled = document.getElementById('role-skilled').checked; // 기능공 라디오 버튼 체크 여부
+        
+        // 추가 수당 시간들
+        const holidayH = parseFloat(document.getElementById('wageHoliday').value) || 0;
+        const weekendH = parseFloat(document.getElementById('wageWeekend').value) || 0;
+        const rainH = parseFloat(document.getElementById('wageRain').value) || 0;
+        const hotH = parseFloat(document.getElementById('wageHotTime').value) || 0;
+        const taxRate = parseFloat(document.getElementById('wageTaxType').value) || 0;
 
         // 2. 단가 설정 (2026년 기준)
-        const DAY_RATE = 10320; 
-        const NIGHT_RATE = 15480; 
+        const BASE_RATE = 10320;
         const SKILLED_DAY_ADD = 2557; 
-        const SKILLED_NIGHT_ADD = 3836; 
+        const SKILLED_NIGHT_ADD = 3836;
 
-        // 3. 금액 계산 로직
-        const dayAmt = dayHours * DAY_RATE;
-        const nightAmt = nightHours * NIGHT_RATE;
+        // 3. 주간/야간 시간 분리 로직 (현재 월 기준 자동 계산)
+        const month = new Date().getMonth() + 1;
+        let dayStart = 8, dayEnd = 18; // 1~3월 기준
+        if (month >= 4 && month <= 9) { dayStart = 6; dayEnd = 19; }
+        else if (month >= 10) { dayStart = 7; dayEnd = 17; }
+
+        let dayHours = 0, nightHours = 0;
+        for (let i = 0; i < totalHours; i++) {
+            let currentHour = (startTime + i) % 24;
+            if (currentHour >= dayStart && currentHour < dayEnd) dayHours++;
+            else nightHours++;
+        }
+
+        // 4. 금액 계산
+        const dayAmt = dayHours * BASE_RATE;
+        const nightAmt = nightHours * (BASE_RATE * 1.5);
+        const extraAmt = (holidayH + weekendH + rainH + hotH) * (BASE_RATE * 0.5); // 가산금 50% 기준 예시
         
-        // 기능공 수당 계산
+        // 🔥 기능공 수당 계산 (체크 시 적용)
         let skilledAmt = 0;
         if (isSkilled) {
             skilledAmt = (dayHours * SKILLED_DAY_ADD) + (nightHours * SKILLED_NIGHT_ADD);
         }
 
-        const subTotal = dayAmt + nightAmt + skilledAmt + extraPay;
-        const taxAmt = Math.floor(subTotal * (taxRate / 100));
+        const subTotal = dayAmt + nightAmt + skilledAmt + extraAmt;
+        const taxAmt = Math.floor(subTotal * taxRate);
         const finalTotal = subTotal - taxAmt;
 
-        // 4. 내역서 화면 그리기 (image_87b71a.png 완벽 재현)
-        const output = document.getElementById('wageResult'); // 결과가 나올 자리
-        
-        if(!output) {
-            alert("결과를 표시할 자리를 찾을 수 없습니다. (ID: wageResult 확인 필요)");
-            return;
-        }
-
-        output.innerHTML = `
-            <div style="background: white; padding: 15px; border-radius: 12px; border: 2px solid #2563eb; margin-top: 20px;">
-                <h3 style="text-align: center; color: #1e3a8a; margin-bottom: 15px;">📋 임금 산정 내역서</h3>
-                <ul style="list-style: none; padding: 0; margin: 0;">
-                    <li style="display: flex; justify-content: space-between; margin-bottom: 10px;">
-                        <span>☀️ 주간 (${dayHours.toFixed(1)}H)</span>
-                        <span style="font-weight: bold;">${dayAmt.toLocaleString()}원</span>
-                    </li>
-                    <li style="display: flex; justify-content: space-between; margin-bottom: 10px;">
-                        <span>🌙 야간 (${nightHours.toFixed(1)}H)</span>
-                        <span style="font-weight: bold;">${nightAmt.toLocaleString()}원</span>
-                    </li>
-                    <li style="display: flex; justify-content: space-between; margin-bottom: 10px; color: #2563eb;">
-                        <span>🔧 기능공 수당 추가</span>
-                        <span style="font-weight: bold;">${skilledAmt.toLocaleString()}원</span>
-                    </li>
-                    <li style="display: flex; justify-content: space-between; margin-bottom: 10px;">
-                        <span>🌴 할증 (0H)</span>
-                        <span style="font-weight: bold;">${extraPay.toLocaleString()}원</span>
-                    </li>
-                    <hr style="border: 0; border-top: 1px solid #ddd; margin: 10px 0;">
-                    <li style="display: flex; justify-content: space-between; margin-bottom: 10px;">
-                        <span>💸 세금 (${taxRate.toFixed(1)}%)</span>
-                        <span style="font-weight: bold; color: #ef4444;">-${taxAmt.toLocaleString()}원</span>
-                    </li>
-                    <li style="display: flex; justify-content: space-between; margin-top: 15px; border-top: 2px solid #eee; padding-top: 15px;">
-                        <span style="font-size: 1.4rem; font-weight: 900; color: #c2410c;">총 수령액:</span>
-                        <span style="font-size: 1.4rem; font-weight: 900; color: #c2410c;">${finalTotal.toLocaleString()}원</span>
-                    </li>
-                </ul>
-                <p style="text-align: center; font-size: 0.75rem; color: #666; margin-top: 10px;">※ 2026년 3항업지부 임금표 기준</p>
-            </div>
+        // 5. 내역서 생성 (우측 정렬 flex 적용)
+        const specBody = document.getElementById('wageSpecBody');
+        specBody.innerHTML = `
+            ${renderRow("☀️ 주간 기본 ("+dayHours+"H)", dayAmt)}
+            ${renderRow("🌙 야간 할증 ("+nightHours+"H)", nightAmt)}
+            ${renderRow("🔧 기능공 수당 추가", skilledAmt, "var(--primary)")}
+            ${renderRow("➕ 기타 가산 수당", extraAmt)}
+            ${taxAmt > 0 ? renderRow("💸 공제액 (세금/보험)", -taxAmt, "var(--danger)") : ""}
         `;
 
-        if(typeof showToast === 'function') showToast("내역서가 생성되었습니다!");
+        document.getElementById('wageTotal').innerText = finalTotal.toLocaleString() + "원";
+        document.getElementById('wageResultBox').classList.remove('hidden');
+        showToast("계산서가 생성되었습니다!");
 
     } catch (e) {
-        console.error("계산 에러:", e);
-        alert("계산 도중 오류가 발생했습니다. 입력창의 ID를 확인해 주세요.");
+        console.error(e);
+        alert("계산 오류: 입력창 값을 확인해주세요.");
     }
+}
+
+// 헬퍼 함수: 한 줄씩 정렬해서 그려주기
+function renderRow(label, amt, color = "inherit") {
+    return `
+        <tr>
+            <td style="padding: 8px 0; color: var(--text-sub);">${label}</td>
+            <td style="text-align: right; font-weight: bold; color: ${color};">
+                ${amt.toLocaleString()}원
+            </td>
+        </tr>
+    `;
 }
 function resetWageForm(){ 
     document.querySelectorAll('#wage-card input').forEach(i=> { if(i.type !== 'radio' && i.id !== 'wageHourly') i.value=''; }); 
@@ -1257,6 +1257,7 @@ db.collection("posts").orderBy("timestamp","desc").onSnapshot(s => {
 </script>
 </body>
 </html>
+
 
 
 
