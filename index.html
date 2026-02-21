@@ -309,7 +309,19 @@
         <div class="card" style="border-left: 5px solid var(--primary);"><div class="section-header tap-effect" onclick="toggleSection('ads-info-1', this)"><span class="section-title">📘 부산항 이용 및 안전 근무 가이드 ▼</span></div><div id="ads-info-1" class="collapsible-content collapsed"><div class="guide-text"><h4>📌 2026년 부산항 터미널 출입 및 보안 규정</h4><p>부산항 내 모든 터미널(PNC, HJNC, BCT 등)은 국가 중요 보안 시설로 지정되어 출입 시 사전 등록이 필수입니다.</p><h4>🌧️ 기상 악화 시 하역 작업 중단 기준</h4><p>항만 업무는 풍속과 강수량에 민감합니다. 통상 순간풍속 15m/s 초과 시 안벽 크레인(QC) 작업이 일시 중단됩니다.</p></div></div></div>
 
         <div class="dash-grid">
-            <div id="notice-card" class="dash-card"><div class="dash-header tap-effect" onclick="toggleDashItem('notice-card')">📢 공지사항 ▼</div><div class="dash-content"><div style="margin-bottom:10px; background:rgba(239,68,68,0.05); padding:10px; border-radius:8px;"><input type="text" id="noticeTitle" class="input-field" placeholder="제목"><textarea id="noticeContent" class="input-field textarea-field" placeholder="내용"></textarea><button class="action-btn bg-submit" onclick="addNotice()">공지 등록 (Admin)</button></div><table class="board-table" style="margin-top:10px;">
+            <div id="notice-card" class="dash-card">
+    <div class="dash-header tap-effect" onclick="toggleDashItem('notice-card')">
+        <span>📢 공지사항 <span id="noticeBadge" class="badge-new hidden">NEW</span></span>
+        <span>▼</span>
+    </div>
+    <div class="dash-content">
+        <div style="margin-bottom:10px; background:rgba(239,68,68,0.05); padding:10px; border-radius:8px;">
+            <input type="text" id="noticeTitle" class="input-field" placeholder="제목">
+            <textarea id="noticeContent" class="input-field textarea-field" placeholder="내용"></textarea>
+            <button class="action-btn bg-submit" onclick="addNotice()">공지 등록 (Admin)</button>
+        </div>
+        <table class="board-table" style="margin-top:10px;">
+            <thead>
     <thead>
         <tr>
             <th style="width: 45px;">분류</th>
@@ -837,13 +849,27 @@ window.onload = () => {
 db.collection("notices").orderBy("timestamp","desc").onSnapshot(s => {
     const l = document.getElementById("noticeList"); 
     l.innerHTML = ""; 
-    s.forEach(d => {
+    
+    let isNew = false;
+    const now = new Date();
+
+    s.forEach((d, index) => {
         const x = d.data(); 
         let dateStr = "";
+        
         if(x.timestamp) { 
             const dt = x.timestamp.toDate();
             dateStr = `${dt.getFullYear()}/${String(dt.getMonth()+1).padStart(2,'0')}/${String(dt.getDate()).padStart(2,'0')}`;
+            
+            // [추가된 로직] 가장 최근 글(index 0)이 24시간 이내인지 확인
+            if (index === 0) {
+                const diffTime = now.getTime() - dt.getTime();
+                if (diffTime < 24 * 60 * 60 * 1000) { // 24시간(ms) 기준
+                    isNew = true;
+                }
+            }
         }
+        
         const rowId = `n-${d.id}`;
         l.innerHTML += `
         <tr onclick="toggleBoardRow('${rowId}')" style="cursor:pointer; background:rgba(239,68,68,0.03);">
@@ -860,7 +886,14 @@ db.collection("notices").orderBy("timestamp","desc").onSnapshot(s => {
             </td>
         </tr>`;
     });
-}); 
+
+    // 뱃지 보이기/숨기기 처리
+    const badge = document.getElementById("noticeBadge");
+    if(badge) {
+        if(isNew) badge.classList.remove("hidden");
+        else badge.classList.add("hidden");
+    }
+});
         db.collection("posts").orderBy("timestamp","desc").onSnapshot(s=>{allPostsData=[]; s.forEach(d=>{allPostsData.push({...d.data(), id:d.id})}); renderBoardPage(1);}); 
         db.collection("ships").orderBy("timestamp","desc").onSnapshot(s=>{allShipsData=[]; s.forEach(d=>{allShipsData.push({...d.data(), id:d.id})}); filteredShips=allShipsData; renderShipPage(1);}); 
         db.collection("archives").orderBy("timestamp","desc").onSnapshot(s=>{const l=document.getElementById("fileList"); l.innerHTML=""; s.forEach(d=>{const x=d.data(); l.innerHTML+=`<li class="post-item"><a href="${x.url}" target="_blank">💾 ${x.title}</a><button class="mini-btn btn-del" onclick="delArchive('${d.id}',event)">×</button></li>`;})});
@@ -870,6 +903,7 @@ db.collection("notices").orderBy("timestamp","desc").onSnapshot(s => {
 </script>
 </body>
 </html>
+
 
 
 
