@@ -845,75 +845,82 @@ function previewLogImage(input){ if(input.files&&input.files[0]){ const r=new Fi
 
 // --- [D] 임금계산기 ---
 function calculateWage() {
-    // 1. 입력값 읽어오기
-    const dayHours = parseFloat(document.getElementById('dayHours').value) || 0;
-    const nightHours = parseFloat(document.getElementById('nightHours').value) || 0;
-    const isSkilled = document.getElementById('skilledCheck').checked;
-    const extraPay = parseFloat(document.getElementById('extraPay').value) || 0;
-    const taxRate = parseFloat(document.getElementById('taxRate').value) || 0;
+    try {
+        // 1. 입력값 읽어오기 (오빠의 입력창 ID와 맞췄습니다)
+        const dayHours = parseFloat(document.getElementById('dayHours').value) || 0;
+        const nightHours = parseFloat(document.getElementById('nightHours').value) || 0;
+        const isSkilled = document.getElementById('skilledCheck').checked;
+        const extraPay = parseFloat(document.getElementById('extraPay').value) || 0;
+        const taxRate = parseFloat(document.getElementById('taxRate').value) || 0;
 
-    // 2. 단가 설정
-    const DAY_RATE = 10320; 
-    const NIGHT_RATE = 15480; 
-    const SKILLED_DAY_ADD = 2557;  // 주간 기능공 가산금
-    const SKILLED_NIGHT_ADD = 3836; // 야간 기능공 가산금
+        // 2. 단가 설정 (2026년 기준)
+        const DAY_RATE = 10320; 
+        const NIGHT_RATE = 15480; 
+        const SKILLED_DAY_ADD = 2557; 
+        const SKILLED_NIGHT_ADD = 3836; 
 
-    // 3. 금액 계산
-    const dayAmt = dayHours * DAY_RATE;
-    const nightAmt = nightHours * NIGHT_RATE;
-    
-    // 기능공 수당 계산 (체크 시에만 적용)
-    let skilledAmt = 0;
-    if (isSkilled) {
-        skilledAmt = (dayHours * SKILLED_DAY_ADD) + (nightHours * SKILLED_NIGHT_ADD);
+        // 3. 금액 계산 로직
+        const dayAmt = dayHours * DAY_RATE;
+        const nightAmt = nightHours * NIGHT_RATE;
+        
+        // 기능공 수당 계산
+        let skilledAmt = 0;
+        if (isSkilled) {
+            skilledAmt = (dayHours * SKILLED_DAY_ADD) + (nightHours * SKILLED_NIGHT_ADD);
+        }
+
+        const subTotal = dayAmt + nightAmt + skilledAmt + extraPay;
+        const taxAmt = Math.floor(subTotal * (taxRate / 100));
+        const finalTotal = subTotal - taxAmt;
+
+        // 4. 내역서 화면 그리기 (image_87b71a.png 완벽 재현)
+        const output = document.getElementById('wageResult'); // 결과가 나올 자리
+        
+        if(!output) {
+            alert("결과를 표시할 자리를 찾을 수 없습니다. (ID: wageResult 확인 필요)");
+            return;
+        }
+
+        output.innerHTML = `
+            <div style="background: white; padding: 15px; border-radius: 12px; border: 2px solid #2563eb; margin-top: 20px;">
+                <h3 style="text-align: center; color: #1e3a8a; margin-bottom: 15px;">📋 임금 산정 내역서</h3>
+                <ul style="list-style: none; padding: 0; margin: 0;">
+                    <li style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                        <span>☀️ 주간 (${dayHours.toFixed(1)}H)</span>
+                        <span style="font-weight: bold;">${dayAmt.toLocaleString()}원</span>
+                    </li>
+                    <li style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                        <span>🌙 야간 (${nightHours.toFixed(1)}H)</span>
+                        <span style="font-weight: bold;">${nightAmt.toLocaleString()}원</span>
+                    </li>
+                    <li style="display: flex; justify-content: space-between; margin-bottom: 10px; color: #2563eb;">
+                        <span>🔧 기능공 수당 추가</span>
+                        <span style="font-weight: bold;">${skilledAmt.toLocaleString()}원</span>
+                    </li>
+                    <li style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                        <span>🌴 할증 (0H)</span>
+                        <span style="font-weight: bold;">${extraPay.toLocaleString()}원</span>
+                    </li>
+                    <hr style="border: 0; border-top: 1px solid #ddd; margin: 10px 0;">
+                    <li style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                        <span>💸 세금 (${taxRate.toFixed(1)}%)</span>
+                        <span style="font-weight: bold; color: #ef4444;">-${taxAmt.toLocaleString()}원</span>
+                    </li>
+                    <li style="display: flex; justify-content: space-between; margin-top: 15px; border-top: 2px solid #eee; padding-top: 15px;">
+                        <span style="font-size: 1.4rem; font-weight: 900; color: #c2410c;">총 수령액:</span>
+                        <span style="font-size: 1.4rem; font-weight: 900; color: #c2410c;">${finalTotal.toLocaleString()}원</span>
+                    </li>
+                </ul>
+                <p style="text-align: center; font-size: 0.75rem; color: #666; margin-top: 10px;">※ 2026년 3항업지부 임금표 기준</p>
+            </div>
+        `;
+
+        if(typeof showToast === 'function') showToast("내역서가 생성되었습니다!");
+
+    } catch (e) {
+        console.error("계산 에러:", e);
+        alert("계산 도중 오류가 발생했습니다. 입력창의 ID를 확인해 주세요.");
     }
-
-    const subTotal = dayAmt + nightAmt + skilledAmt + extraPay;
-    const taxAmt = Math.floor(subTotal * (taxRate / 100));
-    const finalTotal = subTotal - taxAmt;
-
-    // 4. 내역서 화면 생성 (여기가 resultHTML 정의 구간입니다!)
-    const resultHTML = `
-        <div style="background: #f9fafb; padding: 20px; border-radius: 12px; border: 2px solid #e5e7eb; margin-top: 20px;">
-            <h3 style="text-align: center; color: #1f2937; margin-bottom: 20px;">📋 임금 산정 내역서</h3>
-            <ul style="list-style: none; padding: 0; margin: 0;">
-                <li style="display: flex; justify-content: space-between; margin-bottom: 12px; font-size: 0.95rem;">
-                    <span>☀️ 주간 (${dayHours}H)</span>
-                    <span style="font-family: monospace;">${dayAmt.toLocaleString()}원</span>
-                </li>
-                <li style="display: flex; justify-content: space-between; margin-bottom: 12px; font-size: 0.95rem;">
-                    <span>🌙 야간 (${nightHours}H)</span>
-                    <span style="font-family: monospace;">${nightAmt.toLocaleString()}원</span>
-                </li>
-                
-                <li style="display: flex; justify-content: space-between; margin-bottom: 12px; font-size: 0.95rem; color: #2563eb; font-weight: bold;">
-                    <span>🔧 기능공 수당 추가</span>
-                    <span style="font-family: monospace;">${skilledAmt.toLocaleString()}원</span>
-                </li>
-                
-                <li style="display: flex; justify-content: space-between; margin-bottom: 12px; font-size: 0.95rem;">
-                    <span>🌴 기타 수당</span>
-                    <span style="font-family: monospace;">${extraPay.toLocaleString()}원</span>
-                </li>
-                <hr style="border: 0; border-top: 1px dashed #d1d5db; margin: 15px 0;">
-                <li style="display: flex; justify-content: space-between; margin-bottom: 12px; color: #ef4444; font-size: 0.9rem;">
-                    <span>💸 세금 (${taxRate}%)</span>
-                    <span style="font-family: monospace;">-${taxAmt.toLocaleString()}원</span>
-                </li>
-                <li style="display: flex; justify-content: space-between; margin-top: 20px; font-size: 1.25rem; font-weight: 900; color: #111827;">
-                    <span>총 수령액</span>
-                    <span style="color: #ef4444;">${finalTotal.toLocaleString()}원</span>
-                </li>
-            </ul>
-            <p style="text-align: center; font-size: 0.7rem; color: #9ca3af; margin-top: 20px;">※ 2026년 3항업지부 임금표 기준</p>
-        </div>
-    `;
-
-    // 5. 화면에 출력
-    document.getElementById('wageResult').innerHTML = resultHTML;
-    
-    // 알림 띄우기 (Toast 기능이 있다면)
-    if(typeof showToast === 'function') showToast("계산서가 생성되었습니다!");
 }
 function resetWageForm(){ 
     document.querySelectorAll('#wage-card input').forEach(i=> { if(i.type !== 'radio' && i.id !== 'wageHourly') i.value=''; }); 
@@ -1250,6 +1257,7 @@ db.collection("posts").orderBy("timestamp","desc").onSnapshot(s => {
 </script>
 </body>
 </html>
+
 
 
 
