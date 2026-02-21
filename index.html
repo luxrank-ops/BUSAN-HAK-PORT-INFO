@@ -845,38 +845,75 @@ function previewLogImage(input){ if(input.files&&input.files[0]){ const r=new Fi
 
 // --- [D] 임금계산기 ---
 function calculateWage() {
-    const role = document.querySelector('input[name="workRole"]:checked').value; 
-    const totalHours = parseFloat(document.getElementById('wageTotalHours').value) || 0;
-    const startHour = parseInt(document.getElementById('wageStartTime').value) || 8; 
-    const taxRate = parseFloat(document.getElementById('wageTaxType').value) || 0;
-    const hHoliday = parseFloat(document.getElementById('wageHoliday').value) || 0;
-    const hWeekend = parseFloat(document.getElementById('wageWeekend').value) || 0;
-    const hRain = parseFloat(document.getElementById('wageRain').value) || 0;
-    const hT = parseFloat(document.getElementById('wageHotTime').value) || 0;
-    const currentMonth = new Date().getMonth() + 1;
-    let dayStartHour = 8, dayEndHour = 18;
-    ['row-jan','row-apr','row-oct'].forEach(id => document.getElementById(id)?.classList.remove('highlight'));
-    if (currentMonth >= 4 && currentMonth <= 9) { dayStartHour = 6; dayEndHour = 19; document.getElementById('row-apr')?.classList.add('highlight'); }
-    else if (currentMonth >= 10 && currentMonth <= 12) { dayStartHour = 7; dayEndHour = 17; document.getElementById('row-oct')?.classList.add('highlight'); }
-    else { document.getElementById('row-jan')?.classList.add('highlight'); }
-    let dayCount=0, nightCount=0, deepNightCount=0, lunchExtCount=0;
-    for (let i = 0; i < totalHours; i++) {
-        let curr = (startHour + i) % 24;
-        if (curr >= dayStartHour && curr < dayEndHour) dayCount++; else nightCount++;
-        if (curr >= 0 && curr < 4) deepNightCount++;
-        if (curr === 12) lunchExtCount++;
+    // 1. 입력값 읽어오기
+    const dayHours = parseFloat(document.getElementById('dayHours').value) || 0;
+    const nightHours = parseFloat(document.getElementById('nightHours').value) || 0;
+    const isSkilled = document.getElementById('skilledCheck').checked;
+    const extraPay = parseFloat(document.getElementById('extraPay').value) || 0;
+    const taxRate = parseFloat(document.getElementById('taxRate').value) || 0;
+
+    // 2. 단가 설정
+    const DAY_RATE = 10320; 
+    const NIGHT_RATE = 15480; 
+    const SKILLED_DAY_ADD = 2557;  // 주간 기능공 가산금
+    const SKILLED_NIGHT_ADD = 3836; // 야간 기능공 가산금
+
+    // 3. 금액 계산
+    const dayAmt = dayHours * DAY_RATE;
+    const nightAmt = nightHours * NIGHT_RATE;
+    
+    // 기능공 수당 계산 (체크 시에만 적용)
+    let skilledAmt = 0;
+    if (isSkilled) {
+        skilledAmt = (dayHours * SKILLED_DAY_ADD) + (nightHours * SKILLED_NIGHT_ADD);
     }
-    let sDayCount=0, sNightCount=0;
-    if (role === 'skilled') { sDayCount = dayCount; sNightCount = nightCount; }
-    const DAY_RATE = 10320, NIGHT_RATE = 15480, EXTRA_ADD = 5160, HOT_ADD = 3096;
-    const SKILLED_DAY_ADD = 2557, SKILLED_NIGHT_ADD = 3836;
-    const subTotal = (dayCount * DAY_RATE) + (nightCount * NIGHT_RATE) + (deepNightCount * EXTRA_ADD) + (lunchExtCount * DAY_RATE) + 
-                     ((hHoliday + hWeekend + hRain) * EXTRA_ADD) + (hT * HOT_ADD) + 
-                     (sDayCount * SKILLED_DAY_ADD) + (sNightCount * SKILLED_NIGHT_ADD);
-    const taxAmt = subTotal * taxRate;
-    document.getElementById('wageSpecBody').innerHTML = `<tr><td>☀️ 주간 (${dayCount.toFixed(1)}H)</td><td>${Math.floor(dayCount * DAY_RATE).toLocaleString()}원</td></tr><tr><td>🌙 야간 (${nightCount.toFixed(1)}H)</td><td>${Math.floor(nightCount * NIGHT_RATE).toLocaleString()}원</td></tr>${role === 'skilled' ? `<tr><td colspan="2">🔧 기능공 수당 추가</td></tr>` : ''}<tr><td>🌴 할증 (${hHoliday+hWeekend+hRain+hT}H)</td><td>${Math.floor((hHoliday+hWeekend+hRain)*EXTRA_ADD + hT*HOT_ADD).toLocaleString()}원</td></tr><tr style="border-top:2px solid #ccc; font-weight:bold;"><td>💸 세금 (${(taxRate*100).toFixed(1)}%)</td><td>-${Math.floor(taxAmt).toLocaleString()}원</td></tr>`;
-    document.getElementById('wageTotal').innerText = `총 수령액: ${Math.floor(subTotal - taxAmt).toLocaleString()}원`;
-    document.getElementById('wageResultBox').classList.remove('hidden');
+
+    const subTotal = dayAmt + nightAmt + skilledAmt + extraPay;
+    const taxAmt = Math.floor(subTotal * (taxRate / 100));
+    const finalTotal = subTotal - taxAmt;
+
+    // 4. 내역서 화면 생성 (여기가 resultHTML 정의 구간입니다!)
+    const resultHTML = `
+        <div style="background: #f9fafb; padding: 20px; border-radius: 12px; border: 2px solid #e5e7eb; margin-top: 20px;">
+            <h3 style="text-align: center; color: #1f2937; margin-bottom: 20px;">📋 임금 산정 내역서</h3>
+            <ul style="list-style: none; padding: 0; margin: 0;">
+                <li style="display: flex; justify-content: space-between; margin-bottom: 12px; font-size: 0.95rem;">
+                    <span>☀️ 주간 (${dayHours}H)</span>
+                    <span style="font-family: monospace;">${dayAmt.toLocaleString()}원</span>
+                </li>
+                <li style="display: flex; justify-content: space-between; margin-bottom: 12px; font-size: 0.95rem;">
+                    <span>🌙 야간 (${nightHours}H)</span>
+                    <span style="font-family: monospace;">${nightAmt.toLocaleString()}원</span>
+                </li>
+                
+                <li style="display: flex; justify-content: space-between; margin-bottom: 12px; font-size: 0.95rem; color: #2563eb; font-weight: bold;">
+                    <span>🔧 기능공 수당 추가</span>
+                    <span style="font-family: monospace;">${skilledAmt.toLocaleString()}원</span>
+                </li>
+                
+                <li style="display: flex; justify-content: space-between; margin-bottom: 12px; font-size: 0.95rem;">
+                    <span>🌴 기타 수당</span>
+                    <span style="font-family: monospace;">${extraPay.toLocaleString()}원</span>
+                </li>
+                <hr style="border: 0; border-top: 1px dashed #d1d5db; margin: 15px 0;">
+                <li style="display: flex; justify-content: space-between; margin-bottom: 12px; color: #ef4444; font-size: 0.9rem;">
+                    <span>💸 세금 (${taxRate}%)</span>
+                    <span style="font-family: monospace;">-${taxAmt.toLocaleString()}원</span>
+                </li>
+                <li style="display: flex; justify-content: space-between; margin-top: 20px; font-size: 1.25rem; font-weight: 900; color: #111827;">
+                    <span>총 수령액</span>
+                    <span style="color: #ef4444;">${finalTotal.toLocaleString()}원</span>
+                </li>
+            </ul>
+            <p style="text-align: center; font-size: 0.7rem; color: #9ca3af; margin-top: 20px;">※ 2026년 3항업지부 임금표 기준</p>
+        </div>
+    `;
+
+    // 5. 화면에 출력
+    document.getElementById('wageResult').innerHTML = resultHTML;
+    
+    // 알림 띄우기 (Toast 기능이 있다면)
+    if(typeof showToast === 'function') showToast("계산서가 생성되었습니다!");
 }
 function resetWageForm(){ 
     document.querySelectorAll('#wage-card input').forEach(i=> { if(i.type !== 'radio' && i.id !== 'wageHourly') i.value=''; }); 
@@ -1213,6 +1250,7 @@ db.collection("posts").orderBy("timestamp","desc").onSnapshot(s => {
 </script>
 </body>
 </html>
+
 
 
 
