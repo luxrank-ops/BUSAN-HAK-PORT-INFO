@@ -922,7 +922,7 @@ function addArchive() {
                     document.getElementById('archiveTitle').value = "";
                     document.getElementById('archiveFile').value = "";
                     toggleHidden('archiveForm'); // 입력창 숨기기
-                    btn.innerText = "업로드 완료";
+                    btn.innerText = "업로드";
                     btn.disabled = false;
                     showToast("파일이 성공적으로 등록되었습니다!");
                 });
@@ -1094,4 +1094,5 @@ db.collection("posts").orderBy("timestamp","desc").onSnapshot(s => {
 </script>
 </body>
 </html>
+
 
