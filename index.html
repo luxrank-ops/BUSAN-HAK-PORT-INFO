@@ -346,21 +346,23 @@
     </div>
     <script>
 /* 1️⃣ Firebase 설정 */
-const firebaseConfig = { 
-    apiKey: "AIzaSyBDXy5HcYW-IZQJ9ZDEivr_yi99AxhYme8", // (이건 기존과 동일하다면 유지)
-    authDomain: "busan-hak-port.firebaseapp.com",     // 수정: my-app-d8527 -> busan-hak-port
-    projectId: "busan-hak-port",                      // 수정: my-app-d8527 -> busan-hak-port
-    storageBucket: "busan-hak-port.appspot.com",      // 수정: my-app-d8527 -> busan-hak-port
-    messagingSenderId: "667323279185", 
-    appId: "1:667323279185:web:cff6184aaa82e08d345570" 
+/* 1️⃣ Firebase 설정 */
+const firebaseConfig = {
+    apiKey: "AIzaSyBWFZr9TE9yybZJCJjEXSsv1YCpGkVb0kA",
+    authDomain: "busan-hak-port.firebaseapp.com",
+    projectId: "busan-hak-port",
+    storageBucket: "busan-hak-port.appspot.com", // [🔥매우 중요] firebasestorage.app -> appspot.com 으로 고쳤습니다!
+    messagingSenderId: "616469111502",
+    appId: "1:616469111502:web:6f3c94b15e444e04c7669f",
+    measurementId: "G-QQ728TDFJ2"
 };
+
 // Firebase 초기화
 if (!firebase.apps.length) {
     firebase.initializeApp(firebaseConfig);
 }
 const db = firebase.firestore();
-const storage = firebase.storage(); 
-
+const storage = firebase.storage();
 // 오프라인 영속성
 db.enablePersistence({ synchronizeTabs: true }).catch(err => {
     console.warn("Persistence Error:", err.code);
@@ -809,6 +811,7 @@ window.onload = () => {
 </script>
 </body>
 </html>
+
 
 
 
