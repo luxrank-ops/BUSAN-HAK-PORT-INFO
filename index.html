@@ -149,6 +149,23 @@
         .board-content-row { display: none; background: rgba(0,0,0,0.015); }
         .board-content-row.show { display: table-row; }
         .board-content-box { padding: 15px 10px; text-align: left; word-break: break-all; font-size: 0.95rem; line-height: 1.6; white-space: pre-wrap; color: var(--text-main); }
+    /* 새 글 알림 뱃지 및 깜빡임 효과 */
+.badge-new {
+    background: #ef4444;
+    color: white;
+    font-size: 0.65rem;
+    font-weight: 900;
+    padding: 2px 6px;
+    border-radius: 10px;
+    margin-left: 6px;
+    vertical-align: middle;
+    animation: blink 1s infinite; /* 1초마다 무한 깜빡임 */
+}
+@keyframes blink {
+    0% { opacity: 1; }
+    50% { opacity: 0.2; }
+    100% { opacity: 1; }
+}
     </style>
 </head>
 <body>
@@ -853,6 +870,7 @@ db.collection("notices").orderBy("timestamp","desc").onSnapshot(s => {
 </script>
 </body>
 </html>
+
 
 
 
