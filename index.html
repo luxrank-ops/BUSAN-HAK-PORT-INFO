@@ -346,17 +346,16 @@
     </div>
     <script>
 /* 1️⃣ Firebase 설정 */
-/* 1️⃣ Firebase 설정 */
 const firebaseConfig = {
     apiKey: "AIzaSyBWFZr9TE9yybZJCJjEXSsv1YCpGkVb0kA",
     authDomain: "busan-hak-port.firebaseapp.com",
     projectId: "busan-hak-port",
-    storageBucket: "busan-hak-port.appspot.com", // [🔥매우 중요] firebasestorage.app -> appspot.com 으로 고쳤습니다!
+    // 👇 이 부분을 다시 .firebasestorage.app 으로 변경해 주세요!
+    storageBucket: "busan-hak-port.firebasestorage.app", 
     messagingSenderId: "616469111502",
     appId: "1:616469111502:web:6f3c94b15e444e04c7669f",
     measurementId: "G-QQ728TDFJ2"
 };
-
 // Firebase 초기화
 if (!firebase.apps.length) {
     firebase.initializeApp(firebaseConfig);
@@ -816,6 +815,7 @@ window.onload = () => {
 </script>
 </body>
 </html>
+
 
 
 
