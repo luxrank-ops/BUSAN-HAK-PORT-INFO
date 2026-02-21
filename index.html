@@ -315,22 +315,28 @@
         <span>▼</span>
     </div>
     <div class="dash-content">
-        <div style="margin-bottom:10px; background:rgba(239,68,68,0.05); padding:10px; border-radius:8px;">
-            <input type="text" id="noticeTitle" class="input-field" placeholder="제목">
-            <textarea id="noticeContent" class="input-field textarea-field" placeholder="내용"></textarea>
-            <button class="action-btn bg-submit" onclick="addNotice()">공지 등록 (Admin)</button>
-        </div>
-        <table class="board-table" style="margin-top:10px;">
+        <table class="board-table" style="margin-top:0;">
             <thead>
-    <thead>
-        <tr>
-            <th style="width: 45px;">분류</th>
-            <th style="width: auto;">공지 제목</th>
-            <th style="width: 90px;">등록일</th>
-        </tr>
-    </thead>
-    <tbody id="noticeList"></tbody>
-</table></div></div>
+                <tr>
+                    <th style="width: 45px;">분류</th>
+                    <th style="width: auto;">공지 제목</th>
+                    <th style="width: 90px;">등록일</th>
+                </tr>
+            </thead>
+            <tbody id="noticeList"></tbody>
+        </table>
+        
+        <button class="action-btn" style="background:var(--text-sub); margin-top:15px; margin-bottom:10px;" onclick="toggleHidden('noticeForm')">✍️ 공지 쓰기 (Admin)</button>
+        
+        <div id="noticeForm" class="hidden">
+            <div style="margin-bottom:10px; background:rgba(239,68,68,0.05); padding:10px; border-radius:8px; border:1px solid rgba(239,68,68,0.2);">
+                <input type="text" id="noticeTitle" class="input-field" placeholder="공지 제목">
+                <textarea id="noticeContent" class="input-field textarea-field" placeholder="공지 내용"></textarea>
+                <button class="action-btn bg-submit" onclick="addNotice()">등록 완료</button>
+            </div>
+        </div>
+    </div>
+</div>
             
             <div id="board-card" class="dash-card">
                 <div class="dash-header tap-effect" onclick="toggleDashItem('board-card')">💬 익명게시판 ▼</div>
@@ -903,6 +909,7 @@ db.collection("notices").orderBy("timestamp","desc").onSnapshot(s => {
 </script>
 </body>
 </html>
+
 
 
 
