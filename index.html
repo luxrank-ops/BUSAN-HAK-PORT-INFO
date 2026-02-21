@@ -340,6 +340,11 @@
             
             <div id="board-card" class="dash-card">
                 <div class="dash-header tap-effect" onclick="toggleDashItem('board-card')">💬 익명게시판 ▼</div>
+
+<div class="dash-header tap-effect" onclick="toggleDashItem('board-card')">
+    <span>💬 익명게시판 <span id="boardBadge" class="badge-new hidden">NEW</span></span>
+    <span>▼</span>
+</div>
                 <div class="dash-content">
                     <table class="board-table">
                         <thead>
@@ -909,7 +914,34 @@ db.collection("notices").orderBy("timestamp","desc").onSnapshot(s => {
         else badge.classList.add("hidden");
     }
 });
-        db.collection("posts").orderBy("timestamp","desc").onSnapshot(s=>{allPostsData=[]; s.forEach(d=>{allPostsData.push({...d.data(), id:d.id})}); renderBoardPage(1);}); 
+        /* 변경 전 코드: db.collection("posts").orderBy("timestamp","desc").onSnapshot(...) 한 줄 전체 */
+
+/* 변경 후 (아래 코드로 덮어쓰기) */
+db.collection("posts").orderBy("timestamp","desc").onSnapshot(s => {
+    allPostsData = []; 
+    s.forEach(d => { allPostsData.push({...d.data(), id:d.id}) }); 
+    
+    // 익명게시판 NEW 뱃지 로직
+    const badge = document.getElementById("boardBadge");
+    if (badge) {
+        // 게시글이 1개라도 있고, 첫 번째 글(가장 최신 글)의 시간이 존재할 때
+        if (allPostsData.length > 0 && allPostsData[0].timestamp) {
+            const now = new Date();
+            const dt = allPostsData[0].timestamp.toDate();
+            const diffTime = now.getTime() - dt.getTime(); // 시간 차이 계산
+            
+            if (diffTime < 24 * 60 * 60 * 1000) { // 24시간(1일) 이내면 보이기
+                badge.classList.remove("hidden");
+            } else { // 24시간이 지났으면 숨기기
+                badge.classList.add("hidden");
+            }
+        } else {
+            badge.classList.add("hidden");
+        }
+    }
+    
+    renderBoardPage(1); // 1페이지 화면 그리기
+});
         db.collection("ships").orderBy("timestamp","desc").onSnapshot(s=>{allShipsData=[]; s.forEach(d=>{allShipsData.push({...d.data(), id:d.id})}); filteredShips=allShipsData; renderShipPage(1);}); 
         db.collection("archives").orderBy("timestamp","desc").onSnapshot(s=>{const l=document.getElementById("fileList"); l.innerHTML=""; s.forEach(d=>{const x=d.data(); l.innerHTML+=`<li class="post-item"><a href="${x.url}" target="_blank">💾 ${x.title}</a><button class="mini-btn btn-del" onclick="delArchive('${d.id}',event)">×</button></li>`;})});
     } catch(err) { console.warn("실시간 연결 오류:", err); }
@@ -918,6 +950,7 @@ db.collection("notices").orderBy("timestamp","desc").onSnapshot(s => {
 </script>
 </body>
 </html>
+
 
 
 
