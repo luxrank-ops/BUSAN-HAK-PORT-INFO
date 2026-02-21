@@ -397,6 +397,80 @@
         </div>
     </div>
 </div>
+<div id="guide-card" class="dash-card">
+    <div class="dash-header tap-effect" onclick="toggleDashItem('guide-card')">
+        <span>📚 부산항 이용 및 안전 근무 가이드</span>
+        <span>▼</span>
+    </div>
+    <div class="dash-content">
+        <div style="margin-bottom:15px;">
+            <input type="text" id="guideSearch" class="input-field" placeholder="찾으시는 용어를 입력하세요 (예: 갑문, 흘수)" onkeyup="filterGuide()">
+        </div>
+
+        <div class="guide-container" style="max-height: 500px; overflow-y: auto; background: #fff; border-radius: 8px; border: 1px solid var(--border);">
+            <table class="board-table">
+                <thead style="position: sticky; top: 0; z-index: 10;">
+                    <tr>
+                        <th style="width: 30%;">용어 (한글/영문)</th>
+                        <th style="width: 70%;">상세 정의 및 안전 가이드</th>
+                    </tr>
+                </thead>
+                <tbody id="guideBody">
+                    <tr>
+                        <td class="board-no"><b>가항반원</b><br>(navigable semi-circle)</td>
+                        <td class="board-title" style="text-align:left; font-size:0.85rem;">
+                            태풍 중심에서 진행방향의 좌측 부분. 풍속이 비교적 약하고 해면이 평온하여 선박이 태풍을 피할 때 이용하는 구역입니다. 
+                            <br><strong>⚠️ 안전팁:</strong> 위험반원(우측)에 들어가지 않도록 기상도를 상시 확인하십시오.
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td class="board-no"><b>갑문</b><br>(lock gate)</td>
+                        <td class="board-title" style="text-align:left; font-size:0.85rem;">
+                            조석 간만의 차가 심한 항만에서 선박 입출항 시 수위를 조절하기 위한 수문입니다. 인천항이 대표적인 갑문식 독(dock)입니다.
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td class="board-no"><b>계류</b><br>(mooring)</td>
+                        <td class="board-title" style="text-align:left; font-size:0.85rem;">
+                            선박이 표류하지 않도록 안벽이나 부표에 밧줄로 묶어 놓는 것을 말합니다.
+                            <br><strong>⚠️ 안전팁:</strong> 계류삭(밧줄) 인장 강도를 체크하고 스냅백(줄 끊어짐 반동) 구역에 서 있지 마십시오.
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="board-no"><b>만재흘수선</b><br>(load line)</td>
+                        <td class="board-title" style="text-align:left; font-size:0.85rem;">
+                            선박이 안전하게 항해할 수 있는 최대 적재 한계를 나타내는 선입니다. 선체 옆면에 표시됩니다.
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td class="board-no"><b>에이프런</b><br>(apron)</td>
+                        <td class="board-title" style="text-align:left; font-size:0.85rem;">
+                            안벽 법선에서 헛간(상옥) 사이의 공간으로 하역 장비가 가동되고 화물이 일시 거치되는 구역입니다.
+                            <br><strong>⚠️ 안전팁:</strong> 에이프런 내 장비 이동이 빈번하므로 안전화와 안전모 착용은 필수입니다.
+                        </td>
+                    </tr>
+                    </tbody>
+            </table>
+        </div>
+        <p style="margin-top:10px; font-size:0.75rem; color:var(--text-sub);">* 본 가이드는 부산항 근로자의 안전한 업무 수행을 위해 공공 데이터를 기반으로 제작되었습니다.</p>
+    </div>
+</div>
+
+<script>
+/* 가이드 검색 필터 함수 */
+function filterGuide() {
+    const input = document.getElementById('guideSearch').value.toLowerCase();
+    const rows = document.getElementById('guideBody').getElementsByTagName('tr');
+    
+    for (let i = 0; i < rows.length; i++) {
+        const text = rows[i].innerText.toLowerCase();
+        rows[i].style.display = text.includes(input) ? "" : "none";
+    }
+}
+</script>            
 <div id="info-card" class="dash-card">
     <div class="dash-header tap-effect" onclick="toggleDashItem('info-card')">
         <span>ℹ️ 서비스 안내 및 이용약관</span>
@@ -1139,6 +1213,7 @@ db.collection("posts").orderBy("timestamp","desc").onSnapshot(s => {
 </script>
 </body>
 </html>
+
 
 
 
