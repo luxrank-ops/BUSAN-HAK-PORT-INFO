@@ -814,7 +814,36 @@ function openPrivacy(){ document.getElementById('privacyModal').style.display='f
 window.onload = () => {
     loadBanner();
     try {
-        db.collection("notices").orderBy("timestamp","desc").onSnapshot(s=>{const l=document.getElementById("noticeList"); l.innerHTML=""; s.forEach(d=>{const x=d.data(); l.innerHTML+=`<li class="post-item" onclick="toggleContent('n-${d.id}')">📢 <strong>${x.title}</strong><div id="n-${d.id}" class="post-body-content">${x.content}<br><button class="mini-btn btn-del" onclick="delNotice('${d.id}',event)">삭제</button></div></li>`;})}); 
+        /* 변경 전 코드: db.collection("notices").orderBy("timestamp","desc").onSnapshot(...) 한 줄 전체 */
+
+/* 변경 후 (아래 코드로 덮어쓰기) */
+db.collection("notices").orderBy("timestamp","desc").onSnapshot(s => {
+    const l = document.getElementById("noticeList"); 
+    l.innerHTML = ""; 
+    s.forEach(d => {
+        const x = d.data(); 
+        let dateStr = "";
+        if(x.timestamp) { 
+            const dt = x.timestamp.toDate();
+            dateStr = `${dt.getFullYear()}/${String(dt.getMonth()+1).padStart(2,'0')}/${String(dt.getDate()).padStart(2,'0')}`;
+        }
+        const rowId = `n-${d.id}`;
+        l.innerHTML += `
+        <tr onclick="toggleBoardRow('${rowId}')" style="cursor:pointer; background:rgba(239,68,68,0.03);">
+            <td class="board-no" style="color:var(--danger); font-weight:bold;">공지</td>
+            <td class="board-title">📢 ${x.title} <span style="font-size:0.7rem; color:var(--primary); margin-left:4px;">▼</span></td>
+            <td class="board-date">${dateStr}</td>
+        </tr>
+        <tr id="${rowId}" class="board-content-row">
+            <td colspan="3" class="board-content-box" style="border-left: 3px solid var(--danger);">
+                <div style="margin-bottom:15px;">${x.content}</div>
+                <div style="text-align:right;">
+                    <button class="mini-btn btn-del" onclick="delNotice('${d.id}',event)">🗑️ 삭제(Admin)</button>
+                </div>
+            </td>
+        </tr>`;
+    });
+}); 
         db.collection("posts").orderBy("timestamp","desc").onSnapshot(s=>{allPostsData=[]; s.forEach(d=>{allPostsData.push({...d.data(), id:d.id})}); renderBoardPage(1);}); 
         db.collection("ships").orderBy("timestamp","desc").onSnapshot(s=>{allShipsData=[]; s.forEach(d=>{allShipsData.push({...d.data(), id:d.id})}); filteredShips=allShipsData; renderShipPage(1);}); 
         db.collection("archives").orderBy("timestamp","desc").onSnapshot(s=>{const l=document.getElementById("fileList"); l.innerHTML=""; s.forEach(d=>{const x=d.data(); l.innerHTML+=`<li class="post-item"><a href="${x.url}" target="_blank">💾 ${x.title}</a><button class="mini-btn btn-del" onclick="delArchive('${d.id}',event)">×</button></li>`;})});
@@ -824,6 +853,7 @@ window.onload = () => {
 </script>
 </body>
 </html>
+
 
 
 
