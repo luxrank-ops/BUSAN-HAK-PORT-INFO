@@ -195,7 +195,8 @@
         </div>
         <div class="dash-content" style="display:none;">
             <button class="action-btn bg-calc" onclick="calculateWage()">내역서 생성 및 계산</button>
-            <div id="wageResult"></div> </div>
+            <div id="wageResult"></div>
+        </div>
     </div>
 
     <div id="log-card" class="dash-card" style="border:1px solid var(--primary);">
@@ -210,6 +211,7 @@
         <span class="section-title">⛴️ 3항업 (신항 남측) ▼</span>
     </div>
     <div id="t3-content" class="collapsible-content collapsed">
+        
         <div class="terminal-block">
             <div class="terminal-header tap-effect" onclick="toggleContent('term-hjnc')">한진신항만 (HJNC) ▼</div>
             <div id="term-hjnc" class="terminal-body" style="display:none;">
@@ -217,11 +219,7 @@
                     <a href="https://www.hjnc.co.kr/esvc/vessel/berthScheduleT" target="_blank" class="terminal-btn">스케줄</a>
                     <a href="https://www.hjnc.co.kr/esvc/vessel/berthScheduleG" target="_blank" class="terminal-btn">차트</a>
                     <a href="https://www.hjnc.co.kr/esvc/vessel/vesselStatus" target="_blank" class="terminal-btn">현황</a>
-                    </div>
-            </div>
-        </div>
-        </div>
-</div>
+                    
                     <div style="grid-column: span 3; display: flex; gap: 5px; margin-top: 4px;">
                         <a href="http://bayplan.hjnc.co.kr" target="_blank" class="terminal-btn" style="flex: 1; margin: 0; background: linear-gradient(135deg, #fffbeb, #fef3c7); border: 1px solid #fcd34d; color: #92400e;">🧩 BAY PLAN</a>
                         <button onclick="openLeaderSchedule()" class="terminal-btn" style="flex: 1; margin: 0; background: linear-gradient(135deg, #e0f2fe, #bae6fd); border: 1px solid #7dd3fc; color: #0369a1;">📅 조장 근무일</button>
@@ -232,6 +230,10 @@
                 </div>
             </div>
         </div>
+
+        ...
+    </div>
+</div>
 
         <div class="terminal-block">
             <div class="terminal-header tap-effect" onclick="toggleContent('term-bnct')">부산신항컨테이너 (BNCT) ▼</div>
@@ -1285,6 +1287,7 @@ function openAllBayPlan() {
 </script>
 </body>
 </html>
+
 
 
 
