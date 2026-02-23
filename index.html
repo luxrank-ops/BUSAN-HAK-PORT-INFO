@@ -295,6 +295,12 @@
         </div>
     </div>
 </div>
+ <div style="grid-column: span 3; margin-top: 5px;">
+    <button onclick="openAllBayPlan()" class="terminal-btn" 
+            style="width: 100%; margin: 0; background: linear-gradient(135deg, #fdf2f8, #fbcfe8); border: 1px solid #f9a8d4; color: #be185d; font-weight: bold;">
+        🧩 ALL BAY PLAN
+    </button>
+</div>                   
                 <div class="terminal-block"><div class="terminal-header tap-effect" onclick="toggleContent('term-bnct')">부산신항컨테이너 (BNCT) ▼</div><div id="term-bnct" class="terminal-body"><div class="terminal-actions"><a href="https://info.bnctkorea.com/esvc/vessel/berthScheduleT" target="_blank" class="terminal-btn">스케줄</a><a href="https://info.bnctkorea.com/esvc/vessel/berthScheduleG" target="_blank" class="terminal-btn">차트</a><a href="https://info.bnctkorea.com/esvc/vessel/vesselStatus" target="_blank" class="terminal-btn">현황</a></div></div></div>
                 <div class="terminal-block"><div class="terminal-header tap-effect" onclick="toggleContent('term-dgt')">동원로엑스 (DGT) ▼</div><div id="term-dgt" class="terminal-body"><div class="terminal-actions"><a href="https://www.dgtbusan.com/DGT/esvc/vessel/berthScheduleT" target="_blank" class="terminal-btn">스케줄</a><a href="https://www.dgtbusan.com/DGT/esvc/vessel/berthScheduleG" target="_blank" class="terminal-btn">차트</a><a href="https://www.dgtbusan.com/DGT/esvc/vessel/vesselStatus" target="_blank" class="terminal-btn">현황</a></div></div></div>
             </div>
@@ -1272,7 +1278,21 @@ function openLeaderSchedule() {
     // 👇 여기에 업로드하신 '조장 근무일' 이미지 주소를 넣어주세요!
     document.getElementById('modalImage').src = 'https://firebasestorage.googleapis.com/v0/b/busan-hak-port.firebasestorage.app/o/leader_schedule.jpg?alt=media'; 
     m.style.display = 'flex';
-}       
+} 
+/* ALL BAY PLAN 비밀번호 확인 및 링크 연결 함수 */
+function openAllBayPlan() {
+    const pwInput = prompt("보안 비밀번호를 입력하세요:"); // 사용자에게 비밀번호 요청
+    
+    if (pwInput === "9445") {
+        // 비밀번호 일치 시 주소 연결
+        window.open("http://112.163.71.98:8080/webits/bayplan", "_blank");
+        showToast("인증 성공! 페이지로 연결합니다.");
+    } else if (pwInput !== null) {
+        // 비밀번호 틀렸을 때 (취소 버튼을 누르지 않은 경우)
+        alert("비밀번호가 올바르지 않습니다. 다시 확인해 주세요.");
+    }
+}        
 </script>
 </body>
 </html>
+
