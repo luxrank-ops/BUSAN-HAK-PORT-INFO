@@ -193,7 +193,7 @@
         <div class="dash-header tap-effect" onclick="toggleDashItem('wage-card')">
             <span class="dash-title" style="color:var(--danger);">💰 임금계산기</span><span class="toggle-icon">▼</span>
         </div>
-        <div class="dash-content" style="display:none; padding:12px;">
+        <div class="dash-content" style="display:none; padding:10px;">
             <div class="role-selector">
                 <input type="radio" id="role-main" name="workRole" value="main" checked><label for="role-main">🚢 본선</label>
                 <input type="radio" id="role-skilled" name="workRole" value="skilled"><label for="role-skilled">🔧 기능공</label>
@@ -201,8 +201,18 @@
             </div>
             <div class="wage-row"><label>⏳ 총 근무</label><input type="number" id="wageTotalHours" class="input-field" placeholder="H"></div>
             <div class="wage-row"><label>🕒 시작시각</label><input type="number" id="wageStartTime" class="input-field" value="8"></div>
+            <div class="wage-row"><label>💸 세금/보험</label>
+                <select id="wageTaxType" class="input-field">
+                    <option value="0">0%</option>
+                    <option value="0.033">3.3%</option>
+                    <option value="0.094">9.4%</option>
+                </select>
+            </div>
             <button class="action-btn bg-calc" onclick="calculateWage()">내역서 생성 및 계산</button>
-            <div id="wageResult" style="margin-top:10px;"></div>
+            <div id="wageResultBox" class="hidden wage-result-box">
+                <table class="spec-table"><tbody id="wageSpecBody"></tbody></table>
+                <div id="wageTotal" class="wage-total">0원</div>
+            </div>
         </div>
     </div>
 
@@ -210,28 +220,35 @@
         <div class="dash-header tap-effect" onclick="toggleDashItem('log-card')">
             <span class="dash-title" style="color:var(--primary);">📅 스마트 근무일지</span><span class="toggle-icon">▼</span>
         </div>
-        <div id="workLogArea" class="dash-content" style="display:none; padding:12px;">
+        <div id="workLogArea" class="dash-content" style="display:none; padding:10px;">
             <div id="userProfileBar" class="user-auth-bar" style="display:none;">
                 <span id="currentUserDisplay" class="user-name"></span>
                 <button class="logout-btn" onclick="logoutWorker()">로그아웃</button>
             </div>
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
                 <button class="mini-btn" onclick="changeMonth(-1)">◀</button>
                 <span id="calMonthYear" style="font-weight:bold;"></span>
                 <button class="mini-btn" onclick="changeMonth(1)">▶</button>
             </div>
             <div id="calendarGrid" class="calendar-grid"></div>
-            <div id="dailyLogForm" class="hidden" style="margin-top:10px;">
-                <h4 id="selectedDateText" style="text-align:center; color:var(--primary);"></h4>
+            
+            <div id="dailyLogForm" class="hidden" style="margin-top:15px; background:rgba(0,0,0,0.02); padding:10px; border-radius:8px;">
+                <h4 id="selectedDateText" style="text-align:center; color:var(--primary); margin:0 0 10px 0;"></h4>
                 <div class="wage-row"><label>주간</label><input type="number" id="logDayHours" class="input-field" step="0.5"></div>
                 <div class="wage-row"><label>야간</label><input type="number" id="logNightHours" class="input-field" step="0.5"></div>
-                <textarea id="logMemo" class="input-field textarea-field" placeholder="작업 메모..."></textarea>
-                <button class="action-btn bg-submit" onclick="trySaveWorkLog()">저장하기</button>
+                <textarea id="logMemo" class="input-field textarea-field" placeholder="특이사항 메모..."></textarea>
+                
+                <label style="font-size:0.8rem; font-weight:bold; margin-top:10px; display:block;">📷 현장 사진 업로드</label>
+                <input type="file" id="logImageInput" class="input-field" accept="image/*" style="padding-top:8px;">
+                <div id="uploadStatus" style="font-size:0.75rem; color:var(--primary); text-align:right; margin-top:4px;"></div>
+                
+                <button id="saveLogBtn" class="action-btn bg-submit" style="margin-top:10px;" onclick="trySaveWorkLog()">데이터 저장하기</button>
             </div>
-            <div id="monthlyTotalDisplay" style="text-align:center; margin-top:10px; font-weight:bold; color:var(--primary);">총액: 0원</div>
+            <div id="monthlyTotalDisplay" style="text-align:center; margin-top:10px; font-weight:bold; color:var(--primary);">이번달 총액: 0원</div>
         </div>
     </div>
-</div> <div class="card" style="border-left: 5px solid #3b82f6; margin-top: 12px;">
+</div> 
+        <div class="card" style="border-left: 5px solid #3b82f6; margin-top: 12px;">
     <div class="section-header tap-effect" onclick="toggleSection('t3-content')">
         <span class="section-title">⛴️ 3항업 (신항 남측) ▼</span>
     </div>
@@ -1288,6 +1305,7 @@ function openAllBayPlan() {
 </script>
 </body>
 </html>
+
 
 
 
