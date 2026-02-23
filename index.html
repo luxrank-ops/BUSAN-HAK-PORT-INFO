@@ -193,9 +193,16 @@
         <div class="dash-header tap-effect" onclick="toggleDashItem('wage-card')">
             <span class="dash-title" style="color:var(--danger);">💰 임금계산기</span><span class="toggle-icon">▼</span>
         </div>
-        <div class="dash-content" style="display:none;">
+        <div class="dash-content" style="display:none; padding:12px;">
+            <div class="role-selector">
+                <input type="radio" id="role-main" name="workRole" value="main" checked><label for="role-main">🚢 본선</label>
+                <input type="radio" id="role-skilled" name="workRole" value="skilled"><label for="role-skilled">🔧 기능공</label>
+                <input type="radio" id="role-onshore" name="workRole" value="onshore"><label for="role-onshore">🚛 육상</label>
+            </div>
+            <div class="wage-row"><label>⏳ 총 근무</label><input type="number" id="wageTotalHours" class="input-field" placeholder="H"></div>
+            <div class="wage-row"><label>🕒 시작시각</label><input type="number" id="wageStartTime" class="input-field" value="8"></div>
             <button class="action-btn bg-calc" onclick="calculateWage()">내역서 생성 및 계산</button>
-            <div id="wageResult"></div>
+            <div id="wageResult" style="margin-top:10px;"></div>
         </div>
     </div>
 
@@ -203,10 +210,28 @@
         <div class="dash-header tap-effect" onclick="toggleDashItem('log-card')">
             <span class="dash-title" style="color:var(--primary);">📅 스마트 근무일지</span><span class="toggle-icon">▼</span>
         </div>
-        <div class="dash-content" style="display:none;">
+        <div id="workLogArea" class="dash-content" style="display:none; padding:12px;">
+            <div id="userProfileBar" class="user-auth-bar" style="display:none;">
+                <span id="currentUserDisplay" class="user-name"></span>
+                <button class="logout-btn" onclick="logoutWorker()">로그아웃</button>
             </div>
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                <button class="mini-btn" onclick="changeMonth(-1)">◀</button>
+                <span id="calMonthYear" style="font-weight:bold;"></span>
+                <button class="mini-btn" onclick="changeMonth(1)">▶</button>
+            </div>
+            <div id="calendarGrid" class="calendar-grid"></div>
+            <div id="dailyLogForm" class="hidden" style="margin-top:10px;">
+                <h4 id="selectedDateText" style="text-align:center; color:var(--primary);"></h4>
+                <div class="wage-row"><label>주간</label><input type="number" id="logDayHours" class="input-field" step="0.5"></div>
+                <div class="wage-row"><label>야간</label><input type="number" id="logNightHours" class="input-field" step="0.5"></div>
+                <textarea id="logMemo" class="input-field textarea-field" placeholder="작업 메모..."></textarea>
+                <button class="action-btn bg-submit" onclick="trySaveWorkLog()">저장하기</button>
+            </div>
+            <div id="monthlyTotalDisplay" style="text-align:center; margin-top:10px; font-weight:bold; color:var(--primary);">총액: 0원</div>
+        </div>
     </div>
-</div> <div class="card" style="border-left: 5px solid #3b82f6;">
+</div> <div class="card" style="border-left: 5px solid #3b82f6; margin-top: 12px;">
     <div class="section-header tap-effect" onclick="toggleSection('t3-content')">
         <span class="section-title">⛴️ 3항업 (신항 남측) ▼</span>
     </div>
@@ -214,61 +239,37 @@
         
         <div class="terminal-block">
             <div class="terminal-header tap-effect" onclick="toggleContent('term-hjnc')">한진신항만 (HJNC) ▼</div>
-            <div id="term-hjnc" class="terminal-body" style="display:none;">
+            <div id="term-hjnc" class="terminal-body" style="display:none; padding:10px;">
                 <div class="terminal-actions">
                     <a href="https://www.hjnc.co.kr/esvc/vessel/berthScheduleT" target="_blank" class="terminal-btn">스케줄</a>
                     <a href="https://www.hjnc.co.kr/esvc/vessel/berthScheduleG" target="_blank" class="terminal-btn">차트</a>
                     <a href="https://www.hjnc.co.kr/esvc/vessel/vesselStatus" target="_blank" class="terminal-btn">현황</a>
                     
-                    <div style="grid-column: span 3; display: flex; gap: 5px; margin-top: 4px;">
-                        <a href="http://bayplan.hjnc.co.kr" target="_blank" class="terminal-btn" style="flex: 1; margin: 0; background: linear-gradient(135deg, #fffbeb, #fef3c7); border: 1px solid #fcd34d; color: #92400e;">🧩 BAY PLAN</a>
-                        <button onclick="openLeaderSchedule()" class="terminal-btn" style="flex: 1; margin: 0; background: linear-gradient(135deg, #e0f2fe, #bae6fd); border: 1px solid #7dd3fc; color: #0369a1;">📅 조장 근무일</button>
+                    <div style="grid-column: span 3; display: flex; gap: 5px; margin-top: 5px;">
+                        <a href="http://bayplan.hjnc.co.kr" target="_blank" class="terminal-btn" style="flex: 1; margin:0; background: linear-gradient(135deg, #fffbeb, #fef3c7); border:1px solid #fcd34d; color:#92400e;">🧩 BAY PLAN</a>
+                        <button onclick="openLeaderSchedule()" class="terminal-btn" style="flex: 1; margin:0; background: linear-gradient(135deg, #e0f2fe, #bae6fd); border:1px solid #7dd3fc; color:#0369a1;">📅 조장 근무일</button>
                     </div>
                     <div style="grid-column: span 3; margin-top: 5px;">
-                        <button onclick="openAllBayPlan()" class="terminal-btn" style="width: 100%; margin: 0; background: linear-gradient(135deg, #fdf2f8, #fbcfe8); border: 1px solid #f9a8d4; color: #be185d; font-weight: bold;">🌸 ALL BAY PLAN (보안)</button>
+                        <button onclick="openAllBayPlan()" class="terminal-btn" style="width: 100%; margin:0; background: linear-gradient(135deg, #fdf2f8, #fbcfe8); border:1px solid #f9a8d4; color:#be185d; font-weight:bold;">🌸 ALL BAY PLAN (보안)</button>
                     </div>
                 </div>
             </div>
         </div>
-
-        ...
-    </div>
-</div>
 
         <div class="terminal-block">
             <div class="terminal-header tap-effect" onclick="toggleContent('term-bnct')">부산신항컨테이너 (BNCT) ▼</div>
-            <div id="term-bnct" class="terminal-body">
-                <div class="terminal-actions">
-                    <a href="https://info.bnctkorea.com/esvc/vessel/berthScheduleT" target="_blank" class="terminal-btn">스케줄</a>
-                    <a href="https://info.bnctkorea.com/esvc/vessel/berthScheduleG" target="_blank" class="terminal-btn">차트</a>
-                    <a href="https://info.bnctkorea.com/esvc/vessel/vesselStatus" target="_blank" class="terminal-btn">현황</a>
-                </div>
-            </div>
+            <div id="term-bnct" class="terminal-body" style="display:none; padding:10px;"><div class="terminal-actions"><a href="https://info.bnctkorea.com/esvc/vessel/berthScheduleT" target="_blank" class="terminal-btn">스케줄</a><a href="https://info.bnctkorea.com/esvc/vessel/berthScheduleG" target="_blank" class="terminal-btn">차트</a><a href="https://info.bnctkorea.com/esvc/vessel/vesselStatus" target="_blank" class="terminal-btn">현황</a></div></div>
         </div>
-
         <div class="terminal-block">
             <div class="terminal-header tap-effect" onclick="toggleContent('term-dgt')">동원로엑스 (DGT) ▼</div>
-            <div id="term-dgt" class="terminal-body">
-                <div class="terminal-actions">
-                    <a href="https://www.dgtbusan.com/DGT/esvc/vessel/berthScheduleT" target="_blank" class="terminal-btn">스케줄</a>
-                    <a href="https://www.dgtbusan.com/DGT/esvc/vessel/berthScheduleG" target="_blank" class="terminal-btn">차트</a>
-                    <a href="https://www.dgtbusan.com/DGT/esvc/vessel/vesselStatus" target="_blank" class="terminal-btn">현황</a>
-                </div>
-            </div>
+            <div id="term-dgt" class="terminal-body" style="display:none; padding:10px;"><div class="terminal-actions"><a href="https://www.dgtbusan.com/DGT/esvc/vessel/berthScheduleT" target="_blank" class="terminal-btn">스케줄</a><a href="https://www.dgtbusan.com/DGT/esvc/vessel/berthScheduleG" target="_blank" class="terminal-btn">차트</a><a href="https://www.dgtbusan.com/DGT/esvc/vessel/vesselStatus" target="_blank" class="terminal-btn">현황</a></div></div>
         </div>
-
         <div class="terminal-block">
             <div class="terminal-header tap-effect" onclick="toggleContent('term-bct')">부산컨테이너 터미널 (고려 BCT) ▼</div>
-            <div id="term-bct" class="terminal-body">
-                <div class="terminal-actions">
-                    <a href="https://info.bct2-4.com/infoservice/index.html" target="_blank" class="terminal-btn">스케줄</a>
-                    <a href="https://info.bct2-4.com/infoservice/index.html" target="_blank" class="terminal-btn">차트</a>
-                    <a href="https://info.bct2-4.com/infoservice/index.html" target="_blank" class="terminal-btn">현황</a>
-                </div>
-            </div>
+            <div id="term-bct" class="terminal-body" style="display:none; padding:10px;"><div class="terminal-actions"><a href="https://info.bct2-4.com/infoservice/index.html" target="_blank" class="terminal-btn">스케줄</a><a href="https://info.bct2-4.com/infoservice/index.html" target="_blank" class="terminal-btn">차트</a><a href="https://info.bct2-4.com/infoservice/index.html" target="_blank" class="terminal-btn">현황</a></div></div>
         </div>
-
-    </div> </div> 
+    </div>
+</div>
     <div id="term-hjnc" class="terminal-body">
         <div class="terminal-actions">
             <a href="https://www.hjnc.co.kr/esvc/vessel/berthScheduleT" target="_blank" class="terminal-btn">스케줄</a>
@@ -1287,6 +1288,7 @@ function openAllBayPlan() {
 </script>
 </body>
 </html>
+
 
 
 
