@@ -208,11 +208,12 @@
     </div>
 
     <div class="container">
-<div class="card manual-card" style="margin-bottom: 25px; border-radius: 12px; padding: 20px;">
-            <div class="section-header" style="border-bottom: 2px dashed #eab308; padding-bottom: 12px; margin-bottom: 15px;">
-                <span class="section-title" style="color: #ca8a04; font-size: 1.25rem; font-weight: 900;">🌟 부산항 필수 앱 100% 활용 설명서 (초보자 환영!)</span>
+<div id="main-manual-card" class="dash-card manual-card" style="margin-bottom: 25px;">
+            <div class="dash-header tap-effect" onclick="toggleDashItem('main-manual-card')" style="border-bottom: 2px dashed #eab308; padding: 15px;">
+                <span class="dash-title" style="color: #ca8a04; font-size: 1.15rem; font-weight: 900;">🌟 부산항 필수 앱 100% 활용 설명서 (터치해서 열기)</span>
+                <span class="toggle-icon" style="color:#ca8a04; font-weight:bold;">▼</span>
             </div>
-            <div class="manual-content" style="font-size: 0.95rem; line-height: 1.8; color: #333;">
+            <div class="dash-content" style="padding: 20px; font-size: 0.95rem; line-height: 1.8; color: #333;">
                 
                 <p style="margin-bottom: 20px; font-size: 1.05rem;"><b>안녕하세요! 부산항(신항, 북항)에서 땀 흘려 일하시는 모든 현장 작업자 여러분, 정말 환영합니다.</b><br>이 앱은 복잡하고 위험한 항만 현장에서 여러분이 조금 더 안전하게 일하고, 일한 만큼의 월급을 정확하게 챙겨갈 수 있도록 돕기 위해 만들어진 <b>'내 손안의 똑똑한 비서'</b>입니다. 스마트폰이나 컴퓨터를 잘 다루지 못하는 분들도 누구나 쉽게 사용할 수 있도록, 이 앱에 있는 기능들을 어떻게 써먹으면 좋은지 아주 쉽고 자세하게 설명해 드릴게요. 천천히 읽어보시고 현장에서 꼭 활용해 보세요!</p>
 
@@ -252,7 +253,7 @@
                 </div>
             </div>
         </div>
-    
+
       <div class="dash-grid">
     <div id="wage-card" class="dash-card" style="border:1px solid var(--danger);">
         <div class="dash-header tap-effect" onclick="toggleDashItem('wage-card')">
@@ -1687,6 +1688,7 @@ db.collection("posts").orderBy("timestamp","desc").onSnapshot(s => {
 </script>
 </body>
 </html>
+
 
 
 
