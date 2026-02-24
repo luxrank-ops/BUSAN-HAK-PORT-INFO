@@ -13,6 +13,7 @@
 
     <link rel="icon" type="image/png" sizes="32x32" href="icon.png">
     <link rel="stylesheet" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.8/dist/web/static/pretendard.css" />
+    <link rel="manifest" href="manifest.json">
     <style>
         :root { --primary: #1e3a8a; --primary-light: #3b82f6; --accent: #f59e0b; --bg-color: #f3f4f6; --card-bg: rgba(255, 255, 255, 0.98); --text-main: #1f2937; --text-sub: #6b7280; --border: rgba(229, 231, 235, 0.9); --danger: #ef4444; --success: #10b981; }
         body.dark-mode { --primary: #60a5fa; --primary-light: #93c5fd; --accent: #fbbf24; --bg-color: #0f172a; --card-bg: rgba(30, 41, 59, 0.98); --text-main: #f3f4f6; --text-sub: #9ca3af; --border: rgba(55, 65, 81, 0.7); }
@@ -781,6 +782,25 @@ function renderCalendar(y, m){
         });
     }
 }
+function downloadWorkLogsExcel() {
+    if (!currentWorkerId || Object.keys(adminWorkLogs).length === 0) return alert("다운로드할 데이터가 없습니다.");
+
+    // 엑셀 첫 번째 줄(제목) 만들기
+    let csvContent = "\uFEFF날짜,배이름,임금1,임금2,총임금,근무자,메모\n";
+
+    // 데이터 한 줄씩 엑셀에 적어 넣기
+    Object.values(adminWorkLogs).sort((a,b) => a.date.localeCompare(b.date)).forEach(d => {
+        const memoSafe = (d.memo || "").replace(/\n/g, " "); // 메모 엔터키 방지
+        csvContent += `${d.date},${d.shipName || ''},${d.wage1 || 0},${d.wage2 || 0},${d.totalPay || 0},${d.coworkers || ''},${memoSafe}\n`;
+    });
+
+    // 스마트폰에 파일로 저장하는 보이지 않는 버튼 클릭하기
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = `${currentWorkerId}_근무일지.csv`; // 엑셀 파일 이름
+    link.click();
+}        
 
 function clickDate(dStr){
     document.getElementById('selectedDateText').innerText = dStr;
@@ -1102,6 +1122,7 @@ async function overrideLeader(dStr, currentLeader) { if (!(await verifyAdmin()))
     </script>
 </body>
 </html>
+
 
 
 
