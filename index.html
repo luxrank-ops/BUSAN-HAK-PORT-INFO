@@ -1011,67 +1011,115 @@ function resetWageForm(){
 
 // --- [E] 게시판/공지/기타 ---
 // [자동 링크 변환 헬퍼 함수 추가]
-function autoLink(text) {
-    if (!text) return "";
-    const urlRegex = /(https?:\/\/[^\s]+)/g;
-    return text.replace(urlRegex, function(url) {
-        return `<a href="${url}" target="_blank" style="color:#2563eb; text-decoration:underline; font-weight:bold;">${url}</a>`;
-    });
-}
+// ================= [공지사항 함수 시작] =================
+    let currentEditNoticeId = null;
+    let currentEditNoticeImg = null;
 
-// [수정] 공지사항 등록 함수 (사진 업로드 기능 완벽 탑재)
-async function addNotice() {
-    if (!(await verifyAdmin())) return; 
-
-    const t = document.getElementById('noticeTitle').value.trim();
-    const c = document.getElementById('noticeContent').value.trim();
-    const f = document.getElementById('noticeFileInput').files[0];
-    const btn = document.getElementById('noticeSubmitBtn');
-
-    if (!t || !c) { alert("공지 제목과 내용을 입력해주세요."); return; }
-
-    btn.innerText = "서버 업로드 중...";
-    btn.disabled = true;
-
-    const save = (url) => {
-        db.collection("notices").add({
-            title: t,
-            content: c,
-            imageUrl: url, 
-            timestamp: firebase.firestore.FieldValue.serverTimestamp()
-        }).then(() => {
-            document.getElementById('noticeTitle').value = '';
-            document.getElementById('noticeContent').value = '';
-            document.getElementById('noticeFileInput').value = '';
-            toggleHidden('noticeForm');
-            showToast("공지가 성공적으로 등록되었습니다.");
-            btn.innerText = "등록 완료";
-            btn.disabled = false;
-        }).catch(err => {
-            alert("공지 등록 실패: " + err.message);
-            btn.innerText = "등록 완료";
-            btn.disabled = false;
+    function autoLink(text) {
+        if (!text) return "";
+        const urlRegex = /(https?:\/\/[^\s]+)/g;
+        return text.replace(urlRegex, function(url) {
+            return `<a href="${url}" target="_blank" style="color:#2563eb; text-decoration:underline; font-weight:bold;">${url}</a>`;
         });
-    };
-
-    if (f) {
-        const storageRef = storage.ref(`notices/${Date.now()}_${f.name}`);
-        const uploadTask = storageRef.put(f);
-
-        uploadTask.on('state_changed', 
-            (snap) => {
-                const percent = Math.round((snap.bytesTransferred / snap.totalBytes) * 100);
-                btn.innerText = `사진 업로드 중... ${percent}%`; 
-            },
-            (err) => { alert("사진 업로드 실패: " + err.message); btn.disabled = false; btn.innerText = "등록 완료"; },
-            () => { uploadTask.snapshot.ref.getDownloadURL().then(url => save(url)); }
-        );
-    } else {
-        save(null); 
     }
-}
 
-function delNotice(id,e){ e.stopPropagation(); verifyAdmin().then(r=>{ if(r) db.collection("notices").doc(id).delete(); }); }
+    async function startEditNotice(id, title, content, imgUrl, e) {
+        e.stopPropagation();
+        if (!(await verifyAdmin())) return; 
+
+        currentEditNoticeId = id;
+        currentEditNoticeImg = imgUrl;
+
+        document.getElementById('noticeTitle').value = title;
+        document.getElementById('noticeContent').value = content.replace(/\\n/g, '\n');
+        document.getElementById('noticeFileInput').value = ''; 
+
+        document.getElementById('noticeForm').classList.remove('hidden');
+        document.getElementById('noticeSubmitBtn').innerText = "수정 완료";
+        document.getElementById('noticeSubmitBtn').style.background = "var(--primary)";
+        document.getElementById('noticeCancelBtn').style.display = "block";
+        
+        document.getElementById('noticeForm').scrollIntoView({behavior: 'smooth', block: 'center'});
+    }
+
+    function cancelEditNotice() {
+        currentEditNoticeId = null;
+        currentEditNoticeImg = null;
+        document.getElementById('noticeTitle').value = '';
+        document.getElementById('noticeContent').value = '';
+        document.getElementById('noticeFileInput').value = '';
+        
+        document.getElementById('noticeSubmitBtn').innerText = "등록 완료";
+        document.getElementById('noticeSubmitBtn').style.background = "var(--success)";
+        document.getElementById('noticeCancelBtn').style.display = "none";
+        document.getElementById('noticeForm').classList.add('hidden');
+    }
+
+    async function saveNotice() {
+        if (!(await verifyAdmin())) return; 
+
+        const t = document.getElementById('noticeTitle').value.trim();
+        const c = document.getElementById('noticeContent').value.trim();
+        const f = document.getElementById('noticeFileInput').files[0];
+        const btn = document.getElementById('noticeSubmitBtn');
+
+        if (!t || !c) { alert("공지 제목과 내용을 입력해주세요."); return; }
+
+        btn.innerText = "서버 기록 중...";
+        btn.disabled = true;
+
+        const finalize = (url) => {
+            const data = {
+                title: t,
+                content: c,
+                timestamp: firebase.firestore.FieldValue.serverTimestamp()
+            };
+
+            if (url) {
+                data.imageUrl = url; 
+            } else if (currentEditNoticeId && currentEditNoticeImg) {
+                data.imageUrl = currentEditNoticeImg; 
+            } else {
+                data.imageUrl = null;
+            }
+
+            let req;
+            if (currentEditNoticeId) {
+                req = db.collection("notices").doc(currentEditNoticeId).update(data);
+            } else {
+                req = db.collection("notices").add(data);
+            }
+
+            req.then(() => {
+                const isEdit = !!currentEditNoticeId;
+                cancelEditNotice(); 
+                showToast(isEdit ? "공지가 수정되었습니다." : "공지가 등록되었습니다.");
+            }).catch(err => {
+                alert("저장 실패: " + err.message);
+                btn.innerText = currentEditNoticeId ? "수정 완료" : "등록 완료";
+                btn.disabled = false;
+            });
+        };
+
+        if (f) {
+            const storageRef = storage.ref(`notices/${Date.now()}_${f.name}`);
+            const uploadTask = storageRef.put(f);
+
+            uploadTask.on('state_changed', 
+                (snap) => {
+                    const percent = Math.round((snap.bytesTransferred / snap.totalBytes) * 100);
+                    btn.innerText = `사진 업로드 중... ${percent}%`; 
+                },
+                (err) => { alert("사진 업로드 실패: " + err.message); btn.disabled = false; btn.innerText = currentEditNoticeId ? "수정 완료" : "등록 완료"; },
+                () => { uploadTask.snapshot.ref.getDownloadURL().then(url => finalize(url)); }
+            );
+        } else {
+            finalize(null); 
+        }
+    }
+
+    function delNotice(id,e){ e.stopPropagation(); verifyAdmin().then(r=>{ if(r) db.collection("notices").doc(id).delete(); }); }
+    // ================= [공지사항 함수 끝] =================
 /* [수정 적용됨] 게시글 등록 함수 */
 function addPost() {
     const nickEl = document.getElementById('inputNick');
@@ -1306,65 +1354,71 @@ window.onload = () => {
         /* 변경 전 코드: db.collection("notices").orderBy("timestamp","desc").onSnapshot(...) 한 줄 전체 */
 
 /* 변경 후 (아래 코드로 덮어쓰기) */
-/* 변경 후 (아래 코드로 덮어쓰기) */
-db.collection("notices").orderBy("timestamp","desc").onSnapshot(s => {
-    const l = document.getElementById("noticeList"); 
-    l.innerHTML = ""; 
-    const badge = document.getElementById("noticeBadge");
+// ================= [공지사항 화면 출력 시작] =================
+    db.collection("notices").orderBy("timestamp","desc").onSnapshot(s => {
+        const l = document.getElementById("noticeList"); 
+        l.innerHTML = ""; 
+        const badge = document.getElementById("noticeBadge");
 
-    if (s.empty) {
-        l.innerHTML = "<tr><td colspan='3' style='text-align:center; padding:20px; color:var(--text-sub);'>등록된 공지가 없습니다.</td></tr>";
-        if(badge) badge.classList.add("hidden");
-        return;
-    }
-
-    let isNew = false;
-    const now = new Date();
-    let index = 0;
-
-    s.forEach(d => {
-        const x = d.data(); 
-        let dateStr = "";
-
-        if(x.timestamp) { 
-            const dt = x.timestamp.toDate();
-            dateStr = `${dt.getFullYear()}/${String(dt.getMonth()+1).padStart(2,'0')}/${String(dt.getDate()).padStart(2,'0')}`;
-
-            if (index === 0) {
-                const diffTime = now.getTime() - dt.getTime();
-                if (diffTime < 24 * 60 * 60 * 1000) { 
-                    isNew = true;
-                }
-            }
+        if (s.empty) {
+            l.innerHTML = "<tr><td colspan='3' style='text-align:center; padding:20px; color:var(--text-sub);'>등록된 공지가 없습니다.</td></tr>";
+            if(badge) badge.classList.add("hidden");
+            return;
         }
 
-        const linkedContent = autoLink(x.content); 
-        const imageHtml = x.imageUrl ? `<img src="${x.imageUrl}" style="max-width:100%; border-radius:8px; margin-top:10px; border:1px solid rgba(0,0,0,0.1);" onclick="document.getElementById('imageModal').style.display='flex'; document.getElementById('modalImage').src=this.src;">` : '';
+        let isNew = false;
+        const now = new Date();
+        let index = 0;
 
-        const rowId = `n-${d.id}`;
-        l.innerHTML += `
-        <tr onclick="toggleBoardRow('${rowId}')" style="cursor:pointer; background:rgba(239,68,68,0.03);">
-            <td class="board-no" style="color:var(--danger); font-weight:bold;">공지</td>
-            <td class="board-title">📢 ${x.title} <span style="font-size:0.7rem; color:var(--primary); margin-left:4px;">▼</span></td>
-            <td class="board-date">${dateStr}</td>
-        </tr>
-        <tr id="${rowId}" class="board-content-row">
-            <td colspan="3" class="board-content-box" style="border-left: 3px solid var(--danger);">
-                <div style="margin-bottom:15px; white-space:pre-wrap;">${linkedContent}</div>
-                ${imageHtml}
-                <div style="text-align:right; margin-top:10px;">
-                    <button class="mini-btn btn-del" onclick="delNotice('${d.id}',event)">🗑️ 삭제(Admin)</button>
-                </div>
-            </td>
-        </tr>`;
-        index++;
+        s.forEach(d => {
+            const x = d.data(); 
+            let dateStr = "";
+
+            if(x.timestamp) { 
+                const dt = x.timestamp.toDate();
+                dateStr = `${dt.getFullYear()}/${String(dt.getMonth()+1).padStart(2,'0')}/${String(dt.getDate()).padStart(2,'0')}`;
+
+                if (index === 0) {
+                    const diffTime = now.getTime() - dt.getTime();
+                    if (diffTime < 24 * 60 * 60 * 1000) { 
+                        isNew = true;
+                    }
+                }
+            }
+
+            const linkedContent = autoLink(x.content); 
+            const imageHtml = x.imageUrl ? `<img src="${x.imageUrl}" style="max-width:100%; border-radius:8px; margin-top:10px; border:1px solid rgba(0,0,0,0.1);" onclick="document.getElementById('imageModal').style.display='flex'; document.getElementById('modalImage').src=this.src;">` : '';
+
+            const safeTitle = (x.title || '').replace(/'/g, "\\'").replace(/"/g, "&quot;");
+            const safeContent = (x.content || '').replace(/'/g, "\\'").replace(/"/g, "&quot;").replace(/\n/g, "\\n");
+            const imgParam = x.imageUrl ? `'${x.imageUrl}'` : `null`;
+
+            const rowId = `n-${d.id}`;
+            l.innerHTML += `
+            <tr onclick="toggleBoardRow('${rowId}')" style="cursor:pointer; background:rgba(239,68,68,0.03);">
+                <td class="board-no" style="color:var(--danger); font-weight:bold;">공지</td>
+                <td class="board-title">📢 ${x.title} <span style="font-size:0.7rem; color:var(--primary); margin-left:4px;">▼</span></td>
+                <td class="board-date">${dateStr}</td>
+            </tr>
+            <tr id="${rowId}" class="board-content-row">
+                <td colspan="3" class="board-content-box" style="border-left: 3px solid var(--danger);">
+                    <div style="margin-bottom:15px; white-space:pre-wrap;">${linkedContent}</div>
+                    ${imageHtml}
+                    <div style="text-align:right; margin-top:10px;">
+                        <button class="mini-btn" style="background:var(--primary); margin-right:5px;" onclick="startEditNotice('${d.id}', '${safeTitle}', '${safeContent}', ${imgParam}, event)">✏️ 수정(Admin)</button>
+                        <button class="mini-btn btn-del" onclick="delNotice('${d.id}',event)">🗑️ 삭제(Admin)</button>
+                    </div>
+                </td>
+            </tr>`;
+            index++;
+        });
+
+        if(badge) {
+            if(isNew) badge.classList.remove("hidden");
+            else badge.classList.add("hidden");
+        }
     });
-
-    if(badge) {
-        if(isNew) badge.classList.remove("hidden");
-        else badge.classList.add("hidden");
-    }
-});
+    // ================= [공지사항 화면 출력 끝] =================
 /* 변경 후 (아래 코드로 덮어쓰기) */
 db.collection("posts").orderBy("timestamp","desc").onSnapshot(s => {
     allPostsData = []; 
@@ -1526,6 +1580,7 @@ db.collection("posts").orderBy("timestamp","desc").onSnapshot(s => {
 </script>
 </body>
 </html>
+
 
 
 
