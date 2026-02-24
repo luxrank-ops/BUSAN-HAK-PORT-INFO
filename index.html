@@ -268,11 +268,11 @@
                 </div>
 
                 <div class="calc-layout">
-                  <div class="calc-left">
+                 <div class="calc-left">
                             <div class="wage-row"><label>시급(기본)</label><input type="number" id="wageHourly" class="input-field" value="10320" style="text-align:right; font-weight:bold; color:#ef4444; font-size:1.1rem;" readonly></div>
-                            <div class="wage-row"><label>📅 근무일자</label><input type="date" id="wageDate" class="input-field" style="text-align:right; max-width: 125px; font-size:0.85rem; padding: 0 5px;" onchange="autoFillWeekendHoliday()"></div>
-                            <div class="wage-row"><label>⏳ 총 근무</label><input type="number" id="wageTotalHours" class="input-field" placeholder="H" style="text-align:right;" oninput="autoFillWeekendHoliday()"></div>
-                            <div class="wage-row"><label>🕒 시작시각</label><input type="number" id="wageStartTime" class="input-field" value="8" placeholder="0~23" style="text-align:right;" oninput="autoFillWeekendHoliday()"></div>
+                            <div class="wage-row"><label>🟢 시작</label><input type="datetime-local" id="wageStartDateTime" class="input-field" style="text-align:right; max-width: 150px; font-size:0.75rem; padding: 0 3px;" onchange="calcTimeAndFill()"></div>
+                            <div class="wage-row"><label>🔴 종료</label><input type="datetime-local" id="wageEndDateTime" class="input-field" style="text-align:right; max-width: 150px; font-size:0.75rem; padding: 0 3px;" onchange="calcTimeAndFill()"></div>
+                            <div class="wage-row"><label>⏳ 총근무</label><input type="number" id="wageTotalHours" class="input-field" placeholder="H" style="text-align:right; font-weight:bold;" oninput="autoFillWeekendHoliday()"></div>
                         </div>
                     <div class="calc-right">
                         <table class="ref-table">
@@ -768,67 +768,147 @@ if (!firebase.apps.length) {
     firebase.initializeApp(firebaseConfig);
 }
   // --- [주말 및 2026년 공휴일 자동 인식 로직 시작] ---
+// --- [스마트 임금계산기: 시작/종료 풀-오토 시간 계산 로직 시작] ---
 const publicHolidays = [
-    '2026-01-01', // 신정
-    '2026-02-16', '2026-02-17', '2026-02-18', // 설날 연휴
-    '2026-03-01', '2026-03-02', // 삼일절 및 대체공휴일
-    '2026-05-05', // 어린이날
-    '2026-05-24', '2026-05-25', // 부처님오신날 및 대체공휴일
-    '2026-06-06', // 현충일
-    '2026-08-15', // 광복절
-    '2026-09-24', '2026-09-25', '2026-09-26', '2026-09-28', // 추석 연휴 및 대체공휴일
-    '2026-10-03', // 개천절
-    '2026-10-09', // 한글날
-    '2026-12-25'  // 기독탄신일(크리스마스)
+    '2026-01-01', '2026-02-16', '2026-02-17', '2026-02-18', 
+    '2026-03-01', '2026-03-02', '2026-05-05', '2026-05-24', 
+    '2026-05-25', '2026-06-06', '2026-08-15', '2026-09-24', 
+    '2026-09-25', '2026-09-26', '2026-09-28', '2026-10-03', 
+    '2026-10-09', '2026-12-25'
 ];
 
-function autoFillWeekendHoliday() {
-    const dateStr = document.getElementById('wageDate').value;
-    const hoursStr = document.getElementById('wageTotalHours').value;
-    const startHourStr = document.getElementById('wageStartTime').value;
+// 🔥 시작~종료 시간을 빼서 '총 근무' 칸에 자동으로 적어주는 함수
+function calcTimeAndFill() {
+    const startVal = document.getElementById('wageStartDateTime').value;
+    const endVal = document.getElementById('wageEndDateTime').value;
+    
+    if(startVal && endVal) {
+        const startD = new Date(startVal);
+        const endD = new Date(endVal);
+        const diffMs = endD.getTime() - startD.getTime();
+        
+        if(diffMs > 0) {
+            // 시간 단위로 정확하게 잘라내기
+            const hours = Math.floor(diffMs / (1000 * 60 * 60)); 
+            document.getElementById('wageTotalHours').value = hours;
+        } else {
+            document.getElementById('wageTotalHours').value = '';
+        }
+    }
+    // 시간이 채워졌으니 연달아서 주말/공휴일 검사 실시!
+    autoFillWeekendHoliday();
+}
 
-    // 날짜, 총 시간, 시작 시각 중 하나라도 비어있으면 계산 안 함
-    if(!dateStr || !hoursStr || !startHourStr) return;
+// 🔥 요일과 공휴일을 검사하는 함수
+function autoFillWeekendHoliday() {
+    const startVal = document.getElementById('wageStartDateTime').value;
+    const hoursStr = document.getElementById('wageTotalHours').value;
+
+    if(!startVal || !hoursStr) return;
 
     const totalHours = parseInt(hoursStr) || 0;
-    const startHour = parseInt(startHourStr) || 0;
+    let currentDateTime = new Date(startVal);
 
     let holidayCount = 0;
     let weekendCount = 0;
 
-    // 문자열 날짜를 쪼개서 자바스크립트 '시간 객체'로 만듭니다.
-    const [y, m, d] = dateStr.split('-').map(Number);
-    // 입력한 날짜의 '시작 시각'으로 시계를 딱 맞춥니다.
-    let currentDateTime = new Date(y, m - 1, d, startHour, 0, 0);
-
-    // 총 근무 시간만큼 1시간씩 빙글빙글 돌면서 검사합니다.
     for(let i = 0; i < totalHours; i++) {
-        // 현재 검사 중인 1시간이 며칠, 무슨 요일인지 확인
         const curY = currentDateTime.getFullYear();
         const curM = String(currentDateTime.getMonth() + 1).padStart(2, '0');
         const curD = String(currentDateTime.getDate()).padStart(2, '0');
         const curDateString = `${curY}-${curM}-${curD}`;
-        const curDayOfWeek = currentDateTime.getDay(); // 0: 일요일, 6: 토요일
+        const curDayOfWeek = currentDateTime.getDay(); 
 
         const isHoliday = publicHolidays.includes(curDateString);
         const isWeekend = (curDayOfWeek === 0 || curDayOfWeek === 6);
 
-        // 공휴일이면 공휴일+1, 아니면 주말인지 확인해서 주말+1
         if (isHoliday) {
             holidayCount++;
         } else if (isWeekend) {
             weekendCount++;
         }
-
-        // 시계를 1시간 앞으로 돌립니다 (자정이 넘어가면 날짜도 알아서 바뀜!)
         currentDateTime.setHours(currentDateTime.getHours() + 1);
     }
 
-    // 최종 계산된 시간을 칸에 입력 (0시간이면 빈칸 유지)
     document.getElementById('wageHoliday').value = holidayCount > 0 ? holidayCount : '';
     document.getElementById('wageWeekend').value = weekendCount > 0 ? weekendCount : '';
 }
-// --- [주말 및 공휴일 자동 인식 로직 (시간단위 정밀계산) 끝] ---
+
+// 🔥 마지막 영수증 계산기
+function calculateWage() {
+    try {
+        const totalHours = parseFloat(document.getElementById('wageTotalHours').value) || 0;
+        const startVal = document.getElementById('wageStartDateTime').value;
+        
+        // 캘린더에서 시작 시간을 뽑아옴 (안 적었으면 8시 기본값)
+        const startTime = startVal ? new Date(startVal).getHours() : 8;
+        const isSkilled = document.getElementById('role-skilled').checked;
+
+        const holidayH = parseFloat(document.getElementById('wageHoliday').value) || 0;
+        const weekendH = parseFloat(document.getElementById('wageWeekend').value) || 0;
+        const rainH = parseFloat(document.getElementById('wageRain').value) || 0;
+        const hotH = parseFloat(document.getElementById('wageHotTime').value) || 0;
+        const taxRate = parseFloat(document.getElementById('wageTaxType').value) || 0;
+
+        const BASE_RATE = 10320;
+        const SKILLED_DAY_ADD = 2557; 
+        const SKILLED_NIGHT_ADD = 3836;
+
+        const month = startVal ? (new Date(startVal).getMonth() + 1) : (new Date().getMonth() + 1);
+        let dayStart = 8, dayEnd = 18; 
+        if (month >= 4 && month <= 9) { dayStart = 6; dayEnd = 19; }
+        else if (month >= 10) { dayStart = 7; dayEnd = 17; }
+
+        let dayHours = 0, nightHours = 0;
+        for (let i = 0; i < totalHours; i++) {
+            let currentHour = (startTime + i) % 24;
+            if (currentHour >= dayStart && currentHour < dayEnd) dayHours++;
+            else nightHours++;
+        }
+
+        const dayAmt = dayHours * BASE_RATE;
+        const nightAmt = nightHours * (BASE_RATE * 1.5);
+        const holidayAmt = holidayH * (BASE_RATE * 0.5);
+        const weekendAmt = weekendH * (BASE_RATE * 0.5);
+        const otherAmt = (rainH + hotH) * (BASE_RATE * 0.5);
+
+        let skilledAmt = 0;
+        if (isSkilled) {
+            skilledAmt = (dayHours * SKILLED_DAY_ADD) + (nightHours * SKILLED_NIGHT_ADD);
+        }
+
+        const subTotal = dayAmt + nightAmt + skilledAmt + holidayAmt + weekendAmt + otherAmt;
+        const taxAmt = Math.floor(subTotal * taxRate);
+        const finalTotal = subTotal - taxAmt;
+
+        let extraHtml = "";
+        if (holidayAmt > 0) extraHtml += renderRow("🎉 공휴일 수당 (" + holidayH + "H)", holidayAmt, "#ea580c"); 
+        if (weekendAmt > 0) extraHtml += renderRow("🎈 주말 수당 (" + weekendH + "H)", weekendAmt, "#3b82f6"); 
+        if (otherAmt > 0) extraHtml += renderRow("☔ 우천/혹서기 등 (" + (rainH + hotH) + "H)", otherAmt);
+        
+        if (holidayAmt === 0 && weekendAmt === 0 && otherAmt === 0) {
+            extraHtml += renderRow("➕ 추가 가산 수당", 0);
+        }
+
+        const specBody = document.getElementById('wageSpecBody');
+        specBody.innerHTML = `
+            ${renderRow("☀️ 주간 기본 ("+dayHours+"H)", dayAmt)}
+            ${renderRow("🌙 야간 할증 ("+nightHours+"H)", nightAmt)}
+            ${renderRow("🔧 기능공 수당 추가", skilledAmt, "var(--primary)")}
+            ${extraHtml}
+            ${taxAmt > 0 ? renderRow("💸 공제액 (세금/보험)", -taxAmt, "var(--danger)") : ""}
+        `;
+
+        document.getElementById('wageTotal').innerText = finalTotal.toLocaleString() + "원";
+        document.getElementById('wageResultBox').classList.remove('hidden');
+        showToast("상세 계산서가 생성되었습니다!");
+
+    } catch (e) {
+        console.error(e);
+        alert("계산 오류: 입력창 값을 확인해주세요.");
+    }
+}
+// --- [스마트 임금계산기: 시작/종료 풀-오토 시간 계산 로직 끝] ---
 const db = firebase.firestore();
 const storage = firebase.storage();
 // 오프라인 영속성
@@ -1546,7 +1626,13 @@ function openPrivacy(){ document.getElementById('privacyModal').style.display='f
 
 /* 4️⃣ 실행 */
 window.onload = () => {
-    document.getElementById('wageDate').value = new Date().toISOString().split('T')[0];
+    // 👇 시작 시간을 '오늘 오전 8시'로 기본 셋팅해 줍니다 👇
+    const today = new Date();
+    const y = today.getFullYear();
+    const m = String(today.getMonth() + 1).padStart(2, '0');
+    const d = String(today.getDate()).padStart(2, '0');
+    document.getElementById('wageStartDateTime').value = `${y}-${m}-${d}T08:00`;
+    
     loadBanner();
     try {
         /* 변경 전 코드: db.collection("notices").orderBy("timestamp","desc").onSnapshot(...) 한 줄 전체 */
@@ -1778,6 +1864,7 @@ db.collection("posts").orderBy("timestamp","desc").onSnapshot(s => {
 </script>
 </body>
 </html>
+
 
 
 
