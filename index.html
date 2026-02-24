@@ -339,6 +339,9 @@
                     <div style="color:#ef4444;">일</div><div>월</div><div>화</div><div>수</div><div>목</div><div>금</div><div style="color:#3b82f6;">토</div>
                 </div>
                 <div id="calendarGrid" class="calendar-grid"></div>
+                <button class="action-btn" style="background:#10b981; margin-top:20px; margin-bottom:10px;" onclick="downloadWorkLogsExcel()">
+    📊 한달 기록 엑셀 저장 (CSV)
+</button>
                 <div id="dailyLogForm" class="hidden" style="margin-top:20px; padding:15px; background:rgba(0,0,0,0.03); border-radius:12px; border:1px solid var(--border);">
                     <h4 id="selectedDateText" style="margin:0 0 10px 0; color:var(--primary); text-align:center; font-size:1.1rem;"></h4>
                     <div class="wage-row"><label>배이름</label><input type="text" id="logShipName" class="input-field" placeholder="작업 선박명"></div>
@@ -741,7 +744,47 @@ async function deleteTickerMsg(type, index){
     else { globalTickerData.userMessages.splice(index, 1); await db.collection('settings').doc('banner').update({ userMessages: globalTickerData.userMessages }); }
     renderTickerList(); showToast("삭제됨");
 }
+/* 📊 엑셀 다운로드 실행 함수 */
+function downloadWorkLogsExcel() {
+    // 1. 데이터가 있는지 먼저 확인
+    if (!currentWorkerId || Object.keys(adminWorkLogs).length === 0) {
+        return alert("다운로드할 근무 기록 데이터가 없습니다.");
+    }
 
+    // 2. 엑셀 파일의 첫 줄 (제목 열) - 한글 깨짐 방지용 \uFEFF 추가
+    let csvContent = "\uFEFF날짜,배이름,임금1,임금2,총임금,근무자,메모\n";
+
+    // 3. 저장된 데이터를 날짜순으로 정렬해서 한 줄씩 채우기
+    const sortedDates = Object.keys(adminWorkLogs).sort();
+    
+    sortedDates.forEach(date => {
+        const d = adminWorkLogs[date];
+        const ship = d.shipName || "";
+        const w1 = d.wage1 || 0;
+        const w2 = d.wage2 || 0;
+        const total = d.totalPay || 0;
+        const workers = (d.coworkers || "").replace(/,/g, " "); // 쉼표가 있으면 엑셀 칸이 밀리니까 공백으로 교체
+        const memo = (d.memo || "").replace(/\n/g, " ").replace(/,/g, " "); // 엔터랑 쉼표 제거
+
+        csvContent += `${date},${ship},${w1},${w2},${total},${workers},${memo}\n`;
+    });
+
+    // 4. 가상의 다운로드 링크를 만들어서 클릭시키기
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    
+    // 파일 이름 예쁘게 정하기 (예: 이춘학_2026년 02월_근무기록.csv)
+    const monthTitle = document.getElementById('calMonthYear').innerText;
+    link.href = url;
+    link.download = `${currentWorkerId}_${monthTitle}_근무기록.csv`;
+    
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link); // 클릭 후 링크 삭제
+
+    showToast("📊 엑셀 파일이 다운로드 폴더에 저장되었습니다!");
+}
 function renderCalendar(y, m){
     const g = document.getElementById('calendarGrid'); g.innerHTML = "";
     document.getElementById('calMonthYear').innerText = `${y}년 ${m+1}월`;
@@ -1122,6 +1165,7 @@ async function overrideLeader(dStr, currentLeader) { if (!(await verifyAdmin()))
     </script>
 </body>
 </html>
+
 
 
 
