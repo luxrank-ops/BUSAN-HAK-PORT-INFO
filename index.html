@@ -166,6 +166,12 @@
     50% { opacity: 0.2; }
     100% { opacity: 1; }
 }
+ /* 조장 근무일 캘린더 전용 스타일 */
+        .leader-badge { font-size: 0.75rem; color: white; border-radius: 12px; padding: 3px 6px; margin-top: 5px; display: inline-block; font-weight: 800; white-space: nowrap; }
+        .leader-jaekyung { background-color: #374151; } /* 재경: 검정/회색 */
+        .leader-sungchul { background-color: #fbbf24; color: #000; } /* 성철: 노랑 */
+        .leader-gaegool { background-color: #3b82f6; } /* 임조: 파랑 */
+        .leader-custom { border: 2px solid #ef4444; box-shadow: 0 0 5px rgba(239,68,68,0.5); }       
     </style>
 </head>
 <body>
@@ -548,6 +554,22 @@ function filterGuide() {
 
     <nav class="bottom-nav"><div class="nav-item active tap-effect" onclick="scrollToTop()">🏠 홈</div><div class="nav-item tap-effect" onclick="toggleDashItem('board-card')">💬 톡톡</div><div class="nav-item tap-effect" onclick="toggleDashItem('ship-card')">🚢 선박</div><div class="nav-item tap-effect" onclick="toggleDashItem('file-card')">📂 자료</div></nav>
     <div id="toast">알림</div>
+    <div id="leaderCalendarModal" class="modal-overlay" style="display:none;" onclick="closeLeaderCalendar()">
+        <div class="modal-content" onclick="event.stopPropagation()" style="background:#f3f4f6;">
+            <h3 style="margin-top:0; text-align:center; color:var(--primary);">📅 조장 근무표</h3>
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; background:white; padding:10px; border-radius:10px; box-shadow:0 2px 5px rgba(0,0,0,0.05);">
+                <button class="mini-btn" style="padding:8px 15px; font-size:1rem; background:var(--primary);" onclick="changeLeaderMonth(-1)">◀</button>
+                <span id="leaderCalMonthYear" style="font-weight:900; font-size:1.1rem; color:var(--text-main);"></span>
+                <button class="mini-btn" style="padding:8px 15px; font-size:1rem; background:var(--primary);" onclick="changeLeaderMonth(1)">▶</button>
+            </div>
+            <div class="calendar-grid" style="grid-template-columns: repeat(7, 1fr); gap: 3px; text-align: center; font-size: 0.85rem; font-weight: 900; margin-bottom: 5px;">
+                <div style="color:#ef4444;">일</div><div>월</div><div>화</div><div>수</div><div>목</div><div>금</div><div style="color:#3b82f6;">토</div>
+            </div>
+            <div id="leaderCalendarGrid" class="calendar-grid"></div>
+            <p style="font-size:0.75rem; color:var(--text-sub); text-align:center; margin-top:10px;">※ 날짜를 터치하면 근무자를 임의로 변경할 수 있습니다. (Admin 전용)</p>
+            <button class="action-btn bg-cancel" style="margin-top:10px;" onclick="closeLeaderCalendar()">닫기</button>
+        </div>
+    </div>    
     <div id="imageModal" class="modal-overlay" onclick="closeImageModal()"><div class="modal-content" onclick="event.stopPropagation()"><img id="modalImage" class="modal-img"><button class="action-btn bg-cancel" onclick="closeImageModal()">닫기</button></div></div>
     <div id="privacyModal" class="modal-overlay" onclick="document.getElementById('privacyModal').style.display='none'"><div class="modal-content"><h3>🛡️ 개인정보처리방침</h3><p>본 사이트는 구글 애드센스 광고를 게재하며 쿠키를 사용합니다. 근무 기록 및 게시물 데이터는 Firebase 서버에 안전하게 보관됩니다.</p><button class="action-btn" onclick="document.getElementById('privacyModal').style.display='none'">닫기</button></div></div>
     <div id="tickerManageModal" class="modal-overlay" onclick="document.getElementById('tickerManageModal').style.display='none'"><div class="modal-content" onclick="event.stopPropagation()"><h3 style="margin-top:0;">⚙️ 알림글 삭제</h3><div id="tickerListContainer"></div><button class="action-btn bg-cancel" onclick="document.getElementById('tickerManageModal').style.display='none'" style="margin-top:10px;">닫기</button></div></div>
@@ -1281,12 +1303,125 @@ db.collection("posts").orderBy("timestamp","desc").onSnapshot(s => {
     if(localStorage.getItem('myWorkerId')) { currentWorkerId = localStorage.getItem('myWorkerId'); updateUserBar(); }
 };
 /* 조장 근무일 이미지 팝업 함수 */
-function openLeaderSchedule() {
-    const m = document.getElementById('imageModal');
-    // 👇 오빠가 주신 새 파일 주소로 교체 완료!
-    document.getElementById('modalImage').src = 'https://firebasestorage.googleapis.com/v0/b/busan-hak-port.firebasestorage.app/o/KakaoTalk_20260222_172810293.jpg?alt=media'; 
-    m.style.display = 'flex';
-}
+/* ===== 조장 근무일 캘린더 스크립트 ===== */
+        let leaderCurrentDate = new Date();
+        let leaderOverrides = {};
+        const leaderCycle = ["재경", "성철", "개굴"]; // 3일 무한 로테이션 패턴
+
+        // 기존 단순 이미지 팝업을 달력 호출로 완전 대체
+        function openLeaderSchedule() {
+            document.getElementById('leaderCalendarModal').style.display = 'flex';
+            leaderCurrentDate = new Date(); 
+            renderLeaderCalendar(leaderCurrentDate.getFullYear(), leaderCurrentDate.getMonth());
+        }
+
+        function closeLeaderCalendar() {
+            document.getElementById('leaderCalendarModal').style.display = 'none';
+        }
+
+        function changeLeaderMonth(s) {
+            leaderCurrentDate.setMonth(leaderCurrentDate.getMonth() + s);
+            renderLeaderCalendar(leaderCurrentDate.getFullYear(), leaderCurrentDate.getMonth());
+        }
+
+        // 이미지 기반 패턴 로직: 2026년 2월 1일은 '재경'(인덱스 0)
+        function getCalculatedLeader(y, m, d) {
+            const target = Date.UTC(y, m, d);
+            const anchor = Date.UTC(2026, 1, 1); // 2026년 2월 1일 (JS month는 0부터 시작)
+            const diffDays = Math.floor((target - anchor) / (1000 * 60 * 60 * 24));
+            
+            let index = diffDays % 3;
+            if (index < 0) index += 3;
+            return leaderCycle[index];
+        }
+
+        function getLeaderBadgeClass(name) {
+            if (name.includes("재경")) return "leader-jaekyung";
+            if (name.includes("성철")) return "leader-sungchul";
+            if (name.includes("개굴")) return "leader-gaegool";
+            return "leader-jaekyung"; // 기본색
+        }
+
+        function renderLeaderCalendar(y, m) {
+            document.getElementById('leaderCalMonthYear').innerText = `${y}년 ${m+1}월`;
+            const g = document.getElementById('leaderCalendarGrid');
+            g.innerHTML = "";
+            
+            const sDate = `${y}-${String(m+1).padStart(2,'0')}-01`;
+            const lD = new Date(y, m+1, 0).getDate();
+            const eDate = `${y}-${String(m+1).padStart(2,'0')}-${String(lD).padStart(2,'0')}`;
+
+            // Firebase에서 해당 월의 '수동 변경된(대타 등)' 근무자 정보 가져오기
+            db.collection('leader_overrides').where('date', '>=', sDate).where('date', '<=', eDate).get().then(s => {
+                leaderOverrides = {};
+                s.forEach(doc => { leaderOverrides[doc.data().date] = doc.data().leader; });
+                drawLeaderGrid(y, m, lD);
+            }).catch(err => {
+                console.warn("근무자 오버라이드 로드 실패:", err);
+                drawLeaderGrid(y, m, lD); // 에러시에도 기본 패턴은 그려줌
+            });
+        }
+
+        function drawLeaderGrid(y, m, lD) {
+            const g = document.getElementById('leaderCalendarGrid');
+            g.innerHTML = "";
+            const fD = new Date(y, m, 1).getDay();
+            
+            for(let i=0; i<fD; i++) {
+                g.innerHTML += `<div style="background:transparent; border:none;"></div>`;
+            }
+            
+            for(let d=1; d<=lD; d++) {
+                const dStr = `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+                let leaderName = getCalculatedLeader(y, m, d);
+                let isCustom = false;
+                
+                // 수동 변경된 데이터가 있으면 덮어쓰기 적용
+                if (leaderOverrides[dStr]) {
+                    leaderName = leaderOverrides[dStr];
+                    isCustom = true;
+                }
+                
+                const badgeClass = getLeaderBadgeClass(leaderName);
+                const customStyle = isCustom ? "border: 2px solid #ef4444;" : "";
+                
+                let dayColor = "var(--text-main)";
+                let currentDayObj = new Date(y, m, d).getDay();
+                if (currentDayObj === 0) dayColor = "#ef4444"; // 일요일 빨강
+                if (currentDayObj === 6) dayColor = "#3b82f6"; // 토요일 파랑
+
+                g.innerHTML += `
+                    <div class="cal-day tap-effect" onclick="overrideLeader('${dStr}', '${leaderName}')" style="min-height: 65px; justify-content: flex-start; padding-top: 5px; background: white;">
+                        <span style="color: ${dayColor}; font-weight: 900; font-size: 0.95rem;">${d}</span>
+                        <div class="leader-badge ${badgeClass}" style="${customStyle}">${leaderName}</div>
+                    </div>
+                `;
+            }
+        }
+
+        // 근무자 수동 변경 함수 (Admin 전용)
+        async function overrideLeader(dStr, currentLeader) {
+            if (!(await verifyAdmin())) return; // 관리자(0346)만 변경 가능
+            
+            const newLeader = prompt(`[${dStr}] 근무자를 변경합니다.\n변경할 이름(재경, 성철, 임조장 등)을 입력하세요.\n\n※ 임의 변경 취소 후 '기본 패턴'으로 되돌리려면 '초기화' 또는 빈칸 입력`, currentLeader);
+            
+            if (newLeader === null) return; // 취소 버튼
+            
+            if (newLeader.trim() === "" || newLeader === "초기화") {
+                db.collection('leader_overrides').doc(dStr).delete().then(() => {
+                    showToast("기본 패턴으로 복구되었습니다.");
+                    renderLeaderCalendar(leaderCurrentDate.getFullYear(), leaderCurrentDate.getMonth());
+                });
+            } else {
+                db.collection('leader_overrides').doc(dStr).set({
+                    date: dStr,
+                    leader: newLeader.trim()
+                }).then(() => {
+                    showToast("근무자가 수동으로 변경되었습니다.");
+                    renderLeaderCalendar(leaderCurrentDate.getFullYear(), leaderCurrentDate.getMonth());
+                });
+            }
+        }
 /* ALL BAY PLAN 비밀번호 확인 및 링크 연결 함수 */
 function openAllBayPlan() {
     const pwInput = prompt("보안 비밀번호를 입력하세요:"); // 사용자에게 비밀번호 요청
@@ -1303,5 +1438,6 @@ function openAllBayPlan() {
 </script>
 </body>
 </html>
+
 
 
