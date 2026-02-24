@@ -327,6 +327,9 @@
                         <span id="calMonthYear" style="font-weight:bold; font-size:1.1rem;"></span>
                         <button class="mini-btn" style="padding:6px 12px; font-size:1rem;" onclick="changeMonth(1)">▶</button>
                     </div>
+                  <div class="calendar-grid" style="grid-template-columns: repeat(7, 1fr); gap: 3px; text-align: center; font-size: 0.85rem; font-weight: 900; margin-bottom: 5px;">
+                        <div style="color:#ef4444;">일</div><div>월</div><div>화</div><div>수</div><div>목</div><div>금</div><div style="color:#3b82f6;">토</div>
+                    </div>
                     <div id="calendarGrid" class="calendar-grid"></div>
                     <div id="dailyLogForm" class="hidden" style="margin-top:20px; padding:15px; background:rgba(0,0,0,0.03); border-radius:12px; border:1px solid var(--border);">
                         <h4 id="selectedDateText" style="margin:0 0 10px 0; color:var(--primary); text-align:center; font-size:1.1rem;"></h4>
@@ -858,9 +861,17 @@ function renderCalendar(y, m){
     document.getElementById('calMonthYear').innerText = `${y}년 ${m+1}월`;
     const fD = new Date(y, m, 1).getDay(), lD = new Date(y, m+1, 0).getDate();
     for(let i=0; i<fD; i++) g.innerHTML += `<div></div>`;
-    for(let d=1; d<=lD; d++){
+   for(let d=1; d<=lD; d++){
         const dStr = `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-        g.innerHTML += `<div id="cal-day-${d}" class="cal-day tap-effect" onclick="clickDate('${dStr}')">${d}<div class="cal-dot"></div></div>`;
+        
+        // --- 요일별 색상 구분 로직 시작 ---
+        let dayColor = "var(--text-main)";
+        let currentDayObj = new Date(y, m, d).getDay();
+        if (currentDayObj === 0) dayColor = "#ef4444"; // 일요일은 빨간색
+        if (currentDayObj === 6) dayColor = "#3b82f6"; // 토요일은 파란색
+        // --- 요일별 색상 구분 로직 끝 ---
+
+        g.innerHTML += `<div id="cal-day-${d}" class="cal-day tap-effect" onclick="clickDate('${dStr}')" style="color: ${dayColor};">${d}<div class="cal-dot"></div></div>`;
     }
     if(currentWorkerId) {
         const sDate = `${y}-${String(m+1).padStart(2,'0')}-01`, eDate = `${y}-${String(m+1).padStart(2,'0')}-${lD}`;
@@ -1688,6 +1699,7 @@ db.collection("posts").orderBy("timestamp","desc").onSnapshot(s => {
 </script>
 </body>
 </html>
+
 
 
 
