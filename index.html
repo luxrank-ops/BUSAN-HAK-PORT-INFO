@@ -268,12 +268,12 @@
                 </div>
 
                 <div class="calc-layout">
-                    <div class="calc-left">
-                        <div class="wage-row"><label>시급(기본)</label><input type="number" id="wageHourly" class="input-field" value="10320" style="text-align:right; font-weight:bold; color:#ef4444; font-size:1.1rem;" readonly></div>
-                        <div class="wage-row"><label>📅 근무일자</label><input type="date" id="wageDate" class="input-field" style="text-align:right; max-width: 125px; font-size:0.85rem; padding: 0 5px;" onchange="autoFillWeekendHoliday()"></div>
-                        <div class="wage-row"><label>⏳ 총 근무</label><input type="number" id="wageTotalHours" class="input-field" placeholder="H" style="text-align:right;" oninput="autoFillWeekendHoliday()"></div>
-                        <div class="wage-row"><label>🕒 시작시각</label><input type="number" id="wageStartTime" class="input-field" value="8" placeholder="0~23" style="text-align:right;"></div>
-                    </div>
+                  <div class="calc-left">
+                            <div class="wage-row"><label>시급(기본)</label><input type="number" id="wageHourly" class="input-field" value="10320" style="text-align:right; font-weight:bold; color:#ef4444; font-size:1.1rem;" readonly></div>
+                            <div class="wage-row"><label>📅 근무일자</label><input type="date" id="wageDate" class="input-field" style="text-align:right; max-width: 125px; font-size:0.85rem; padding: 0 5px;" onchange="autoFillWeekendHoliday()"></div>
+                            <div class="wage-row"><label>⏳ 총 근무</label><input type="number" id="wageTotalHours" class="input-field" placeholder="H" style="text-align:right;" oninput="autoFillWeekendHoliday()"></div>
+                            <div class="wage-row"><label>🕒 시작시각</label><input type="number" id="wageStartTime" class="input-field" value="8" placeholder="0~23" style="text-align:right;" oninput="autoFillWeekendHoliday()"></div>
+                        </div>
                     <div class="calc-right">
                         <table class="ref-table">
                             <thead><tr><th>월(Month)</th><th>주간</th><th>야간</th></tr></thead>
@@ -784,28 +784,51 @@ const publicHolidays = [
 
 function autoFillWeekendHoliday() {
     const dateStr = document.getElementById('wageDate').value;
-    const hours = document.getElementById('wageTotalHours').value;
-    
-    // 날짜나 시간이 비어있으면 작동하지 않음
-    if(!dateStr || !hours) return;
+    const hoursStr = document.getElementById('wageTotalHours').value;
+    const startHourStr = document.getElementById('wageStartTime').value;
 
-    const d = new Date(dateStr);
-    const dayOfWeek = d.getDay();
-    const isWeekend = (dayOfWeek === 0 || dayOfWeek === 6); // 0: 일요일, 6: 토요일
-    const isHoliday = publicHolidays.includes(dateStr);
+    // 날짜, 총 시간, 시작 시각 중 하나라도 비어있으면 계산 안 함
+    if(!dateStr || !hoursStr || !startHourStr) return;
 
-    // 일단 기존 값을 초기화 (평일로 바꿀 경우를 대비)
-    document.getElementById('wageWeekend').value = '';
-    document.getElementById('wageHoliday').value = '';
+    const totalHours = parseInt(hoursStr) || 0;
+    const startHour = parseInt(startHourStr) || 0;
 
-    // 공휴일이 최우선, 그다음이 주말
-    if (isHoliday) {
-        document.getElementById('wageHoliday').value = hours;
-    } else if (isWeekend) {
-        document.getElementById('wageWeekend').value = hours;
+    let holidayCount = 0;
+    let weekendCount = 0;
+
+    // 문자열 날짜를 쪼개서 자바스크립트 '시간 객체'로 만듭니다.
+    const [y, m, d] = dateStr.split('-').map(Number);
+    // 입력한 날짜의 '시작 시각'으로 시계를 딱 맞춥니다.
+    let currentDateTime = new Date(y, m - 1, d, startHour, 0, 0);
+
+    // 총 근무 시간만큼 1시간씩 빙글빙글 돌면서 검사합니다.
+    for(let i = 0; i < totalHours; i++) {
+        // 현재 검사 중인 1시간이 며칠, 무슨 요일인지 확인
+        const curY = currentDateTime.getFullYear();
+        const curM = String(currentDateTime.getMonth() + 1).padStart(2, '0');
+        const curD = String(currentDateTime.getDate()).padStart(2, '0');
+        const curDateString = `${curY}-${curM}-${curD}`;
+        const curDayOfWeek = currentDateTime.getDay(); // 0: 일요일, 6: 토요일
+
+        const isHoliday = publicHolidays.includes(curDateString);
+        const isWeekend = (curDayOfWeek === 0 || curDayOfWeek === 6);
+
+        // 공휴일이면 공휴일+1, 아니면 주말인지 확인해서 주말+1
+        if (isHoliday) {
+            holidayCount++;
+        } else if (isWeekend) {
+            weekendCount++;
+        }
+
+        // 시계를 1시간 앞으로 돌립니다 (자정이 넘어가면 날짜도 알아서 바뀜!)
+        currentDateTime.setHours(currentDateTime.getHours() + 1);
     }
+
+    // 최종 계산된 시간을 칸에 입력 (0시간이면 빈칸 유지)
+    document.getElementById('wageHoliday').value = holidayCount > 0 ? holidayCount : '';
+    document.getElementById('wageWeekend').value = weekendCount > 0 ? weekendCount : '';
 }
-// --- [주말 및 공휴일 자동 인식 로직 끝] ---      
+// --- [주말 및 공휴일 자동 인식 로직 (시간단위 정밀계산) 끝] ---
 const db = firebase.firestore();
 const storage = firebase.storage();
 // 오프라인 영속성
@@ -1755,6 +1778,7 @@ db.collection("posts").orderBy("timestamp","desc").onSnapshot(s => {
 </script>
 </body>
 </html>
+
 
 
 
