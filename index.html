@@ -717,7 +717,6 @@ function renderCalendar(y, m){
                     const el = document.getElementById(`cal-day-${day}`);
                     if(el) {
                         el.classList.add('has-data');
-                        // 💡 동료 이름 뱃지 표시 로직
                         if (data.coworkers) {
                             if (!el.querySelector('.coworker-badge')) {
                                 el.innerHTML += `<div class="coworker-badge">${data.coworkers}</div>`;
@@ -726,6 +725,7 @@ function renderCalendar(y, m){
                             }
                         }
                     }
+                    // 💡 직접 입력한 임금이 월 총액에 합산됨
                     total += (data.totalPay || 0);
                 }
             });
@@ -739,9 +739,12 @@ function clickDate(dStr){
     document.getElementById('dailyLogForm').classList.remove('hidden');
     document.getElementById('dailyLogForm').setAttribute('data-date', dStr);
     const d = adminWorkLogs[dStr];
-    document.getElementById('logDayHours').value = d ? d.dayHours : '';
-    document.getElementById('logNightHours').value = d ? d.nightHours : '';
-    // 💡 클릭 시 저장된 동료 이름 불러오기
+    
+    // 💡 배이름 및 임금1, 임금2 불러오기
+    document.getElementById('logShipName').value = d ? (d.shipName || '') : '';
+    document.getElementById('logWage1').value = d ? (d.wage1 || '') : '';
+    document.getElementById('logWage2').value = d ? (d.wage2 || '') : '';
+    
     document.getElementById('logCoworkers').value = d ? (d.coworkers || '') : ''; 
     document.getElementById('logMemo').value = d ? d.memo : '';
     const img = document.getElementById('logImagePreview');
@@ -769,24 +772,27 @@ function saveWorkLog(){
     btn.innerText = "저장 중... (0%)";
     btn.disabled = true;
 
-    const dh = parseFloat(document.getElementById('logDayHours').value)||0;
-    const nh = parseFloat(document.getElementById('logNightHours').value)||0;
-    // 💡 동료 이름 데이터 수집
+    // 💡 배이름 및 직접 입력한 임금 데이터 수집
+    const shipNameInfo = document.getElementById('logShipName').value.trim();
+    const w1 = parseFloat(document.getElementById('logWage1').value) || 0;
+    const w2 = parseFloat(document.getElementById('logWage2').value) || 0;
     const coworkersInfo = document.getElementById('logCoworkers').value.trim(); 
     const memo = document.getElementById('logMemo').value;
     const file = document.getElementById('logImageInput').files[0];
-    const pay = (dh*10320) + (nh*15480);
+    
+    // 💡 임금 1 + 임금 2 합산하여 totalPay로 기록
+    const pay = w1 + w2;
     const docId = `${currentWorkerId}_${dStr}`;
 
     const finalizeSave = (url) => {
         btn.innerText = "데이터 기록 중...";
         
-        // 💡 logData에 coworkers 필드 추가 저장
         const logData = { 
             date: dStr, 
             workerId: currentWorkerId, 
-            dayHours: dh, 
-            nightHours: nh, 
+            shipName: shipNameInfo,
+            wage1: w1,
+            wage2: w2,
             coworkers: coworkersInfo, 
             memo: memo, 
             totalPay: pay, 
@@ -799,7 +805,6 @@ function saveWorkLog(){
             showToast("저장되었습니다.");
             adminWorkLogs[dStr] = logData;
             
-            // 저장 직후 달력 리로드
             renderCalendar(currentDate.getFullYear(), currentDate.getMonth());
 
             setTimeout(() => { 
@@ -841,7 +846,6 @@ function saveWorkLog(){
     }
 }
 
-// 기존 로그인/아웃 관련 함수들 그대로 유지
 function loginSuccess(name) { currentWorkerId = name; localStorage.setItem('myWorkerId', currentWorkerId); updateUserBar(); renderCalendar(currentDate.getFullYear(), currentDate.getMonth()); }
 function closeLoginModal(){ document.getElementById('loginModal').style.display = 'none'; }
 function updateUserBar() { document.getElementById('userProfileBar').style.display = currentWorkerId ? 'flex' : 'none'; if(currentWorkerId) document.getElementById('currentUserDisplay').innerText = `👤 ${currentWorkerId}`; }
@@ -856,9 +860,10 @@ function deleteWorkLog(){
     db.collection('work_logs').doc(`${currentWorkerId}_${dStr}`).delete().then(()=>{
         showToast("삭제되었습니다.");
         
-        document.getElementById('logDayHours').value=''; 
-        document.getElementById('logNightHours').value=''; 
-        // 💡 삭제 시 동료 이름 입력칸도 초기화
+        // 💡 입력창 초기화
+        document.getElementById('logShipName').value=''; 
+        document.getElementById('logWage1').value=''; 
+        document.getElementById('logWage2').value=''; 
         document.getElementById('logCoworkers').value=''; 
         document.getElementById('logMemo').value='';
         document.getElementById('logImageInput').value = '';
@@ -1412,6 +1417,7 @@ db.collection("posts").orderBy("timestamp","desc").onSnapshot(s => {
 </script>
 </body>
 </html>
+
 
 
 
