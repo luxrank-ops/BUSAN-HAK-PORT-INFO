@@ -255,66 +255,73 @@
         </div>
 
       <div class="dash-grid">
-    <div id="wage-card" class="dash-card" style="border:1px solid var(--danger);">
-        <div class="dash-header tap-effect" onclick="toggleDashItem('wage-card')">
-            <span class="dash-title" style="color:var(--danger);">💰 임금계산기</span>
-            <span class="toggle-icon">▼</span>
-        </div>
-                <div class="dash-content" style="display:none;">
-                    <div class="role-selector">
-                        <input type="radio" id="role-main" name="workRole" value="main" checked><label for="role-main">🚢 본선</label>
-                        <input type="radio" id="role-skilled" name="workRole" value="skilled"><label for="role-skilled">🔧 기능공</label>
-                        <input type="radio" id="role-onshore" name="workRole" value="onshore"><label for="role-onshore">🚛 육상</label>
-                    </div>
+<div id="wage-card" class="dash-card" style="border:1px solid var(--danger);">
+            <div class="dash-header tap-effect" onclick="toggleDashItem('wage-card')">
+                <span class="dash-title" style="color:var(--danger);">💰 임금계산기</span>
+                <span class="toggle-icon">▼</span>
+            </div>
+            <div class="dash-content" style="display:none;">
+                <div class="role-selector">
+                    <input type="radio" id="role-main" name="workRole" value="main" checked><label for="role-main">🚢 본선</label>
+                    <input type="radio" id="role-skilled" name="workRole" value="skilled"><label for="role-skilled">🔧 기능공</label>
+                    <input type="radio" id="role-onshore" name="workRole" value="onshore"><label for="role-onshore">🚛 육상</label>
+                </div>
 
-                    <div class="calc-layout">
-                        <div class="calc-left">
-                           <div class="calc-left">
-                            <div class="wage-row"><label>시급(기본)</label><input type="number" id="wageHourly" class="input-field" value="10320" style="text-align:right; font-weight:bold; color:#ef4444; font-size:1.1rem;" readonly></div>
-                            <div class="wage-row"><label>📅 근무일자</label><input type="date" id="wageDate" class="input-field" style="text-align:right;" onchange="autoFillWeekendHoliday()"></div>
-                            <div class="wage-row"><label>⏳ 총 근무</label><input type="number" id="wageTotalHours" class="input-field" placeholder="H" style="text-align:right;" oninput="autoFillWeekendHoliday()"></div>
-                            <div class="wage-row"><label>🕒 시작시각</label><input type="number" id="wageStartTime" class="input-field" value="8" placeholder="0~23" style="text-align:right;"></div>
-                        </div>
-                        <div class="calc-right">
-                            <table class="ref-table">
-                                <thead><tr><th>월(Month)</th><th>주간</th><th>야간</th></tr></thead>
-                                <tbody>
-                                    <tr id="row-jan"><td>1~3월</td><td>08~18</td><td>18~08</td></tr>
-                                    <tr id="row-apr"><td>4~9월</td><td>06~19</td><td>19~06</td></tr>
-                                    <tr id="row-oct"><td>10~12월</td><td>07~17</td><td>17~07</td></tr>
-                                </tbody>
-                            </table>
-                        </div>
+                <div class="calc-layout">
+                    <div class="calc-left">
+                        <div class="wage-row"><label>시급(기본)</label><input type="number" id="wageHourly" class="input-field" value="10320" style="text-align:right; font-weight:bold; color:#ef4444; font-size:1.1rem;" readonly></div>
+                        <div class="wage-row"><label>📅 근무일자</label><input type="date" id="wageDate" class="input-field" style="text-align:right; max-width: 125px; font-size:0.85rem; padding: 0 5px;" onchange="autoFillWeekendHoliday()"></div>
+                        <div class="wage-row"><label>⏳ 총 근무</label><input type="number" id="wageTotalHours" class="input-field" placeholder="H" style="text-align:right;" oninput="autoFillWeekendHoliday()"></div>
+                        <div class="wage-row"><label>🕒 시작시각</label><input type="number" id="wageStartTime" class="input-field" value="8" placeholder="0~23" style="text-align:right;"></div>
                     </div>
-
-                    <p style="font-size:0.75rem; color:var(--text-sub); margin:0; text-align:center;">※ 현재 월에 맞춰 주/야간 시간이 자동 적용됩니다.</p>
-                    <p style="font-size:0.8rem; color:#ef4444; font-weight:bold; margin:4px 0 12px 0; text-align:center;">더블 오더로 겹치는 시간은 별도로 시간을 계산 하여야 합니다!!</p>
-                    <div style="border-top:1px dashed var(--border); margin:10px 0; padding-top:12px;">
-                        <p style="font-size:0.85rem; color:var(--primary); font-weight:800; margin-bottom:8px;">✅ 추가 수당 시간 입력</p>
-                        <div class="allowance-grid">
-                            <div class="wage-row"><label>공휴일</label><input type="number" id="wageHoliday" class="input-field" placeholder="H"></div>
-                            <div class="wage-row"><label>주말</label><input type="number" id="wageWeekend" class="input-field" placeholder="H"></div>
-                            <div class="wage-row"><label>우천</label><input type="number" id="wageRain" class="input-field" placeholder="H"></div>
-                            <div class="wage-row"><label>혹서기</label><input type="number" id="wageHotTime" class="input-field" placeholder="H"></div>
-                        </div>
-                    </div>
-                    <select id="wageTaxType" class="input-field" style="margin-top:5px; text-align:center;">
-                        <option value="0">공제 없음 (0%)</option>
-                        <option value="0.033">프리랜서 (3.3%)</option>
-                        <option value="0.094">4대보험 (9.4%)</option>
-                    </select>
-                    <div style="display:flex; gap:10px; margin-top:10px;">
-                        <button class="action-btn bg-calc" style="flex:2" onclick="calculateWage()">내역서 생성 및 계산</button>
-                        <button class="action-btn bg-cancel" style="flex:1" onclick="resetWageForm()">초기화</button>
-                    </div>
-                    <div id="wageResultBox" class="hidden wage-result-box">
-                        <h4 style="margin:0; text-align:center; color:var(--primary); font-size:1.1rem;">📋 임금 산정 내역서</h4>
-                        <table class="spec-table"><tbody id="wageSpecBody"></tbody></table>
-                        <div id="wageTotal" class="wage-total">0원</div>
-                        <p style="font-size:0.75rem; color:var(--text-sub); text-align:center; margin-top:5px;">※ 2026년 3항업지부 임금표 기준</p>
+                    <div class="calc-right">
+                        <table class="ref-table">
+                            <thead><tr><th>월(Month)</th><th>주간</th><th>야간</th></tr></thead>
+                            <tbody>
+                                <tr id="row-jan"><td>1~3월</td><td>08~18</td><td>18~08</td></tr>
+                                <tr id="row-apr"><td>4~9월</td><td>06~19</td><td>19~06</td></tr>
+                                <tr id="row-oct"><td>10~12월</td><td>07~17</td><td>17~07</td></tr>
+                            </tbody>
+                        </table>
                     </div>
                 </div>
+
+                <p style="font-size:0.75rem; color:var(--text-sub); margin:0; text-align:center;">※ 현재 월에 맞춰 주/야간 시간이 자동 적용됩니다.</p>
+                <p style="font-size:0.8rem; color:#ef4444; font-weight:bold; margin:4px 0 12px 0; text-align:center;">더블 오더로 겹치는 시간은 별도로 시간을 계산 하여야 합니다!!</p>
+                <div style="border-top:1px dashed var(--border); margin:10px 0; padding-top:12px;">
+                    <p style="font-size:0.85rem; color:var(--primary); font-weight:800; margin-bottom:8px;">✅ 추가 수당 시간 입력</p>
+                    <div class="allowance-grid">
+                        <div class="wage-row"><label>공휴일</label><input type="number" id="wageHoliday" class="input-field" placeholder="H"></div>
+                        <div class="wage-row"><label>주말</label><input type="number" id="wageWeekend" class="input-field" placeholder="H"></div>
+                        <div class="wage-row"><label>우천</label><input type="number" id="wageRain" class="input-field" placeholder="H"></div>
+                        <div class="wage-row"><label>혹서기</label><input type="number" id="wageHotTime" class="input-field" placeholder="H"></div>
+                    </div>
+                </div>
+                <select id="wageTaxType" class="input-field" style="margin-top:5px; text-align:center;">
+                    <option value="0">공제 없음 (0%)</option>
+                    <option value="0.033">프리랜서 (3.3%)</option>
+                    <option value="0.094">4대보험 (9.4%)</option>
+                </select>
+                <div style="display:flex; gap:10px; margin-top:10px;">
+                    <button class="action-btn bg-calc" style="flex:2" onclick="calculateWage()">내역서 생성 및 계산</button>
+                    <button class="action-btn bg-cancel" style="flex:1" onclick="resetWageForm()">초기화</button>
+                </div>
+                <div id="wageResultBox" class="hidden wage-result-box">
+                    <h4 style="margin:0; text-align:center; color:var(--primary); font-size:1.1rem;">📋 임금 산정 내역서</h4>
+                    <table class="spec-table"><tbody id="wageSpecBody"></tbody></table>
+                    <div id="wageTotal" class="wage-total">0원</div>
+                    <p style="font-size:0.75rem; color:var(--text-sub); text-align:center; margin-top:5px;">※ 2026년 3항업지부 임금표 기준</p>
+                </div>
             </div>
+        </div>
+        ```
+
+### ⚡ 실무 팁: 자바스크립트는 그대로 두셔도 됩니다!
+방금 전 답변에서 맨 밑에 넣으셨던 **[2단계] 자동 완성 로직(JavaScript)** 부분과 **[3단계] 앱 켤 때 오늘 날짜 띄우기** 부분은 화면 찌그러짐과 무관하게 아주 정상 작동하는 완벽한 코드이므로 그대로 두시면 됩니다! HTML 영역만 덮어쓰시면 복구 끝입니다.
+
+---
+
+오빠, 이거 통째로 덮어쓰시고 Vercel 업데이트 돌려서 확인해 보시겠습니까? 찌그러졌던 화면이 예쁜 반반(50:50) 바둑판으로 돌아오고, 계산기에 날짜를 넣었을 때 주말 시간이 알아서 채워지는지 저에게 꼭 보고해 주십시오!
             <div id="log-card" class="dash-card" style="border:1px solid var(--primary);">
                 <div class="dash-header tap-effect" onclick="toggleDashItem('log-card')">
                     <span class="dash-title" style="color:var(--primary);">📅 스마트 근무일지(짝지)</span><span class="toggle-icon">▼</span>
@@ -1741,6 +1748,7 @@ db.collection("posts").orderBy("timestamp","desc").onSnapshot(s => {
 </script>
 </body>
 </html>
+
 
 
 
