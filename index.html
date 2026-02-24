@@ -286,7 +286,7 @@
                     </div>
                 </div>
 
-                <p style="font-size:0.75rem; color:var(--text-sub); margin:0; text-align:center;">※ 현재 월에 맞춰 주/야간 시간이 자동 적용됩니다.</p>
+                <p style="font-size:0.75rem; color:var(--text-sub); margin:0; text-align:center;">※ 현재 월에 맞춰 주/야간 시간이 자동 적용되며 주말 및 공휴일 수당도 날짜에 맞게 자동 적용됩니.</p>
                 <p style="font-size:0.8rem; color:#ef4444; font-weight:bold; margin:4px 0 12px 0; text-align:center;">더블 오더로 겹치는 시간은 별도로 시간을 계산 하여야 합니다!!</p>
                 <div style="border-top:1px dashed var(--border); margin:10px 0; padding-top:12px;">
                     <p style="font-size:0.85rem; color:var(--primary); font-weight:800; margin-bottom:8px;">✅ 추가 수당 시간 입력</p>
@@ -1085,12 +1085,13 @@ function changeMonth(s){ currentDate.setMonth(currentDate.getMonth()+s); renderC
 function previewLogImage(input){ if(input.files&&input.files[0]){ const r=new FileReader(); r.onload=e=>{const i=document.getElementById('logImagePreview'); i.src=e.target.result; i.style.display='block';}; r.readAsDataURL(input.files[0]); } }
 
 // --- [D] 임금계산기 ---
+// 👇 여기서부터 복사해서 기존 calculateWage 함수를 덮어쓰세요 👇
 function calculateWage() {
     try {
         // 1. 오빠의 HTML ID에 맞춰 데이터 가져오기
         const totalHours = parseFloat(document.getElementById('wageTotalHours').value) || 0;
         const startTime = parseInt(document.getElementById('wageStartTime').value) || 8;
-        const isSkilled = document.getElementById('role-skilled').checked; // 기능공 라디오 버튼 체크 여부
+        const isSkilled = document.getElementById('role-skilled').checked;
 
         // 추가 수당 시간들
         const holidayH = parseFloat(document.getElementById('wageHoliday').value) || 0;
@@ -1106,7 +1107,7 @@ function calculateWage() {
 
         // 3. 주간/야간 시간 분리 로직 (현재 월 기준 자동 계산)
         const month = new Date().getMonth() + 1;
-        let dayStart = 8, dayEnd = 18; // 1~3월 기준
+        let dayStart = 8, dayEnd = 18; 
         if (month >= 4 && month <= 9) { dayStart = 6; dayEnd = 19; }
         else if (month >= 10) { dayStart = 7; dayEnd = 17; }
 
@@ -1120,7 +1121,11 @@ function calculateWage() {
         // 4. 금액 계산
         const dayAmt = dayHours * BASE_RATE;
         const nightAmt = nightHours * (BASE_RATE * 1.5);
-        const extraAmt = (holidayH + weekendH + rainH + hotH) * (BASE_RATE * 0.5); // 가산금 50% 기준 예시
+
+        // 🔥 수당 항목별 분리 계산
+        const holidayAmt = holidayH * (BASE_RATE * 0.5);
+        const weekendAmt = weekendH * (BASE_RATE * 0.5);
+        const otherAmt = (rainH + hotH) * (BASE_RATE * 0.5);
 
         // 🔥 기능공 수당 계산 (체크 시 적용)
         let skilledAmt = 0;
@@ -1128,30 +1133,40 @@ function calculateWage() {
             skilledAmt = (dayHours * SKILLED_DAY_ADD) + (nightHours * SKILLED_NIGHT_ADD);
         }
 
-        const subTotal = dayAmt + nightAmt + skilledAmt + extraAmt;
+        const subTotal = dayAmt + nightAmt + skilledAmt + holidayAmt + weekendAmt + otherAmt;
         const taxAmt = Math.floor(subTotal * taxRate);
         const finalTotal = subTotal - taxAmt;
 
-        // 5. 내역서 생성 (우측 정렬 flex 적용)
+        // 5. 내역서 영수증 상세 표기 로직 (값이 있을 때만 나타나게 스마트하게 처리!)
+        let extraHtml = "";
+        if (holidayAmt > 0) extraHtml += renderRow("🎉 공휴일 수당 (" + holidayH + "H)", holidayAmt, "#ea580c"); // 주황/빨강
+        if (weekendAmt > 0) extraHtml += renderRow("🎈 주말 수당 (" + weekendH + "H)", weekendAmt, "#3b82f6"); // 파랑
+        if (otherAmt > 0) extraHtml += renderRow("☔ 우천/혹서기 등 (" + (rainH + hotH) + "H)", otherAmt);
+        
+        // 가산 수당이 아예 0시간일 때만 기본 표시
+        if (holidayAmt === 0 && weekendAmt === 0 && otherAmt === 0) {
+            extraHtml += renderRow("➕ 추가 가산 수당", 0);
+        }
+
         const specBody = document.getElementById('wageSpecBody');
         specBody.innerHTML = `
             ${renderRow("☀️ 주간 기본 ("+dayHours+"H)", dayAmt)}
             ${renderRow("🌙 야간 할증 ("+nightHours+"H)", nightAmt)}
             ${renderRow("🔧 기능공 수당 추가", skilledAmt, "var(--primary)")}
-            ${renderRow("➕ 기타 가산 수당", extraAmt)}
+            ${extraHtml}
             ${taxAmt > 0 ? renderRow("💸 공제액 (세금/보험)", -taxAmt, "var(--danger)") : ""}
         `;
 
         document.getElementById('wageTotal').innerText = finalTotal.toLocaleString() + "원";
         document.getElementById('wageResultBox').classList.remove('hidden');
-        showToast("계산서가 생성되었습니다!");
+        showToast("상세 계산서가 생성되었습니다!");
 
     } catch (e) {
         console.error(e);
         alert("계산 오류: 입력창 값을 확인해주세요.");
     }
 }
-
+// 👆 여기까지 복사해서 기존 calculateWage 함수를 덮어쓰세요 👆
 // 헬퍼 함수: 한 줄씩 정렬해서 그려주기
 function renderRow(label, amt, color = "inherit") {
     return `
@@ -1740,6 +1755,7 @@ db.collection("posts").orderBy("timestamp","desc").onSnapshot(s => {
 </script>
 </body>
 </html>
+
 
 
 
