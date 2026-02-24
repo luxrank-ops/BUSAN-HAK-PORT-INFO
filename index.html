@@ -171,7 +171,9 @@
         .leader-jaekyung { background-color: #374151; } /* 재경: 검정/회색 */
         .leader-sungchul { background-color: #fbbf24; color: #000; } /* 성철: 노랑 */
         .leader-gaegool { background-color: #3b82f6; } /* 임조: 파랑 */
-        .leader-custom { border: 2px solid #ef4444; box-shadow: 0 0 5px rgba(239,68,68,0.5); }       
+        .leader-custom { border: 2px solid #ef4444; box-shadow: 0 0 5px rgba(239,68,68,0.5); }    
+ /* 근무일지 짝지(동료) 이름 표기용 뱃지 */
+        .coworker-badge { font-size: 0.65rem; color: #1e3a8a; background: rgba(59, 130, 246, 0.15); border-radius: 4px; padding: 2px 4px; margin-top: 2px; width: 95%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: center; font-weight: bold; }       
     </style>
 </head>
 <body>
@@ -272,6 +274,7 @@
                         <h4 id="selectedDateText" style="margin:0 0 10px 0; color:var(--primary); text-align:center; font-size:1.1rem;"></h4>
                         <div class="wage-row"><label>주간</label><input type="number" id="logDayHours" class="input-field" placeholder="시간(H)" step="0.5"></div>
                         <div class="wage-row"><label>야간</label><input type="number" id="logNightHours" class="input-field" placeholder="시간(H)" step="0.5"></div>
+                        <div class="wage-row"><label>근무자</label><input type="text" id="logCoworkers" class="input-field" placeholder="예: 재경, 성철 (2~4명)"></div>
                         <textarea id="logMemo" class="input-field textarea-field" placeholder="작업 내용..."></textarea>
                         <label style="font-size:0.85rem; font-weight:bold; display:block; margin-top:10px; margin-bottom:4px;">📷 현장 사진</label>
                         <input type="file" id="logImageInput" class="input-field" accept="image/*" onchange="previewLogImage(this)">
@@ -708,7 +711,17 @@ function renderCalendar(y, m){
                     adminWorkLogs[data.date] = data; 
                     const day = parseInt(data.date.split('-')[2]);
                     const el = document.getElementById(`cal-day-${day}`);
-                    if(el) el.classList.add('has-data');
+                    if(el) {
+                        el.classList.add('has-data');
+                        // 💡 동료 이름 뱃지 표시 로직
+                        if (data.coworkers) {
+                            if (!el.querySelector('.coworker-badge')) {
+                                el.innerHTML += `<div class="coworker-badge">${data.coworkers}</div>`;
+                            } else {
+                                el.querySelector('.coworker-badge').innerText = data.coworkers;
+                            }
+                        }
+                    }
                     total += (data.totalPay || 0);
                 }
             });
@@ -716,6 +729,7 @@ function renderCalendar(y, m){
         });
     }
 }
+
 function clickDate(dStr){
     document.getElementById('selectedDateText').innerText = dStr;
     document.getElementById('dailyLogForm').classList.remove('hidden');
@@ -723,12 +737,16 @@ function clickDate(dStr){
     const d = adminWorkLogs[dStr];
     document.getElementById('logDayHours').value = d ? d.dayHours : '';
     document.getElementById('logNightHours').value = d ? d.nightHours : '';
+    // 💡 클릭 시 저장된 동료 이름 불러오기
+    document.getElementById('logCoworkers').value = d ? (d.coworkers || '') : ''; 
     document.getElementById('logMemo').value = d ? d.memo : '';
     const img = document.getElementById('logImagePreview');
     if(d && d.imageUrl){ img.src = d.imageUrl; img.style.display = 'block'; } else { img.style.display = 'none'; img.src = ""; }
     document.getElementById('logImageInput').value = ''; 
 }
+
 function trySaveWorkLog(){ if(currentWorkerId) saveWorkLog(); else document.getElementById('loginModal').style.display = 'flex'; }
+
 async function confirmLoginAndSave(){
     const nick = document.getElementById('loginNick').value.trim(), pw = document.getElementById('loginPw').value.trim();
     if(!nick || !pw) return alert("입력 필요");
@@ -739,132 +757,92 @@ async function confirmLoginAndSave(){
     loginSuccess(nick); closeLoginModal(); saveWorkLog();
 }
 
-/* [수정] 저장 기능: 디버깅 로그 추가 및 타임아웃 방지 */
 function saveWorkLog(){
     const btn = document.getElementById('saveLogBtn');
-
-    // 1. 필수 입력값 검증
     const dStr = document.getElementById('dailyLogForm').getAttribute('data-date');
     if(!dStr) { alert("날짜가 선택되지 않았습니다."); return; }
 
-    // UI 잠금
     btn.innerText = "저장 중... (0%)";
     btn.disabled = true;
 
-    // 데이터 수집
     const dh = parseFloat(document.getElementById('logDayHours').value)||0;
     const nh = parseFloat(document.getElementById('logNightHours').value)||0;
+    // 💡 동료 이름 데이터 수집
+    const coworkersInfo = document.getElementById('logCoworkers').value.trim(); 
     const memo = document.getElementById('logMemo').value;
     const file = document.getElementById('logImageInput').files[0];
     const pay = (dh*10320) + (nh*15480);
     const docId = `${currentWorkerId}_${dStr}`;
 
-    console.log("시작: 데이터 수집 완료", { docId, dh, nh, hasFile: !!file });
-
-    // 내부 저장 실행 함수
     const finalizeSave = (url) => {
-        console.log("Firestore 저장 시작...", url);
         btn.innerText = "데이터 기록 중...";
-
+        
+        // 💡 logData에 coworkers 필드 추가 저장
         const logData = { 
             date: dStr, 
             workerId: currentWorkerId, 
             dayHours: dh, 
             nightHours: nh, 
+            coworkers: coworkersInfo, 
             memo: memo, 
             totalPay: pay, 
-            imageUrl: url // 이미지가 없으면 null 혹은 기존 url
+            imageUrl: url 
         };
 
         db.collection('work_logs').doc(docId).set(logData, {merge: true}).then(() => {
-            console.log("Firestore 저장 성공!");
-
-            // 성공 피드백
             btn.innerText = "✅ 저장 완료!";
             btn.style.background = "var(--success)";
             showToast("저장되었습니다.");
-
-            // 데이터 즉시 동기화
             adminWorkLogs[dStr] = logData;
-
-            // 달력에 점 찍기
-            const dayPart = parseInt(dStr.split('-')[2]);
-            const dayEl = document.getElementById(`cal-day-${dayPart}`);
-            if(dayEl) dayEl.classList.add('has-data');
-
-            // 총액 갱신
-            let total = 0; 
-            Object.values(adminWorkLogs).forEach(log => total += (log.totalPay || 0));
-            document.getElementById('monthlyTotalDisplay').innerText = `이번달 총액: ${total.toLocaleString()}원`;
-
-            // 달력 전체 새로고침 (확실한 동기화)
+            
+            // 저장 직후 달력 리로드
             renderCalendar(currentDate.getFullYear(), currentDate.getMonth());
 
-            // 1.5초 후 버튼 복귀
             setTimeout(() => { 
                 btn.innerText = "저장하기"; 
-                btn.style.background = "#ef4444"; // 원래 색상(붉은색 계열) 복구
-                btn.disabled = false;
+                btn.style.background = "#ef4444"; 
+                btn.disabled = false; 
             }, 1500);
 
         }).catch(err => { 
-            console.error("Firestore 에러:", err);
             alert("데이터베이스 저장 실패: " + err.message); 
             btn.innerText = "저장하기"; 
-            btn.disabled = false;
+            btn.disabled = false; 
         });
     };
 
-    // 파일 업로드 로직 분기
     if(file) {
-        console.log("파일 업로드 시작...");
-        btn.innerText = "사진 업로드 중...";
-
-        // 파일명에 타임스탬프 추가하여 중복 방지
         const storageRef = storage.ref(`logs/${currentWorkerId}/${Date.now()}_${file.name}`);
         const uploadTask = storageRef.put(file);
 
         uploadTask.on('state_changed', 
             (snapshot) => {
-                // 진행률 표시 (무한루프인지 확인용)
                 const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-                console.log('Upload is ' + progress + '% done');
                 btn.innerText = `업로드 중... ${Math.round(progress)}%`;
             }, 
             (error) => {
-                // 업로드 실패 시
-                console.error("Storage 에러:", error);
-                let msg = "사진 업로드 실패!\n";
-                if(error.code === 'storage/unauthorized') msg += "원인: 권한 없음 (Firebase Rules를 확인하세요)";
-                else if(error.code === 'storage/unknown') msg += "원인: 알 수 없는 오류 (네트워크 등)";
-                else msg += "원인: " + error.message;
-
-                alert(msg);
+                alert("사진 업로드 실패: " + error.message);
                 btn.innerText = "저장하기";
                 btn.disabled = false;
             }, 
             () => {
-                // 업로드 성공 시
-                console.log("업로드 완료. URL 다운로드 중...");
                 uploadTask.snapshot.ref.getDownloadURL().then((downloadURL) => {
                     finalizeSave(downloadURL);
                 });
             }
         );
     } else {
-        // 파일 없음: 기존 이미지가 있다면 유지, 없으면 null
         const existingUrl = adminWorkLogs[dStr] ? adminWorkLogs[dStr].imageUrl : null;
-        console.log("파일 없음. 기존 URL 사용:", existingUrl);
         finalizeSave(existingUrl);
     }
 }
 
+// 기존 로그인/아웃 관련 함수들 그대로 유지
 function loginSuccess(name) { currentWorkerId = name; localStorage.setItem('myWorkerId', currentWorkerId); updateUserBar(); renderCalendar(currentDate.getFullYear(), currentDate.getMonth()); }
 function closeLoginModal(){ document.getElementById('loginModal').style.display = 'none'; }
 function updateUserBar() { document.getElementById('userProfileBar').style.display = currentWorkerId ? 'flex' : 'none'; if(currentWorkerId) document.getElementById('currentUserDisplay').innerText = `👤 ${currentWorkerId}`; }
 function logoutWorker() { if(confirm("로그아웃?")) { currentWorkerId = null; localStorage.removeItem('myWorkerId'); updateUserBar(); renderCalendar(currentDate.getFullYear(), currentDate.getMonth()); document.getElementById('dailyLogForm').classList.add('hidden'); } }
 
-/* [수정] 삭제 기능: 삭제 성공 시 달력 데이터 재로드 */
 function deleteWorkLog(){
     if(!currentWorkerId) { alert("로그인이 필요합니다."); return; }
     if(!confirm("정말 삭제하시겠습니까?")) return;
@@ -873,21 +851,19 @@ function deleteWorkLog(){
 
     db.collection('work_logs').doc(`${currentWorkerId}_${dStr}`).delete().then(()=>{
         showToast("삭제되었습니다.");
-
-        // 입력창 초기화
+        
         document.getElementById('logDayHours').value=''; 
         document.getElementById('logNightHours').value=''; 
+        // 💡 삭제 시 동료 이름 입력칸도 초기화
+        document.getElementById('logCoworkers').value=''; 
         document.getElementById('logMemo').value='';
         document.getElementById('logImageInput').value = '';
         const imgPreview = document.getElementById('logImagePreview');
         if(imgPreview) { imgPreview.src = ''; imgPreview.style.display = 'none'; }
-
-        // [중요] 삭제 후 달력 데이터를 새로 받아와서 화면 갱신 (동기화)
+        
         renderCalendar(currentDate.getFullYear(), currentDate.getMonth());
-
     }).catch(err => alert("삭제 실패: " + err.message));
 }
-
 function changeMonth(s){ currentDate.setMonth(currentDate.getMonth()+s); renderCalendar(currentDate.getFullYear(), currentDate.getMonth()); }
 function previewLogImage(input){ if(input.files&&input.files[0]){ const r=new FileReader(); r.onload=e=>{const i=document.getElementById('logImagePreview'); i.src=e.target.result; i.style.display='block';}; r.readAsDataURL(input.files[0]); } }
 
@@ -1432,6 +1408,7 @@ db.collection("posts").orderBy("timestamp","desc").onSnapshot(s => {
 </script>
 </body>
 </html>
+
 
 
 
