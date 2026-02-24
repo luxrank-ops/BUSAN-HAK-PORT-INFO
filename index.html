@@ -272,9 +272,13 @@
                     <div id="calendarGrid" class="calendar-grid"></div>
                     <div id="dailyLogForm" class="hidden" style="margin-top:20px; padding:15px; background:rgba(0,0,0,0.03); border-radius:12px; border:1px solid var(--border);">
                         <h4 id="selectedDateText" style="margin:0 0 10px 0; color:var(--primary); text-align:center; font-size:1.1rem;"></h4>
-                        <div class="wage-row"><label>주간</label><input type="number" id="logDayHours" class="input-field" placeholder="시간(H)" step="0.5"></div>
-                        <div class="wage-row"><label>야간</label><input type="number" id="logNightHours" class="input-field" placeholder="시간(H)" step="0.5"></div>
+                        <div class="wage-row"><label>배이름</label><input type="text" id="logShipName" class="input-field" placeholder="작업 선박명"></div>
+                        <div style="display:flex; gap:10px; margin-bottom:8px; width:100%;">
+                            <div class="wage-row" style="flex:1; margin-bottom:0;"><label>임금1</label><input type="number" id="logWage1" class="input-field" placeholder="원"></div>
+                            <div class="wage-row" style="flex:1; margin-bottom:0;"><label>임금2</label><input type="number" id="logWage2" class="input-field" placeholder="원"></div>
+                        </div>
                         <div class="wage-row"><label>근무자</label><input type="text" id="logCoworkers" class="input-field" placeholder="예: 재경, 성철 (2~4명)"></div>
+                        <textarea id="logMemo" class="input-field textarea-field" placeholder="작업 내용..."></textarea>
                         <textarea id="logMemo" class="input-field textarea-field" placeholder="작업 내용..."></textarea>
                         <label style="font-size:0.85rem; font-weight:bold; display:block; margin-top:10px; margin-bottom:4px;">📷 현장 사진</label>
                         <input type="file" id="logImageInput" class="input-field" accept="image/*" onchange="previewLogImage(this)">
@@ -1408,6 +1412,7 @@ db.collection("posts").orderBy("timestamp","desc").onSnapshot(s => {
 </script>
 </body>
 </html>
+
 
 
 
