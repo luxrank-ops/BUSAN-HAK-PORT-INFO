@@ -257,12 +257,28 @@
                 </div>
 
                 <div class="calc-layout">
-                    <div class="calc-left">
-                        <div class="wage-row"><label>시급(기본)</label><input type="number" id="wageHourly" class="input-field" value="10320" style="text-align:right; font-weight:bold; color:#ef4444; font-size:1.1rem;" readonly></div>
-                        <div class="wage-row"><label style="min-width: 65px;">🟢 근무시작</label><input type="datetime-local" id="wageStartDateTime" class="input-field" style="text-align:center; font-size:0.8rem; padding:0 5px;" onchange="calcTimeAndFill()"></div>
-                        <div class="wage-row"><label style="min-width: 65px;">🔴 근무종료</label><input type="datetime-local" id="wageEndDateTime" class="input-field" style="text-align:center; font-size:0.8rem; padding:0 5px;" onchange="calcTimeAndFill()"></div>
-                        <div class="wage-row"><label style="min-width: 65px;">⏳ 총근무</label><input type="number" id="wageTotalHours" class="input-field" placeholder="자동계산" style="text-align:right; font-weight:bold; color:var(--primary);" oninput="autoFillWeekendHoliday()"></div>
-                    </div>
+                   <div class="calc-left">
+                            <div class="wage-row"><label>시급(기본)</label><input type="number" id="wageHourly" class="input-field" value="10320" style="text-align:right; font-weight:bold; color:#ef4444; font-size:1.1rem;" readonly></div>
+                            
+                            <div style="background: rgba(59, 130, 246, 0.05); border: 1px solid var(--primary-light); padding: 8px; border-radius: 8px; margin-bottom: 8px;">
+                                <div class="wage-row" style="margin-bottom: 5px;">
+                                    <label style="min-width: 50px; color:var(--primary); font-size:0.85rem;">🟢 시작</label>
+                                    <input type="date" id="wageStartDate" class="input-field" style="font-size:0.75rem; padding:0 2px; width:55%;">
+                                    <select id="wageStartHour" class="input-field" style="font-size:0.85rem; padding:0 2px; width:35%; margin-left:4px; text-align:center;">
+                                        <option value="0">00시</option><option value="1">01시</option><option value="2">02시</option><option value="3">03시</option><option value="4">04시</option><option value="5">05시</option><option value="6">06시</option><option value="7">07시</option><option value="8" selected>08시</option><option value="9">09시</option><option value="10">10시</option><option value="11">11시</option><option value="12">12시</option><option value="13">13시</option><option value="14">14시</option><option value="15">15시</option><option value="16">16시</option><option value="17">17시</option><option value="18">18시</option><option value="19">19시</option><option value="20">20시</option><option value="21">21시</option><option value="22">22시</option><option value="23">23시</option>
+                                    </select>
+                                </div>
+                                <div class="wage-row" style="margin-bottom: 8px;">
+                                    <label style="min-width: 50px; color:var(--danger); font-size:0.85rem;">🔴 종료</label>
+                                    <input type="date" id="wageEndDate" class="input-field" style="font-size:0.75rem; padding:0 2px; width:55%;">
+                                    <select id="wageEndHour" class="input-field" style="font-size:0.85rem; padding:0 2px; width:35%; margin-left:4px; text-align:center;">
+                                        <option value="0">00시</option><option value="1">01시</option><option value="2">02시</option><option value="3">03시</option><option value="4">04시</option><option value="5">05시</option><option value="6">06시</option><option value="7">07시</option><option value="8">08시</option><option value="9">09시</option><option value="10">10시</option><option value="11">11시</option><option value="12">12시</option><option value="13">13시</option><option value="14">14시</option><option value="15">15시</option><option value="16">16시</option><option value="17" selected>17시</option><option value="18">18시</option><option value="19">19시</option><option value="20">20시</option><option value="21">21시</option><option value="22">22시</option><option value="23">23시</option>
+                                    </select>
+                                </div>
+                                <button class="action-btn" style="background:var(--primary); padding:8px; margin:0; font-size:0.9rem;" onclick="calcTimeAndFill()">⏱️ 시간 설정 완료</button>
+                            </div>
+                            <div class="wage-row"><label style="min-width: 65px;">⏳ 총근무</label><input type="number" id="wageTotalHours" class="input-field" placeholder="자동계산됨" style="text-align:right; font-weight:bold; color:var(--primary);" oninput="autoFillWeekendHoliday()"></div>
+                        </div>
                     <div class="calc-right">
                         <table class="ref-table">
                             <thead><tr><th>월(Month)</th><th>주간</th><th>야간</th></tr></thead>
@@ -861,14 +877,22 @@ const publicHolidays = [
 
 function calcTimeAndFill() {
     try {
-        const startVal = document.getElementById('wageStartDateTime').value;
-        const endVal = document.getElementById('wageEndDateTime').value;
-        if(startVal && endVal) {
-            const diffMs = new Date(endVal).getTime() - new Date(startVal).getTime();
+        const sd = document.getElementById('wageStartDate').value;
+        const sh = parseInt(document.getElementById('wageStartHour').value) || 0;
+        const ed = document.getElementById('wageEndDate').value;
+        const eh = parseInt(document.getElementById('wageEndHour').value) || 0;
+        
+        if(sd && ed) {
+            const startD = new Date(`${sd}T${String(sh).padStart(2,'0')}:00:00`);
+            const endD = new Date(`${ed}T${String(eh).padStart(2,'0')}:00:00`);
+            const diffMs = endD.getTime() - startD.getTime();
+            
             if(diffMs > 0) {
-                document.getElementById('wageTotalHours').value = Math.floor(diffMs / 3600000); 
+                const hours = Math.floor(diffMs / (1000 * 60 * 60)); 
+                document.getElementById('wageTotalHours').value = hours;
             } else {
                 document.getElementById('wageTotalHours').value = '';
+                if(sd !== ed || sh !== eh) alert("종료 시간이 시작 시간보다 빠를 수 없습니다.");
             }
         }
         autoFillWeekendHoliday();
@@ -877,17 +901,18 @@ function calcTimeAndFill() {
 
 function autoFillWeekendHoliday() {
     try {
-        const startVal = document.getElementById('wageStartDateTime').value;
+        const sd = document.getElementById('wageStartDate').value;
+        const sh = parseInt(document.getElementById('wageStartHour').value) || 0;
         const hoursStr = document.getElementById('wageTotalHours').value;
 
-        if(!startVal || !hoursStr) {
+        if(!sd || !hoursStr) {
             document.getElementById('wageHoliday').value = '';
             document.getElementById('wageWeekend').value = '';
             return;
         }
 
         const totalHours = parseInt(hoursStr) || 0;
-        let currentDateTime = new Date(startVal);
+        let currentDateTime = new Date(`${sd}T${String(sh).padStart(2,'0')}:00:00`);
         let holidayCount = 0; let weekendCount = 0;
 
         for(let i = 0; i < totalHours; i++) {
@@ -912,11 +937,13 @@ function autoFillWeekendHoliday() {
 function calculateWage() {
     try {
         const totalHours = parseFloat(document.getElementById('wageTotalHours').value) || 0;
-        const startVal = document.getElementById('wageStartDateTime').value;
+        const sd = document.getElementById('wageStartDate').value;
+        const sh = parseInt(document.getElementById('wageStartHour').value) || 0;
         
-        if (!startVal) { alert("근무 시작 시간을 캘린더에서 선택해주세요."); return; }
+        if (!sd || !document.getElementById('wageEndDate').value) { alert("근무 날짜를 선택해주세요."); return; }
+        if (totalHours <= 0) { alert("총 근무 시간이 0시간입니다. 시간을 다시 설정해주세요."); return; }
         
-        const startTime = new Date(startVal).getHours();
+        const startTime = sh; // 0~23
         const isSkilled = document.getElementById('role-skilled').checked;
 
         const holidayH = parseFloat(document.getElementById('wageHoliday').value) || 0;
@@ -929,7 +956,7 @@ function calculateWage() {
         const SKILLED_DAY_ADD = 2557; 
         const SKILLED_NIGHT_ADD = 3836;
 
-        const month = new Date(startVal).getMonth() + 1;
+        const month = new Date(sd).getMonth() + 1;
         let dayStart = 8, dayEnd = 18; 
         if (month >= 4 && month <= 9) { dayStart = 6; dayEnd = 19; }
         else if (month >= 10) { dayStart = 7; dayEnd = 17; }
@@ -973,7 +1000,7 @@ function calculateWage() {
 
     } catch (e) { console.error(e); alert("계산 오류: 입력창 값을 확인해주세요."); }
 }
-
+// 👆 여기까지 덮어쓰세요 👆
 function resetWageForm(){ 
     document.querySelectorAll('#wage-card input').forEach(i=> { if(i.type !== 'radio' && i.id !== 'wageHourly') i.value=''; }); 
     document.getElementById('wageResultBox').classList.add('hidden'); 
@@ -1007,11 +1034,14 @@ window.onload = () => {
     try {
         const now = new Date();
         now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
-        now.setHours(8, 0, 0, 0); 
-        const wageStartInput = document.getElementById('wageStartDateTime');
-        if(wageStartInput) wageStartInput.value = now.toISOString().slice(0, 16);
+        const todayStr = now.toISOString().split('T')[0];
+        
+        const sDate = document.getElementById('wageStartDate');
+        const eDate = document.getElementById('wageEndDate');
+        if(sDate) sDate.value = todayStr;
+        if(eDate) eDate.value = todayStr;
     } catch(e) { console.error("날짜 초기화 오류", e); }
-
+    
     loadBanner();
     try {
         db.collection("notices").orderBy("timestamp","desc").onSnapshot(s => {
@@ -1064,3 +1094,4 @@ async function overrideLeader(dStr, currentLeader) { if (!(await verifyAdmin()))
     </script>
 </body>
 </html>
+
