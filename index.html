@@ -345,7 +345,53 @@
         </div>
 
         <div class="card"><div class="section-header tap-effect" onclick="toggleSection('control-content', this)"><span class="section-title">📡 날씨 및 도선상황 ▼</span></div><div id="control-content" class="collapsible-content collapsed"><div class="control-grid"><a href="http://www.busanpilot.co.kr/popup/monitoring" class="control-btn" target="_blank">🛥️ 도선 모니터</a><a href="http://www.busanpilot.co.kr/boards/lists/weather" class="control-btn" target="_blank">📋 도선 상황</a><a href="https://weather.naver.com/today/08440585" class="control-btn" target="_blank" style="grid-column: span 2; color:var(--danger);">☀️ 부산항 실시간 날씨</a></div></div></div>
-        <div class="card" style="border-left: 5px solid var(--primary);"><div class="section-header tap-effect" onclick="toggleSection('ads-info-1', this)"><span class="section-title">📘 부산항 이용 및 안전 근무 가이드 ▼</span></div><div id="ads-info-1" class="collapsible-content collapsed"><div class="guide-text"><h4>📌 2026년 부산항 터미널 출입 및 보안 규정</h4><p>부산항 내 모든 터미널(PNC, HJNC, BCT 등)은 국가 중요 보안 시설로 지정되어 출입 시 사전 등록이 필수입니다.</p><h4>🌧️ 기상 악화 시 하역 작업 중단 기준</h4><p>항만 업무는 풍속과 강수량에 민감합니다. 통상 순간풍속 15m/s 초과 시 안벽 크레인(QC) 작업이 일시 중단됩니다.</p></div></div></div>
+        <div class="card" style="border-left: 5px solid var(--primary);">
+            <div class="section-header tap-effect" onclick="toggleSection('ads-info-1', this)">
+                <span class="section-title">📘 부산항 이용 및 안전 근무 종합 가이드 ▼</span>
+            </div>
+            <div id="ads-info-1" class="collapsible-content collapsed">
+                <div class="guide-text" style="font-size: 0.9rem; line-height: 1.6; color: var(--text-main); padding: 5px;">
+                    <h3 style="color: var(--primary); border-bottom: 2px solid var(--primary-light); padding-bottom: 8px; margin-top: 0; font-size: 1.1rem;">현장 근로자를 위한 핵심 안전 수칙</h3>
+                    <p style="margin-bottom: 15px;">부산항(북항 및 신항)은 연간 수천만 TEU의 물동량을 처리하는 세계적인 물류 허브입니다. 수많은 하역 장비와 대형 선박이 교차하는 현장 특성상, 근로자의 안전은 그 무엇과도 타협할 수 없는 최우선 과제입니다. 본 가이드는 항만물류협회 및 산업안전보건공단의 기준을 바탕으로 작성된 필수 안전 수칙입니다.</p>
+
+                    <h4 style="color: #ea580c; margin-top: 20px; margin-bottom: 8px; font-size: 1rem;">1. 터미널 출입 및 보안 규정 (ISPS Code)</h4>
+                    <p style="margin-bottom: 8px;">부산항 내 모든 컨테이너 터미널(PNC, HJNC, BNCT, BPTC 등)은 '국제 선박 및 항만 시설 보안 규칙(ISPS Code)'에 의거하여 최고 수준의 보안이 적용되는 국가 중요 시설입니다.</p>
+                    <ul style="padding-left: 20px; color: var(--text-sub); margin-bottom: 15px;">
+                        <li style="margin-bottom: 4px;"><strong>사전 출입 승인:</strong> 모든 작업자는 모바일 항만 출입증 또는 사전 인가된 물리적 출입증을 패용해야 합니다.</li>
+                        <li style="margin-bottom: 4px;"><strong>보안 구역 통제:</strong> 인가되지 않은 에이프런(Apron) 최전방 및 본선 선상 진입은 엄격히 금지됩니다.</li>
+                        <li style="margin-bottom: 4px;"><strong>촬영 금지:</strong> 항만 보안 구역 내에서의 무단 사진 및 동영상 촬영, 외부 유출은 법적으로 처벌받을 수 있습니다.</li>
+                    </ul>
+
+                    <h4 style="color: #ea580c; margin-top: 20px; margin-bottom: 8px; font-size: 1rem;">2. 기상 악화 시 하역 작업 제한 및 대피 기준</h4>
+                    <p style="margin-bottom: 8px;">항만 하역 작업은 해상 기상의 영향을 직접적으로 받습니다. 기상청 특보 및 터미널 자체 풍속계 기준에 따라 다음의 안전 조치를 즉각 이행해야 합니다.</p>
+                    <ul style="padding-left: 20px; color: var(--text-sub); margin-bottom: 15px;">
+                        <li style="margin-bottom: 4px;"><strong>강풍 및 태풍:</strong> 순간 풍속이 15m/s를 초과할 경우 안벽 크레인(QC) 작업이 일시 중지되며, 20m/s 초과 시 갠트리 크레인 타다운(Tie-down) 및 전면 작업 중단이 실시됩니다.</li>
+                        <li style="margin-bottom: 4px;"><strong>집중 호우 및 폭설:</strong> 시계가 100m 이내로 제한되거나 바닥이 심하게 미끄러울 경우 야드 트랙터(Y/T)의 운행 속도를 10km/h 이하로 엄격히 제한합니다.</li>
+                        <li style="margin-bottom: 4px;"><strong>폭염 및 혹서기:</strong> 체감온도 33도 이상 시 휴식 시간을 추가 보장하고, 탈수 예방을 위한 식염수와 생수를 상시 비치합니다.</li>
+                    </ul>
+
+                    <h4 style="color: #ea580c; margin-top: 20px; margin-bottom: 8px; font-size: 1rem;">3. 고위험군(라싱 및 선내 작업) 특별 안전</h4>
+                    <p style="margin-bottom: 8px;">컨테이너를 고정하고 해체하는 라싱(Lashing) 작업과 선내 하역 작업은 추락 및 낙하물 사고 위험이 가장 높은 직무입니다.</p>
+                    <ul style="padding-left: 20px; color: var(--text-sub); margin-bottom: 15px;">
+                        <li style="margin-bottom: 4px;"><strong>생명줄 및 안전대 착용:</strong> 컨테이너 상부 작업 시 반드시 안전대(Safety Harness)를 체결하여 추락에 대비해야 합니다.</li>
+                        <li style="margin-bottom: 4px;"><strong>스냅백(Snap-back) 구역 이탈:</strong> 선박 계류 작업 시 홋줄(Mooring line)이 끊어질 경우 튕겨 나가는 반경 내에 절대 서 있지 마십시오.</li>
+                        <li style="margin-bottom: 4px;"><strong>장비 하부 보행 금지:</strong> 스프레더(Spreader)나 화물이 매달려 있는 크레인 바로 밑으로의 보행 및 대기는 치명적인 중대재해를 유발합니다.</li>
+                    </ul>
+
+                    <h4 style="color: #ea580c; margin-top: 20px; margin-bottom: 8px; font-size: 1rem;">4. 야드 내 교통안전 및 사각지대 주의</h4>
+                    <p style="margin-bottom: 8px;">야드 트랙터, 스트래들 캐리어(S/C), 리치 스태커 등 대형 하역 장비는 운전자의 시야(사각지대) 제한이 매우 큽니다.</p>
+                    <ul style="padding-left: 20px; color: var(--text-sub); margin-bottom: 15px;">
+                        <li style="margin-bottom: 4px;">운행 중인 장비의 전후방 10m 이내 접근을 금지하며, 부득이한 접근 시 반드시 운전자와 수신호 또는 무전으로 소통해야 합니다.</li>
+                        <li style="margin-bottom: 4px;">야드 내 도보 이동은 지정된 안전 통로(Green Zone)만을 이용해야 합니다.</li>
+                    </ul>
+                    
+                    <div style="margin-top: 25px; text-align: center; background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); padding: 15px; border-radius: 10px;">
+                        <strong style="color: var(--danger); font-size: 0.95rem;">🚨 긴급 사고 발생 시 행동 요령</strong>
+                        <p style="margin: 5px 0 0 0; font-size: 0.85rem; color: var(--text-main);">사고 발생 시 즉시 작업반장 및 터미널 통제실(Control Room)로 무전 보고를 실시하고, 환자 발생 시 119 및 항만 소방대에 최우선으로 연락을 취하십시오.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
 
         <div class="dash-grid">
             <div id="notice-card" class="dash-card">
@@ -1417,6 +1463,7 @@ db.collection("posts").orderBy("timestamp","desc").onSnapshot(s => {
 </script>
 </body>
 </html>
+
 
 
 
