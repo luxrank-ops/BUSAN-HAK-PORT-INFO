@@ -270,9 +270,9 @@
                 <div class="calc-layout">
                  <div class="calc-left">
                             <div class="wage-row"><label>시급(기본)</label><input type="number" id="wageHourly" class="input-field" value="10320" style="text-align:right; font-weight:bold; color:#ef4444; font-size:1.1rem;" readonly></div>
-                            <div class="wage-row"><label>🟢 시작</label><input type="datetime-local" id="wageStartDateTime" class="input-field" style="text-align:right; max-width: 150px; font-size:0.75rem; padding: 0 3px;" onchange="calcTimeAndFill()"></div>
-                            <div class="wage-row"><label>🔴 종료</label><input type="datetime-local" id="wageEndDateTime" class="input-field" style="text-align:right; max-width: 150px; font-size:0.75rem; padding: 0 3px;" onchange="calcTimeAndFill()"></div>
-                            <div class="wage-row"><label>⏳ 총근무</label><input type="number" id="wageTotalHours" class="input-field" placeholder="H" style="text-align:right; font-weight:bold;" oninput="autoFillWeekendHoliday()"></div>
+                            <div class="wage-row"><label style="min-width: 65px;">🟢 근무시작</label><input type="datetime-local" id="wageStartDateTime" class="input-field" style="text-align:center; font-size:0.8rem; padding:0 5px;" onchange="calcTimeAndFill()"></div>
+                            <div class="wage-row"><label style="min-width: 65px;">🔴 근무종료</label><input type="datetime-local" id="wageEndDateTime" class="input-field" style="text-align:center; font-size:0.8rem; padding:0 5px;" onchange="calcTimeAndFill()"></div>
+                            <div class="wage-row"><label style="min-width: 65px;">⏳ 총근무</label><input type="number" id="wageTotalHours" class="input-field" placeholder="자동계산" style="text-align:right; font-weight:bold; color:var(--primary);" oninput="autoFillWeekendHoliday()"></div>
                         </div>
                     <div class="calc-right">
                         <table class="ref-table">
@@ -316,7 +316,7 @@
         </div>
             <div id="log-card" class="dash-card" style="border:1px solid var(--primary);">
                 <div class="dash-header tap-effect" onclick="toggleDashItem('log-card')">
-                    <span class="dash-title" style="color:var(--primary);">📅 스마트 근무일지(짝지)</span><span class="toggle-icon">▼</span>
+                    <span class="dash-title" style="color:var(--primary);">📅 스마트 근무일지(짝지및임금 장가능)</span><span class="toggle-icon">▼</span>
                 </div>
                 <div id="workLogArea" class="dash-content">
                     <div id="userProfileBar" class="user-auth-bar" style="display:none;">
@@ -769,6 +769,19 @@ if (!firebase.apps.length) {
 }
   // --- [주말 및 2026년 공휴일 자동 인식 로직 시작] ---
 // --- [스마트 임금계산기: 시작/종료 풀-오토 시간 계산 로직 시작] ---
+<div class="calc-left">
+                            <div class="wage-row"><label>시급(기본)</label><input type="number" id="wageHourly" class="input-field" value="10320" style="text-align:right; font-weight:bold; color:#ef4444; font-size:1.1rem;" readonly></div>
+                            <div class="wage-row"><label style="min-width: 65px;">🟢 근무시작</label><input type="datetime-local" id="wageStartDateTime" class="input-field" style="text-align:center; font-size:0.8rem; padding:0 5px;" onchange="calcTimeAndFill()"></div>
+                            <div class="wage-row"><label style="min-width: 65px;">🔴 근무종료</label><input type="datetime-local" id="wageEndDateTime" class="input-field" style="text-align:center; font-size:0.8rem; padding:0 5px;" onchange="calcTimeAndFill()"></div>
+                            <div class="wage-row"><label style="min-width: 65px;">⏳ 총근무</label><input type="number" id="wageTotalHours" class="input-field" placeholder="자동계산" style="text-align:right; font-weight:bold; color:var(--primary);" oninput="autoFillWeekendHoliday()"></div>
+                        </div>
+                        ```
+
+### 💡 [2단계] 계산기 두뇌 (JavaScript) 교체
+코드 맨 밑 `<script>` 영역으로 내려가셔서, 아까 넣었던 `const publicHolidays = ...` 부분부터 `function calculateWage() { ... }` 끝나는 곳까지 싹 드래그해서 지우시고, **아래 코드로 쾅! 덮어써 주십시오.** (에러 방어 코드를 떡칠해 두어서 절대 멈추지 않습니다!)
+
+```javascript
+// 👇 여기서부터 복사하세요 👇
 const publicHolidays = [
     '2026-01-01', '2026-02-16', '2026-02-17', '2026-02-18', 
     '2026-03-01', '2026-03-02', '2026-05-05', '2026-05-24', 
@@ -777,71 +790,69 @@ const publicHolidays = [
     '2026-10-09', '2026-12-25'
 ];
 
-// 🔥 시작~종료 시간을 빼서 '총 근무' 칸에 자동으로 적어주는 함수
 function calcTimeAndFill() {
-    const startVal = document.getElementById('wageStartDateTime').value;
-    const endVal = document.getElementById('wageEndDateTime').value;
-    
-    if(startVal && endVal) {
-        const startD = new Date(startVal);
-        const endD = new Date(endVal);
-        const diffMs = endD.getTime() - startD.getTime();
+    try {
+        const startVal = document.getElementById('wageStartDateTime').value;
+        const endVal = document.getElementById('wageEndDateTime').value;
         
-        if(diffMs > 0) {
-            // 시간 단위로 정확하게 잘라내기
-            const hours = Math.floor(diffMs / (1000 * 60 * 60)); 
-            document.getElementById('wageTotalHours').value = hours;
-        } else {
-            document.getElementById('wageTotalHours').value = '';
+        if(startVal && endVal) {
+            const startD = new Date(startVal);
+            const endD = new Date(endVal);
+            const diffMs = endD.getTime() - startD.getTime();
+            
+            if(diffMs > 0) {
+                const hours = Math.floor(diffMs / (1000 * 60 * 60)); 
+                document.getElementById('wageTotalHours').value = hours;
+            } else {
+                document.getElementById('wageTotalHours').value = '';
+            }
         }
-    }
-    // 시간이 채워졌으니 연달아서 주말/공휴일 검사 실시!
-    autoFillWeekendHoliday();
+        autoFillWeekendHoliday();
+    } catch(e) { console.error(e); }
 }
 
-// 🔥 요일과 공휴일을 검사하는 함수
 function autoFillWeekendHoliday() {
-    const startVal = document.getElementById('wageStartDateTime').value;
-    const hoursStr = document.getElementById('wageTotalHours').value;
+    try {
+        const startVal = document.getElementById('wageStartDateTime').value;
+        const hoursStr = document.getElementById('wageTotalHours').value;
 
-    if(!startVal || !hoursStr) return;
-
-    const totalHours = parseInt(hoursStr) || 0;
-    let currentDateTime = new Date(startVal);
-
-    let holidayCount = 0;
-    let weekendCount = 0;
-
-    for(let i = 0; i < totalHours; i++) {
-        const curY = currentDateTime.getFullYear();
-        const curM = String(currentDateTime.getMonth() + 1).padStart(2, '0');
-        const curD = String(currentDateTime.getDate()).padStart(2, '0');
-        const curDateString = `${curY}-${curM}-${curD}`;
-        const curDayOfWeek = currentDateTime.getDay(); 
-
-        const isHoliday = publicHolidays.includes(curDateString);
-        const isWeekend = (curDayOfWeek === 0 || curDayOfWeek === 6);
-
-        if (isHoliday) {
-            holidayCount++;
-        } else if (isWeekend) {
-            weekendCount++;
+        if(!startVal || !hoursStr) {
+            document.getElementById('wageHoliday').value = '';
+            document.getElementById('wageWeekend').value = '';
+            return;
         }
-        currentDateTime.setHours(currentDateTime.getHours() + 1);
-    }
 
-    document.getElementById('wageHoliday').value = holidayCount > 0 ? holidayCount : '';
-    document.getElementById('wageWeekend').value = weekendCount > 0 ? weekendCount : '';
+        const totalHours = parseInt(hoursStr) || 0;
+        let currentDateTime = new Date(startVal);
+        let holidayCount = 0; let weekendCount = 0;
+
+        for(let i = 0; i < totalHours; i++) {
+            const curY = currentDateTime.getFullYear();
+            const curM = String(currentDateTime.getMonth() + 1).padStart(2, '0');
+            const curD = String(currentDateTime.getDate()).padStart(2, '0');
+            const curDateString = `${curY}-${curM}-${curD}`;
+            const curDayOfWeek = currentDateTime.getDay(); 
+
+            const isHoliday = publicHolidays.includes(curDateString);
+            const isWeekend = (curDayOfWeek === 0 || curDayOfWeek === 6);
+
+            if (isHoliday) { holidayCount++; } else if (isWeekend) { weekendCount++; }
+            currentDateTime.setHours(currentDateTime.getHours() + 1);
+        }
+
+        document.getElementById('wageHoliday').value = holidayCount > 0 ? holidayCount : '';
+        document.getElementById('wageWeekend').value = weekendCount > 0 ? weekendCount : '';
+    } catch(e) { console.error(e); }
 }
 
-// 🔥 마지막 영수증 계산기
 function calculateWage() {
     try {
         const totalHours = parseFloat(document.getElementById('wageTotalHours').value) || 0;
         const startVal = document.getElementById('wageStartDateTime').value;
         
-        // 캘린더에서 시작 시간을 뽑아옴 (안 적었으면 8시 기본값)
-        const startTime = startVal ? new Date(startVal).getHours() : 8;
+        if (!startVal) { alert("근무 시작 시간을 캘린더에서 선택해주세요."); return; }
+        
+        const startTime = new Date(startVal).getHours();
         const isSkilled = document.getElementById('role-skilled').checked;
 
         const holidayH = parseFloat(document.getElementById('wageHoliday').value) || 0;
@@ -854,7 +865,7 @@ function calculateWage() {
         const SKILLED_DAY_ADD = 2557; 
         const SKILLED_NIGHT_ADD = 3836;
 
-        const month = startVal ? (new Date(startVal).getMonth() + 1) : (new Date().getMonth() + 1);
+        const month = new Date(startVal).getMonth() + 1;
         let dayStart = 8, dayEnd = 18; 
         if (month >= 4 && month <= 9) { dayStart = 6; dayEnd = 19; }
         else if (month >= 10) { dayStart = 7; dayEnd = 17; }
@@ -871,11 +882,7 @@ function calculateWage() {
         const holidayAmt = holidayH * (BASE_RATE * 0.5);
         const weekendAmt = weekendH * (BASE_RATE * 0.5);
         const otherAmt = (rainH + hotH) * (BASE_RATE * 0.5);
-
-        let skilledAmt = 0;
-        if (isSkilled) {
-            skilledAmt = (dayHours * SKILLED_DAY_ADD) + (nightHours * SKILLED_NIGHT_ADD);
-        }
+        let skilledAmt = isSkilled ? (dayHours * SKILLED_DAY_ADD) + (nightHours * SKILLED_NIGHT_ADD) : 0;
 
         const subTotal = dayAmt + nightAmt + skilledAmt + holidayAmt + weekendAmt + otherAmt;
         const taxAmt = Math.floor(subTotal * taxRate);
@@ -885,10 +892,7 @@ function calculateWage() {
         if (holidayAmt > 0) extraHtml += renderRow("🎉 공휴일 수당 (" + holidayH + "H)", holidayAmt, "#ea580c"); 
         if (weekendAmt > 0) extraHtml += renderRow("🎈 주말 수당 (" + weekendH + "H)", weekendAmt, "#3b82f6"); 
         if (otherAmt > 0) extraHtml += renderRow("☔ 우천/혹서기 등 (" + (rainH + hotH) + "H)", otherAmt);
-        
-        if (holidayAmt === 0 && weekendAmt === 0 && otherAmt === 0) {
-            extraHtml += renderRow("➕ 추가 가산 수당", 0);
-        }
+        if (holidayAmt === 0 && weekendAmt === 0 && otherAmt === 0) extraHtml += renderRow("➕ 추가 가산 수당", 0);
 
         const specBody = document.getElementById('wageSpecBody');
         specBody.innerHTML = `
@@ -903,11 +907,9 @@ function calculateWage() {
         document.getElementById('wageResultBox').classList.remove('hidden');
         showToast("상세 계산서가 생성되었습니다!");
 
-    } catch (e) {
-        console.error(e);
-        alert("계산 오류: 입력창 값을 확인해주세요.");
-    }
+    } catch (e) { console.error(e); alert("계산 오류: 입력창 값을 확인해주세요."); }
 }
+// 👆 여기까지 덮어쓰세요 👆
 // --- [스마트 임금계산기: 시작/종료 풀-오토 시간 계산 로직 끝] ---
 const db = firebase.firestore();
 const storage = firebase.storage();
@@ -1626,12 +1628,11 @@ function openPrivacy(){ document.getElementById('privacyModal').style.display='f
 
 /* 4️⃣ 실행 */
 window.onload = () => {
-    // 👇 시작 시간을 '오늘 오전 8시'로 기본 셋팅해 줍니다 👇
-    const today = new Date();
-    const y = today.getFullYear();
-    const m = String(today.getMonth() + 1).padStart(2, '0');
-    const d = String(today.getDate()).padStart(2, '0');
-    document.getElementById('wageStartDateTime').value = `${y}-${m}-${d}T08:00`;
+    // 👇 한국 시간에 맞춰 오늘 날짜 오전 8시로 캘린더 기본값 셋팅 👇
+    const now = new Date();
+    now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+    now.setHours(8, 0, 0, 0); // 아침 8시로 고정
+    document.getElementById('wageStartDateTime').value = now.toISOString().slice(0, 16);
     
     loadBanner();
     try {
@@ -1864,6 +1865,7 @@ db.collection("posts").orderBy("timestamp","desc").onSnapshot(s => {
 </script>
 </body>
 </html>
+
 
 
 
