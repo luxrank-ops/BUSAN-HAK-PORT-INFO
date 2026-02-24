@@ -413,15 +413,17 @@
 
         <button class="action-btn" style="background:var(--text-sub); margin-top:15px; margin-bottom:10px;" onclick="toggleHidden('noticeForm')">✍️ 공지 쓰기 (Admin)</button>
 
-        <div id="noticeForm" class="hidden">
+       <div id="noticeForm" class="hidden">
             <div style="margin-bottom:10px; background:rgba(239,68,68,0.05); padding:10px; border-radius:8px; border:1px solid rgba(239,68,68,0.2);">
                 <input type="text" id="noticeTitle" class="input-field" placeholder="공지 제목">
                 <textarea id="noticeContent" class="input-field textarea-field" placeholder="공지 내용"></textarea>
                 <input type="file" id="noticeFileInput" class="input-field" accept="image/*">
-                <button id="noticeSubmitBtn" class="action-btn bg-submit" onclick="addNotice()">등록 완료</button>
+                <div style="display:flex; gap:10px; margin-top:5px;">
+                    <button id="noticeSubmitBtn" class="action-btn bg-submit" style="flex:2;" onclick="saveNotice()">등록 완료</button>
+                    <button id="noticeCancelBtn" class="action-btn bg-cancel" style="flex:1; display:none;" onclick="cancelEditNotice()">취소</button>
+                </div>
             </div>
         </div>
-    </div>
 </div>
 
             <div id="board-card" class="dash-card">
@@ -1524,6 +1526,7 @@ db.collection("posts").orderBy("timestamp","desc").onSnapshot(s => {
 </script>
 </body>
 </html>
+
 
 
 
