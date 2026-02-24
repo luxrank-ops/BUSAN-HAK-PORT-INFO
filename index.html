@@ -344,103 +344,88 @@
             </div>
         </div>
 
-        <div class="card"><div class="section-header tap-effect" onclick="toggleSection('control-content', this)"><span class="section-title">📡 날씨 및 도선상황 ▼</span></div><div id="control-content" class="collapsible-content collapsed"><div class="control-grid"><a href="http://www.busanpilot.co.kr/popup/monitoring" class="control-btn" target="_blank">🛥️ 도선 모니터</a><a href="http://www.busanpilot.co.kr/boards/lists/weather" class="control-btn" target="_blank">📋 도선 상황</a><a href="https://weather.naver.com/today/08440585" class="control-btn" target="_blank" style="grid-column: span 2; color:var(--danger);">☀️ 부산항 실시간 날씨</a></div></div></div>
-        <div class="card" style="border-left: 5px solid var(--primary);">
-            <div class="section-header tap-effect" onclick="toggleSection('ads-info-1', this)">
-                <span class="section-title">📘 부산항 이용 및 안전 근무 종합 가이드 ▼</span>
-            </div>
-            <div id="ads-info-1" class="collapsible-content collapsed">
-                <div class="guide-text" style="font-size: 0.9rem; line-height: 1.6; color: var(--text-main); padding: 5px;">
-                    <h3 style="color: var(--primary); border-bottom: 2px solid var(--primary-light); padding-bottom: 8px; margin-top: 0; font-size: 1.1rem;">현장 근로자를 위한 핵심 안전 수칙</h3>
-                    <p style="margin-bottom: 15px;">부산항(북항 및 신항)은 연간 수천만 TEU의 물동량을 처리하는 세계적인 물류 허브입니다. 수많은 하역 장비와 대형 선박이 교차하는 현장 특성상, 근로자의 안전은 그 무엇과도 타협할 수 없는 최우선 과제입니다. 본 가이드는 항만물류협회 및 산업안전보건공단의 기준을 바탕으로 작성된 필수 안전 수칙입니다.</p>
-
-                    <h4 style="color: #ea580c; margin-top: 20px; margin-bottom: 8px; font-size: 1rem;">1. 터미널 출입 및 보안 규정 (ISPS Code)</h4>
-                    <p style="margin-bottom: 8px;">부산항 내 모든 컨테이너 터미널(PNC, HJNC, BNCT, BPTC 등)은 '국제 선박 및 항만 시설 보안 규칙(ISPS Code)'에 의거하여 최고 수준의 보안이 적용되는 국가 중요 시설입니다.</p>
-                    <ul style="padding-left: 20px; color: var(--text-sub); margin-bottom: 15px;">
-                        <li style="margin-bottom: 4px;"><strong>사전 출입 승인:</strong> 모든 작업자는 모바일 항만 출입증 또는 사전 인가된 물리적 출입증을 패용해야 합니다.</li>
-                        <li style="margin-bottom: 4px;"><strong>보안 구역 통제:</strong> 인가되지 않은 에이프런(Apron) 최전방 및 본선 선상 진입은 엄격히 금지됩니다.</li>
-                        <li style="margin-bottom: 4px;"><strong>촬영 금지:</strong> 항만 보안 구역 내에서의 무단 사진 및 동영상 촬영, 외부 유출은 법적으로 처벌받을 수 있습니다.</li>
-                    </ul>
-
-                    <h4 style="color: #ea580c; margin-top: 20px; margin-bottom: 8px; font-size: 1rem;">2. 기상 악화 시 하역 작업 제한 및 대피 기준</h4>
-                    <p style="margin-bottom: 8px;">항만 하역 작업은 해상 기상의 영향을 직접적으로 받습니다. 기상청 특보 및 터미널 자체 풍속계 기준에 따라 다음의 안전 조치를 즉각 이행해야 합니다.</p>
-                    <ul style="padding-left: 20px; color: var(--text-sub); margin-bottom: 15px;">
-                        <li style="margin-bottom: 4px;"><strong>강풍 및 태풍:</strong> 순간 풍속이 15m/s를 초과할 경우 안벽 크레인(QC) 작업이 일시 중지되며, 20m/s 초과 시 갠트리 크레인 타다운(Tie-down) 및 전면 작업 중단이 실시됩니다.</li>
-                        <li style="margin-bottom: 4px;"><strong>집중 호우 및 폭설:</strong> 시계가 100m 이내로 제한되거나 바닥이 심하게 미끄러울 경우 야드 트랙터(Y/T)의 운행 속도를 10km/h 이하로 엄격히 제한합니다.</li>
-                        <li style="margin-bottom: 4px;"><strong>폭염 및 혹서기:</strong> 체감온도 33도 이상 시 휴식 시간을 추가 보장하고, 탈수 예방을 위한 식염수와 생수를 상시 비치합니다.</li>
-                    </ul>
-
-                    <h4 style="color: #ea580c; margin-top: 20px; margin-bottom: 8px; font-size: 1rem;">3. 고위험군(라싱 및 선내 작업) 특별 안전</h4>
-                    <p style="margin-bottom: 8px;">컨테이너를 고정하고 해체하는 라싱(Lashing) 작업과 선내 하역 작업은 추락 및 낙하물 사고 위험이 가장 높은 직무입니다.</p>
-                    <ul style="padding-left: 20px; color: var(--text-sub); margin-bottom: 15px;">
-                        <li style="margin-bottom: 4px;"><strong>생명줄 및 안전대 착용:</strong> 컨테이너 상부 작업 시 반드시 안전대(Safety Harness)를 체결하여 추락에 대비해야 합니다.</li>
-                        <li style="margin-bottom: 4px;"><strong>스냅백(Snap-back) 구역 이탈:</strong> 선박 계류 작업 시 홋줄(Mooring line)이 끊어질 경우 튕겨 나가는 반경 내에 절대 서 있지 마십시오.</li>
-                        <li style="margin-bottom: 4px;"><strong>장비 하부 보행 금지:</strong> 스프레더(Spreader)나 화물이 매달려 있는 크레인 바로 밑으로의 보행 및 대기는 치명적인 중대재해를 유발합니다.</li>
-                    </ul>
-
-                    <h4 style="color: #ea580c; margin-top: 20px; margin-bottom: 8px; font-size: 1rem;">4. 야드 내 교통안전 및 사각지대 주의</h4>
-                    <p style="margin-bottom: 8px;">야드 트랙터, 스트래들 캐리어(S/C), 리치 스태커 등 대형 하역 장비는 운전자의 시야(사각지대) 제한이 매우 큽니다.</p>
-                    <ul style="padding-left: 20px; color: var(--text-sub); margin-bottom: 15px;">
-                        <li style="margin-bottom: 4px;">운행 중인 장비의 전후방 10m 이내 접근을 금지하며, 부득이한 접근 시 반드시 운전자와 수신호 또는 무전으로 소통해야 합니다.</li>
-                        <li style="margin-bottom: 4px;">야드 내 도보 이동은 지정된 안전 통로(Green Zone)만을 이용해야 합니다.</li>
-                    </ul>
-                    
-                    <div style="margin-top: 25px; text-align: center; background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); padding: 15px; border-radius: 10px;">
-                        <strong style="color: var(--danger); font-size: 0.95rem;">🚨 긴급 사고 발생 시 행동 요령</strong>
-                        <p style="margin: 5px 0 0 0; font-size: 0.85rem; color: var(--text-main);">사고 발생 시 즉시 작업반장 및 터미널 통제실(Control Room)로 무전 보고를 실시하고, 환자 발생 시 119 및 항만 소방대에 최우선으로 연락을 취하십시오.</p>
+        <div class="dash-grid">
+            
+            <div id="weather-card" class="dash-card">
+                <div class="dash-header tap-effect" onclick="toggleDashItem('weather-card')">
+                    <span class="dash-title" style="color:var(--text-main); font-weight:bold;">📡 날씨 및 도선상황</span><span class="toggle-icon">▼</span>
+                </div>
+                <div class="dash-content">
+                    <div class="control-grid">
+                        <a href="http://www.busanpilot.co.kr/popup/monitoring" class="control-btn" target="_blank">🛥️ 도선 모니터</a>
+                        <a href="https://www.busanpilot.co.kr/boards/lists/weather" class="control-btn" target="_blank">📋 도선 상황</a>
+                        <a href="https://weather.naver.com/today/08440585" class="control-btn" target="_blank" style="grid-column: span 2; color:var(--danger);">☀️ 부산항 실시간 날씨</a>
                     </div>
                 </div>
             </div>
-        </div>
 
-        <div class="dash-grid">
-            <div id="notice-card" class="dash-card">
-    <div class="dash-header tap-effect" onclick="toggleDashItem('notice-card')">
-        <span>📢 공지사항 <span id="noticeBadge" class="badge-new hidden">NEW</span></span>
-        <span>▼</span>
-    </div>
-    <div class="dash-content">
-        <table class="board-table" style="margin-top:0;">
-            <thead>
-                <tr>
-                    <th style="width: 45px;">분류</th>
-                    <th style="width: auto;">공지 제목</th>
-                    <th style="width: 90px;">등록일</th>
-                </tr>
-            </thead>
-            <tbody id="noticeList"></tbody>
-        </table>
+            <div id="safety-card" class="dash-card">
+                <div class="dash-header tap-effect" onclick="toggleDashItem('safety-card')">
+                    <span class="dash-title" style="color:var(--primary); font-weight:bold;">📘 안전 근무 가이드</span><span class="toggle-icon">▼</span>
+                </div>
+                <div class="dash-content">
+                    <div class="guide-text" style="font-size: 0.9rem; line-height: 1.6; color: var(--text-main); padding: 5px;">
+                        <h3 style="color: var(--primary); border-bottom: 2px solid var(--primary-light); padding-bottom: 8px; margin-top: 0; font-size: 1.1rem;">현장 근로자 핵심 수칙</h3>
+                        <p style="margin-bottom: 15px;">부산항(북항/신항)은 수많은 장비와 선박이 교차하는 곳으로, 근로자의 안전이 최우선입니다.</p>
 
-        <button class="action-btn" style="background:var(--text-sub); margin-top:15px; margin-bottom:10px;" onclick="toggleHidden('noticeForm')">✍️ 공지 쓰기 (Admin)</button>
+                        <h4 style="color: #ea580c; margin-top: 15px; margin-bottom: 8px; font-size: 1rem;">1. 터미널 출입 및 보안 (ISPS)</h4>
+                        <ul style="padding-left: 20px; color: var(--text-sub); margin-bottom: 15px;">
+                            <li style="margin-bottom: 4px;"><strong>사전 출입 승인:</strong> 모바일 항만 출입증 필수 패용.</li>
+                            <li style="margin-bottom: 4px;"><strong>보안 통제:</strong> 비인가 에이프런 최전방 진입 엄격 금지.</li>
+                            <li style="margin-bottom: 4px;"><strong>촬영 금지:</strong> 항만 내 무단 사진/동영상 촬영 금지.</li>
+                        </ul>
 
-       <div id="noticeForm" class="hidden">
-            <div style="margin-bottom:10px; background:rgba(239,68,68,0.05); padding:10px; border-radius:8px; border:1px solid rgba(239,68,68,0.2);">
-                <input type="text" id="noticeTitle" class="input-field" placeholder="공지 제목">
-                <textarea id="noticeContent" class="input-field textarea-field" placeholder="공지 내용"></textarea>
-                <input type="file" id="noticeFileInput" class="input-field" accept="image/*">
-                <div style="display:flex; gap:10px; margin-top:5px;">
-                    <button id="noticeSubmitBtn" class="action-btn bg-submit" style="flex:2;" onclick="saveNotice()">등록 완료</button>
-                    <button id="noticeCancelBtn" class="action-btn bg-cancel" style="flex:1; display:none;" onclick="cancelEditNotice()">취소</button>
+                        <h4 style="color: #ea580c; margin-top: 15px; margin-bottom: 8px; font-size: 1rem;">2. 기상 악화 시 대피 기준</h4>
+                        <ul style="padding-left: 20px; color: var(--text-sub); margin-bottom: 15px;">
+                            <li style="margin-bottom: 4px;"><strong>강풍/태풍:</strong> 15m/s 초과 시 QC 중지, 20m/s 초과 시 전면 중단.</li>
+                            <li style="margin-bottom: 4px;"><strong>폭우/폭설:</strong> 시계 100m 이내 야드 트랙터(Y/T) 10km/h 이하 운행.</li>
+                        </ul>
+
+                        <h4 style="color: #ea580c; margin-top: 15px; margin-bottom: 8px; font-size: 1rem;">3. 라싱 및 선내 작업 안전</h4>
+                        <ul style="padding-left: 20px; color: var(--text-sub); margin-bottom: 15px;">
+                            <li style="margin-bottom: 4px;"><strong>안전대 착용:</strong> 상부 작업 시 반드시 안전대(Harness) 체결.</li>
+                            <li style="margin-bottom: 4px;"><strong>스냅백 구역 이탈:</strong> 홋줄 반동 반경 내 진입 절대 금지.</li>
+                        </ul>
+                        
+                        <div style="margin-top: 20px; text-align: center; background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); padding: 15px; border-radius: 10px;">
+                            <strong style="color: var(--danger); font-size: 0.95rem;">🚨 긴급 사고 발생 시</strong>
+                            <p style="margin: 5px 0 0 0; font-size: 0.85rem; color: var(--text-main);">즉시 통제실 보고 후 119 및 항만 소방대에 연락하십시오.</p>
+                        </div>
+                    </div>
                 </div>
             </div>
-        </div>
-</div>
+
+            <div id="notice-card" class="dash-card">
+                <div class="dash-header tap-effect" onclick="toggleDashItem('notice-card')">
+                    <span class="dash-title" style="font-weight:bold;">📢 공지사항 <span id="noticeBadge" class="badge-new hidden">NEW</span></span><span class="toggle-icon">▼</span>
+                </div>
+                <div class="dash-content">
+                    <table class="board-table" style="margin-top:0;">
+                        <thead><tr><th style="width: 45px;">분류</th><th style="width: auto;">제목</th><th style="width: 90px;">등록일</th></tr></thead>
+                        <tbody id="noticeList"></tbody>
+                    </table>
+                    <button class="action-btn" style="background:var(--text-sub); margin-top:15px; margin-bottom:10px;" onclick="toggleHidden('noticeForm')">✍️ 공지 쓰기 (Admin)</button>
+                    <div id="noticeForm" class="hidden">
+                        <div style="margin-bottom:10px; background:rgba(239,68,68,0.05); padding:10px; border-radius:8px; border:1px solid rgba(239,68,68,0.2);">
+                            <input type="text" id="noticeTitle" class="input-field" placeholder="공지 제목">
+                            <textarea id="noticeContent" class="input-field textarea-field" placeholder="공지 내용"></textarea>
+                            <input type="file" id="noticeFileInput" class="input-field" accept="image/*">
+                            <div style="display:flex; gap:10px; margin-top:5px;">
+                                <button id="noticeSubmitBtn" class="action-btn bg-submit" style="flex:2;" onclick="saveNotice()">등록 완료</button>
+                                <button id="noticeCancelBtn" class="action-btn bg-cancel" style="flex:1; display:none;" onclick="cancelEditNotice()">취소</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
 
             <div id="board-card" class="dash-card">
-<div class="dash-header tap-effect" onclick="toggleDashItem('board-card')">
-    <span>💬 익명게시판 <span id="boardBadge" class="badge-new hidden">NEW</span></span>
-    <span>▼</span>
-</div>
+                <div class="dash-header tap-effect" onclick="toggleDashItem('board-card')">
+                    <span class="dash-title" style="font-weight:bold;">💬 익명게시판 <span id="boardBadge" class="badge-new hidden">NEW</span></span><span class="toggle-icon">▼</span>
+                </div>
                 <div class="dash-content">
                     <table class="board-table">
-                        <thead>
-                            <tr>
-                                <th style="width: 40px;">No.</th>
-                                <th style="width: auto;">제 목</th>
-                                <th style="width: 100px;">날짜</th>
-                                <th style="width: 60px;">닉네임</th>
-                            </tr>
-                        </thead>
+                        <thead><tr><th style="width: 40px;">No.</th><th style="width: auto;">제 목</th><th style="width: 100px;">날짜</th><th style="width: 60px;">닉네임</th></tr></thead>
                         <tbody id="boardList"></tbody>
                     </table>
                     <div id="pagination" style="display:flex; justify-content:center; gap:5px; margin-top:10px; margin-bottom: 15px;"></div>
@@ -457,153 +442,92 @@
                 </div>
             </div>
 
-            <div id="ship-card" class="dash-card"><div class="dash-header tap-effect" onclick="toggleDashItem('ship-card')">🚢 선박정보 ▼</div><div class="dash-content"><div style="display:flex; gap:5px; margin-bottom:10px;"><input type="text" id="shipSearch" class="input-field" placeholder="선박 검색" onkeyup="filterShips()" style="margin-bottom:0;"><button class="action-btn" style="width:auto;" onclick="filterShips()">🔍</button></div><a href="https://www.marinetraffic.com/" target="_blank" class="action-btn" style="background:#0284c7; text-align:center; display:block; text-decoration:none; margin-bottom:10px; padding:12px;">🌍 실시간 선박 위치 확인</a><button class="action-btn" style="background:var(--accent); margin-bottom:10px;" onclick="toggleHidden('shipForm')">📝 선박 정보 신규 등록</button><div id="shipForm" class="hidden"><input type="text" id="shipName" class="input-field" placeholder="선박명"><textarea id="shipOnboard" class="input-field textarea-field" placeholder="작업내용"></textarea><input type="file" id="shipFileInput" class="input-field"><button id="shipSubmitBtn" class="action-btn bg-submit" onclick="addShipInfo()">등록/수정</button></div><ul id="shipList" class="post-list"></ul></div></div>
-            <div id="archive-card" class="dash-card">
-    <div class="dash-header tap-effect" onclick="toggleDashItem('archive-card')">
-        <span>📂 자료실 <span id="archiveBadge" class="badge-new hidden">NEW</span></span>
-        <span>▼</span>
-    </div>
-    <div class="dash-content">
-        <table class="board-table" style="margin-top:0;">
-            <thead>
-                <tr>
-                    <th style="width: auto;">파일명 (클릭 시 다운로드)</th>
-                    <th style="width: 80px;">관리</th>
-                </tr>
-            </thead>
-            <tbody id="fileList"></tbody>
-        </table>
-
-        <button class="action-btn" style="background:var(--text-sub); margin-top:15px; margin-bottom:10px;" onclick="toggleHidden('archiveForm')">💾 파일 업로드 (Admin)</button>
-
-        <div id="archiveForm" class="hidden">
-            <div style="margin-bottom:10px; background:rgba(59,130,246,0.05); padding:10px; border-radius:8px; border:1px solid rgba(59,130,246,0.2);">
-                <input type="text" id="archiveTitle" class="input-field" placeholder="파일 설명 (예: 셔틀버스 시간표)">
-                <input type="file" id="archiveFile" class="input-field">
-                <button id="archiveSubmitBtn" class="action-btn bg-submit" onclick="addArchive()">업로드 완료</button>
+            <div id="ship-card" class="dash-card">
+                <div class="dash-header tap-effect" onclick="toggleDashItem('ship-card')">
+                    <span class="dash-title" style="font-weight:bold;">🚢 선박정보</span><span class="toggle-icon">▼</span>
+                </div>
+                <div class="dash-content">
+                    <div style="display:flex; gap:5px; margin-bottom:10px;"><input type="text" id="shipSearch" class="input-field" placeholder="선박 검색" onkeyup="filterShips()" style="margin-bottom:0;"><button class="action-btn" style="width:auto;" onclick="filterShips()">🔍</button></div>
+                    <a href="https://www.marinetraffic.com/" target="_blank" class="action-btn" style="background:#0284c7; text-align:center; display:block; text-decoration:none; margin-bottom:10px; padding:12px;">🌍 실시간 선박 위치 확인</a>
+                    <button class="action-btn" style="background:var(--accent); margin-bottom:10px;" onclick="toggleHidden('shipForm')">📝 선박 정보 신규 등록</button>
+                    <div id="shipForm" class="hidden">
+                        <input type="text" id="shipName" class="input-field" placeholder="선박명">
+                        <textarea id="shipOnboard" class="input-field textarea-field" placeholder="작업내용"></textarea>
+                        <input type="file" id="shipFileInput" class="input-field">
+                        <button id="shipSubmitBtn" class="action-btn bg-submit" onclick="addShipInfo()">등록/수정</button>
+                    </div>
+                    <ul id="shipList" class="post-list"></ul>
+                </div>
             </div>
+
+            <div id="archive-card" class="dash-card">
+                <div class="dash-header tap-effect" onclick="toggleDashItem('archive-card')">
+                    <span class="dash-title" style="font-weight:bold;">📂 자료실 <span id="archiveBadge" class="badge-new hidden">NEW</span></span><span class="toggle-icon">▼</span>
+                </div>
+                <div class="dash-content">
+                    <table class="board-table" style="margin-top:0;">
+                        <thead><tr><th style="width: auto;">파일명 (다운로드)</th><th style="width: 60px;">관리</th></tr></thead>
+                        <tbody id="fileList"></tbody>
+                    </table>
+                    <button class="action-btn" style="background:var(--text-sub); margin-top:15px; margin-bottom:10px;" onclick="toggleHidden('archiveForm')">💾 파일 업로드 (Admin)</button>
+                    <div id="archiveForm" class="hidden">
+                        <div style="margin-bottom:10px; background:rgba(59,130,246,0.05); padding:10px; border-radius:8px; border:1px solid rgba(59,130,246,0.2);">
+                            <input type="text" id="archiveTitle" class="input-field" placeholder="파일 설명">
+                            <input type="file" id="archiveFile" class="input-field">
+                            <button id="archiveSubmitBtn" class="action-btn bg-submit" onclick="addArchive()">업로드 완료</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="guide-card" class="dash-card">
+                <div class="dash-header tap-effect" onclick="toggleDashItem('guide-card')">
+                    <span class="dash-title" style="font-weight:bold;">📚 항만 용어 가이드</span><span class="toggle-icon">▼</span>
+                </div>
+                <div class="dash-content">
+                    <div style="margin-bottom:15px;">
+                        <input type="text" id="guideSearch" class="input-field" placeholder="용어 검색" onkeyup="filterGuide()">
+                    </div>
+                    <div class="guide-container" style="max-height: 500px; overflow-y: auto; background: #fff; border-radius: 8px; border: 1px solid var(--border);">
+                        <table class="board-table">
+                            <thead style="position: sticky; top: 0; z-index: 10;">
+                                <tr><th style="width: 35%;">용어</th><th style="width: 65%;">정의 및 가이드</th></tr>
+                            </thead>
+                            <tbody id="guideBody">
+                                <tr><td class="board-no"><b>가항반원</b></td><td class="board-title" style="text-align:left; font-size:0.85rem; white-space:normal;">태풍 진행방향 좌측.</td></tr>
+                                <tr><td class="board-no"><b>갑문</b></td><td class="board-title" style="text-align:left; font-size:0.85rem; white-space:normal;">수위 조절 수문.</td></tr>
+                                <tr><td class="board-no"><b>계류</b></td><td class="board-title" style="text-align:left; font-size:0.85rem; white-space:normal;">밧줄로 묶어 놓는 것.</td></tr>
+                                <tr><td class="board-no"><b>만재흘수선</b></td><td class="board-title" style="text-align:left; font-size:0.85rem; white-space:normal;">최대 적재 한계선.</td></tr>
+                                <tr><td class="board-no"><b>에이프런</b></td><td class="board-title" style="text-align:left; font-size:0.85rem; white-space:normal;">하역 장비 가동 구역.</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div id="info-card" class="dash-card">
+                <div class="dash-header tap-effect" onclick="toggleDashItem('info-card')">
+                    <span class="dash-title" style="font-weight:bold;">ℹ️ 서비스 안내</span><span class="toggle-icon">▼</span>
+                </div>
+                <div class="dash-content" style="font-size: 0.85rem; line-height: 1.6; color: var(--text-main);">
+                    <section style="margin-bottom: 20px; padding: 10px; background: rgba(0,0,0,0.02); border-radius: 8px;">
+                        <h4 style="color: var(--primary); margin-bottom: 10px;">🚢 부산항 통합 가이드</h4>
+                        <p>본 플랫폼은 부산항 신항/북항 근로자를 위한 현장 맞춤형 관리 시스템입니다.</p>
+                    </section>
+                    <div style="border-top: 1px solid var(--border); padding-top: 15px;">
+                        <h5 style="font-weight: bold;">[책임고지]</h5>
+                        <p style="font-size: 0.75rem; color: var(--text-sub);">1. 비영리 목적 운영<br>2. 임금 계산 결과는 참고용</p>
+                    </div>
+                    <div style="margin-top: 15px; text-align: center; border-top: 1px solid var(--border); padding-top: 10px;">
+                        <p style="font-size: 0.75rem; color: var(--text-sub);">문의: luxrank@gmail.com</p>
+                    </div>
+                </div>
+            </div>
+
         </div>
-    </div>
-</div>
-<div id="guide-card" class="dash-card">
-    <div class="dash-header tap-effect" onclick="toggleDashItem('guide-card')">
-        <span>📚 부산항 항만 용어 가이드</span>
-        <span>▼</span>
-    </div>
-    <div class="dash-content">
-        <div style="margin-bottom:15px;">
-            <input type="text" id="guideSearch" class="input-field" placeholder="찾으시는 용어를 입력하세요 (예: 갑문, 흘수)" onkeyup="filterGuide()">
-        </div>
+        ```
 
-        <div class="guide-container" style="max-height: 500px; overflow-y: auto; background: #fff; border-radius: 8px; border: 1px solid var(--border);">
-            <table class="board-table">
-                <thead style="position: sticky; top: 0; z-index: 10;">
-                    <tr>
-                        <th style="width: 30%;">용어 (한글/영문)</th>
-                        <th style="width: 70%;">상세 정의 및 안전 가이드</th>
-                    </tr>
-                </thead>
-                <tbody id="guideBody">
-                    <tr>
-                        <td class="board-no"><b>가항반원</b><br>(navigable semi-circle)</td>
-                        <td class="board-title" style="text-align:left; font-size:0.85rem;">
-                            태풍 중심에서 진행방향의 좌측 부분. 풍속이 비교적 약하고 해면이 평온하여 선박이 태풍을 피할 때 이용하는 구역입니다. 
-                            <br><strong>⚠️ 안전팁:</strong> 위험반원(우측)에 들어가지 않도록 기상도를 상시 확인하십시오.
-                        </td>
-                    </tr>
-
-                    <tr>
-                        <td class="board-no"><b>갑문</b><br>(lock gate)</td>
-                        <td class="board-title" style="text-align:left; font-size:0.85rem;">
-                            조석 간만의 차가 심한 항만에서 선박 입출항 시 수위를 조절하기 위한 수문입니다. 인천항이 대표적인 갑문식 독(dock)입니다.
-                        </td>
-                    </tr>
-
-                    <tr>
-                        <td class="board-no"><b>계류</b><br>(mooring)</td>
-                        <td class="board-title" style="text-align:left; font-size:0.85rem;">
-                            선박이 표류하지 않도록 안벽이나 부표에 밧줄로 묶어 놓는 것을 말합니다.
-                            <br><strong>⚠️ 안전팁:</strong> 계류삭(밧줄) 인장 강도를 체크하고 스냅백(줄 끊어짐 반동) 구역에 서 있지 마십시오.
-                        </td>
-                    </tr>
-                    <tr>
-                        <td class="board-no"><b>만재흘수선</b><br>(load line)</td>
-                        <td class="board-title" style="text-align:left; font-size:0.85rem;">
-                            선박이 안전하게 항해할 수 있는 최대 적재 한계를 나타내는 선입니다. 선체 옆면에 표시됩니다.
-                        </td>
-                    </tr>
-
-                    <tr>
-                        <td class="board-no"><b>에이프런</b><br>(apron)</td>
-                        <td class="board-title" style="text-align:left; font-size:0.85rem;">
-                            안벽 법선에서 헛간(상옥) 사이의 공간으로 하역 장비가 가동되고 화물이 일시 거치되는 구역입니다.
-                            <br><strong>⚠️ 안전팁:</strong> 에이프런 내 장비 이동이 빈번하므로 안전화와 안전모 착용은 필수입니다.
-                        </td>
-                    </tr>
-                    </tbody>
-            </table>
-        </div>
-        <p style="margin-top:10px; font-size:0.75rem; color:var(--text-sub);">* 본 가이드는 부산항 근로자의 안전한 업무 수행을 위해 공공 데이터를 기반으로 제작되었습니다.</p>
-    </div>
-</div>
-
-<script>
-/* 가이드 검색 필터 함수 */
-function filterGuide() {
-    const input = document.getElementById('guideSearch').value.toLowerCase();
-    const rows = document.getElementById('guideBody').getElementsByTagName('tr');
-
-    for (let i = 0; i < rows.length; i++) {
-        const text = rows[i].innerText.toLowerCase();
-        rows[i].style.display = text.includes(input) ? "" : "none";
-    }
-}
-</script>            
-<div id="info-card" class="dash-card">
-    <div class="dash-header tap-effect" onclick="toggleDashItem('info-card')">
-        <span>ℹ️ 서비스 안내 및 이용약관</span>
-        <span>▼</span>
-    </div>
-    <div class="dash-content" style="font-size: 0.85rem; line-height: 1.6; color: var(--text-main);">
-
-        <section style="margin-bottom: 20px; padding: 10px; background: rgba(0,0,0,0.02); border-radius: 8px;">
-            <h4 style="color: var(--primary); margin-bottom: 10px;">🚢 부산항 통합 가이드 (Busan Port Guide)</h4>
-            <p>본 플랫폼은 부산항 신항 및 북항에서 근무하는 항만 근로자(라싱, 스테베도어 등)를 위해 개발된 <strong>현장 맞춤형 통합 관리 시스템</strong>입니다. 근로자의 권익 보호와 현장 업무의 효율성을 극대화하기 위해 다음과 같은 전문 기능을 제공합니다.</p>
-            <ul style="padding-left: 20px; margin-top: 5px;">
-                <li><strong>정밀 임금 계산</strong>: 야간, 주말, 할증 및 기능공 수당을 포함한 자동 계산 로직 적용.</li>
-                <li><strong>클라우드 근무일지</strong>: 현장 사진 증빙 및 실시간 데이터 보관 기능.</li>
-                <li><strong>항만 인프라 연동</strong>: 터미널 실시간 선석 현황(PNC, HJNC, BPTC 등) 및 셔틀버스 정보 실시간 동기화.</li>
-            </ul>
-        </section>
-
-        <div style="border-top: 1px solid var(--border); padding-top: 15px;">
-            <h5 style="font-weight: bold;">[이용약관 및 책임고지]</h5>
-            <p style="font-size: 0.75rem; color: var(--text-sub);">
-                1. 본 서비스는 부산항 현장 근로자의 편의를 위한 비영리 목적으로 운영됩니다. <br>
-                2. 임금 계산 결과는 참고용이며, 실제 급여명세서와 차이가 있을 수 있습니다. <br>
-                3. 익명 게시판 및 티커 이용 시 타인의 명예를 훼손하는 행위는 엄격히 금지됩니다. <br>
-                4. 서비스 내 제공되는 외부 정보(기상, 도선 등)의 정확성은 해당 기관의 사정에 따라 다를 수 있습니다.
-            </p>
-        </div>
-
-        <div style="margin-top: 15px; padding: 10px; border: 1px dashed var(--border); border-radius: 5px;">
-            <h5 style="font-weight: bold;">[개인정보 처리방침]</h5>
-            <p style="font-size: 0.75rem; color: var(--text-sub);">
-                - 본 앱은 사용자의 닉네임과 비밀번호를 서비스 로그인을 위한 최소한의 용도로만 수집합니다. <br>
-                - 수집된 데이터는 제3자에게 제공되지 않으며, 사용자 요청 시 즉시 삭제 가능합니다. <br>
-                - 구글 애드센스 등 광고 서비스 이용 시 브라우저 쿠키가 사용될 수 있음을 알려드립니다.
-            </p>
-        </div>
-
-        <div style="margin-top: 15px; text-align: center; border-top: 1px solid var(--border); padding-top: 10px;">
-            <p style="font-size: 0.75rem; color: var(--text-sub);">
-                개발 및 운영: luxrank@gmail.com
-                문의: luxrank@gmail.com <br>
-                © 2026 BUSAN HAK PORT INFO. All Rights Reserved.
-            </p>
-        </div>
-    </div>
-</div>            
+이 코드가 적용되면 아까 캡처해서 보여주셨던 것처럼 밑으로 길게 늘어지던 찌그러짐 현상이 완전히 사라지고, 8개 메뉴가 모두 완벽한 50:50 박스 비율로 예쁘게 맞춰질 겁니다! 오빠, 차분히 블록 잡아서 갈아 끼워 주십시오!
 
         <footer><p>© 2026 BUSAN HAK PORT INFO. All rights reserved.</p><div style="margin-top:10px;"><span class="footer-link" onclick="openPrivacy()">개인정보처리방침</span></div></footer>
     </div>
@@ -1580,6 +1504,7 @@ db.collection("posts").orderBy("timestamp","desc").onSnapshot(s => {
 </script>
 </body>
 </html>
+
 
 
 
