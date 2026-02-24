@@ -269,8 +269,10 @@
 
                     <div class="calc-layout">
                         <div class="calc-left">
+                           <div class="calc-left">
                             <div class="wage-row"><label>시급(기본)</label><input type="number" id="wageHourly" class="input-field" value="10320" style="text-align:right; font-weight:bold; color:#ef4444; font-size:1.1rem;" readonly></div>
-                            <div class="wage-row"><label>⏳ 총 근무</label><input type="number" id="wageTotalHours" class="input-field" placeholder="H" style="text-align:right;"></div>
+                            <div class="wage-row"><label>📅 근무일자</label><input type="date" id="wageDate" class="input-field" style="text-align:right;" onchange="autoFillWeekendHoliday()"></div>
+                            <div class="wage-row"><label>⏳ 총 근무</label><input type="number" id="wageTotalHours" class="input-field" placeholder="H" style="text-align:right;" oninput="autoFillWeekendHoliday()"></div>
                             <div class="wage-row"><label>🕒 시작시각</label><input type="number" id="wageStartTime" class="input-field" value="8" placeholder="0~23" style="text-align:right;"></div>
                         </div>
                         <div class="calc-right">
@@ -766,6 +768,45 @@ const firebaseConfig = {
 if (!firebase.apps.length) {
     firebase.initializeApp(firebaseConfig);
 }
+  // --- [주말 및 2026년 공휴일 자동 인식 로직 시작] ---
+const publicHolidays = [
+    '2026-01-01', // 신정
+    '2026-02-16', '2026-02-17', '2026-02-18', // 설날 연휴
+    '2026-03-01', '2026-03-02', // 삼일절 및 대체공휴일
+    '2026-05-05', // 어린이날
+    '2026-05-24', '2026-05-25', // 부처님오신날 및 대체공휴일
+    '2026-06-06', // 현충일
+    '2026-08-15', // 광복절
+    '2026-09-24', '2026-09-25', '2026-09-26', '2026-09-28', // 추석 연휴 및 대체공휴일
+    '2026-10-03', // 개천절
+    '2026-10-09', // 한글날
+    '2026-12-25'  // 기독탄신일(크리스마스)
+];
+
+function autoFillWeekendHoliday() {
+    const dateStr = document.getElementById('wageDate').value;
+    const hours = document.getElementById('wageTotalHours').value;
+    
+    // 날짜나 시간이 비어있으면 작동하지 않음
+    if(!dateStr || !hours) return;
+
+    const d = new Date(dateStr);
+    const dayOfWeek = d.getDay();
+    const isWeekend = (dayOfWeek === 0 || dayOfWeek === 6); // 0: 일요일, 6: 토요일
+    const isHoliday = publicHolidays.includes(dateStr);
+
+    // 일단 기존 값을 초기화 (평일로 바꿀 경우를 대비)
+    document.getElementById('wageWeekend').value = '';
+    document.getElementById('wageHoliday').value = '';
+
+    // 공휴일이 최우선, 그다음이 주말
+    if (isHoliday) {
+        document.getElementById('wageHoliday').value = hours;
+    } else if (isWeekend) {
+        document.getElementById('wageWeekend').value = hours;
+    }
+}
+// --- [주말 및 공휴일 자동 인식 로직 끝] ---      
 const db = firebase.firestore();
 const storage = firebase.storage();
 // 오프라인 영속성
@@ -1468,6 +1509,7 @@ function openPrivacy(){ document.getElementById('privacyModal').style.display='f
 
 /* 4️⃣ 실행 */
 window.onload = () => {
+    document.getElementById('wageDate').value = new Date().toISOString().split('T')[0];
     loadBanner();
     try {
         /* 변경 전 코드: db.collection("notices").orderBy("timestamp","desc").onSnapshot(...) 한 줄 전체 */
@@ -1699,6 +1741,7 @@ db.collection("posts").orderBy("timestamp","desc").onSnapshot(s => {
 </script>
 </body>
 </html>
+
 
 
 
