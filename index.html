@@ -1303,12 +1303,11 @@ db.collection("posts").orderBy("timestamp","desc").onSnapshot(s => {
     if(localStorage.getItem('myWorkerId')) { currentWorkerId = localStorage.getItem('myWorkerId'); updateUserBar(); }
 };
 /* 조장 근무일 이미지 팝업 함수 */
-/* ===== 조장 근무일 캘린더 스크립트 ===== */
+/* ===== 조장 근무일 캘린더 스크립트 (일괄 연동 버전) ===== */
         let leaderCurrentDate = new Date();
-        let leaderOverrides = {};
-        const leaderCycle = ["재경", "성철", "개굴"]; // 3일 무한 로테이션 패턴
+        let leaderAnchors = []; // 변경점(기준점)을 저장하는 배열
+        const leaderCycle = ["재경", "성철", "개굴"]; // 무한 로테이션 패턴
 
-        // 기존 단순 이미지 팝업을 달력 호출로 완전 대체
         function openLeaderSchedule() {
             document.getElementById('leaderCalendarModal').style.display = 'flex';
             leaderCurrentDate = new Date(); 
@@ -1324,14 +1323,32 @@ db.collection("posts").orderBy("timestamp","desc").onSnapshot(s => {
             renderLeaderCalendar(leaderCurrentDate.getFullYear(), leaderCurrentDate.getMonth());
         }
 
-        // 이미지 기반 패턴 로직: 2026년 2월 1일은 '재경'(인덱스 0)
-        function getCalculatedLeader(y, m, d) {
-            const target = Date.UTC(y, m, d);
-            const anchor = Date.UTC(2026, 1, 1); // 2026년 2월 1일 (JS month는 0부터 시작)
-            const diffDays = Math.floor((target - anchor) / (1000 * 60 * 60 * 24));
-            
-            let index = diffDays % 3;
-            if (index < 0) index += 3;
+        // 새로운 앵커(기준점)를 바탕으로 이후 패턴 자동 계산
+        function getCalculatedLeader(targetDateStr) {
+            let anchorDateStr = "2026-02-01"; // 기본 최초 기준일
+            let anchorLeader = "재경";
+
+            // 계산하려는 날짜보다 '이전이거나 같은' 가장 최근 변경점(앵커) 찾기
+            for (let i = 0; i < leaderAnchors.length; i++) {
+                if (leaderAnchors[i].date <= targetDateStr) {
+                    anchorDateStr = leaderAnchors[i].date;
+                    anchorLeader = leaderAnchors[i].leader;
+                } else {
+                    break; // 날짜순 정렬되어 있으므로 이후는 패스
+                }
+            }
+
+            // 기준점과의 날짜 차이 계산
+            const target = new Date(targetDateStr);
+            const anchor = new Date(anchorDateStr);
+            const diffDays = Math.floor((target.getTime() - anchor.getTime()) / (1000 * 60 * 60 * 24));
+
+            // 3일 패턴(배열) 인덱스 추적
+            let baseIndex = leaderCycle.indexOf(anchorLeader);
+            if (baseIndex === -1) baseIndex = 0;
+
+            let index = (baseIndex + diffDays) % 3;
+            if (index < 0) index += 3; // 과거 날짜 조회 시 음수 방지
             return leaderCycle[index];
         }
 
@@ -1339,26 +1356,22 @@ db.collection("posts").orderBy("timestamp","desc").onSnapshot(s => {
             if (name.includes("재경")) return "leader-jaekyung";
             if (name.includes("성철")) return "leader-sungchul";
             if (name.includes("개굴")) return "leader-gaegool";
-            return "leader-jaekyung"; // 기본색
+            return "leader-jaekyung"; 
         }
 
         function renderLeaderCalendar(y, m) {
             document.getElementById('leaderCalMonthYear').innerText = `${y}년 ${m+1}월`;
-            const g = document.getElementById('leaderCalendarGrid');
-            g.innerHTML = "";
-            
-            const sDate = `${y}-${String(m+1).padStart(2,'0')}-01`;
             const lD = new Date(y, m+1, 0).getDate();
-            const eDate = `${y}-${String(m+1).padStart(2,'0')}-${String(lD).padStart(2,'0')}`;
 
-            // Firebase에서 해당 월의 '수동 변경된(대타 등)' 근무자 정보 가져오기
-            db.collection('leader_overrides').where('date', '>=', sDate).where('date', '<=', eDate).get().then(s => {
-                leaderOverrides = {};
-                s.forEach(doc => { leaderOverrides[doc.data().date] = doc.data().leader; });
+            // 데이터베이스에서 모든 '변경점'을 가져와 날짜순으로 정렬
+            db.collection('leader_overrides').get().then(s => {
+                leaderAnchors = [];
+                s.forEach(doc => { leaderAnchors.push(doc.data()); });
+                leaderAnchors.sort((a, b) => a.date.localeCompare(b.date)); // 날짜 오름차순 정렬
                 drawLeaderGrid(y, m, lD);
             }).catch(err => {
-                console.warn("근무자 오버라이드 로드 실패:", err);
-                drawLeaderGrid(y, m, lD); // 에러시에도 기본 패턴은 그려줌
+                console.warn("오버라이드 로드 실패:", err);
+                drawLeaderGrid(y, m, lD);
             });
         }
 
@@ -1373,22 +1386,18 @@ db.collection("posts").orderBy("timestamp","desc").onSnapshot(s => {
             
             for(let d=1; d<=lD; d++) {
                 const dStr = `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-                let leaderName = getCalculatedLeader(y, m, d);
-                let isCustom = false;
                 
-                // 수동 변경된 데이터가 있으면 덮어쓰기 적용
-                if (leaderOverrides[dStr]) {
-                    leaderName = leaderOverrides[dStr];
-                    isCustom = true;
-                }
+                // 해당 날짜가 수동으로 변경된 '기준점'인지 확인 (빨간 테두리용)
+                const isAnchor = leaderAnchors.some(a => a.date === dStr);
+                const leaderName = getCalculatedLeader(dStr);
                 
                 const badgeClass = getLeaderBadgeClass(leaderName);
-                const customStyle = isCustom ? "border: 2px solid #ef4444;" : "";
+                const customStyle = isAnchor ? "border: 2px solid #ef4444;" : "";
                 
                 let dayColor = "var(--text-main)";
                 let currentDayObj = new Date(y, m, d).getDay();
-                if (currentDayObj === 0) dayColor = "#ef4444"; // 일요일 빨강
-                if (currentDayObj === 6) dayColor = "#3b82f6"; // 토요일 파랑
+                if (currentDayObj === 0) dayColor = "#ef4444"; 
+                if (currentDayObj === 6) dayColor = "#3b82f6"; 
 
                 g.innerHTML += `
                     <div class="cal-day tap-effect" onclick="overrideLeader('${dStr}', '${leaderName}')" style="min-height: 65px; justify-content: flex-start; padding-top: 5px; background: white;">
@@ -1399,45 +1408,34 @@ db.collection("posts").orderBy("timestamp","desc").onSnapshot(s => {
             }
         }
 
-        // 근무자 수동 변경 함수 (Admin 전용)
         async function overrideLeader(dStr, currentLeader) {
-            if (!(await verifyAdmin())) return; // 관리자(0346)만 변경 가능
+            if (!(await verifyAdmin())) return; 
             
-            const newLeader = prompt(`[${dStr}] 근무자를 변경합니다.\n변경할 이름(재경, 성철, 임조장 등)을 입력하세요.\n\n※ 임의 변경 취소 후 '기본 패턴'으로 되돌리려면 '초기화' 또는 빈칸 입력`, currentLeader);
+            const newLeader = prompt(`[${dStr}] 조장을 변경합니다.\n여기를 바꾸면 이후 근무자들도 '3일 로테이션'에 맞게 일괄 변경됩니다.\n(입력: 재경, 성철, 개굴)\n\n※ 이 기준점을 삭제하려면 '초기화' 또는 빈칸 입력`, currentLeader);
             
-            if (newLeader === null) return; // 취소 버튼
+            if (newLeader === null) return; 
             
             if (newLeader.trim() === "" || newLeader === "초기화") {
                 db.collection('leader_overrides').doc(dStr).delete().then(() => {
-                    showToast("기본 패턴으로 복구되었습니다.");
+                    showToast("기준점이 삭제되어 기존 패턴으로 복구됩니다.");
                     renderLeaderCalendar(leaderCurrentDate.getFullYear(), leaderCurrentDate.getMonth());
                 });
-            } else {
+            } else if (leaderCycle.includes(newLeader.trim())) {
                 db.collection('leader_overrides').doc(dStr).set({
                     date: dStr,
                     leader: newLeader.trim()
                 }).then(() => {
-                    showToast("근무자가 수동으로 변경되었습니다.");
+                    showToast("이후 근무표가 일괄 변경되었습니다.");
                     renderLeaderCalendar(leaderCurrentDate.getFullYear(), leaderCurrentDate.getMonth());
                 });
+            } else {
+                alert("⚠️ 오류: '재경', '성철', '개굴' 중에서 정확히 입력해 주세요.");
             }
-        }
-/* ALL BAY PLAN 비밀번호 확인 및 링크 연결 함수 */
-function openAllBayPlan() {
-    const pwInput = prompt("보안 비밀번호를 입력하세요:"); // 사용자에게 비밀번호 요청
-
-    if (pwInput === "9445") {
-        // 비밀번호 일치 시 주소 연결
-        window.open("http://112.163.71.98:8080/webits/bayplan", "_blank");
-        showToast("인증 성공! 페이지로 연결합니다.");
-    } else if (pwInput !== null) {
-        // 비밀번호 틀렸을 때 (취소 버튼을 누르지 않은 경우)
-        alert("비밀번호가 올바르지 않습니다. 다시 확인해 주세요.");
-    }
-}        
+        }     
 </script>
 </body>
 </html>
+
 
 
 
