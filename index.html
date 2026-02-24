@@ -670,7 +670,15 @@ let globalTickerData = { adminMessage: "", userMessages: [] };
 
 /* 3️⃣ 함수 선언 */
 async function safeGet(ref) { if (!ref) return null; try { return await ref.get(); } catch (e) { return null; } }
-async function verifyAdmin(){ return prompt("Admin PW:") === "0346"; }
+async function verifyAdmin() {
+    const inputPw = prompt("관리자 비밀번호를 입력하세요:");
+    if (!inputPw) return false;
+    // Firebase의 'settings' 컬렉션 안의 'admin' 문서에서 비밀번호를 가져옴
+    const doc = await db.collection('settings').doc('admin').get();
+    if (doc.exists && doc.data().password === inputPw) return true;
+    alert("⚠️ 비밀번호가 틀렸습니다.");
+    return false;
+}
 
 function toggleDashItem(id){ 
     const c = document.getElementById(id);
@@ -1094,5 +1102,6 @@ async function overrideLeader(dStr, currentLeader) { if (!(await verifyAdmin()))
     </script>
 </body>
 </html>
+
 
 
