@@ -1303,10 +1303,11 @@ db.collection("posts").orderBy("timestamp","desc").onSnapshot(s => {
     if(localStorage.getItem('myWorkerId')) { currentWorkerId = localStorage.getItem('myWorkerId'); updateUserBar(); }
 };
 /* 조장 근무일 이미지 팝업 함수 */
-/* ===== 조장 근무일 캘린더 스크립트 (일괄 연동 버전) ===== */
+/* ===== 조장 근무일 캘린더 스크립트 (근무조 교체 일괄 연동 버전) ===== */
         let leaderCurrentDate = new Date();
-        let leaderAnchors = []; // 변경점(기준점)을 저장하는 배열
-        const leaderCycle = ["재경", "성철", "개굴"]; // 무한 로테이션 패턴
+        let leaderOverrides = []; // 모든 변경 데이터를 저장
+        const baseCycle = ["재경", "성철", "개굴"]; // 3일 기본 로테이션 패턴
+        const baseAnchor = "2026-02-01"; // 계산 기준일 (재경)
 
         function openLeaderSchedule() {
             document.getElementById('leaderCalendarModal').style.display = 'flex';
@@ -1323,51 +1324,39 @@ db.collection("posts").orderBy("timestamp","desc").onSnapshot(s => {
             renderLeaderCalendar(leaderCurrentDate.getFullYear(), leaderCurrentDate.getMonth());
         }
 
-        // 새로운 앵커(기준점)를 바탕으로 이후 패턴 자동 계산
-        function getCalculatedLeader(targetDateStr) {
-            let anchorDateStr = "2026-02-01"; // 기본 최초 기준일
-            let anchorLeader = "재경";
-
-            // 계산하려는 날짜보다 '이전이거나 같은' 가장 최근 변경점(앵커) 찾기
-            for (let i = 0; i < leaderAnchors.length; i++) {
-                if (leaderAnchors[i].date <= targetDateStr) {
-                    anchorDateStr = leaderAnchors[i].date;
-                    anchorLeader = leaderAnchors[i].leader;
-                } else {
-                    break; // 날짜순 정렬되어 있으므로 이후는 패스
-                }
-            }
-
-            // 기준점과의 날짜 차이 계산
-            const target = new Date(targetDateStr);
-            const anchor = new Date(anchorDateStr);
+        // 특정 날짜의 '로테이션 슬롯 번호(0, 1, 2)'를 구하는 함수
+        function getSlotIndex(dStr) {
+            const target = new Date(dStr);
+            const anchor = new Date(baseAnchor);
             const diffDays = Math.floor((target.getTime() - anchor.getTime()) / (1000 * 60 * 60 * 24));
-
-            // 3일 패턴(배열) 인덱스 추적
-            let baseIndex = leaderCycle.indexOf(anchorLeader);
-            if (baseIndex === -1) baseIndex = 0;
-
-            let index = (baseIndex + diffDays) % 3;
-            if (index < 0) index += 3; // 과거 날짜 조회 시 음수 방지
-            return leaderCycle[index];
+            return ((diffDays % 3) + 3) % 3;
         }
 
-        function getLeaderBadgeClass(name) {
-            if (name.includes("재경")) return "leader-jaekyung";
-            if (name.includes("성철")) return "leader-sungchul";
-            if (name.includes("개굴")) return "leader-gaegool";
-            return "leader-jaekyung"; 
+        function getCalculatedLeader(targetDateStr) {
+            const targetSlot = getSlotIndex(targetDateStr);
+
+            // 해당 슬롯에 대해, 현재 날짜 이전의 '가장 최근 변경 기록'을 찾아 일괄 적용
+            for (let i = leaderOverrides.length - 1; i >= 0; i--) {
+                const ov = leaderOverrides[i];
+                if (ov.date <= targetDateStr) {
+                    if (getSlotIndex(ov.date) === targetSlot) {
+                        return ov.leader; // 해당 조를 덮어쓴 가장 최근 근무자 반환
+                    }
+                }
+            }
+            // 덮어쓴 기록이 없으면 기본 3인방 패턴 반환
+            return baseCycle[targetSlot];
         }
 
         function renderLeaderCalendar(y, m) {
             document.getElementById('leaderCalMonthYear').innerText = `${y}년 ${m+1}월`;
             const lD = new Date(y, m+1, 0).getDate();
 
-            // 데이터베이스에서 모든 '변경점'을 가져와 날짜순으로 정렬
+            // 이전 달의 오버라이드 기록도 이후 달력에 영향을 미치므로 전체를 가져옴
             db.collection('leader_overrides').get().then(s => {
-                leaderAnchors = [];
-                s.forEach(doc => { leaderAnchors.push(doc.data()); });
-                leaderAnchors.sort((a, b) => a.date.localeCompare(b.date)); // 날짜 오름차순 정렬
+                leaderOverrides = [];
+                s.forEach(doc => { leaderOverrides.push(doc.data()); });
+                leaderOverrides.sort((a, b) => a.date.localeCompare(b.date)); // 날짜 오름차순 정렬
                 drawLeaderGrid(y, m, lD);
             }).catch(err => {
                 console.warn("오버라이드 로드 실패:", err);
@@ -1387,12 +1376,22 @@ db.collection("posts").orderBy("timestamp","desc").onSnapshot(s => {
             for(let d=1; d<=lD; d++) {
                 const dStr = `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
                 
-                // 해당 날짜가 수동으로 변경된 '기준점'인지 확인 (빨간 테두리용)
-                const isAnchor = leaderAnchors.some(a => a.date === dStr);
+                // 수동 변경의 시작점인지 확인
+                const isAnchor = leaderOverrides.some(ov => ov.date === dStr);
                 const leaderName = getCalculatedLeader(dStr);
                 
-                const badgeClass = getLeaderBadgeClass(leaderName);
-                const customStyle = isAnchor ? "border: 2px solid #ef4444;" : "";
+                let badgeClass = "leader-badge ";
+                if (leaderName.includes("재경")) badgeClass += "leader-jaekyung";
+                else if (leaderName.includes("성철")) badgeClass += "leader-sungchul";
+                else if (leaderName.includes("개굴")) badgeClass += "leader-gaegool";
+                else badgeClass += "leader-jaekyung"; // 기본 모양
+                
+                let customStyle = isAnchor ? "border: 2px solid #ef4444;" : "";
+                
+                // 임의의 이름일 경우 눈에 띄게 보라색 배경 적용
+                if (!baseCycle.includes(leaderName)) {
+                    customStyle += "background-color: #8b5cf6; color: white;";
+                }
                 
                 let dayColor = "var(--text-main)";
                 let currentDayObj = new Date(y, m, d).getDay();
@@ -1402,7 +1401,7 @@ db.collection("posts").orderBy("timestamp","desc").onSnapshot(s => {
                 g.innerHTML += `
                     <div class="cal-day tap-effect" onclick="overrideLeader('${dStr}', '${leaderName}')" style="min-height: 65px; justify-content: flex-start; padding-top: 5px; background: white;">
                         <span style="color: ${dayColor}; font-weight: 900; font-size: 0.95rem;">${d}</span>
-                        <div class="leader-badge ${badgeClass}" style="${customStyle}">${leaderName}</div>
+                        <div class="${badgeClass}" style="${customStyle}">${leaderName}</div>
                     </div>
                 `;
             }
@@ -1411,30 +1410,29 @@ db.collection("posts").orderBy("timestamp","desc").onSnapshot(s => {
         async function overrideLeader(dStr, currentLeader) {
             if (!(await verifyAdmin())) return; 
             
-            const newLeader = prompt(`[${dStr}] 조장을 변경합니다.\n여기를 바꾸면 이후 근무자들도 '3일 로테이션'에 맞게 일괄 변경됩니다.\n(입력: 재경, 성철, 개굴)\n\n※ 이 기준점을 삭제하려면 '초기화' 또는 빈칸 입력`, currentLeader);
+            const newLeader = prompt(`[${dStr}] 조장을 변경합니다.\n\n👉 이곳에 새 이름(예: 용병, 김철수)을 넣으면 이후 3일마다 돌아오는 이 근무조의 스케줄이 모두 이 사람으로 일괄 교체됩니다.\n\n※ 변경을 취소하고 원래 패턴으로 복구하려면 내용을 다 지우고 '확인'을 누르세요.`, currentLeader);
             
             if (newLeader === null) return; 
             
             if (newLeader.trim() === "" || newLeader === "초기화") {
                 db.collection('leader_overrides').doc(dStr).delete().then(() => {
-                    showToast("기준점이 삭제되어 기존 패턴으로 복구됩니다.");
+                    showToast("변경이 취소되어 기존 근무표 패턴으로 복구됩니다.");
                     renderLeaderCalendar(leaderCurrentDate.getFullYear(), leaderCurrentDate.getMonth());
                 });
-            } else if (leaderCycle.includes(newLeader.trim())) {
+            } else {
                 db.collection('leader_overrides').doc(dStr).set({
                     date: dStr,
                     leader: newLeader.trim()
                 }).then(() => {
-                    showToast("이후 근무표가 일괄 변경되었습니다.");
+                    showToast(`'${newLeader.trim()}'(이)가 새 근무조로 일괄 적용되었습니다.`);
                     renderLeaderCalendar(leaderCurrentDate.getFullYear(), leaderCurrentDate.getMonth());
                 });
-            } else {
-                alert("⚠️ 오류: '재경', '성철', '개굴' 중에서 정확히 입력해 주세요.");
             }
-        }     
+        }
 </script>
 </body>
 </html>
+
 
 
 
