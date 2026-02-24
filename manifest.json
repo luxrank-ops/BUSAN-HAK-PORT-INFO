@@ -1,21 +1,9 @@
 {
-  "name": "BUSAN HAK PORT",
-  "short_name": "HAK PORT",
-  "start_url": "/BUSAN-HAK-PORT-INFO/index.html",
+  "name": "부산항 필수 앱 (BUSAN HAK PORT)",
+  "short_name": "부산항앱",
+  "start_url": "/index.html",
   "display": "standalone",
-  "background_color": "#1e3a8a",
-  "theme_color": "#1e40af",
-  "orientation": "portrait",
-  "icons": [
-    {
-      "src": "/BUSAN-HAK-PORT-INFO/icons/icon-192.png",
-      "sizes": "192x192",
-      "type": "image/png"
-    },
-    {
-      "src": "/BUSAN-HAK-PORT-INFO/icons/icon-512.png",
-      "sizes": "512x512",
-      "type": "image/png"
-    }
-  ]
+  "background_color": "#ffffff",
+  "theme_color": "#1e3a8a",
+  "icons": [{ "src": "icon.png", "sizes": "192x192", "type": "image/png" }]
 }
