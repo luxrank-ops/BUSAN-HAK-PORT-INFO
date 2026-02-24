@@ -13,8 +13,6 @@
 
     <link rel="icon" type="image/png" sizes="32x32" href="icon.png">
     <link rel="stylesheet" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.8/dist/web/static/pretendard.css" />
-<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6024353303588422"
-     crossorigin="anonymous"></script>
     <style>
         :root { --primary: #1e3a8a; --primary-light: #3b82f6; --accent: #f59e0b; --bg-color: #f3f4f6; --card-bg: rgba(255, 255, 255, 0.98); --text-main: #1f2937; --text-sub: #6b7280; --border: rgba(229, 231, 235, 0.9); --danger: #ef4444; --success: #10b981; }
         body.dark-mode { --primary: #60a5fa; --primary-light: #93c5fd; --accent: #fbbf24; --bg-color: #0f172a; --card-bg: rgba(30, 41, 59, 0.98); --text-main: #f3f4f6; --text-sub: #9ca3af; --border: rgba(55, 65, 81, 0.7); }
@@ -136,12 +134,10 @@
         .logout-btn { background: var(--text-sub); color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 0.75rem; font-weight: bold; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
 
-        /* [수정] 게시판 테이블 스타일 업데이트 */
         .board-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; margin-top: 10px; table-layout: fixed; }
         .board-table th { border-bottom: 2px solid var(--border); padding: 10px 4px; color: var(--text-sub); font-weight: 700; text-align: center; background: rgba(0,0,0,0.02); font-size: 0.85rem; }
         .board-table td { border-bottom: 1px solid var(--border); padding: 12px 4px; color: var(--text-main); vertical-align: middle; }
 
-        /* 컬럼별 스타일 */
         .board-no { text-align: center; width: 35px; color: var(--text-sub); font-size: 0.75rem; }
         .board-title { text-align: left; font-weight: 600; cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding-left: 8px; width: auto; }
         .board-date { text-align: center; font-size: 0.7rem; color: var(--text-sub); width: 90px; white-space: nowrap; }
@@ -150,32 +146,32 @@
         .board-content-row { display: none; background: rgba(0,0,0,0.015); }
         .board-content-row.show { display: table-row; }
         .board-content-box { padding: 15px 10px; text-align: left; word-break: break-all; font-size: 0.95rem; line-height: 1.6; white-space: pre-wrap; color: var(--text-main); }
-    /* 새 글 알림 뱃지 및 깜빡임 효과 */
-.badge-new {
-    background: #ef4444;
-    color: white;
-    font-size: 0.65rem;
-    font-weight: 900;
-    padding: 2px 6px;
-    border-radius: 10px;
-    margin-left: 6px;
-    vertical-align: middle;
-    animation: blink 1s infinite; /* 1초마다 무한 깜빡임 */
-}
-@keyframes blink {
-    0% { opacity: 1; }
-    50% { opacity: 0.2; }
-    100% { opacity: 1; }
-}
- /* 조장 근무일 캘린더 전용 스타일 */
+        
+        .badge-new {
+            background: #ef4444;
+            color: white;
+            font-size: 0.65rem;
+            font-weight: 900;
+            padding: 2px 6px;
+            border-radius: 10px;
+            margin-left: 6px;
+            vertical-align: middle;
+            animation: blink 1s infinite; 
+        }
+        @keyframes blink {
+            0% { opacity: 1; }
+            50% { opacity: 0.2; }
+            100% { opacity: 1; }
+        }
+        
         .leader-badge { font-size: 0.75rem; color: white; border-radius: 12px; padding: 3px 6px; margin-top: 5px; display: inline-block; font-weight: 800; white-space: nowrap; }
-        .leader-jaekyung { background-color: #374151; } /* 재경: 검정/회색 */
-        .leader-sungchul { background-color: #fbbf24; color: #000; } /* 성철: 노랑 */
-        .leader-gaegool { background-color: #3b82f6; } /* 임조: 파랑 */
-        .leader-custom { border: 2px solid #ef4444; box-shadow: 0 0 5px rgba(239,68,68,0.5); }    
- /* 근무일지 짝지(동료) 이름 표기용 뱃지 */
-        .coworker-badge { font-size: 0.65rem; color: #1e3a8a; background: rgba(59, 130, 246, 0.15); border-radius: 4px; padding: 2px 4px; margin-top: 2px; width: 95%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: center; font-weight: bold; }       
-    /* --- [설명서 반짝임 효과 CSS 시작] --- */
+        .leader-jaekyung { background-color: #374151; } 
+        .leader-sungchul { background-color: #fbbf24; color: #000; } 
+        .leader-gaegool { background-color: #3b82f6; } 
+        .leader-custom { border: 2px solid #ef4444; box-shadow: 0 0 5px rgba(239,68,68,0.5); }  
+        
+        .coworker-badge { font-size: 0.65rem; color: #1e3a8a; background: rgba(59, 130, 246, 0.15); border-radius: 4px; padding: 2px 4px; margin-top: 2px; width: 95%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: center; font-weight: bold; }        
+        
         @keyframes golden-glow {
             0% { box-shadow: 0 0 5px rgba(234, 179, 8, 0.4); border-color: rgba(234, 179, 8, 0.5); }
             50% { box-shadow: 0 0 20px rgba(234, 179, 8, 0.9), inset 0 0 10px rgba(254, 240, 138, 0.5); border-color: rgba(234, 179, 8, 1); }
@@ -186,7 +182,6 @@
             background: linear-gradient(135deg, #ffffff 0%, #fffcf0 100%);
             border: 2px solid #eab308;
         }
-        /* --- [설명서 반짝임 효과 CSS 끝] --- */
     </style>
 </head>
 <body>
@@ -208,15 +203,13 @@
     </div>
 
     <div class="container">
-<div id="main-manual-card" class="dash-card manual-card" style="margin-bottom: 25px;">
+        <div id="main-manual-card" class="dash-card manual-card" style="margin-bottom: 25px;">
             <div class="dash-header tap-effect" onclick="toggleDashItem('main-manual-card')" style="border-bottom: 2px dashed #eab308; padding: 15px;">
                 <span class="dash-title" style="color: #ca8a04; font-size: 1.15rem; font-weight: 900;">🌟 부산항 필수 앱 100% 활용 설명서</span>
                 <span class="toggle-icon" style="color:#ca8a04; font-weight:bold;">▼</span>
             </div>
             <div class="dash-content" style="padding: 20px; font-size: 0.95rem; line-height: 1.8; color: #333;">
-                
                 <p style="margin-bottom: 20px; font-size: 1.05rem;"><b>안녕하세요! 부산항(신항, 북항)에서 땀 흘려 일하시는 모든 현장 작업자 여러분, 정말 환영합니다.</b><br>이 앱은 복잡하고 위험한 항만 현장에서 여러분이 조금 더 안전하게 일하고, 일한 만큼의 월급을 정확하게 챙겨갈 수 있도록 돕기 위해 만들어진 <b>'내 손안의 똑똑한 비서'</b>입니다. 스마트폰이나 컴퓨터를 잘 다루지 못하는 분들도 누구나 쉽게 사용할 수 있도록, 이 앱에 있는 기능들을 어떻게 써먹으면 좋은지 아주 쉽고 자세하게 설명해 드릴게요. 천천히 읽어보시고 현장에서 꼭 활용해 보세요!</p>
-
                 <h4 style="color: #1d4ed8; margin-top: 25px; margin-bottom: 10px; font-size: 1.15rem; border-left: 4px solid #1d4ed8; padding-left: 10px;">💰 1. 내 월급은 내가 지킨다! '임금 계산기' 활용법</h4>
                 <p style="margin-bottom: 10px;">항만에서 일하다 보면 아침 출근, 저녁 출근, 심지어 밤을 새우는 철야 작업까지 근무 시간이 매일매일 뒤죽박죽일 때가 많죠? 게다가 밤 10시부터 다음 날 새벽 6시까지 일하면 법적으로 돈을 더 받아야 하고(야간근로수당), 비가 오거나 위험한 라싱(Lashing, 컨테이너 묶는 일) 작업을 하면 위험 수당도 붙습니다.</p>
                 <p style="margin-bottom: 15px;">이 복잡한 돈 계산을 머리로 하려면 너무 머리가 아픕니다. 그래서 이 앱에 <b>임금 계산기</b>를 만들었습니다!</p>
@@ -225,28 +218,24 @@
                     <li style="margin-bottom: 8px;"><b>메모장 활용:</b> "오늘 바람이 너무 불어서 크레인이 멈추는 바람에 2시간 대기했음" 같은 일기를 메모장에 적어두세요.</li>
                     <li><b>꿀팁:</b> 한 달 동안 매일매일 적어둔 기록을 모아서, 다음 달에 월급 명세서가 나왔을 때 비교해 보세요. 혹시라도 회사에서 실수로 내 수당을 빼먹지는 않았는지 완벽하게 확인할 수 있는 아주 훌륭한 증거 자료가 됩니다!</li>
                 </ul>
-
                 <h4 style="color: #1d4ed8; margin-top: 25px; margin-bottom: 10px; font-size: 1.15rem; border-left: 4px solid #1d4ed8; padding-left: 10px;">🚢 2. 헛걸음 방지! '배 들어오는 시간 & 날씨' 확인하기</h4>
                 <p style="margin-bottom: 10px;">항만 일은 배가 들어와야 시작할 수 있습니다. 그런데 배라는 게 항상 제시간에 도착하는 게 아니에요. 바다에 안개가 심하게 끼거나 태풍이 오면 배가 항구에 들어오지 못하고 바다 위에서 계속 기다려야 하거든요.</p>
                 <ul style="padding-left: 20px; margin-bottom: 20px; background: rgba(37, 99, 235, 0.05); padding: 15px 15px 15px 35px; border-radius: 8px;">
                     <li style="margin-bottom: 8px;"><b>이렇게 쓰세요:</b> 출근 전이나 휴식 시간에 <b>'도선 상황'</b>이나 <b>'실시간 날씨'</b> 버튼을 눌러보세요. 배를 안전하게 안내하는 도선사분들의 실제 스케줄을 바로 볼 수 있습니다.</li>
                     <li><b>꿀팁:</b> 만약 안개가 너무 짙어서 배 도착이 3시간 미뤄졌다는 걸 앱에서 미리 확인했다면? 추운 밖에서 무작정 떨며 기다릴 필요 없이, 휴게실에서 따뜻하게 3시간 더 쉬다가 나오면 됩니다. 내 체력은 소중하니까요!</li>
                 </ul>
-
                 <h4 style="color: #1d4ed8; margin-top: 25px; margin-bottom: 10px; font-size: 1.15rem; border-left: 4px solid #1d4ed8; padding-left: 10px;">🚧 3. 다치지 않고 퇴근하기 위한 '안전 수칙과 용어 사전'</h4>
                 <p style="margin-bottom: 10px;">항만에는 아파트 10층 높이의 거대한 크레인과, 컨테이너를 싣고 달리는 집채만 한 트럭(야드 트랙터)들이 쉴 새 없이 돌아다닙니다. 이런 기계들을 운전하는 기사님들은 기계가 워낙 커서 길을 걸어 다니는 사람을 잘 보지 못합니다(사각지대).</p>
                 <ul style="padding-left: 20px; margin-bottom: 20px; background: rgba(37, 99, 235, 0.05); padding: 15px 15px 15px 35px; border-radius: 8px;">
                     <li style="margin-bottom: 8px;"><b>안전 가이드:</b> 앱에 적혀 있는 안전 가이드를 꼭 읽어보세요. "크레인 아래로는 절대 지나가지 마라", "허락받지 않은 구역에는 들어가지 마라" 같은 생명과 직결되는 규칙들이 적혀 있습니다.</li>
                     <li><b>용어 사전:</b> 처음 일을 하러 오면 반장님들이 "에이프런으로 가!", "타다운 해!" 같은 어려운 외계어(?)를 씁니다. 당황하지 마시고 앱의 <b>'항만 용어 가이드'</b>에서 검색해 보세요. 모르는 단어도 금방 찾아서 베테랑처럼 일할 수 있습니다.</li>
                 </ul>
-
                 <h4 style="color: #1d4ed8; margin-top: 25px; margin-bottom: 10px; font-size: 1.15rem; border-left: 4px solid #1d4ed8; padding-left: 10px;">🗣️ 4. 동료들과 소통하는 '익명 게시판과 공지사항'</h4>
                 <p style="margin-bottom: 10px;">현장에서 일하다 보면 "어? 저기 바닥이 푹 파여서 넘어지기 딱 좋겠는데?" 혹은 "오늘 A 터미널 식당 밥 진짜 맛있네요!" 같은 이야기들을 나누고 싶을 때가 있습니다.</p>
                 <ul style="padding-left: 20px; margin-bottom: 20px; background: rgba(37, 99, 235, 0.05); padding: 15px 15px 15px 35px; border-radius: 8px;">
                     <li style="margin-bottom: 8px;"><b>익명 게시판:</b> 누구인지 이름을 밝히지 않고 편하게 글을 쓸 수 있는 공간입니다. 위험한 곳을 발견하면 이곳에 사진을 찍어 올려서 다른 동료들에게 조심하라고 알려주세요. 여러분의 글 하나가 동료가 다치는 걸 막아줄 수 있습니다.</li>
                     <li><b>공지사항:</b> 관리자가 전하는 아주 중요한 소식(태풍 대비 지시, 안전 교육 안내 등)이 올라오는 곳이니 매일 한 번씩 꼭 확인해 주셔야 합니다.</li>
                 </ul>
-
                 <div style="margin-top: 30px; background: #fffbeb; padding: 20px; border-radius: 10px; text-align: center; border: 2px solid #fde047; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
                     <strong style="color: #b45309; font-size: 1.1rem;">🌟 언제나 여러분의 안전이 1순위입니다! 🌟</strong>
                     <p style="margin: 10px 0 0 0; font-size: 0.95rem; color: #78350f; line-height: 1.6;">돈을 많이 버는 것도 좋지만, 가장 중요한 것은 다치지 않고 집에 있는 가족들 품으로 안전하게 퇴근하는 것입니다. 이 앱이 여러분의 스마트하고 안전한 일터 생활에 큰 도움이 되기를 진심으로 바랍니다. 오늘도 안전 작업 하십시오!</p>
@@ -255,7 +244,7 @@
         </div>
 
       <div class="dash-grid">
-<div id="wage-card" class="dash-card" style="border:1px solid var(--danger);">
+        <div id="wage-card" class="dash-card" style="border:1px solid var(--danger);">
             <div class="dash-header tap-effect" onclick="toggleDashItem('wage-card')">
                 <span class="dash-title" style="color:var(--danger);">💰 임금계산기</span>
                 <span class="toggle-icon">▼</span>
@@ -268,12 +257,12 @@
                 </div>
 
                 <div class="calc-layout">
-                 <div class="calc-left">
-                            <div class="wage-row"><label>시급(기본)</label><input type="number" id="wageHourly" class="input-field" value="10320" style="text-align:right; font-weight:bold; color:#ef4444; font-size:1.1rem;" readonly></div>
-                            <div class="wage-row"><label style="min-width: 65px;">🟢 근무시작</label><input type="datetime-local" id="wageStartDateTime" class="input-field" style="text-align:center; font-size:0.8rem; padding:0 5px;" onchange="calcTimeAndFill()"></div>
-                            <div class="wage-row"><label style="min-width: 65px;">🔴 근무종료</label><input type="datetime-local" id="wageEndDateTime" class="input-field" style="text-align:center; font-size:0.8rem; padding:0 5px;" onchange="calcTimeAndFill()"></div>
-                            <div class="wage-row"><label style="min-width: 65px;">⏳ 총근무</label><input type="number" id="wageTotalHours" class="input-field" placeholder="자동계산" style="text-align:right; font-weight:bold; color:var(--primary);" oninput="autoFillWeekendHoliday()"></div>
-                        </div>
+                    <div class="calc-left">
+                        <div class="wage-row"><label>시급(기본)</label><input type="number" id="wageHourly" class="input-field" value="10320" style="text-align:right; font-weight:bold; color:#ef4444; font-size:1.1rem;" readonly></div>
+                        <div class="wage-row"><label style="min-width: 65px;">🟢 근무시작</label><input type="datetime-local" id="wageStartDateTime" class="input-field" style="text-align:center; font-size:0.8rem; padding:0 5px;" onchange="calcTimeAndFill()"></div>
+                        <div class="wage-row"><label style="min-width: 65px;">🔴 근무종료</label><input type="datetime-local" id="wageEndDateTime" class="input-field" style="text-align:center; font-size:0.8rem; padding:0 5px;" onchange="calcTimeAndFill()"></div>
+                        <div class="wage-row"><label style="min-width: 65px;">⏳ 총근무</label><input type="number" id="wageTotalHours" class="input-field" placeholder="자동계산" style="text-align:right; font-weight:bold; color:var(--primary);" oninput="autoFillWeekendHoliday()"></div>
+                    </div>
                     <div class="calc-right">
                         <table class="ref-table">
                             <thead><tr><th>월(Month)</th><th>주간</th><th>야간</th></tr></thead>
@@ -286,7 +275,7 @@
                     </div>
                 </div>
 
-                <p style="font-size:0.75rem; color:var(--text-sub); margin:0; text-align:center;">※ 현재 월에 맞춰 주/야간 시간 및 주말 및 공휴일 수당도 날짜에 맞게 자동 적용됩니다.</p>
+                <p style="font-size:0.75rem; color:var(--text-sub); margin:0; text-align:center;">※ 현재 월에 맞춰 주/야간 시간이 자동 적용됩니다.</p>
                 <p style="font-size:0.8rem; color:#ef4444; font-weight:bold; margin:4px 0 12px 0; text-align:center;">더블 오더로 겹치는 시간은 별도로 시간을 계산 하여야 합니다!!</p>
                 <div style="border-top:1px dashed var(--border); margin:10px 0; padding-top:12px;">
                     <p style="font-size:0.85rem; color:var(--primary); font-weight:800; margin-bottom:8px;">✅ 추가 수당 시간 입력</p>
@@ -314,46 +303,46 @@
                 </div>
             </div>
         </div>
-            <div id="log-card" class="dash-card" style="border:1px solid var(--primary);">
-                <div class="dash-header tap-effect" onclick="toggleDashItem('log-card')">
-                    <span class="dash-title" style="color:var(--primary);">📅 스마트 근무일지(짝지및임금 장가능)</span><span class="toggle-icon">▼</span>
+
+        <div id="log-card" class="dash-card" style="border:1px solid var(--primary);">
+            <div class="dash-header tap-effect" onclick="toggleDashItem('log-card')">
+                <span class="dash-title" style="color:var(--primary);">📅 스마트 근무일지(짝지)</span><span class="toggle-icon">▼</span>
+            </div>
+            <div id="workLogArea" class="dash-content">
+                <div id="userProfileBar" class="user-auth-bar" style="display:none;">
+                    <div class="user-info"><span id="currentUserDisplay" class="user-name"></span><span class="user-status">🔒 내 저장소</span></div>
+                    <button class="logout-btn" onclick="logoutWorker()">로그아웃</button>
                 </div>
-                <div id="workLogArea" class="dash-content">
-                    <div id="userProfileBar" class="user-auth-bar" style="display:none;">
-                        <div class="user-info"><span id="currentUserDisplay" class="user-name"></span><span class="user-status">🔒 내 저장소</span></div>
-                        <button class="logout-btn" onclick="logoutWorker()">로그아웃</button>
-                    </div>
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
-                        <button class="mini-btn" style="padding:6px 12px; font-size:1rem;" onclick="changeMonth(-1)">◀</button>
-                        <span id="calMonthYear" style="font-weight:bold; font-size:1.1rem;"></span>
-                        <button class="mini-btn" style="padding:6px 12px; font-size:1rem;" onclick="changeMonth(1)">▶</button>
-                    </div>
-                  <div class="calendar-grid" style="grid-template-columns: repeat(7, 1fr); gap: 3px; text-align: center; font-size: 0.85rem; font-weight: 900; margin-bottom: 5px;">
-                        <div style="color:#ef4444;">일</div><div>월</div><div>화</div><div>수</div><div>목</div><div>금</div><div style="color:#3b82f6;">토</div>
-                    </div>
-                    <div id="calendarGrid" class="calendar-grid"></div>
-                    <div id="dailyLogForm" class="hidden" style="margin-top:20px; padding:15px; background:rgba(0,0,0,0.03); border-radius:12px; border:1px solid var(--border);">
-                        <h4 id="selectedDateText" style="margin:0 0 10px 0; color:var(--primary); text-align:center; font-size:1.1rem;"></h4>
-                        <div class="wage-row"><label>배이름</label><input type="text" id="logShipName" class="input-field" placeholder="작업 선박명"></div>
-                        <div style="display:flex; gap:10px; margin-bottom:8px; width:100%;">
-                            <div class="wage-row" style="flex:1; margin-bottom:0;"><label>임금1</label><input type="number" id="logWage1" class="input-field" placeholder="원"></div>
-                            <div class="wage-row" style="flex:1; margin-bottom:0;"><label>임금2</label><input type="number" id="logWage2" class="input-field" placeholder="원"></div>
-                        </div>
-                        <div class="wage-row"><label>근무자</label><input type="text" id="logCoworkers" class="input-field" placeholder="예: 재경, 성철 (2~4명)"></div>
-                        <textarea id="logMemo" class="input-field textarea-field" placeholder="작업 내용..."></textarea>
-                        <textarea id="logMemo" class="input-field textarea-field" placeholder="작업 내용..."></textarea>
-                        <label style="font-size:0.85rem; font-weight:bold; display:block; margin-top:10px; margin-bottom:4px;">📷 현장 사진</label>
-                        <input type="file" id="logImageInput" class="input-field" accept="image/*" onchange="previewLogImage(this)">
-                        <img id="logImagePreview" style="max-width:100%; border-radius:8px; margin-top:8px; display:none;" onclick="document.getElementById('imageModal').style.display='flex'; document.getElementById('modalImage').src=this.src;">
-                        <div style="display:flex; gap:10px; margin-top:15px;">
-                            <button id="saveLogBtn" class="action-btn bg-submit" onclick="trySaveWorkLog()">저장하기</button>
-                            <button class="action-btn bg-cancel" style="background:var(--danger);" onclick="deleteWorkLog()">삭제</button>
-                        </div>
-                    </div>
-                    <div id="monthlyTotalDisplay" style="text-align:center; margin-top:20px; font-weight:bold; color:var(--primary); font-size:1.2rem; border-top:1px dashed var(--border); padding-top:15px;">이번달 총액: 0원</div>
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+                    <button class="mini-btn" style="padding:6px 12px; font-size:1rem;" onclick="changeMonth(-1)">◀</button>
+                    <span id="calMonthYear" style="font-weight:bold; font-size:1.1rem;"></span>
+                    <button class="mini-btn" style="padding:6px 12px; font-size:1rem;" onclick="changeMonth(1)">▶</button>
                 </div>
+                <div class="calendar-grid" style="grid-template-columns: repeat(7, 1fr); gap: 3px; text-align: center; font-size: 0.85rem; font-weight: 900; margin-bottom: 5px;">
+                    <div style="color:#ef4444;">일</div><div>월</div><div>화</div><div>수</div><div>목</div><div>금</div><div style="color:#3b82f6;">토</div>
+                </div>
+                <div id="calendarGrid" class="calendar-grid"></div>
+                <div id="dailyLogForm" class="hidden" style="margin-top:20px; padding:15px; background:rgba(0,0,0,0.03); border-radius:12px; border:1px solid var(--border);">
+                    <h4 id="selectedDateText" style="margin:0 0 10px 0; color:var(--primary); text-align:center; font-size:1.1rem;"></h4>
+                    <div class="wage-row"><label>배이름</label><input type="text" id="logShipName" class="input-field" placeholder="작업 선박명"></div>
+                    <div style="display:flex; gap:10px; margin-bottom:8px; width:100%;">
+                        <div class="wage-row" style="flex:1; margin-bottom:0;"><label>임금1</label><input type="number" id="logWage1" class="input-field" placeholder="원"></div>
+                        <div class="wage-row" style="flex:1; margin-bottom:0;"><label>임금2</label><input type="number" id="logWage2" class="input-field" placeholder="원"></div>
+                    </div>
+                    <div class="wage-row"><label>근무자</label><input type="text" id="logCoworkers" class="input-field" placeholder="예: 재경, 성철 (2~4명)"></div>
+                    <textarea id="logMemo" class="input-field textarea-field" placeholder="작업 내용..."></textarea>
+                    <label style="font-size:0.85rem; font-weight:bold; display:block; margin-top:10px; margin-bottom:4px;">📷 현장 사진</label>
+                    <input type="file" id="logImageInput" class="input-field" accept="image/*" onchange="previewLogImage(this)">
+                    <img id="logImagePreview" style="max-width:100%; border-radius:8px; margin-top:8px; display:none;" onclick="document.getElementById('imageModal').style.display='flex'; document.getElementById('modalImage').src=this.src;">
+                    <div style="display:flex; gap:10px; margin-top:15px;">
+                        <button id="saveLogBtn" class="action-btn bg-submit" onclick="trySaveWorkLog()">저장하기</button>
+                        <button class="action-btn bg-cancel" style="background:var(--danger);" onclick="deleteWorkLog()">삭제</button>
+                    </div>
+                </div>
+                <div id="monthlyTotalDisplay" style="text-align:center; margin-top:20px; font-weight:bold; color:var(--primary); font-size:1.2rem; border-top:1px dashed var(--border); padding-top:15px;">이번달 총액: 0원</div>
             </div>
         </div>
+    </div>
 
         <div class="card" style="border-left: 5px solid #3b82f6;">
             <div class="section-header tap-effect" onclick="toggleSection('t3-content', this)"><span class="section-title">⛴️ 3항업 (신항 남측) ▼</span></div>
@@ -577,119 +566,6 @@
                                         <strong style="color:var(--danger);">⚠️ 안전팁:</strong> 터미널 스케줄과 베이 플랜을 사전에 정확히 숙지해야 오적재를 막고 작업 동선의 꼬임을 방지할 수 있습니다.
                                     </td>
                                 </tr>
-                                <tr>
-                                    <td class="board-no"><b>스태베도어</b><br>(Stevedore)</td>
-                                    <td class="board-title" style="text-align:left; font-size:0.85rem; line-height:1.5; white-space:normal; padding:10px; border-bottom:1px solid var(--border);">
-                                        넓은 의미로는 항만 하역 근로자 전체를 뜻하며, 현장에서는 본선 화물 적양하 작업을 총괄하고 지휘하는 선내 작업자를 지칭합니다.<br>
-                                        <strong style="color:var(--danger);">⚠️ 안전팁:</strong> 크레인 기사 및 야드 트랙터 운전자와의 정확한 수신호 및 무전 소통 체계 유지가 생명입니다.
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td class="board-no"><b>에이프런</b><br>(Apron)</td>
-                                    <td class="board-title" style="text-align:left; font-size:0.85rem; line-height:1.5; white-space:normal; padding:10px; border-bottom:1px solid var(--border);">
-                                        안벽 법선에서 상옥(창고) 사이의 개방된 공간으로, 갠트리 크레인이 가동되고 화물이 직접적으로 오가는 항만의 최전방 구역입니다.<br>
-                                        <strong style="color:var(--danger);">⚠️ 안전팁:</strong> 대형 장비의 이동이 끊임없이 일어나는 구역이므로 시야가 확보되는 안전조끼 및 안전모 착용은 필수입니다.
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td class="board-no"><b>갠트리 크레인</b><br>(Gantry Crane / QC)</td>
-                                    <td class="board-title" style="text-align:left; font-size:0.85rem; line-height:1.5; white-space:normal; padding:10px; border-bottom:1px solid var(--border);">
-                                        부두 안벽에 설치되어 본선과 에이프런 간 컨테이너를 직접 싣고 내리는 초대형 하역 장비(Quay Crane)입니다.<br>
-                                        <strong style="color:var(--danger);">⚠️ 안전팁:</strong> 스프레더에 매달린 컨테이너 하부로의 보행 및 대기는 치명적 중대재해를 유발하므로 절대 접근 금지입니다.
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td class="board-no"><b>야드 트랙터</b><br>(Yard Tractor / YT)</td>
-                                    <td class="board-title" style="text-align:left; font-size:0.85rem; line-height:1.5; white-space:normal; padding:10px; border-bottom:1px solid var(--border);">
-                                        에이프런과 마셜링 야드 사이를 오가며 섀시(Chassis)에 컨테이너를 싣고 운송하는 항만 전용 특수 차량입니다.<br>
-                                        <strong style="color:var(--danger);">⚠️ 안전팁:</strong> 운전석 구조상 우측 및 후방 사각지대가 매우 넓어 도보 이동자를 발견하기 어려우므로 YT 주행로 진입을 삼가야 합니다.
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td class="board-no"><b>해치 커버</b><br>(Hatch Cover)</td>
-                                    <td class="board-title" style="text-align:left; font-size:0.85rem; line-height:1.5; white-space:normal; padding:10px; border-bottom:1px solid var(--border);">
-                                        선박의 화물창(Hold)을 덮는 거대한 철제 뚜껑입니다. 컨테이너선의 경우 주로 폰툰(Pontoon) 타입을 들어 올려 개폐합니다.<br>
-                                        <strong style="color:var(--danger);">⚠️ 안전팁:</strong> 해치 커버 양하 시 크레인 스프레더의 핀 결합이 4모서리 모두 완벽히 이루어졌는지 육안으로 2차 확인해야 합니다.
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td class="board-no"><b>선석</b><br>(Berth)</td>
-                                    <td class="board-title" style="text-align:left; font-size:0.85rem; line-height:1.5; white-space:normal; padding:10px; border-bottom:1px solid var(--border);">
-                                        선박이 항구 내에 안전하게 접안하여 화물을 하역하거나 승하차할 수 있도록 바다 측에 지정된 주차 구역입니다.<br>
-                                        <strong style="color:var(--danger);">⚠️ 안전팁:</strong> 접안 작업 시 배를 끌어당기는 계류삭(Mooring Line)의 엄청난 장력을 주의하고 스냅백 존(Snap-back zone)을 피해야 합니다.
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td class="board-no"><b>스프레더</b><br>(Spreader)</td>
-                                    <td class="board-title" style="text-align:left; font-size:0.85rem; line-height:1.5; white-space:normal; padding:10px; border-bottom:1px solid var(--border);">
-                                        크레인 와이어 끝에 부착되어 컨테이너의 네 모서리를 핀으로 꽂아 들어 올리는 장치입니다. 20피트와 40피트 겸용이 많습니다.<br>
-                                        <strong style="color:var(--danger);">⚠️ 안전팁:</strong> 코너 캐스팅에 핀이 완전히 삽입되어 락(Lock) 램프가 점등되었는지 확인 후 권상(Hoisting)해야 낙하 사고를 막습니다.
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td class="board-no"><b>타다운</b><br>(Tie-down)</td>
-                                    <td class="board-title" style="text-align:left; font-size:0.85rem; line-height:1.5; white-space:normal; padding:10px; border-bottom:1px solid var(--border);">
-                                        태풍 등 기상 악화 시 하역 크레인이나 대형 장비가 강풍에 밀려 탈선하지 않도록 앵커 핀 등으로 지면 레일에 단단히 고정하는 작업입니다.<br>
-                                        <strong style="color:var(--danger);">⚠️ 안전팁:</strong> 순간 풍속 20m/s 이상 예보 시 즉각 터미널 통제에 따라 일제히 타다운 조치를 완료해야 합니다.
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td class="board-no"><b>리퍼 컨테이너</b><br>(Reefer Container)</td>
-                                    <td class="board-title" style="text-align:left; font-size:0.85rem; line-height:1.5; white-space:normal; padding:10px; border-bottom:1px solid var(--border);">
-                                        농수산물, 의약품 등 특정 온도 유지가 필수적인 화물을 운송하기 위해 자체 냉동/냉장 발전 설비가 부착된 특수 컨테이너입니다.<br>
-                                        <strong style="color:var(--danger);">⚠️ 안전팁:</strong> 야드 내 전원 플러그(Receptacle) 연결 및 해체 시 젖은 장갑 사용을 금지하여 고압 전류에 의한 감전을 예방하십시오.
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td class="board-no"><b>마셜링 야드</b><br>(Marshalling Yard)</td>
-                                    <td class="board-title" style="text-align:left; font-size:0.85rem; line-height:1.5; white-space:normal; padding:10px; border-bottom:1px solid var(--border);">
-                                        에이프런 바로 뒤편에 위치하며, 본선에 실을 수출 컨테이너를 선적 순서(베이 플랜)에 맞춰 임시로 대기시키고 정렬해 두는 구역입니다.
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td class="board-no"><b>만재흘수선</b><br>(Load Line)</td>
-                                    <td class="board-title" style="text-align:left; font-size:0.85rem; line-height:1.5; white-space:normal; padding:10px; border-bottom:1px solid var(--border);">
-                                        선박이 파도를 헤치며 안전하게 항해할 수 있는 최대 화물 적재 한계를 선체 외부 한가운데에 원반 마크로 표시한 한계선입니다.<br>
-                                        <strong style="color:var(--danger);">⚠️ 안전팁:</strong> 이 선을 초과하여 과적할 경우 선박의 부력과 복원력을 상실하여 침몰의 원인이 됩니다.
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td class="board-no"><b>흘수</b><br>(Draft)</td>
-                                    <td class="board-title" style="text-align:left; font-size:0.85rem; line-height:1.5; white-space:normal; padding:10px; border-bottom:1px solid var(--border);">
-                                        선박이 물에 떠 있을 때, 수면에서 선박의 가장 밑바닥(용골)까지 잠겨있는 수직 깊이를 의미합니다.<br>
-                                        <strong style="color:var(--danger);">⚠️ 안전팁:</strong> 부산항 등 항구 입항 시 해당 터미널 선석의 수심과 본선의 흘수를 반드시 비교하여 좌초 사고를 방지해야 합니다.
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td class="board-no"><b>도선사</b><br>(Pilot)</td>
-                                    <td class="board-title" style="text-align:left; font-size:0.85rem; line-height:1.5; white-space:normal; padding:10px; border-bottom:1px solid var(--border);">
-                                        항만에 입출항하는 대형 선박에 직접 탑승하여, 복잡한 항만 내의 안전한 수로로 안내하고 정밀한 접안을 지휘하는 최고급 해기사입니다.
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td class="board-no"><b>바우 스러스터</b><br>(Bow Thruster)</td>
-                                    <td class="board-title" style="text-align:left; font-size:0.85rem; line-height:1.5; white-space:normal; padding:10px; border-bottom:1px solid var(--border);">
-                                        선박의 뱃머리(선수) 아랫부분에 설치되어 좌우 방향으로 추진력을 발생시키는 장치로, 예인선 없이도 미세한 접안 조종을 돕습니다.
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td class="board-no"><b>쇼어링 / 초킹</b><br>(Shoring / Chocking)</td>
-                                    <td class="board-title" style="text-align:left; font-size:0.85rem; line-height:1.5; white-space:normal; padding:10px; border-bottom:1px solid var(--border);">
-                                        컨테이너 내부의 화물이 해상 운송 중 파도에 의해 흔들리거나 파손되지 않도록, 목재나 에어백 등을 이용해 빈 공간을 지지하는 작업입니다.
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td class="board-no"><b>검수</b><br>(Tally)</td>
-                                    <td class="board-title" style="text-align:left; font-size:0.85rem; line-height:1.5; white-space:normal; padding:10px; border-bottom:1px solid var(--border);">
-                                        화물이 본선에 적재되거나 양하될 때, 컨테이너의 외관 파손 여부, 특수 씰(Seal) 번호 일치 여부를 실시간으로 확인하고 기록하는 절차입니다.
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td class="board-no"><b>TEU</b><br>(Twenty-foot Eq)</td>
-                                    <td class="board-title" style="text-align:left; font-size:0.85rem; line-height:1.5; white-space:normal; padding:10px; border-bottom:1px solid var(--border);">
-                                        20피트 길이의 규격 컨테이너 1개를 나타내는 단위로, 터미널의 물동량 처리 능력과 선박의 크기를 평가하는 전 세계 공통 기준입니다.
-                                    </td>
-                                </tr>
                             </tbody>
                         </table>
                     </div>
@@ -720,7 +596,7 @@
         <footer><p>© 2026 BUSAN HAK PORT INFO. All rights reserved.</p><div style="margin-top:10px;"><span class="footer-link" onclick="openPrivacy()">개인정보처리방침</span></div></footer>
     </div>
 
-    <nav class="bottom-nav"><div class="nav-item active tap-effect" onclick="scrollToTop()">🏠 홈</div><div class="nav-item tap-effect" onclick="toggleDashItem('board-card')">💬 톡톡</div><div class="nav-item tap-effect" onclick="toggleDashItem('ship-card')">🚢 선박</div><div class="nav-item tap-effect" onclick="toggleDashItem('file-card')">📂 자료</div></nav>
+    <nav class="bottom-nav"><div class="nav-item active tap-effect" onclick="scrollToTop()">🏠 홈</div><div class="nav-item tap-effect" onclick="toggleDashItem('board-card')">💬 톡톡</div><div class="nav-item tap-effect" onclick="toggleDashItem('ship-card')">🚢 선박</div><div class="nav-item tap-effect" onclick="toggleDashItem('archive-card')">📂 자료</div></nav>
     <div id="toast">알림</div>
     <div id="leaderCalendarModal" class="modal-overlay" style="display:none;" onclick="closeLeaderCalendar()">
         <div class="modal-content" onclick="event.stopPropagation()" style="background:#f3f4f6;">
@@ -737,7 +613,7 @@
             <p style="font-size:0.75rem; color:var(--text-sub); text-align:center; margin-top:10px;">※ 날짜를 터치하면 근무자를 임의로 변경할 수 있습니다. (Admin 전용)</p>
             <button class="action-btn bg-cancel" style="margin-top:10px;" onclick="closeLeaderCalendar()">닫기</button>
         </div>
-    </div>    
+    </div>  
     <div id="imageModal" class="modal-overlay" onclick="closeImageModal()"><div class="modal-content" onclick="event.stopPropagation()"><img id="modalImage" class="modal-img"><button class="action-btn bg-cancel" onclick="closeImageModal()">닫기</button></div></div>
     <div id="privacyModal" class="modal-overlay" onclick="document.getElementById('privacyModal').style.display='none'"><div class="modal-content"><h3>🛡️ 개인정보처리방침</h3><p>본 사이트는 구글 애드센스 광고를 게재하며 쿠키를 사용합니다. 근무 기록 및 게시물 데이터는 Firebase 서버에 안전하게 보관됩니다.</p><button class="action-btn" onclick="document.getElementById('privacyModal').style.display='none'">닫기</button></div></div>
     <div id="tickerManageModal" class="modal-overlay" onclick="document.getElementById('tickerManageModal').style.display='none'"><div class="modal-content" onclick="event.stopPropagation()"><h3 style="margin-top:0;">⚙️ 알림글 삭제</h3><div id="tickerListContainer"></div><button class="action-btn bg-cancel" onclick="document.getElementById('tickerManageModal').style.display='none'" style="margin-top:10px;">닫기</button></div></div>
@@ -751,37 +627,230 @@
             <button class="action-btn bg-cancel" onclick="closeLoginModal()">취소</button>
         </div>
     </div>
+
     <script>
 /* 1️⃣ Firebase 설정 */
 const firebaseConfig = {
     apiKey: "AIzaSyBWFZr9TE9yybZJCJjEXSsv1YCpGkVb0kA",
     authDomain: "busan-hak-port.firebaseapp.com",
     projectId: "busan-hak-port",
-    // 👇 반드시 .firebasestorage.app 으로 끝나야 합니다! (오타 주의)
     storageBucket: "busan-hak-port.firebasestorage.app", 
     messagingSenderId: "616469111502",
     appId: "1:616469111502:web:6f3c94b15e444e04c7669f",
     measurementId: "G-QQ728TDFJ2"
 };
-// Firebase 초기화
-if (!firebase.apps.length) {
-    firebase.initializeApp(firebaseConfig);
+if (!firebase.apps.length) { firebase.initializeApp(firebaseConfig); }
+const db = firebase.firestore();
+const storage = firebase.storage();
+db.enablePersistence({ synchronizeTabs: true }).catch(err => { console.warn("Persistence Error:", err.code); });
+
+/* 2️⃣ 전역 변수 */
+let allPostsData=[], allShipsData=[], filteredShips=[], adminWorkLogs={};
+let currentDate = new Date();
+let currentWorkerId = localStorage.getItem('myWorkerId'); 
+let commentUnsubscribes = {};
+const postsPerPage = 5;
+let globalTickerData = { adminMessage: "", userMessages: [] };
+
+/* 3️⃣ 함수 선언 */
+async function safeGet(ref) { if (!ref) return null; try { return await ref.get(); } catch (e) { return null; } }
+async function verifyAdmin(){ return prompt("Admin PW:") === "0346"; }
+
+function toggleDashItem(id){ 
+    const c = document.getElementById(id);
+    if(!c) return; 
+    const e = c.classList.contains('expanded'); 
+    document.querySelectorAll('.dash-card').forEach(x=>{
+        x.classList.remove('expanded'); 
+        const content = x.querySelector('.dash-content');
+        if(content) content.style.display='none';
+    }); 
+    if(!e){
+        c.classList.add('expanded'); 
+        const content = c.querySelector('.dash-content');
+        if(content) content.style.display='block'; 
+        if(id === 'log-card') renderCalendar(currentDate.getFullYear(), currentDate.getMonth()); 
+    }
 }
-  // --- [주말 및 2026년 공휴일 자동 인식 로직 시작] ---
-// --- [스마트 임금계산기: 시작/종료 풀-오토 시간 계산 로직 시작] ---
-<div class="calc-left">
-                            <div class="wage-row"><label>시급(기본)</label><input type="number" id="wageHourly" class="input-field" value="10320" style="text-align:right; font-weight:bold; color:#ef4444; font-size:1.1rem;" readonly></div>
-                            <div class="wage-row"><label style="min-width: 65px;">🟢 근무시작</label><input type="datetime-local" id="wageStartDateTime" class="input-field" style="text-align:center; font-size:0.8rem; padding:0 5px;" onchange="calcTimeAndFill()"></div>
-                            <div class="wage-row"><label style="min-width: 65px;">🔴 근무종료</label><input type="datetime-local" id="wageEndDateTime" class="input-field" style="text-align:center; font-size:0.8rem; padding:0 5px;" onchange="calcTimeAndFill()"></div>
-                            <div class="wage-row"><label style="min-width: 65px;">⏳ 총근무</label><input type="number" id="wageTotalHours" class="input-field" placeholder="자동계산" style="text-align:right; font-weight:bold; color:var(--primary);" oninput="autoFillWeekendHoliday()"></div>
-                        </div>
-                        ```
+function toggleSection(id){ document.getElementById(id).classList.toggle('collapsed'); }
+function toggleContent(id){ const e=document.getElementById(id); e.style.display=(e.style.display==='block'?'none':'block'); }
+function toggleHidden(id){ document.getElementById(id).classList.toggle('hidden'); }
+function toggleDarkMode(){ document.body.classList.toggle('dark-mode'); }
+function scrollToTop(){ window.scrollTo({top:0, behavior:'smooth'}); }
+function showToast(m){const t=document.getElementById("toast"); t.innerText=m; t.classList.add("show"); setTimeout(()=>t.classList.remove("show"),3000);}
 
-### 💡 [2단계] 계산기 두뇌 (JavaScript) 교체
-코드 맨 밑 `<script>` 영역으로 내려가셔서, 아까 넣었던 `const publicHolidays = ...` 부분부터 `function calculateWage() { ... }` 끝나는 곳까지 싹 드래그해서 지우시고, **아래 코드로 쾅! 덮어써 주십시오.** (에러 방어 코드를 떡칠해 두어서 절대 멈추지 않습니다!)
+function loadBanner(){ 
+    db.collection('settings').doc('banner').onSnapshot((doc) => {
+        if(!doc.exists) { document.getElementById('tickerText').innerText = "🚨 안전 제일! 오늘도 무사고!"; return; }
+        globalTickerData = doc.data(); 
+        let msg = "";
+        if(globalTickerData.adminMessage) msg += `📢 ${globalTickerData.adminMessage}   ///   `;
+        if(globalTickerData.userMessages && globalTickerData.userMessages.length > 0) {
+            msg += globalTickerData.userMessages.map((m,i) => `${i+1}. ${m}`).join("   ///   ");
+        }
+        document.getElementById('tickerText').innerText = msg || "🚨 안전 제일! 오늘도 무사고!";
+    });
+}
+function writeUserTicker(){ 
+    const m = prompt("현장 안전 문구 입력:");
+    if(!m) return;
+    let msgs = globalTickerData.userMessages || [];
+    msgs.unshift(m); if(msgs.length > 3) msgs = msgs.slice(0, 3);
+    db.collection('settings').doc('banner').set({ userMessages: msgs }, { merge: true }).then(() => showToast("등록됨")).catch((e) => alert("실패: " + e.message));
+}
+async function setAdminTicker(){ if(await verifyAdmin()){ const m = prompt("관리자 공지:"); if(m) db.collection('settings').doc('banner').set({adminMessage:m}, {merge:true}); } }
+async function openTickerManager(){ if(await verifyAdmin()){ document.getElementById('tickerManageModal').style.display='flex'; renderTickerList(); } }
 
-```javascript
-// 👇 여기서부터 복사하세요 👇
+function renderTickerList() {
+    const listContainer = document.getElementById('tickerListContainer');
+    listContainer.innerHTML = '';
+    const data = globalTickerData; 
+    let hasData = false;
+    if (data.adminMessage) { hasData = true; listContainer.innerHTML += `<div class="ticker-manage-item"><span style="color:red; flex:1;">📢 [관리자] ${data.adminMessage}</span><button onclick="deleteTickerMsg('admin', 0)" class="mini-btn btn-del-mini">삭제</button></div>`; }
+    if (data.userMessages) { data.userMessages.forEach((m, i) => { hasData = true; listContainer.innerHTML += `<div class="ticker-manage-item"><span style="flex:1;">${i + 1}. ${m}</span><button onclick="deleteTickerMsg('user', ${i})" class="mini-btn btn-del-mini">삭제</button></div>`; }); }
+    if (!hasData) listContainer.innerHTML = '<div style="padding:10px; text-align:center;">내용 없음</div>';
+}
+async function deleteTickerMsg(type, index){ 
+    if(!confirm("삭제?")) return;
+    if(type === 'admin') { delete globalTickerData.adminMessage; await db.collection('settings').doc('banner').update({ adminMessage: firebase.firestore.FieldValue.delete() }); } 
+    else { globalTickerData.userMessages.splice(index, 1); await db.collection('settings').doc('banner').update({ userMessages: globalTickerData.userMessages }); }
+    renderTickerList(); showToast("삭제됨");
+}
+
+function renderCalendar(y, m){
+    const g = document.getElementById('calendarGrid'); g.innerHTML = "";
+    document.getElementById('calMonthYear').innerText = `${y}년 ${m+1}월`;
+    const fD = new Date(y, m, 1).getDay(), lD = new Date(y, m+1, 0).getDate();
+    for(let i=0; i<fD; i++) g.innerHTML += `<div></div>`;
+    for(let d=1; d<=lD; d++){
+        const dStr = `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+        let dayColor = "var(--text-main)";
+        let currentDayObj = new Date(y, m, d).getDay();
+        if (currentDayObj === 0) dayColor = "#ef4444"; 
+        if (currentDayObj === 6) dayColor = "#3b82f6";
+        g.innerHTML += `<div id="cal-day-${d}" class="cal-day tap-effect" onclick="clickDate('${dStr}')" style="color: ${dayColor};">${d}<div class="cal-dot"></div></div>`;
+    }
+    if(currentWorkerId) {
+        const sDate = `${y}-${String(m+1).padStart(2,'0')}-01`, eDate = `${y}-${String(m+1).padStart(2,'0')}-${lD}`;
+        db.collection('work_logs').where('date', '>=', sDate).where('date', '<=', eDate).get().then(s => {
+            adminWorkLogs = {}; let total = 0;
+            s.forEach(doc => {
+                const data = doc.data();
+                if(data.workerId === currentWorkerId) {
+                    adminWorkLogs[data.date] = data; 
+                    const day = parseInt(data.date.split('-')[2]);
+                    const el = document.getElementById(`cal-day-${day}`);
+                    if(el) {
+                        el.classList.add('has-data');
+                        if (data.coworkers) {
+                            if (!el.querySelector('.coworker-badge')) {
+                                el.innerHTML += `<div class="coworker-badge">${data.coworkers}</div>`;
+                            } else {
+                                el.querySelector('.coworker-badge').innerText = data.coworkers;
+                            }
+                        }
+                    }
+                    total += (data.totalPay || 0);
+                }
+            });
+            document.getElementById('monthlyTotalDisplay').innerText = `이번달 총액: ${total.toLocaleString()}원`;
+        });
+    }
+}
+
+function clickDate(dStr){
+    document.getElementById('selectedDateText').innerText = dStr;
+    document.getElementById('dailyLogForm').classList.remove('hidden');
+    document.getElementById('dailyLogForm').setAttribute('data-date', dStr);
+    const d = adminWorkLogs[dStr];
+    document.getElementById('logShipName').value = d ? (d.shipName || '') : '';
+    document.getElementById('logWage1').value = d ? (d.wage1 || '') : '';
+    document.getElementById('logWage2').value = d ? (d.wage2 || '') : '';
+    document.getElementById('logCoworkers').value = d ? (d.coworkers || '') : ''; 
+    document.getElementById('logMemo').value = d ? d.memo : '';
+    const img = document.getElementById('logImagePreview');
+    if(d && d.imageUrl){ img.src = d.imageUrl; img.style.display = 'block'; } else { img.style.display = 'none'; img.src = ""; }
+    document.getElementById('logImageInput').value = ''; 
+}
+
+function trySaveWorkLog(){ if(currentWorkerId) saveWorkLog(); else document.getElementById('loginModal').style.display = 'flex'; }
+
+async function confirmLoginAndSave(){
+    const nick = document.getElementById('loginNick').value.trim(), pw = document.getElementById('loginPw').value.trim();
+    if(!nick || !pw) return alert("입력 필요");
+    const userRef = db.collection('user_profiles').doc(nick);
+    const doc = await safeGet(userRef);
+    if (doc && doc.exists && doc.data().password !== pw) return alert("비번 틀림");
+    if (!doc || !doc.exists) await userRef.set({ password: pw });
+    loginSuccess(nick); closeLoginModal(); saveWorkLog();
+}
+
+function saveWorkLog(){
+    const btn = document.getElementById('saveLogBtn');
+    const dStr = document.getElementById('dailyLogForm').getAttribute('data-date');
+    if(!dStr) { alert("날짜가 선택되지 않았습니다."); return; }
+
+    btn.innerText = "저장 중... (0%)";
+    btn.disabled = true;
+
+    const shipNameInfo = document.getElementById('logShipName').value.trim();
+    const w1 = parseFloat(document.getElementById('logWage1').value) || 0;
+    const w2 = parseFloat(document.getElementById('logWage2').value) || 0;
+    const coworkersInfo = document.getElementById('logCoworkers').value.trim(); 
+    const memo = document.getElementById('logMemo').value;
+    const file = document.getElementById('logImageInput').files[0];
+    const pay = w1 + w2;
+    const docId = `${currentWorkerId}_${dStr}`;
+
+    const finalizeSave = (url) => {
+        btn.innerText = "데이터 기록 중...";
+        const logData = { date: dStr, workerId: currentWorkerId, shipName: shipNameInfo, wage1: w1, wage2: w2, coworkers: coworkersInfo, memo: memo, totalPay: pay, imageUrl: url };
+        db.collection('work_logs').doc(docId).set(logData, {merge: true}).then(() => {
+            btn.innerText = "✅ 저장 완료!"; btn.style.background = "var(--success)"; showToast("저장되었습니다.");
+            adminWorkLogs[dStr] = logData; renderCalendar(currentDate.getFullYear(), currentDate.getMonth());
+            setTimeout(() => { btn.innerText = "저장하기"; btn.style.background = "#ef4444"; btn.disabled = false; }, 1500);
+        }).catch(err => { alert("데이터베이스 저장 실패: " + err.message); btn.innerText = "저장하기"; btn.disabled = false; });
+    };
+
+    if(file) {
+        const storageRef = storage.ref(`logs/${currentWorkerId}/${Date.now()}_${file.name}`);
+        const uploadTask = storageRef.put(file);
+        uploadTask.on('state_changed', 
+            (snapshot) => { const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100; btn.innerText = `업로드 중... ${Math.round(progress)}%`; }, 
+            (error) => { alert("사진 업로드 실패: " + error.message); btn.innerText = "저장하기"; btn.disabled = false; }, 
+            () => { uploadTask.snapshot.ref.getDownloadURL().then((downloadURL) => { finalizeSave(downloadURL); }); }
+        );
+    } else {
+        const existingUrl = adminWorkLogs[dStr] ? adminWorkLogs[dStr].imageUrl : null;
+        finalizeSave(existingUrl);
+    }
+}
+
+function loginSuccess(name) { currentWorkerId = name; localStorage.setItem('myWorkerId', currentWorkerId); updateUserBar(); renderCalendar(currentDate.getFullYear(), currentDate.getMonth()); }
+function closeLoginModal(){ document.getElementById('loginModal').style.display = 'none'; }
+function updateUserBar() { document.getElementById('userProfileBar').style.display = currentWorkerId ? 'flex' : 'none'; if(currentWorkerId) document.getElementById('currentUserDisplay').innerText = `👤 ${currentWorkerId}`; }
+function logoutWorker() { if(confirm("로그아웃?")) { currentWorkerId = null; localStorage.removeItem('myWorkerId'); updateUserBar(); renderCalendar(currentDate.getFullYear(), currentDate.getMonth()); document.getElementById('dailyLogForm').classList.add('hidden'); } }
+
+function deleteWorkLog(){
+    if(!currentWorkerId) return;
+    if(!confirm("정말 삭제하시겠습니까?")) return;
+    const dStr = document.getElementById('dailyLogForm').getAttribute('data-date');
+    db.collection('work_logs').doc(`${currentWorkerId}_${dStr}`).delete().then(()=>{
+        showToast("삭제되었습니다.");
+        document.getElementById('logShipName').value=''; document.getElementById('logWage1').value=''; document.getElementById('logWage2').value=''; document.getElementById('logCoworkers').value=''; document.getElementById('logMemo').value=''; document.getElementById('logImageInput').value = '';
+        const imgPreview = document.getElementById('logImagePreview');
+        if(imgPreview) { imgPreview.src = ''; imgPreview.style.display = 'none'; }
+        renderCalendar(currentDate.getFullYear(), currentDate.getMonth());
+    }).catch(err => alert("삭제 실패: " + err.message));
+}
+function changeMonth(s){ currentDate.setMonth(currentDate.getMonth()+s); renderCalendar(currentDate.getFullYear(), currentDate.getMonth()); }
+function previewLogImage(input){ if(input.files&&input.files[0]){ const r=new FileReader(); r.onload=e=>{const i=document.getElementById('logImagePreview'); i.src=e.target.result; i.style.display='block';}; r.readAsDataURL(input.files[0]); } }
+
+function renderRow(label, amt, color = "inherit") {
+    return `<tr><td style="padding: 8px 0; color: var(--text-sub);">${label}</td><td style="text-align: right; font-weight: bold; color: ${color};">${amt.toLocaleString()}원</td></tr>`;
+}
+
+// 스마트 임금계산기 풀-오토 계산 로직
 const publicHolidays = [
     '2026-01-01', '2026-02-16', '2026-02-17', '2026-02-18', 
     '2026-03-01', '2026-03-02', '2026-05-05', '2026-05-24', 
@@ -794,15 +863,10 @@ function calcTimeAndFill() {
     try {
         const startVal = document.getElementById('wageStartDateTime').value;
         const endVal = document.getElementById('wageEndDateTime').value;
-        
         if(startVal && endVal) {
-            const startD = new Date(startVal);
-            const endD = new Date(endVal);
-            const diffMs = endD.getTime() - startD.getTime();
-            
+            const diffMs = new Date(endVal).getTime() - new Date(startVal).getTime();
             if(diffMs > 0) {
-                const hours = Math.floor(diffMs / (1000 * 60 * 60)); 
-                document.getElementById('wageTotalHours').value = hours;
+                document.getElementById('wageTotalHours').value = Math.floor(diffMs / 3600000); 
             } else {
                 document.getElementById('wageTotalHours').value = '';
             }
@@ -909,989 +973,94 @@ function calculateWage() {
 
     } catch (e) { console.error(e); alert("계산 오류: 입력창 값을 확인해주세요."); }
 }
-// 👆 여기까지 덮어쓰세요 👆
-// --- [스마트 임금계산기: 시작/종료 풀-오토 시간 계산 로직 끝] ---
-const db = firebase.firestore();
-const storage = firebase.storage();
-// 오프라인 영속성
-db.enablePersistence({ synchronizeTabs: true }).catch(err => {
-    console.warn("Persistence Error:", err.code);
-});
 
-/* 2️⃣ 전역 변수 */
-let allPostsData=[], allShipsData=[], filteredShips=[], adminWorkLogs={};
-let currentDate = new Date();
-let currentWorkerId = localStorage.getItem('myWorkerId'); 
-let commentUnsubscribes = {};
-const postsPerPage = 5;
-
-// 티커 데이터
-let globalTickerData = { adminMessage: "", userMessages: [] };
-
-/* 3️⃣ 함수 선언 */
-
-// --- [A] 공통 유틸리티 ---
-async function safeGet(ref) {
-    if (!ref) return null;
-    try { return await ref.get(); } catch (e) { console.warn("조회 실패:", e); return null; }
-}
-async function verifyAdmin(){ return prompt("Admin PW:") === "0346"; }
-
-function toggleDashItem(id){ 
-    const c = document.getElementById(id);
-    if(!c) return; 
-    const e = c.classList.contains('expanded'); 
-    document.querySelectorAll('.dash-card').forEach(x=>{
-        x.classList.remove('expanded'); 
-        const content = x.querySelector('.dash-content');
-        if(content) content.style.display='none';
-    }); 
-    if(!e){
-        c.classList.add('expanded'); 
-        const content = c.querySelector('.dash-content');
-        if(content) content.style.display='block'; 
-        if(id === 'log-card') renderCalendar(currentDate.getFullYear(), currentDate.getMonth()); 
-    }
-}
-function toggleSection(id){ document.getElementById(id).classList.toggle('collapsed'); }
-function toggleContent(id){ const e=document.getElementById(id); e.style.display=(e.style.display==='block'?'none':'block'); }
-function toggleHidden(id){ document.getElementById(id).classList.toggle('hidden'); }
-function toggleDarkMode(){ document.body.classList.toggle('dark-mode'); }
-function scrollToTop(){ window.scrollTo({top:0, behavior:'smooth'}); }
-function showToast(m){const t=document.getElementById("toast"); t.innerText=m; t.classList.add("show"); setTimeout(()=>t.classList.remove("show"),3000);}
-
-// --- [B] 배너 관리 ---
-function loadBanner(){ 
-    db.collection('settings').doc('banner').onSnapshot((doc) => {
-        if(!doc.exists) { document.getElementById('tickerText').innerText = "🚨 안전 제일! 오늘도 무사고!"; return; }
-        globalTickerData = doc.data(); 
-        let msg = "";
-        if(globalTickerData.adminMessage) msg += `📢 ${globalTickerData.adminMessage}   ///   `;
-        if(globalTickerData.userMessages && globalTickerData.userMessages.length > 0) {
-            msg += globalTickerData.userMessages.map((m,i) => `${i+1}. ${m}`).join("   ///   ");
-        }
-        document.getElementById('tickerText').innerText = msg || "🚨 안전 제일! 오늘도 무사고!";
-    });
-}
-function writeUserTicker(){ 
-    const m = prompt("현장 안전 문구 입력:");
-    if(!m) return;
-    let msgs = globalTickerData.userMessages || [];
-    msgs.unshift(m); if(msgs.length > 3) msgs = msgs.slice(0, 3);
-    db.collection('settings').doc('banner').set({ userMessages: msgs }, { merge: true })
-        .then(() => showToast("등록됨")).catch((e) => alert("실패: " + e.message));
-}
-async function setAdminTicker(){ if(await verifyAdmin()){ const m = prompt("관리자 공지:"); if(m) db.collection('settings').doc('banner').set({adminMessage:m}, {merge:true}); } }
-async function openTickerManager(){ if(await verifyAdmin()){ document.getElementById('tickerManageModal').style.display='flex'; renderTickerList(); } }
-
-function renderTickerList() {
-    const listContainer = document.getElementById('tickerListContainer');
-    listContainer.innerHTML = '';
-    const data = globalTickerData; 
-    let hasData = false;
-    if (data.adminMessage) { hasData = true; listContainer.innerHTML += `<div class="ticker-manage-item"><span style="color:red; flex:1;">📢 [관리자] ${data.adminMessage}</span><button onclick="deleteTickerMsg('admin', 0)" class="mini-btn btn-del-mini">삭제</button></div>`; }
-    if (data.userMessages) { data.userMessages.forEach((m, i) => { hasData = true; listContainer.innerHTML += `<div class="ticker-manage-item"><span style="flex:1;">${i + 1}. ${m}</span><button onclick="deleteTickerMsg('user', ${i})" class="mini-btn btn-del-mini">삭제</button></div>`; }); }
-    if (!hasData) listContainer.innerHTML = '<div style="padding:10px; text-align:center;">내용 없음</div>';
-}
-async function deleteTickerMsg(type, index){ 
-    if(!confirm("삭제?")) return;
-    if(type === 'admin') { delete globalTickerData.adminMessage; await db.collection('settings').doc('banner').update({ adminMessage: firebase.firestore.FieldValue.delete() }); } 
-    else { globalTickerData.userMessages.splice(index, 1); await db.collection('settings').doc('banner').update({ userMessages: globalTickerData.userMessages }); }
-    renderTickerList(); showToast("삭제됨");
-}
-
-// --- [C] 근무일지 (저장/삭제 시 자동 새로고침 적용) ---
-function renderCalendar(y, m){
-    const g = document.getElementById('calendarGrid'); g.innerHTML = "";
-    document.getElementById('calMonthYear').innerText = `${y}년 ${m+1}월`;
-    const fD = new Date(y, m, 1).getDay(), lD = new Date(y, m+1, 0).getDate();
-    for(let i=0; i<fD; i++) g.innerHTML += `<div></div>`;
-   for(let d=1; d<=lD; d++){
-        const dStr = `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-        
-        // --- 요일별 색상 구분 로직 시작 ---
-        let dayColor = "var(--text-main)";
-        let currentDayObj = new Date(y, m, d).getDay();
-        if (currentDayObj === 0) dayColor = "#ef4444"; // 일요일은 빨간색
-        if (currentDayObj === 6) dayColor = "#3b82f6"; // 토요일은 파란색
-        // --- 요일별 색상 구분 로직 끝 ---
-
-        g.innerHTML += `<div id="cal-day-${d}" class="cal-day tap-effect" onclick="clickDate('${dStr}')" style="color: ${dayColor};">${d}<div class="cal-dot"></div></div>`;
-    }
-    if(currentWorkerId) {
-        const sDate = `${y}-${String(m+1).padStart(2,'0')}-01`, eDate = `${y}-${String(m+1).padStart(2,'0')}-${lD}`;
-        db.collection('work_logs').where('date', '>=', sDate).where('date', '<=', eDate).get().then(s => {
-            adminWorkLogs = {}; let total = 0;
-            s.forEach(doc => {
-                const data = doc.data();
-                if(data.workerId === currentWorkerId) {
-                    adminWorkLogs[data.date] = data; 
-                    const day = parseInt(data.date.split('-')[2]);
-                    const el = document.getElementById(`cal-day-${day}`);
-                    if(el) {
-                        el.classList.add('has-data');
-                        if (data.coworkers) {
-                            if (!el.querySelector('.coworker-badge')) {
-                                el.innerHTML += `<div class="coworker-badge">${data.coworkers}</div>`;
-                            } else {
-                                el.querySelector('.coworker-badge').innerText = data.coworkers;
-                            }
-                        }
-                    }
-                    // 💡 직접 입력한 임금이 월 총액에 합산됨
-                    total += (data.totalPay || 0);
-                }
-            });
-            document.getElementById('monthlyTotalDisplay').innerText = `이번달 총액: ${total.toLocaleString()}원`;
-        });
-    }
-}
-
-function clickDate(dStr){
-    document.getElementById('selectedDateText').innerText = dStr;
-    document.getElementById('dailyLogForm').classList.remove('hidden');
-    document.getElementById('dailyLogForm').setAttribute('data-date', dStr);
-    const d = adminWorkLogs[dStr];
-    
-    // 💡 배이름 및 임금1, 임금2 불러오기
-    document.getElementById('logShipName').value = d ? (d.shipName || '') : '';
-    document.getElementById('logWage1').value = d ? (d.wage1 || '') : '';
-    document.getElementById('logWage2').value = d ? (d.wage2 || '') : '';
-    
-    document.getElementById('logCoworkers').value = d ? (d.coworkers || '') : ''; 
-    document.getElementById('logMemo').value = d ? d.memo : '';
-    const img = document.getElementById('logImagePreview');
-    if(d && d.imageUrl){ img.src = d.imageUrl; img.style.display = 'block'; } else { img.style.display = 'none'; img.src = ""; }
-    document.getElementById('logImageInput').value = ''; 
-}
-
-function trySaveWorkLog(){ if(currentWorkerId) saveWorkLog(); else document.getElementById('loginModal').style.display = 'flex'; }
-
-async function confirmLoginAndSave(){
-    const nick = document.getElementById('loginNick').value.trim(), pw = document.getElementById('loginPw').value.trim();
-    if(!nick || !pw) return alert("입력 필요");
-    const userRef = db.collection('user_profiles').doc(nick);
-    const doc = await safeGet(userRef);
-    if (doc && doc.exists && doc.data().password !== pw) return alert("비번 틀림");
-    if (!doc || !doc.exists) await userRef.set({ password: pw });
-    loginSuccess(nick); closeLoginModal(); saveWorkLog();
-}
-
-function saveWorkLog(){
-    const btn = document.getElementById('saveLogBtn');
-    const dStr = document.getElementById('dailyLogForm').getAttribute('data-date');
-    if(!dStr) { alert("날짜가 선택되지 않았습니다."); return; }
-
-    btn.innerText = "저장 중... (0%)";
-    btn.disabled = true;
-
-    // 💡 배이름 및 직접 입력한 임금 데이터 수집
-    const shipNameInfo = document.getElementById('logShipName').value.trim();
-    const w1 = parseFloat(document.getElementById('logWage1').value) || 0;
-    const w2 = parseFloat(document.getElementById('logWage2').value) || 0;
-    const coworkersInfo = document.getElementById('logCoworkers').value.trim(); 
-    const memo = document.getElementById('logMemo').value;
-    const file = document.getElementById('logImageInput').files[0];
-    
-    // 💡 임금 1 + 임금 2 합산하여 totalPay로 기록
-    const pay = w1 + w2;
-    const docId = `${currentWorkerId}_${dStr}`;
-
-    const finalizeSave = (url) => {
-        btn.innerText = "데이터 기록 중...";
-        
-        const logData = { 
-            date: dStr, 
-            workerId: currentWorkerId, 
-            shipName: shipNameInfo,
-            wage1: w1,
-            wage2: w2,
-            coworkers: coworkersInfo, 
-            memo: memo, 
-            totalPay: pay, 
-            imageUrl: url 
-        };
-
-        db.collection('work_logs').doc(docId).set(logData, {merge: true}).then(() => {
-            btn.innerText = "✅ 저장 완료!";
-            btn.style.background = "var(--success)";
-            showToast("저장되었습니다.");
-            adminWorkLogs[dStr] = logData;
-            
-            renderCalendar(currentDate.getFullYear(), currentDate.getMonth());
-
-            setTimeout(() => { 
-                btn.innerText = "저장하기"; 
-                btn.style.background = "#ef4444"; 
-                btn.disabled = false; 
-            }, 1500);
-
-        }).catch(err => { 
-            alert("데이터베이스 저장 실패: " + err.message); 
-            btn.innerText = "저장하기"; 
-            btn.disabled = false; 
-        });
-    };
-
-    if(file) {
-        const storageRef = storage.ref(`logs/${currentWorkerId}/${Date.now()}_${file.name}`);
-        const uploadTask = storageRef.put(file);
-
-        uploadTask.on('state_changed', 
-            (snapshot) => {
-                const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-                btn.innerText = `업로드 중... ${Math.round(progress)}%`;
-            }, 
-            (error) => {
-                alert("사진 업로드 실패: " + error.message);
-                btn.innerText = "저장하기";
-                btn.disabled = false;
-            }, 
-            () => {
-                uploadTask.snapshot.ref.getDownloadURL().then((downloadURL) => {
-                    finalizeSave(downloadURL);
-                });
-            }
-        );
-    } else {
-        const existingUrl = adminWorkLogs[dStr] ? adminWorkLogs[dStr].imageUrl : null;
-        finalizeSave(existingUrl);
-    }
-}
-
-function loginSuccess(name) { currentWorkerId = name; localStorage.setItem('myWorkerId', currentWorkerId); updateUserBar(); renderCalendar(currentDate.getFullYear(), currentDate.getMonth()); }
-function closeLoginModal(){ document.getElementById('loginModal').style.display = 'none'; }
-function updateUserBar() { document.getElementById('userProfileBar').style.display = currentWorkerId ? 'flex' : 'none'; if(currentWorkerId) document.getElementById('currentUserDisplay').innerText = `👤 ${currentWorkerId}`; }
-function logoutWorker() { if(confirm("로그아웃?")) { currentWorkerId = null; localStorage.removeItem('myWorkerId'); updateUserBar(); renderCalendar(currentDate.getFullYear(), currentDate.getMonth()); document.getElementById('dailyLogForm').classList.add('hidden'); } }
-
-function deleteWorkLog(){
-    if(!currentWorkerId) { alert("로그인이 필요합니다."); return; }
-    if(!confirm("정말 삭제하시겠습니까?")) return;
-
-    const dStr = document.getElementById('dailyLogForm').getAttribute('data-date');
-
-    db.collection('work_logs').doc(`${currentWorkerId}_${dStr}`).delete().then(()=>{
-        showToast("삭제되었습니다.");
-        
-        // 💡 입력창 초기화
-        document.getElementById('logShipName').value=''; 
-        document.getElementById('logWage1').value=''; 
-        document.getElementById('logWage2').value=''; 
-        document.getElementById('logCoworkers').value=''; 
-        document.getElementById('logMemo').value='';
-        document.getElementById('logImageInput').value = '';
-        const imgPreview = document.getElementById('logImagePreview');
-        if(imgPreview) { imgPreview.src = ''; imgPreview.style.display = 'none'; }
-        
-        renderCalendar(currentDate.getFullYear(), currentDate.getMonth());
-    }).catch(err => alert("삭제 실패: " + err.message));
-}
-function changeMonth(s){ currentDate.setMonth(currentDate.getMonth()+s); renderCalendar(currentDate.getFullYear(), currentDate.getMonth()); }
-function previewLogImage(input){ if(input.files&&input.files[0]){ const r=new FileReader(); r.onload=e=>{const i=document.getElementById('logImagePreview'); i.src=e.target.result; i.style.display='block';}; r.readAsDataURL(input.files[0]); } }
-
-// --- [D] 임금계산기 ---
-// 👇 여기서부터 복사해서 기존 calculateWage 함수를 덮어쓰세요 👇
-function calculateWage() {
-    try {
-        // 1. 오빠의 HTML ID에 맞춰 데이터 가져오기
-        const totalHours = parseFloat(document.getElementById('wageTotalHours').value) || 0;
-        const startTime = parseInt(document.getElementById('wageStartTime').value) || 8;
-        const isSkilled = document.getElementById('role-skilled').checked;
-
-        // 추가 수당 시간들
-        const holidayH = parseFloat(document.getElementById('wageHoliday').value) || 0;
-        const weekendH = parseFloat(document.getElementById('wageWeekend').value) || 0;
-        const rainH = parseFloat(document.getElementById('wageRain').value) || 0;
-        const hotH = parseFloat(document.getElementById('wageHotTime').value) || 0;
-        const taxRate = parseFloat(document.getElementById('wageTaxType').value) || 0;
-
-        // 2. 단가 설정 (2026년 기준)
-        const BASE_RATE = 10320;
-        const SKILLED_DAY_ADD = 2557; 
-        const SKILLED_NIGHT_ADD = 3836;
-
-        // 3. 주간/야간 시간 분리 로직 (현재 월 기준 자동 계산)
-        const month = new Date().getMonth() + 1;
-        let dayStart = 8, dayEnd = 18; 
-        if (month >= 4 && month <= 9) { dayStart = 6; dayEnd = 19; }
-        else if (month >= 10) { dayStart = 7; dayEnd = 17; }
-
-        let dayHours = 0, nightHours = 0;
-        for (let i = 0; i < totalHours; i++) {
-            let currentHour = (startTime + i) % 24;
-            if (currentHour >= dayStart && currentHour < dayEnd) dayHours++;
-            else nightHours++;
-        }
-
-        // 4. 금액 계산
-        const dayAmt = dayHours * BASE_RATE;
-        const nightAmt = nightHours * (BASE_RATE * 1.5);
-
-        // 🔥 수당 항목별 분리 계산
-        const holidayAmt = holidayH * (BASE_RATE * 0.5);
-        const weekendAmt = weekendH * (BASE_RATE * 0.5);
-        const otherAmt = (rainH + hotH) * (BASE_RATE * 0.5);
-
-        // 🔥 기능공 수당 계산 (체크 시 적용)
-        let skilledAmt = 0;
-        if (isSkilled) {
-            skilledAmt = (dayHours * SKILLED_DAY_ADD) + (nightHours * SKILLED_NIGHT_ADD);
-        }
-
-        const subTotal = dayAmt + nightAmt + skilledAmt + holidayAmt + weekendAmt + otherAmt;
-        const taxAmt = Math.floor(subTotal * taxRate);
-        const finalTotal = subTotal - taxAmt;
-
-        // 5. 내역서 영수증 상세 표기 로직 (값이 있을 때만 나타나게 스마트하게 처리!)
-        let extraHtml = "";
-        if (holidayAmt > 0) extraHtml += renderRow("🎉 공휴일 수당 (" + holidayH + "H)", holidayAmt, "#ea580c"); // 주황/빨강
-        if (weekendAmt > 0) extraHtml += renderRow("🎈 주말 수당 (" + weekendH + "H)", weekendAmt, "#3b82f6"); // 파랑
-        if (otherAmt > 0) extraHtml += renderRow("☔ 우천/혹서기 등 (" + (rainH + hotH) + "H)", otherAmt);
-        
-        // 가산 수당이 아예 0시간일 때만 기본 표시
-        if (holidayAmt === 0 && weekendAmt === 0 && otherAmt === 0) {
-            extraHtml += renderRow("➕ 추가 가산 수당", 0);
-        }
-
-        const specBody = document.getElementById('wageSpecBody');
-        specBody.innerHTML = `
-            ${renderRow("☀️ 주간 기본 ("+dayHours+"H)", dayAmt)}
-            ${renderRow("🌙 야간 할증 ("+nightHours+"H)", nightAmt)}
-            ${renderRow("🔧 기능공 수당 추가", skilledAmt, "var(--primary)")}
-            ${extraHtml}
-            ${taxAmt > 0 ? renderRow("💸 공제액 (세금/보험)", -taxAmt, "var(--danger)") : ""}
-        `;
-
-        document.getElementById('wageTotal').innerText = finalTotal.toLocaleString() + "원";
-        document.getElementById('wageResultBox').classList.remove('hidden');
-        showToast("상세 계산서가 생성되었습니다!");
-
-    } catch (e) {
-        console.error(e);
-        alert("계산 오류: 입력창 값을 확인해주세요.");
-    }
-}
-// 👆 여기까지 복사해서 기존 calculateWage 함수를 덮어쓰세요 👆
-// 헬퍼 함수: 한 줄씩 정렬해서 그려주기
-function renderRow(label, amt, color = "inherit") {
-    return `
-        <tr>
-            <td style="padding: 8px 0; color: var(--text-sub);">${label}</td>
-            <td style="text-align: right; font-weight: bold; color: ${color};">
-                ${amt.toLocaleString()}원
-            </td>
-        </tr>
-    `;
-}
 function resetWageForm(){ 
     document.querySelectorAll('#wage-card input').forEach(i=> { if(i.type !== 'radio' && i.id !== 'wageHourly') i.value=''; }); 
     document.getElementById('wageResultBox').classList.add('hidden'); 
 }
 
-// --- [E] 게시판/공지/기타 ---
-// [자동 링크 변환 헬퍼 함수 추가]
-// ================= [공지사항 함수 시작] =================
-    let currentEditNoticeId = null;
-    let currentEditNoticeImg = null;
+let currentEditNoticeId = null; let currentEditNoticeImg = null;
+function autoLink(text) { if (!text) return ""; const urlRegex = /(https?:\/\/[^\s]+)/g; return text.replace(urlRegex, function(url) { return `<a href="${url}" target="_blank" style="color:#2563eb; text-decoration:underline; font-weight:bold;">${url}</a>`; }); }
+async function startEditNotice(id, title, content, imgUrl, e) { e.stopPropagation(); if (!(await verifyAdmin())) return; currentEditNoticeId = id; currentEditNoticeImg = imgUrl; document.getElementById('noticeTitle').value = title; document.getElementById('noticeContent').value = content.replace(/\\n/g, '\n'); document.getElementById('noticeFileInput').value = ''; document.getElementById('noticeForm').classList.remove('hidden'); document.getElementById('noticeSubmitBtn').innerText = "수정 완료"; document.getElementById('noticeSubmitBtn').style.background = "var(--primary)"; document.getElementById('noticeCancelBtn').style.display = "block"; document.getElementById('noticeForm').scrollIntoView({behavior: 'smooth', block: 'center'}); }
+function cancelEditNotice() { currentEditNoticeId = null; currentEditNoticeImg = null; document.getElementById('noticeTitle').value = ''; document.getElementById('noticeContent').value = ''; document.getElementById('noticeFileInput').value = ''; document.getElementById('noticeSubmitBtn').innerText = "등록 완료"; document.getElementById('noticeSubmitBtn').style.background = "var(--success)"; document.getElementById('noticeCancelBtn').style.display = "none"; document.getElementById('noticeForm').classList.add('hidden'); }
+async function saveNotice() { if (!(await verifyAdmin())) return; const t = document.getElementById('noticeTitle').value.trim(); const c = document.getElementById('noticeContent').value.trim(); const f = document.getElementById('noticeFileInput').files[0]; const btn = document.getElementById('noticeSubmitBtn'); if (!t || !c) { alert("공지 제목과 내용을 입력해주세요."); return; } btn.innerText = "서버 기록 중..."; btn.disabled = true; const finalize = (url) => { const data = { title: t, content: c, timestamp: firebase.firestore.FieldValue.serverTimestamp() }; if (url) { data.imageUrl = url; } else if (currentEditNoticeId && currentEditNoticeImg) { data.imageUrl = currentEditNoticeImg; } else { data.imageUrl = null; } let req; if (currentEditNoticeId) { req = db.collection("notices").doc(currentEditNoticeId).update(data); } else { req = db.collection("notices").add(data); } req.then(() => { const isEdit = !!currentEditNoticeId; cancelEditNotice(); showToast(isEdit ? "공지가 수정되었습니다." : "공지가 등록되었습니다."); }).catch(err => { alert("저장 실패: " + err.message); btn.innerText = currentEditNoticeId ? "수정 완료" : "등록 완료"; btn.disabled = false; }); }; if (f) { const storageRef = storage.ref(`notices/${Date.now()}_${f.name}`); const uploadTask = storageRef.put(f); uploadTask.on('state_changed', (snap) => { const percent = Math.round((snap.bytesTransferred / snap.totalBytes) * 100); btn.innerText = `사진 업로드 중... ${percent}%`; }, (err) => { alert("사진 업로드 실패: " + err.message); btn.disabled = false; btn.innerText = currentEditNoticeId ? "수정 완료" : "등록 완료"; }, () => { uploadTask.snapshot.ref.getDownloadURL().then(url => finalize(url)); }); } else { finalize(null); } }
+function delNotice(id,e){ e.stopPropagation(); verifyAdmin().then(r=>{ if(r) db.collection("notices").doc(id).delete(); }); }
 
-    function autoLink(text) {
-        if (!text) return "";
-        const urlRegex = /(https?:\/\/[^\s]+)/g;
-        return text.replace(urlRegex, function(url) {
-            return `<a href="${url}" target="_blank" style="color:#2563eb; text-decoration:underline; font-weight:bold;">${url}</a>`;
-        });
-    }
-
-    async function startEditNotice(id, title, content, imgUrl, e) {
-        e.stopPropagation();
-        if (!(await verifyAdmin())) return; 
-
-        currentEditNoticeId = id;
-        currentEditNoticeImg = imgUrl;
-
-        document.getElementById('noticeTitle').value = title;
-        document.getElementById('noticeContent').value = content.replace(/\\n/g, '\n');
-        document.getElementById('noticeFileInput').value = ''; 
-
-        document.getElementById('noticeForm').classList.remove('hidden');
-        document.getElementById('noticeSubmitBtn').innerText = "수정 완료";
-        document.getElementById('noticeSubmitBtn').style.background = "var(--primary)";
-        document.getElementById('noticeCancelBtn').style.display = "block";
-        
-        document.getElementById('noticeForm').scrollIntoView({behavior: 'smooth', block: 'center'});
-    }
-
-    function cancelEditNotice() {
-        currentEditNoticeId = null;
-        currentEditNoticeImg = null;
-        document.getElementById('noticeTitle').value = '';
-        document.getElementById('noticeContent').value = '';
-        document.getElementById('noticeFileInput').value = '';
-        
-        document.getElementById('noticeSubmitBtn').innerText = "등록 완료";
-        document.getElementById('noticeSubmitBtn').style.background = "var(--success)";
-        document.getElementById('noticeCancelBtn').style.display = "none";
-        document.getElementById('noticeForm').classList.add('hidden');
-    }
-
-    async function saveNotice() {
-        if (!(await verifyAdmin())) return; 
-
-        const t = document.getElementById('noticeTitle').value.trim();
-        const c = document.getElementById('noticeContent').value.trim();
-        const f = document.getElementById('noticeFileInput').files[0];
-        const btn = document.getElementById('noticeSubmitBtn');
-
-        if (!t || !c) { alert("공지 제목과 내용을 입력해주세요."); return; }
-
-        btn.innerText = "서버 기록 중...";
-        btn.disabled = true;
-
-        const finalize = (url) => {
-            const data = {
-                title: t,
-                content: c,
-                timestamp: firebase.firestore.FieldValue.serverTimestamp()
-            };
-
-            if (url) {
-                data.imageUrl = url; 
-            } else if (currentEditNoticeId && currentEditNoticeImg) {
-                data.imageUrl = currentEditNoticeImg; 
-            } else {
-                data.imageUrl = null;
-            }
-
-            let req;
-            if (currentEditNoticeId) {
-                req = db.collection("notices").doc(currentEditNoticeId).update(data);
-            } else {
-                req = db.collection("notices").add(data);
-            }
-
-            req.then(() => {
-                const isEdit = !!currentEditNoticeId;
-                cancelEditNotice(); 
-                showToast(isEdit ? "공지가 수정되었습니다." : "공지가 등록되었습니다.");
-            }).catch(err => {
-                alert("저장 실패: " + err.message);
-                btn.innerText = currentEditNoticeId ? "수정 완료" : "등록 완료";
-                btn.disabled = false;
-            });
-        };
-
-        if (f) {
-            const storageRef = storage.ref(`notices/${Date.now()}_${f.name}`);
-            const uploadTask = storageRef.put(f);
-
-            uploadTask.on('state_changed', 
-                (snap) => {
-                    const percent = Math.round((snap.bytesTransferred / snap.totalBytes) * 100);
-                    btn.innerText = `사진 업로드 중... ${percent}%`; 
-                },
-                (err) => { alert("사진 업로드 실패: " + err.message); btn.disabled = false; btn.innerText = currentEditNoticeId ? "수정 완료" : "등록 완료"; },
-                () => { uploadTask.snapshot.ref.getDownloadURL().then(url => finalize(url)); }
-            );
-        } else {
-            finalize(null); 
-        }
-    }
-
-    function delNotice(id,e){ e.stopPropagation(); verifyAdmin().then(r=>{ if(r) db.collection("notices").doc(id).delete(); }); }
-    // ================= [공지사항 함수 끝] =================
-/* [수정 적용됨] 게시글 등록 함수 */
-function addPost() {
-    const nickEl = document.getElementById('inputNick');
-    const titleEl = document.getElementById('inputTitle');
-    const pwEl = document.getElementById('inputPw');
-    const contentEl = document.getElementById('inputContent');
-
-    const nickVal = nickEl.value;
-    const titleVal = titleEl.value;
-    const pwVal = pwEl.value;
-    const contentVal = contentEl.value;
-
-    if (nickVal && titleVal && pwVal && contentVal) {
-        db.collection("posts").add({
-            nick: nickVal,
-            title: titleVal,
-            password: pwVal,
-            content: contentVal,
-            timestamp: firebase.firestore.FieldValue.serverTimestamp()
-        }).then(() => {
-            nickEl.value = '';
-            titleEl.value = '';
-            pwEl.value = '';
-            contentEl.value = '';
-            toggleHidden('boardForm');
-            showToast("등록되었습니다.");
-        }).catch((error) => {
-            alert("등록 실패: " + error.message);
-        });
-    } else {
-        alert("닉네임, 제목, 비밀번호, 내용을 모두 입력해주세요.");
-    }
-}
-
+function addPost() { const nickEl = document.getElementById('inputNick'); const titleEl = document.getElementById('inputTitle'); const pwEl = document.getElementById('inputPw'); const contentEl = document.getElementById('inputContent'); const nickVal = nickEl.value; const titleVal = titleEl.value; const pwVal = pwEl.value; const contentVal = contentEl.value; if (nickVal && titleVal && pwVal && contentVal) { db.collection("posts").add({ nick: nickVal, title: titleVal, password: pwVal, content: contentVal, timestamp: firebase.firestore.FieldValue.serverTimestamp() }).then(() => { nickEl.value = ''; titleEl.value = ''; pwEl.value = ''; contentEl.value = ''; toggleHidden('boardForm'); showToast("등록되었습니다."); }).catch((error) => { alert("등록 실패: " + error.message); }); } else { alert("모두 입력해주세요."); } }
 function deletePost(id,pw,e){ e.stopPropagation(); if(prompt("비번")===pw) db.collection("posts").doc(id).delete(); }
 function addComment(pid){const n=document.getElementById(`cmt-name-${pid}`).value, p=document.getElementById(`cmt-pw-${pid}`).value, t=document.getElementById(`cmt-txt-${pid}`).value; if(n&&p&&t){db.collection('posts').doc(pid).collection('comments').add({name:n, password:p, text:t, timestamp:firebase.firestore.FieldValue.serverTimestamp()}).then(()=>{document.getElementById(`cmt-txt-${pid}`).value=""; showToast("댓글 등록됨");});}}
 async function deleteComment(pid,cid,pw){if(prompt("비번")===pw||await verifyAdmin()) db.collection('posts').doc(pid).collection('comments').doc(cid).delete();}
-/* 1. 선박 등록 함수: 사진 업로드 진행 상황을 버튼에 표시합니다 */
-function addShipInfo() {
-    const n = document.getElementById('shipName').value.trim();
-    const c = document.getElementById('shipOnboard').value.trim();
-    const f = document.getElementById('shipFileInput').files[0];
-    const btn = document.getElementById('shipSubmitBtn');
-
-    if (!n) { alert("선박명을 입력해주세요!"); return; }
-
-    btn.innerText = "업로드 시작...";
-    btn.disabled = true;
-
-    const save = (url) => {
-        db.collection("ships").add({
-            shipName: n, 
-            onboardFeat: c, 
-            imageUrl: url, 
-            timestamp: firebase.firestore.FieldValue.serverTimestamp()
-        }).then(() => {
-            document.getElementById('shipName').value = ''; 
-            document.getElementById('shipOnboard').value = ''; 
-            document.getElementById('shipFileInput').value = ''; 
-            toggleHidden('shipForm'); 
-            showToast("선박이 등록되었습니다!");
-            btn.innerText = "등록/수정";
-            btn.disabled = false;
-        });
-    };
-
-    if (f) {
-        const storageRef = storage.ref(`ships/${Date.now()}_${f.name}`);
-        const uploadTask = storageRef.put(f);
-
-        uploadTask.on('state_changed', 
-            (snap) => {
-                const percent = Math.round((snap.bytesTransferred / snap.totalBytes) * 100);
-                btn.innerText = `업로드 중... ${percent}%`; // 실시간 진행률 표시
-            },
-            (err) => { alert("실패: " + err.message); btn.disabled = false; },
-            () => { uploadTask.snapshot.ref.getDownloadURL().then(url => save(url)); }
-        );
-    } else {
-        save(null); // 사진 선택 안 했을 때
-    }
-}
-
-/* 2. 화면 표시 함수: 이 부분이 있어야 목록에 커다란 사진이 나옵니다 */
-function renderShipPage(p) {
-    const l = document.getElementById("shipList"); 
-    l.innerHTML = ""; 
-    const pageData = filteredShips.slice((p-1)*postsPerPage, p*postsPerPage);
-
-    pageData.forEach(x => {
-        // 사진이 있을 때만 큼지막하게 보여줍니다
-        let photoHtml = x.imageUrl ? `<img src="${x.imageUrl}" style="width:100%; border-radius:10px; margin-top:10px; border:1px solid #eee;">` : `<p style="color:#ccc; font-size:0.8rem;">[등록된 사진 없음]</p>`;
-
-        l.innerHTML += `
-        <li class="post-item" style="border-bottom: 2px solid var(--border);">
-            <div class="post-header-row" onclick="toggleContent('s-${x.id}')">
-                <div class="post-title-text">🚢 ${x.shipName || '미기입 선박'}</div>
-                <span style="color:var(--primary);">▼</span>
-            </div>
-            <div id="s-${x.id}" class="post-body-content" style="display:none; padding:15px;">
-                <div style="font-weight:bold; color:var(--secondary); margin-bottom:5px;">작업내용:</div>
-                <div style="white-space:pre-wrap;">${x.onboardFeat || '내용 없음'}</div>
-                ${photoHtml}
-                <div style="text-align:right; margin-top:10px;">
-                    <button class="mini-btn btn-del" onclick="deleteShip('${x.id}',event)">🗑️ 삭제</button>
-                </div>
-            </div>
-        </li>`;
-    });
-}
-/* 자료실 파일 업로드 함수 */
-function addArchive() {
-    const t = document.getElementById('archiveTitle').value.trim(); // 파일 설명
-    const f = document.getElementById('archiveFile').files[0];      // 선택된 파일
-    const btn = document.getElementById('archiveSubmitBtn');        // 업로드 버튼
-
-    // 1. 필수 입력 체크
-    if(!t || !f) return alert("파일 설명과 파일을 모두 선택해주세요.");
-
-    // 2. 버튼 상태 변경 (중복 클릭 방지)
-    btn.innerText = "서버 연결 중...";
-    btn.disabled = true;
-
-    // 3. 파이어베이스 스토리지 경로 설정 (archives 폴더 안에 저장)
-    const ref = storage.ref(`archives/${Date.now()}_${f.name}`);
-    const task = ref.put(f);
-
-    // 4. 업로드 진행 상황 모니터링
-    task.on('state_changed', 
-        (s) => {
-            // 실시간 퍼센트 계산
-            const p = Math.round((s.bytesTransferred / s.totalBytes) * 100);
-            btn.innerText = `업로드 중... ${p}%`; // 오빠 폰 화면에 숫자가 올라갑니다!
-        },
-        (e) => { 
-            // 에러 발생 시
-            console.error(e);
-            alert("업로드 실패: " + e.message); 
-            btn.disabled = false; 
-            btn.innerText = "업로드 완료"; 
-        },
-        () => {
-            // 5. 업로드 완료 후 다운로드 주소(URL) 가져오기
-            task.snapshot.ref.getDownloadURL().then(url => {
-                // 6. 데이터베이스(Firestore)에 파일 정보 저장
-                db.collection("archives").add({
-                    title: t, 
-                    url: url, 
-                    timestamp: firebase.firestore.FieldValue.serverTimestamp()
-                }).then(() => {
-                    // 7. 입력창 초기화 및 화면 닫기
-                    document.getElementById('archiveTitle').value = "";
-                    document.getElementById('archiveFile').value = "";
-                    toggleHidden('archiveForm'); // 입력창 숨기기
-                    btn.innerText = "업로드 실행";
-                    btn.disabled = false;
-                    showToast("파일이 성공적으로 등록되었습니다!");
-                });
-            });
-        }
-    );
-}        
+function addShipInfo() { const n = document.getElementById('shipName').value.trim(); const c = document.getElementById('shipOnboard').value.trim(); const f = document.getElementById('shipFileInput').files[0]; const btn = document.getElementById('shipSubmitBtn'); if (!n) return alert("선박명 입력!"); btn.innerText = "업로드 시작..."; btn.disabled = true; const save = (url) => { db.collection("ships").add({ shipName: n, onboardFeat: c, imageUrl: url, timestamp: firebase.firestore.FieldValue.serverTimestamp() }).then(() => { document.getElementById('shipName').value = ''; document.getElementById('shipOnboard').value = ''; document.getElementById('shipFileInput').value = ''; toggleHidden('shipForm'); showToast("선박이 등록되었습니다!"); btn.innerText = "등록/수정"; btn.disabled = false; }); }; if (f) { const storageRef = storage.ref(`ships/${Date.now()}_${f.name}`); const uploadTask = storageRef.put(f); uploadTask.on('state_changed', (snap) => { const percent = Math.round((snap.bytesTransferred / snap.totalBytes) * 100); btn.innerText = `업로드 중... ${percent}%`; }, (err) => { alert("실패: " + err.message); btn.disabled = false; }, () => { uploadTask.snapshot.ref.getDownloadURL().then(url => save(url)); }); } else { save(null); } }
+function renderShipPage(p) { const l = document.getElementById("shipList"); l.innerHTML = ""; const pageData = filteredShips.slice((p-1)*postsPerPage, p*postsPerPage); pageData.forEach(x => { let photoHtml = x.imageUrl ? `<img src="${x.imageUrl}" style="width:100%; border-radius:10px; margin-top:10px; border:1px solid #eee;">` : `<p style="color:#ccc; font-size:0.8rem;">[등록된 사진 없음]</p>`; l.innerHTML += `<li class="post-item" style="border-bottom: 2px solid var(--border);"> <div class="post-header-row" onclick="toggleContent('s-${x.id}')"> <div class="post-title-text">🚢 ${x.shipName || '미기입 선박'}</div> <span style="color:var(--primary);">▼</span> </div> <div id="s-${x.id}" class="post-body-content" style="display:none; padding:15px;"> <div style="font-weight:bold; color:var(--secondary); margin-bottom:5px;">작업내용:</div> <div style="white-space:pre-wrap;">${x.onboardFeat || '내용 없음'}</div> ${photoHtml} <div style="text-align:right; margin-top:10px;"> <button class="mini-btn btn-del" onclick="deleteShip('${x.id}',event)">🗑️ 삭제</button> </div> </div> </li>`; }); }
+function addArchive() { const t = document.getElementById('archiveTitle').value.trim(); const f = document.getElementById('archiveFile').files[0]; const btn = document.getElementById('archiveSubmitBtn'); if(!t || !f) return alert("파일 설명과 파일을 모두 선택해주세요."); btn.innerText = "서버 연결 중..."; btn.disabled = true; const ref = storage.ref(`archives/${Date.now()}_${f.name}`); const task = ref.put(f); task.on('state_changed', (s) => { const p = Math.round((s.bytesTransferred / s.totalBytes) * 100); btn.innerText = `업로드 중... ${p}%`; }, (e) => { alert("업로드 실패: " + e.message); btn.disabled = false; btn.innerText = "업로드 완료"; }, () => { task.snapshot.ref.getDownloadURL().then(url => { db.collection("archives").add({ title: t, url: url, timestamp: firebase.firestore.FieldValue.serverTimestamp() }).then(() => { document.getElementById('archiveTitle').value = ""; document.getElementById('archiveFile').value = ""; toggleHidden('archiveForm'); btn.innerText = "업로드 실행"; btn.disabled = false; showToast("파일이 성공적으로 등록되었습니다!"); }); }); } ); }        
 async function deleteShip(id,e){e.stopPropagation(); if(await verifyAdmin()) db.collection("ships").doc(id).delete();}
-function uploadFile(){ const f=document.getElementById('fileInput').files[0], t=document.getElementById('fileTitle').value; if(f&&t) storage.ref(`archives/${Date.now()}`).put(f).then(s=>s.ref.getDownloadURL()).then(u=>db.collection("archives").add({title:t, url:u, timestamp:firebase.firestore.FieldValue.serverTimestamp()})).then(()=>{showToast("업로드됨"); document.getElementById('fileTitle').value='';}); }
 function delArchive(id,e){ e.stopPropagation(); verifyAdmin().then(r=>{ if(r) db.collection("archives").doc(id).delete(); }); }
-
-/* [수정 적용됨] 게시판 렌더링 함수 */
-function renderBoardPage(p){
-    currentBoardPage = p; 
-    const l = document.getElementById("boardList"); l.innerHTML = ""; 
-    const start = (p-1) * postsPerPage; const end = start + postsPerPage; 
-    const pageData = allPostsData.slice(start, end);
-
-    if(pageData.length === 0) { l.innerHTML = "<tr><td colspan='4' style='text-align:center; padding:20px; color:var(--text-sub);'>게시글이 없습니다.</td></tr>"; document.getElementById("pagination").innerHTML = ""; return; }
-
-    pageData.forEach((x, i) => {
-        let dateStr = "";
-        if(x.timestamp) { 
-            const d = x.timestamp.toDate();
-            const year = d.getFullYear();
-            const month = String(d.getMonth() + 1).padStart(2, '0');
-            const day = String(d.getDate()).padStart(2, '0');
-            const hour = String(d.getHours()).padStart(2, '0');
-            const min = String(d.getMinutes()).padStart(2, '0');
-            dateStr = `${year}/${month}/${day} ${hour}:${min}`; 
-        }
-        const rowId = `p-${x.id}`;
-        const authorName = x.nick || '익명';
-        const postNum = allPostsData.length - ((currentBoardPage - 1) * postsPerPage) - i;
-
-        l.innerHTML += `
-        <tr onclick="toggleBoardRow('${rowId}')" style="cursor:pointer;">
-            <td class="board-no">${postNum}</td>
-            <td class="board-title">${x.title} <span style="font-size:0.7rem; color:var(--primary); margin-left:4px;">▼</span></td>
-            <td class="board-date">${dateStr}</td>
-            <td class="board-nick">${authorName}</td>
-        </tr>
-        <tr id="${rowId}" class="board-content-row">
-            <td colspan="4" class="board-content-box">
-                <div style="margin-bottom:15px;">${x.content}</div>
-                <div style="text-align:right; border-bottom:1px dashed var(--border); padding-bottom:10px; margin-bottom:10px;"><button class="mini-btn btn-del" onclick="deletePost('${x.id}','${x.password}',event)">🗑️ 글 삭제</button></div>
-                <div id="cmt-list-${x.id}" class="comment-section"></div>
-                <div class="comment-form">
-                    <input id="cmt-name-${x.id}" class="comment-input-sm" placeholder="닉네임"><input id="cmt-pw-${x.id}" class="comment-input-sm" type="password" placeholder="비번"><input id="cmt-txt-${x.id}" class="comment-input-lg" placeholder="댓글 내용..."><button class="comment-submit" onclick="addComment('${x.id}')">등록</button>
-                </div>
-            </td>
-        </tr>`;
-        loadComments(x.id);
-    });
-    renderPagination(p);
-}
+function renderBoardPage(p){ currentBoardPage = p; const l = document.getElementById("boardList"); l.innerHTML = ""; const start = (p-1) * postsPerPage; const end = start + postsPerPage; const pageData = allPostsData.slice(start, end); if(pageData.length === 0) { l.innerHTML = "<tr><td colspan='4' style='text-align:center; padding:20px; color:var(--text-sub);'>게시글이 없습니다.</td></tr>"; document.getElementById("pagination").innerHTML = ""; return; } pageData.forEach((x, i) => { let dateStr = ""; if(x.timestamp) { const d = x.timestamp.toDate(); const year = d.getFullYear(); const month = String(d.getMonth() + 1).padStart(2, '0'); const day = String(d.getDate()).padStart(2, '0'); const hour = String(d.getHours()).padStart(2, '0'); const min = String(d.getMinutes()).padStart(2, '0'); dateStr = `${year}/${month}/${day} ${hour}:${min}`; } const rowId = `p-${x.id}`; const authorName = x.nick || '익명'; const postNum = allPostsData.length - ((currentBoardPage - 1) * postsPerPage) - i; l.innerHTML += `<tr onclick="toggleBoardRow('${rowId}')" style="cursor:pointer;"> <td class="board-no">${postNum}</td> <td class="board-title">${x.title} <span style="font-size:0.7rem; color:var(--primary); margin-left:4px;">▼</span></td> <td class="board-date">${dateStr}</td> <td class="board-nick">${authorName}</td> </tr> <tr id="${rowId}" class="board-content-row"> <td colspan="4" class="board-content-box"> <div style="margin-bottom:15px;">${x.content}</div> <div style="text-align:right; border-bottom:1px dashed var(--border); padding-bottom:10px; margin-bottom:10px;"><button class="mini-btn btn-del" onclick="deletePost('${x.id}','${x.password}',event)">🗑️ 글 삭제</button></div> <div id="cmt-list-${x.id}" class="comment-section"></div> <div class="comment-form"> <input id="cmt-name-${x.id}" class="comment-input-sm" placeholder="닉네임"><input id="cmt-pw-${x.id}" class="comment-input-sm" type="password" placeholder="비번"><input id="cmt-txt-${x.id}" class="comment-input-lg" placeholder="댓글 내용..."><button class="comment-submit" onclick="addComment('${x.id}')">등록</button> </div> </td> </tr>`; loadComments(x.id); }); renderPagination(p); }
 function toggleBoardRow(id) { const el = document.getElementById(id); if(el.classList.contains('show')) el.classList.remove('show'); else el.classList.add('show'); }
-function renderPagination(curr) {
-    const total = Math.ceil(allPostsData.length / postsPerPage);
-    const el = document.getElementById('pagination'); if(!el) return; el.innerHTML = "";
-    for(let i=1; i<=total; i++){ el.innerHTML += `<span class="page-num ${i===curr?'active':''}" onclick="renderBoardPage(${i})">${i}</span>`; }
-}
+function renderPagination(curr) { const total = Math.ceil(allPostsData.length / postsPerPage); const el = document.getElementById('pagination'); if(!el) return; el.innerHTML = ""; for(let i=1; i<=total; i++){ el.innerHTML += `<span class="page-num ${i===curr?'active':''}" onclick="renderBoardPage(${i})">${i}</span>`; } }
 function loadComments(pid){if(commentUnsubscribes[pid]) commentUnsubscribes[pid](); commentUnsubscribes[pid]=db.collection('posts').doc(pid).collection('comments').orderBy('timestamp','asc').onSnapshot(s=>{const el=document.getElementById(`cmt-list-${pid}`); if(!el) return; el.innerHTML=""; s.forEach(d=>{const c=d.data(); el.innerHTML+=`<div class="comment-item"><span><span class="comment-meta">${c.name}:</span><span class="comment-text">${c.text}</span></span><button class="comment-del-btn" onclick="deleteComment('${pid}','${d.id}','${c.password}')">×</button></div>`;});});}
-function openBusSchedule(){ 
-    const m=document.getElementById('imageModal'); 
-    // 파이어베이스 공식 웹 다운로드 주소로 변환하여 적용했습니다.
-    document.getElementById('modalImage').src='https://firebasestorage.googleapis.com/v0/b/busan-hak-port.firebasestorage.app/o/KakaoTalk_20260129_001114789.jpg?alt=media'; 
-    m.style.display='flex'; 
-}
+function openBusSchedule(){ const m=document.getElementById('imageModal'); document.getElementById('modalImage').src='https://firebasestorage.googleapis.com/v0/b/busan-hak-port.firebasestorage.app/o/KakaoTalk_20260129_001114789.jpg?alt=media'; m.style.display='flex'; }
 function closeImageModal(){ document.getElementById('imageModal').style.display='none'; }
 function openPrivacy(){ document.getElementById('privacyModal').style.display='flex'; }
 
-/* 4️⃣ 실행 */
 window.onload = () => {
-    // 👇 한국 시간에 맞춰 오늘 날짜 오전 8시로 캘린더 기본값 셋팅 👇
-    const now = new Date();
-    now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
-    now.setHours(8, 0, 0, 0); // 아침 8시로 고정
-    document.getElementById('wageStartDateTime').value = now.toISOString().slice(0, 16);
-    
+    try {
+        const now = new Date();
+        now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+        now.setHours(8, 0, 0, 0); 
+        const wageStartInput = document.getElementById('wageStartDateTime');
+        if(wageStartInput) wageStartInput.value = now.toISOString().slice(0, 16);
+    } catch(e) { console.error("날짜 초기화 오류", e); }
+
     loadBanner();
     try {
-        /* 변경 전 코드: db.collection("notices").orderBy("timestamp","desc").onSnapshot(...) 한 줄 전체 */
-
-/* 변경 후 (아래 코드로 덮어쓰기) */
-// ================= [공지사항 화면 출력 시작] =================
-    db.collection("notices").orderBy("timestamp","desc").onSnapshot(s => {
-        const l = document.getElementById("noticeList"); 
-        l.innerHTML = ""; 
-        const badge = document.getElementById("noticeBadge");
-
-        if (s.empty) {
-            l.innerHTML = "<tr><td colspan='3' style='text-align:center; padding:20px; color:var(--text-sub);'>등록된 공지가 없습니다.</td></tr>";
-            if(badge) badge.classList.add("hidden");
-            return;
-        }
-
-        let isNew = false;
-        const now = new Date();
-        let index = 0;
-
-        s.forEach(d => {
-            const x = d.data(); 
-            let dateStr = "";
-
-            if(x.timestamp) { 
-                const dt = x.timestamp.toDate();
-                dateStr = `${dt.getFullYear()}/${String(dt.getMonth()+1).padStart(2,'0')}/${String(dt.getDate()).padStart(2,'0')}`;
-
-                if (index === 0) {
-                    const diffTime = now.getTime() - dt.getTime();
-                    if (diffTime < 24 * 60 * 60 * 1000) { 
-                        isNew = true;
-                    }
-                }
-            }
-
-            const linkedContent = autoLink(x.content); 
-            const imageHtml = x.imageUrl ? `<img src="${x.imageUrl}" style="max-width:100%; border-radius:8px; margin-top:10px; border:1px solid rgba(0,0,0,0.1);" onclick="document.getElementById('imageModal').style.display='flex'; document.getElementById('modalImage').src=this.src;">` : '';
-
-            const safeTitle = (x.title || '').replace(/'/g, "\\'").replace(/"/g, "&quot;");
-            const safeContent = (x.content || '').replace(/'/g, "\\'").replace(/"/g, "&quot;").replace(/\n/g, "\\n");
-            const imgParam = x.imageUrl ? `'${x.imageUrl}'` : `null`;
-
-            const rowId = `n-${d.id}`;
-            l.innerHTML += `
-            <tr onclick="toggleBoardRow('${rowId}')" style="cursor:pointer; background:rgba(239,68,68,0.03);">
-                <td class="board-no" style="color:var(--danger); font-weight:bold;">공지</td>
-                <td class="board-title">📢 ${x.title} <span style="font-size:0.7rem; color:var(--primary); margin-left:4px;">▼</span></td>
-                <td class="board-date">${dateStr}</td>
-            </tr>
-            <tr id="${rowId}" class="board-content-row">
-                <td colspan="3" class="board-content-box" style="border-left: 3px solid var(--danger);">
-                    <div style="margin-bottom:15px; white-space:pre-wrap;">${linkedContent}</div>
-                    ${imageHtml}
-                    <div style="text-align:right; margin-top:10px;">
-                        <button class="mini-btn" style="background:var(--primary); margin-right:5px;" onclick="startEditNotice('${d.id}', '${safeTitle}', '${safeContent}', ${imgParam}, event)">✏️ 수정(Admin)</button>
-                        <button class="mini-btn btn-del" onclick="delNotice('${d.id}',event)">🗑️ 삭제(Admin)</button>
-                    </div>
-                </td>
-            </tr>`;
-            index++;
+        db.collection("notices").orderBy("timestamp","desc").onSnapshot(s => {
+            const l = document.getElementById("noticeList"); l.innerHTML = ""; const badge = document.getElementById("noticeBadge");
+            if (s.empty) { l.innerHTML = "<tr><td colspan='3' style='text-align:center; padding:20px; color:var(--text-sub);'>등록된 공지가 없습니다.</td></tr>"; if(badge) badge.classList.add("hidden"); return; }
+            let isNew = false; const now = new Date(); let index = 0;
+            s.forEach(d => {
+                const x = d.data(); let dateStr = "";
+                if(x.timestamp) { const dt = x.timestamp.toDate(); dateStr = `${dt.getFullYear()}/${String(dt.getMonth()+1).padStart(2,'0')}/${String(dt.getDate()).padStart(2,'0')}`; if (index === 0) { const diffTime = now.getTime() - dt.getTime(); if (diffTime < 24 * 60 * 60 * 1000) isNew = true; } }
+                const linkedContent = autoLink(x.content); 
+                const imageHtml = x.imageUrl ? `<img src="${x.imageUrl}" style="max-width:100%; border-radius:8px; margin-top:10px; border:1px solid rgba(0,0,0,0.1);" onclick="document.getElementById('imageModal').style.display='flex'; document.getElementById('modalImage').src=this.src;">` : '';
+                const safeTitle = (x.title || '').replace(/'/g, "\\'").replace(/"/g, "&quot;"); const safeContent = (x.content || '').replace(/'/g, "\\'").replace(/"/g, "&quot;").replace(/\n/g, "\\n"); const imgParam = x.imageUrl ? `'${x.imageUrl}'` : `null`;
+                const rowId = `n-${d.id}`;
+                l.innerHTML += `<tr onclick="toggleBoardRow('${rowId}')" style="cursor:pointer; background:rgba(239,68,68,0.03);"> <td class="board-no" style="color:var(--danger); font-weight:bold;">공지</td> <td class="board-title">📢 ${x.title} <span style="font-size:0.7rem; color:var(--primary); margin-left:4px;">▼</span></td> <td class="board-date">${dateStr}</td> </tr> <tr id="${rowId}" class="board-content-row"> <td colspan="3" class="board-content-box" style="border-left: 3px solid var(--danger);"> <div style="margin-bottom:15px; white-space:pre-wrap;">${linkedContent}</div> ${imageHtml} <div style="text-align:right; margin-top:10px;"> <button class="mini-btn" style="background:var(--primary); margin-right:5px;" onclick="startEditNotice('${d.id}', '${safeTitle}', '${safeContent}', ${imgParam}, event)">✏️ 수정(Admin)</button> <button class="mini-btn btn-del" onclick="delNotice('${d.id}',event)">🗑️ 삭제(Admin)</button> </div> </td> </tr>`;
+                index++;
+            });
+            if(badge) { if(isNew) badge.classList.remove("hidden"); else badge.classList.add("hidden"); }
         });
 
-        if(badge) {
-            if(isNew) badge.classList.remove("hidden");
-            else badge.classList.add("hidden");
-        }
-    });
-    // ================= [공지사항 화면 출력 끝] =================
-/* 변경 후 (아래 코드로 덮어쓰기) */
-db.collection("posts").orderBy("timestamp","desc").onSnapshot(s => {
-    allPostsData = []; 
-    s.forEach(d => { allPostsData.push({...d.data(), id:d.id}) }); 
-
-    // 익명게시판 NEW 뱃지 로직
-    const badge = document.getElementById("boardBadge");
-    if (badge) {
-        // 게시글이 1개라도 있고, 첫 번째 글(가장 최신 글)의 시간이 존재할 때
-        if (allPostsData.length > 0 && allPostsData[0].timestamp) {
-            const now = new Date();
-            const dt = allPostsData[0].timestamp.toDate();
-            const diffTime = now.getTime() - dt.getTime(); // 시간 차이 계산
-
-            if (diffTime < 24 * 60 * 60 * 1000) { // 24시간(1일) 이내면 보이기
-                badge.classList.remove("hidden");
-            } else { // 24시간이 지났으면 숨기기
-                badge.classList.add("hidden");
+        db.collection("posts").orderBy("timestamp","desc").onSnapshot(s => {
+            allPostsData = []; s.forEach(d => { allPostsData.push({...d.data(), id:d.id}) }); 
+            const badge = document.getElementById("boardBadge");
+            if (badge) {
+                if (allPostsData.length > 0 && allPostsData[0].timestamp) {
+                    const now = new Date(); const dt = allPostsData[0].timestamp.toDate(); const diffTime = now.getTime() - dt.getTime(); 
+                    if (diffTime < 24 * 60 * 60 * 1000) badge.classList.remove("hidden"); else badge.classList.add("hidden");
+                } else badge.classList.add("hidden");
             }
-        } else {
-            badge.classList.add("hidden");
-        }
-    }
-
-    renderBoardPage(1); // 1페이지 화면 그리기
-});
+            renderBoardPage(1); 
+        });
         db.collection("ships").orderBy("timestamp","desc").onSnapshot(s=>{allShipsData=[]; s.forEach(d=>{allShipsData.push({...d.data(), id:d.id})}); filteredShips=allShipsData; renderShipPage(1);}); 
         db.collection("archives").orderBy("timestamp","desc").onSnapshot(s=>{const l=document.getElementById("fileList"); l.innerHTML=""; s.forEach(d=>{const x=d.data(); l.innerHTML+=`<li class="post-item"><a href="${x.url}" target="_blank">💾 ${x.title}</a><button class="mini-btn btn-del" onclick="delArchive('${d.id}',event)">×</button></li>`;})});
     } catch(err) { console.warn("실시간 연결 오류:", err); }
     if(localStorage.getItem('myWorkerId')) { currentWorkerId = localStorage.getItem('myWorkerId'); updateUserBar(); }
 };
-/* 조장 근무일 이미지 팝업 함수 */
-/* ===== 조장 근무일 캘린더 스크립트 (근무조 교체 일괄 연동 버전) ===== */
-        let leaderCurrentDate = new Date();
-        let leaderOverrides = []; // 모든 변경 데이터를 저장
-        const baseCycle = ["재경", "성철", "개굴"]; // 3일 기본 로테이션 패턴
-        const baseAnchor = "2026-02-01"; // 계산 기준일 (재경)
 
-        function openLeaderSchedule() {
-            document.getElementById('leaderCalendarModal').style.display = 'flex';
-            leaderCurrentDate = new Date(); 
-            renderLeaderCalendar(leaderCurrentDate.getFullYear(), leaderCurrentDate.getMonth());
-        }
+let leaderCurrentDate = new Date();
+let leaderOverrides = [];
+const baseCycle = ["재경", "성철", "개굴"];
+const baseAnchor = "2026-02-01";
 
-        function closeLeaderCalendar() {
-            document.getElementById('leaderCalendarModal').style.display = 'none';
-        }
-
-        function changeLeaderMonth(s) {
-            leaderCurrentDate.setMonth(leaderCurrentDate.getMonth() + s);
-            renderLeaderCalendar(leaderCurrentDate.getFullYear(), leaderCurrentDate.getMonth());
-        }
-
-        // 특정 날짜의 '로테이션 슬롯 번호(0, 1, 2)'를 구하는 함수
-        function getSlotIndex(dStr) {
-            const target = new Date(dStr);
-            const anchor = new Date(baseAnchor);
-            const diffDays = Math.floor((target.getTime() - anchor.getTime()) / (1000 * 60 * 60 * 24));
-            return ((diffDays % 3) + 3) % 3;
-        }
-
-        function getCalculatedLeader(targetDateStr) {
-            const targetSlot = getSlotIndex(targetDateStr);
-
-            // 해당 슬롯에 대해, 현재 날짜 이전의 '가장 최근 변경 기록'을 찾아 일괄 적용
-            for (let i = leaderOverrides.length - 1; i >= 0; i--) {
-                const ov = leaderOverrides[i];
-                if (ov.date <= targetDateStr) {
-                    if (getSlotIndex(ov.date) === targetSlot) {
-                        return ov.leader; // 해당 조를 덮어쓴 가장 최근 근무자 반환
-                    }
-                }
-            }
-            // 덮어쓴 기록이 없으면 기본 3인방 패턴 반환
-            return baseCycle[targetSlot];
-        }
-
-        function renderLeaderCalendar(y, m) {
-            document.getElementById('leaderCalMonthYear').innerText = `${y}년 ${m+1}월`;
-            const lD = new Date(y, m+1, 0).getDate();
-
-            // 이전 달의 오버라이드 기록도 이후 달력에 영향을 미치므로 전체를 가져옴
-            db.collection('leader_overrides').get().then(s => {
-                leaderOverrides = [];
-                s.forEach(doc => { leaderOverrides.push(doc.data()); });
-                leaderOverrides.sort((a, b) => a.date.localeCompare(b.date)); // 날짜 오름차순 정렬
-                drawLeaderGrid(y, m, lD);
-            }).catch(err => {
-                console.warn("오버라이드 로드 실패:", err);
-                drawLeaderGrid(y, m, lD);
-            });
-        }
-
-        function drawLeaderGrid(y, m, lD) {
-            const g = document.getElementById('leaderCalendarGrid');
-            g.innerHTML = "";
-            const fD = new Date(y, m, 1).getDay();
-            
-            for(let i=0; i<fD; i++) {
-                g.innerHTML += `<div style="background:transparent; border:none;"></div>`;
-            }
-            
-            for(let d=1; d<=lD; d++) {
-                const dStr = `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-                
-                // 수동 변경의 시작점인지 확인
-                const isAnchor = leaderOverrides.some(ov => ov.date === dStr);
-                const leaderName = getCalculatedLeader(dStr);
-                
-                let badgeClass = "leader-badge ";
-                if (leaderName.includes("재경")) badgeClass += "leader-jaekyung";
-                else if (leaderName.includes("성철")) badgeClass += "leader-sungchul";
-                else if (leaderName.includes("개굴")) badgeClass += "leader-gaegool";
-                else badgeClass += "leader-jaekyung"; // 기본 모양
-                
-                let customStyle = isAnchor ? "border: 2px solid #ef4444;" : "";
-                
-                // 임의의 이름일 경우 눈에 띄게 보라색 배경 적용
-                if (!baseCycle.includes(leaderName)) {
-                    customStyle += "background-color: #8b5cf6; color: white;";
-                }
-                
-                let dayColor = "var(--text-main)";
-                let currentDayObj = new Date(y, m, d).getDay();
-                if (currentDayObj === 0) dayColor = "#ef4444"; 
-                if (currentDayObj === 6) dayColor = "#3b82f6"; 
-
-                g.innerHTML += `
-                    <div class="cal-day tap-effect" onclick="overrideLeader('${dStr}', '${leaderName}')" style="min-height: 65px; justify-content: flex-start; padding-top: 5px; background: white;">
-                        <span style="color: ${dayColor}; font-weight: 900; font-size: 0.95rem;">${d}</span>
-                        <div class="${badgeClass}" style="${customStyle}">${leaderName}</div>
-                    </div>
-                `;
-            }
-        }
-
-        async function overrideLeader(dStr, currentLeader) {
-            if (!(await verifyAdmin())) return; 
-            
-            const newLeader = prompt(`[${dStr}] 조장을 변경합니다.\n\n👉 이곳에 새 이름(예: 용병, 김철수)을 넣으면 이후 3일마다 돌아오는 이 근무조의 스케줄이 모두 이 사람으로 일괄 교체됩니다.\n\n※ 변경을 취소하고 원래 패턴으로 복구하려면 내용을 다 지우고 '확인'을 누르세요.`, currentLeader);
-            
-            if (newLeader === null) return; 
-            
-            if (newLeader.trim() === "" || newLeader === "초기화") {
-                db.collection('leader_overrides').doc(dStr).delete().then(() => {
-                    showToast("변경이 취소되어 기존 근무표 패턴으로 복구됩니다.");
-                    renderLeaderCalendar(leaderCurrentDate.getFullYear(), leaderCurrentDate.getMonth());
-                });
-            } else {
-                db.collection('leader_overrides').doc(dStr).set({
-                    date: dStr,
-                    leader: newLeader.trim()
-                }).then(() => {
-                    showToast(`'${newLeader.trim()}'(이)가 새 근무조로 일괄 적용되었습니다.`);
-                    renderLeaderCalendar(leaderCurrentDate.getFullYear(), leaderCurrentDate.getMonth());
-                });
-            }
-        }
-</script>
+function openLeaderSchedule() { document.getElementById('leaderCalendarModal').style.display = 'flex'; leaderCurrentDate = new Date(); renderLeaderCalendar(leaderCurrentDate.getFullYear(), leaderCurrentDate.getMonth()); }
+function closeLeaderCalendar() { document.getElementById('leaderCalendarModal').style.display = 'none'; }
+function changeLeaderMonth(s) { leaderCurrentDate.setMonth(leaderCurrentDate.getMonth() + s); renderLeaderCalendar(leaderCurrentDate.getFullYear(), leaderCurrentDate.getMonth()); }
+function getSlotIndex(dStr) { const target = new Date(dStr); const anchor = new Date(baseAnchor); const diffDays = Math.floor((target.getTime() - anchor.getTime()) / (1000 * 60 * 60 * 24)); return ((diffDays % 3) + 3) % 3; }
+function getCalculatedLeader(targetDateStr) { const targetSlot = getSlotIndex(targetDateStr); for (let i = leaderOverrides.length - 1; i >= 0; i--) { const ov = leaderOverrides[i]; if (ov.date <= targetDateStr) { if (getSlotIndex(ov.date) === targetSlot) return ov.leader; } } return baseCycle[targetSlot]; }
+function renderLeaderCalendar(y, m) { document.getElementById('leaderCalMonthYear').innerText = `${y}년 ${m+1}월`; const lD = new Date(y, m+1, 0).getDate(); db.collection('leader_overrides').get().then(s => { leaderOverrides = []; s.forEach(doc => { leaderOverrides.push(doc.data()); }); leaderOverrides.sort((a, b) => a.date.localeCompare(b.date)); drawLeaderGrid(y, m, lD); }).catch(err => { drawLeaderGrid(y, m, lD); }); }
+function drawLeaderGrid(y, m, lD) { const g = document.getElementById('leaderCalendarGrid'); g.innerHTML = ""; const fD = new Date(y, m, 1).getDay(); for(let i=0; i<fD; i++) { g.innerHTML += `<div style="background:transparent; border:none;"></div>`; } for(let d=1; d<=lD; d++) { const dStr = `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`; const isAnchor = leaderOverrides.some(ov => ov.date === dStr); const leaderName = getCalculatedLeader(dStr); let badgeClass = "leader-badge "; if (leaderName.includes("재경")) badgeClass += "leader-jaekyung"; else if (leaderName.includes("성철")) badgeClass += "leader-sungchul"; else if (leaderName.includes("개굴")) badgeClass += "leader-gaegool"; else badgeClass += "leader-jaekyung"; let customStyle = isAnchor ? "border: 2px solid #ef4444;" : ""; if (!baseCycle.includes(leaderName)) customStyle += "background-color: #8b5cf6; color: white;"; let dayColor = "var(--text-main)"; let currentDayObj = new Date(y, m, d).getDay(); if (currentDayObj === 0) dayColor = "#ef4444"; if (currentDayObj === 6) dayColor = "#3b82f6"; g.innerHTML += `<div class="cal-day tap-effect" onclick="overrideLeader('${dStr}', '${leaderName}')" style="min-height: 65px; justify-content: flex-start; padding-top: 5px; background: white;"><span style="color: ${dayColor}; font-weight: 900; font-size: 0.95rem;">${d}</span><div class="${badgeClass}" style="${customStyle}">${leaderName}</div></div>`; } }
+async function overrideLeader(dStr, currentLeader) { if (!(await verifyAdmin())) return; const newLeader = prompt(`[${dStr}] 조장을 변경합니다.\n\n👉 이곳에 새 이름(예: 용병)을 넣으면 이후 3일마다 돌아오는 이 근무조의 스케줄이 모두 교체됩니다.\n\n※ 취소하려면 '초기화'를 입력하세요.`, currentLeader); if (newLeader === null) return; if (newLeader.trim() === "" || newLeader === "초기화") { db.collection('leader_overrides').doc(dStr).delete().then(() => { showToast("기존 패턴 복구완료."); renderLeaderCalendar(leaderCurrentDate.getFullYear(), leaderCurrentDate.getMonth()); }); } else { db.collection('leader_overrides').doc(dStr).set({ date: dStr, leader: newLeader.trim() }).then(() => { showToast("새 근무조 적용완료."); renderLeaderCalendar(leaderCurrentDate.getFullYear(), leaderCurrentDate.getMonth()); }); } }
+    </script>
 </body>
 </html>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
