@@ -1094,7 +1094,84 @@ function addPost() { const nickEl = document.getElementById('inputNick'); const 
 function deletePost(id,pw,e){ e.stopPropagation(); if(prompt("비번")===pw) db.collection("posts").doc(id).delete(); }
 function addComment(pid){const n=document.getElementById(`cmt-name-${pid}`).value, p=document.getElementById(`cmt-pw-${pid}`).value, t=document.getElementById(`cmt-txt-${pid}`).value; if(n&&p&&t){db.collection('posts').doc(pid).collection('comments').add({name:n, password:p, text:t, timestamp:firebase.firestore.FieldValue.serverTimestamp()}).then(()=>{document.getElementById(`cmt-txt-${pid}`).value=""; showToast("댓글 등록됨");});}}
 async function deleteComment(pid,cid,pw){if(prompt("비번")===pw||await verifyAdmin()) db.collection('posts').doc(pid).collection('comments').doc(cid).delete();}
-function addShipInfo() { const n = document.getElementById('shipName').value.trim(); const c = document.getElementById('shipOnboard').value.trim(); const f = document.getElementById('shipFileInput').files[0]; const btn = document.getElementById('shipSubmitBtn'); if (!n) return alert("선박명 입력!"); btn.innerText = "업로드 시작..."; btn.disabled = true; const save = (url) => { db.collection("ships").add({ shipName: n, onboardFeat: c, imageUrl: url, timestamp: firebase.firestore.FieldValue.serverTimestamp() }).then(() => { document.getElementById('shipName').value = ''; document.getElementById('shipOnboard').value = ''; document.getElementById('shipFileInput').value = ''; toggleHidden('shipForm'); showToast("선박이 등록되었습니다!"); btn.innerText = "등록/수정"; btn.disabled = false; }); }; if (f) { const storageRef = storage.ref(`ships/${Date.now()}_${f.name}`); const uploadTask = storageRef.put(f); uploadTask.on('state_changed', (snap) => { const percent = Math.round((snap.bytesTransferred / snap.totalBytes) * 100); btn.innerText = `업로드 중... ${percent}%`; }, (err) => { alert("실패: " + err.message); btn.disabled = false; }, () => { uploadTask.snapshot.ref.getDownloadURL().then(url => save(url)); }); } else { save(null); } }
+/* 🚢 전역 변수 추가 (수정 모드 판별용) */
+let currentEditShipId = null;
+
+// 1. 선박 정보 등록 및 수정 함수
+function addShipInfo() {
+    const n = document.getElementById('shipName').value.trim();
+    const c = document.getElementById('shipOnboard').value.trim();
+    const f = document.getElementById('shipFileInput').files[0];
+    const btn = document.getElementById('shipSubmitBtn');
+
+    if (!n) return alert("선박명은 필수입니다!");
+    
+    btn.innerText = "서버 기록 중...";
+    btn.disabled = true;
+
+    const finalizeSave = (url) => {
+        const shipData = {
+            shipName: n,
+            onboardFeat: c,
+            timestamp: firebase.firestore.FieldValue.serverTimestamp()
+        };
+        if (url) shipData.imageUrl = url;
+
+        let task;
+        if (currentEditShipId) {
+            // 수정 모드일 때
+            task = db.collection("ships").doc(currentEditShipId).update(shipData);
+        } else {
+            // 신규 등록일 때
+            task = db.collection("ships").add(shipData);
+        }
+
+        task.then(() => {
+            showToast(currentEditShipId ? "수정 완료!" : "등록 완료!");
+            resetShipForm();
+            btn.innerText = "등록/수정 완료";
+            btn.disabled = false;
+            currentEditShipId = null; // 수정 모드 해제
+        }).catch(err => {
+            alert("저장 실패: " + err.message);
+            btn.disabled = false;
+        });
+    };
+
+    if (f) {
+        const storageRef = storage.ref(`ships/${Date.now()}_${f.name}`);
+        const uploadTask = storageRef.put(f);
+        uploadTask.on('state_changed', null, null, () => {
+            uploadTask.snapshot.ref.getDownloadURL().then(url => finalizeSave(url));
+        });
+    } else {
+        finalizeSave();
+    }
+}
+
+// 2. 수정 버튼 클릭 시 폼에 데이터 채우기
+function startEditShip(id, name, feat) {
+    currentEditShipId = id;
+    document.getElementById('shipName').value = name;
+    document.getElementById('shipOnboard').value = feat;
+    
+    // 등록 폼이 닫혀있다면 열어주기
+    const form = document.getElementById('shipForm');
+    if (form.classList.contains('hidden')) form.classList.remove('hidden');
+    
+    // 폼 위치로 스크롤 이동
+    form.scrollIntoView({behavior: 'smooth', block: 'center'});
+    showToast("수정 모드로 전환되었습니다.");
+}
+
+// 3. 폼 초기화 함수
+function resetShipForm() {
+    document.getElementById('shipName').value = '';
+    document.getElementById('shipOnboard').value = '';
+    document.getElementById('shipFileInput').value = '';
+    document.getElementById('shipForm').classList.add('hidden');
+    currentEditShipId = null;
+}
 /* 🚢 선박 검색 기능 수정 (기존 틀 유지) */
 function filterShips() {
     const searchTerm = document.getElementById('shipSearch').value.trim().toUpperCase();
@@ -1113,35 +1190,32 @@ function filterShips() {
     renderShipPage(1); 
 }
         /* 🚢 선박 목록 출력 (기존 디자인 100% 유지) */
+// 4. 선박 목록 출력 (수정 버튼 추가됨)
 function renderShipPage(p) {
     const l = document.getElementById("shipList");
     if(!l) return;
     l.innerHTML = "";
-    
-    // 검색 결과나 전체 목록에서 5개씩 잘라서 보여줌
     const pageData = filteredShips.slice((p-1)*postsPerPage, p*postsPerPage);
     
-    if(pageData.length === 0) {
-        l.innerHTML = "<p style='text-align:center; padding:20px; color:var(--text-sub);'>검색 결과가 없습니다.</p>";
-        return;
-    }
-
     pageData.forEach(x => {
-        let photoHtml = x.imageUrl ? 
-            `<img src="${x.imageUrl}" style="width:100%; border-radius:10px; margin-top:10px; border:1px solid #eee;" onclick="document.getElementById('imageModal').style.display='flex'; document.getElementById('modalImage').src=this.src;">` : 
-            `<p style="color:#ccc; font-size:0.8rem;">[등록된 사진 없음]</p>`;
-            
+        let photoHtml = x.imageUrl ? `<img src="${x.imageUrl}" style="width:100%; border-radius:10px; margin-top:10px;" onclick="document.getElementById('imageModal').style.display='flex'; document.getElementById('modalImage').src=this.src;">` : '';
+        
+        // 특수기호 에러 방지를 위한 텍스트 처리
+        const safeName = (x.shipName || "").replace(/'/g, "\\'");
+        const safeFeat = (x.onboardFeat || "").replace(/'/g, "\\'").replace(/\n/g, "\\n");
+
         l.innerHTML += `
             <li class="post-item" style="border-bottom: 2px solid var(--border);">
                 <div class="post-header-row" onclick="toggleContent('s-${x.id}')">
-                    <div class="post-title-text">🚢 ${x.shipName || '미기입 선박'}</div>
+                    <div class="post-title-text">🚢 ${x.shipName || '미기입'}</div>
                     <span style="color:var(--primary);">▼</span>
                 </div>
                 <div id="s-${x.id}" class="post-body-content" style="display:none; padding:15px;">
                     <div style="font-weight:bold; color:var(--primary); margin-bottom:5px;">작업내용:</div>
                     <div style="white-space:pre-wrap;">${x.onboardFeat || '내용 없음'}</div>
                     ${photoHtml}
-                    <div style="text-align:right; margin-top:10px;">
+                    <div style="text-align:right; margin-top:15px;">
+                        <button class="mini-btn" style="background:var(--primary-light);" onclick="startEditShip('${x.id}', '${safeName}', '${safeFeat}')">✏️ 수정</button>
                         <button class="mini-btn btn-del" onclick="deleteShip('${x.id}',event)">🗑️ 삭제</button>
                     </div>
                 </div>
@@ -1223,6 +1297,7 @@ async function overrideLeader(dStr, currentLeader) { if (!(await verifyAdmin()))
     </script>
 </body>
 </html>
+
 
 
 
