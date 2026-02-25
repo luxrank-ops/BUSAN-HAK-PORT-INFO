@@ -1089,7 +1089,59 @@ function deletePost(id,pw,e){ e.stopPropagation(); if(prompt("비번")===pw) db.
 function addComment(pid){const n=document.getElementById(`cmt-name-${pid}`).value, p=document.getElementById(`cmt-pw-${pid}`).value, t=document.getElementById(`cmt-txt-${pid}`).value; if(n&&p&&t){db.collection('posts').doc(pid).collection('comments').add({name:n, password:p, text:t, timestamp:firebase.firestore.FieldValue.serverTimestamp()}).then(()=>{document.getElementById(`cmt-txt-${pid}`).value=""; showToast("댓글 등록됨");});}}
 async function deleteComment(pid,cid,pw){if(prompt("비번")===pw||await verifyAdmin()) db.collection('posts').doc(pid).collection('comments').doc(cid).delete();}
 function addShipInfo() { const n = document.getElementById('shipName').value.trim(); const c = document.getElementById('shipOnboard').value.trim(); const f = document.getElementById('shipFileInput').files[0]; const btn = document.getElementById('shipSubmitBtn'); if (!n) return alert("선박명 입력!"); btn.innerText = "업로드 시작..."; btn.disabled = true; const save = (url) => { db.collection("ships").add({ shipName: n, onboardFeat: c, imageUrl: url, timestamp: firebase.firestore.FieldValue.serverTimestamp() }).then(() => { document.getElementById('shipName').value = ''; document.getElementById('shipOnboard').value = ''; document.getElementById('shipFileInput').value = ''; toggleHidden('shipForm'); showToast("선박이 등록되었습니다!"); btn.innerText = "등록/수정"; btn.disabled = false; }); }; if (f) { const storageRef = storage.ref(`ships/${Date.now()}_${f.name}`); const uploadTask = storageRef.put(f); uploadTask.on('state_changed', (snap) => { const percent = Math.round((snap.bytesTransferred / snap.totalBytes) * 100); btn.innerText = `업로드 중... ${percent}%`; }, (err) => { alert("실패: " + err.message); btn.disabled = false; }, () => { uploadTask.snapshot.ref.getDownloadURL().then(url => save(url)); }); } else { save(null); } }
-function renderShipPage(p) { const l = document.getElementById("shipList"); l.innerHTML = ""; const pageData = filteredShips.slice((p-1)*postsPerPage, p*postsPerPage); pageData.forEach(x => { let photoHtml = x.imageUrl ? `<img src="${x.imageUrl}" style="width:100%; border-radius:10px; margin-top:10px; border:1px solid #eee;">` : `<p style="color:#ccc; font-size:0.8rem;">[등록된 사진 없음]</p>`; l.innerHTML += `<li class="post-item" style="border-bottom: 2px solid var(--border);"> <div class="post-header-row" onclick="toggleContent('s-${x.id}')"> <div class="post-title-text">🚢 ${x.shipName || '미기입 선박'}</div> <span style="color:var(--primary);">▼</span> </div> <div id="s-${x.id}" class="post-body-content" style="display:none; padding:15px;"> <div style="font-weight:bold; color:var(--secondary); margin-bottom:5px;">작업내용:</div> <div style="white-space:pre-wrap;">${x.onboardFeat || '내용 없음'}</div> ${photoHtml} <div style="text-align:right; margin-top:10px;"> <button class="mini-btn btn-del" onclick="deleteShip('${x.id}',event)">🗑️ 삭제</button> </div> </div> </li>`; }); }
+/* 🚢 선박 검색 기능 수정 (기존 틀 유지) */
+function filterShips() {
+    const searchTerm = document.getElementById('shipSearch').value.trim().toUpperCase();
+    
+    if (searchTerm === "") {
+        // 검색어가 없으면 전체 데이터를 다시 보여줌
+        filteredShips = allShipsData;
+    } else {
+        // 전체 데이터에서 선박명(shipName)에 검색어가 포함된 것만 골라냄
+        filteredShips = allShipsData.filter(ship => 
+            (ship.shipName && ship.shipName.toUpperCase().includes(searchTerm))
+        );
+    }
+    
+    // 검색 결과를 1페이지부터 다시 그려줌
+    renderShipPage(1); 
+}
+        /* 🚢 선박 목록 출력 (기존 디자인 100% 유지) */
+function renderShipPage(p) {
+    const l = document.getElementById("shipList");
+    if(!l) return;
+    l.innerHTML = "";
+    
+    // 검색 결과나 전체 목록에서 5개씩 잘라서 보여줌
+    const pageData = filteredShips.slice((p-1)*postsPerPage, p*postsPerPage);
+    
+    if(pageData.length === 0) {
+        l.innerHTML = "<p style='text-align:center; padding:20px; color:var(--text-sub);'>검색 결과가 없습니다.</p>";
+        return;
+    }
+
+    pageData.forEach(x => {
+        let photoHtml = x.imageUrl ? 
+            `<img src="${x.imageUrl}" style="width:100%; border-radius:10px; margin-top:10px; border:1px solid #eee;" onclick="document.getElementById('imageModal').style.display='flex'; document.getElementById('modalImage').src=this.src;">` : 
+            `<p style="color:#ccc; font-size:0.8rem;">[등록된 사진 없음]</p>`;
+            
+        l.innerHTML += `
+            <li class="post-item" style="border-bottom: 2px solid var(--border);">
+                <div class="post-header-row" onclick="toggleContent('s-${x.id}')">
+                    <div class="post-title-text">🚢 ${x.shipName || '미기입 선박'}</div>
+                    <span style="color:var(--primary);">▼</span>
+                </div>
+                <div id="s-${x.id}" class="post-body-content" style="display:none; padding:15px;">
+                    <div style="font-weight:bold; color:var(--primary); margin-bottom:5px;">작업내용:</div>
+                    <div style="white-space:pre-wrap;">${x.onboardFeat || '내용 없음'}</div>
+                    ${photoHtml}
+                    <div style="text-align:right; margin-top:10px;">
+                        <button class="mini-btn btn-del" onclick="deleteShip('${x.id}',event)">🗑️ 삭제</button>
+                    </div>
+                </div>
+            </li>`;
+    });
+}
 function addArchive() { const t = document.getElementById('archiveTitle').value.trim(); const f = document.getElementById('archiveFile').files[0]; const btn = document.getElementById('archiveSubmitBtn'); if(!t || !f) return alert("파일 설명과 파일을 모두 선택해주세요."); btn.innerText = "서버 연결 중..."; btn.disabled = true; const ref = storage.ref(`archives/${Date.now()}_${f.name}`); const task = ref.put(f); task.on('state_changed', (s) => { const p = Math.round((s.bytesTransferred / s.totalBytes) * 100); btn.innerText = `업로드 중... ${p}%`; }, (e) => { alert("업로드 실패: " + e.message); btn.disabled = false; btn.innerText = "업로드 완료"; }, () => { task.snapshot.ref.getDownloadURL().then(url => { db.collection("archives").add({ title: t, url: url, timestamp: firebase.firestore.FieldValue.serverTimestamp() }).then(() => { document.getElementById('archiveTitle').value = ""; document.getElementById('archiveFile').value = ""; toggleHidden('archiveForm'); btn.innerText = "업로드 실행"; btn.disabled = false; showToast("파일이 성공적으로 등록되었습니다!"); }); }); } ); }        
 async function deleteShip(id,e){e.stopPropagation(); if(await verifyAdmin()) db.collection("ships").doc(id).delete();}
 function delArchive(id,e){ e.stopPropagation(); verifyAdmin().then(r=>{ if(r) db.collection("archives").doc(id).delete(); }); }
@@ -1165,6 +1217,7 @@ async function overrideLeader(dStr, currentLeader) { if (!(await verifyAdmin()))
     </script>
 </body>
 </html>
+
 
 
 
