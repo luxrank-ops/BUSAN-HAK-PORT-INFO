@@ -525,13 +525,15 @@
 
         <a href="https://www.marinetraffic.com/" target="_blank" class="action-btn" style="background:#0284c7; text-align:center; display:block; text-decoration:none; margin-bottom:10px; padding:12px;">🌍 실시간 선박 위치 확인</a>
         <button class="action-btn" style="background:var(--accent); margin-bottom:10px;" onclick="toggleHidden('shipForm')">📝 선박 정보 신규 등록</button>
-        
-        <div id="shipForm" class="hidden">
-            <input type="text" id="shipName" class="input-field" placeholder="선박명">
-            <textarea id="shipOnboard" class="input-field textarea-field" placeholder="작업내용"></textarea>
-            <input type="file" id="shipFileInput" class="input-field">
-            <button id="shipSubmitBtn" class="action-btn bg-submit" onclick="addShipInfo()">등록/수정</button>
-        </div>
+
+<div id="shipForm" class="hidden">
+    <input type="password" id="shipPw" class="input-field" placeholder="비밀번호 (수정/삭제용)" style="text-align:left; margin-bottom:8px;">
+    
+    <input type="text" id="shipName" class="input-field" placeholder="선박명" style="text-align:left;">
+    <textarea id="shipOnboard" class="input-field textarea-field" placeholder="작업내용"></textarea>
+    <input type="file" id="shipFileInput" class="input-field">
+    <button id="shipSubmitBtn" class="action-btn bg-submit" onclick="addShipInfo()">등록/수정</button>
+</div>
         
         <ul id="shipList" class="post-list"></ul>
     </div>
@@ -1097,14 +1099,15 @@ async function deleteComment(pid,cid,pw){if(prompt("비번")===pw||await verifyA
 /* 🚢 전역 변수 추가 (수정 모드 판별용) */
 let currentEditShipId = null;
 
-// 1. 선박 정보 등록 및 수정 함수
+/* 🚢 선박 정보 등록/수정 (비밀번호 보안 포함) */
 function addShipInfo() {
     const n = document.getElementById('shipName').value.trim();
     const c = document.getElementById('shipOnboard').value.trim();
+    const p = document.getElementById('shipPw').value.trim(); // 비밀번호 필드
     const f = document.getElementById('shipFileInput').files[0];
     const btn = document.getElementById('shipSubmitBtn');
 
-    if (!n) return alert("선박명은 필수입니다!");
+    if (!n || !p) return alert("선박명과 비밀번호는 필수입니다!");
     
     btn.innerText = "서버 기록 중...";
     btn.disabled = true;
@@ -1113,29 +1116,21 @@ function addShipInfo() {
         const shipData = {
             shipName: n,
             onboardFeat: c,
+            password: p, // 비번 저장
             timestamp: firebase.firestore.FieldValue.serverTimestamp()
         };
         if (url) shipData.imageUrl = url;
 
-        let task;
-        if (currentEditShipId) {
-            // 수정 모드일 때
-            task = db.collection("ships").doc(currentEditShipId).update(shipData);
-        } else {
-            // 신규 등록일 때
-            task = db.collection("ships").add(shipData);
-        }
+        let task = currentEditShipId ? 
+            db.collection("ships").doc(currentEditShipId).update(shipData) : 
+            db.collection("ships").add(shipData);
 
         task.then(() => {
-            showToast(currentEditShipId ? "수정 완료!" : "등록 완료!");
+            showToast("성공적으로 기록되었습니다.");
             resetShipForm();
-            btn.innerText = "등록/수정 완료";
+            btn.innerText = "등록/수정";
             btn.disabled = false;
-            currentEditShipId = null; // 수정 모드 해제
-        }).catch(err => {
-            alert("저장 실패: " + err.message);
-            btn.disabled = false;
-        });
+        }).catch(err => { alert("실패: " + err.message); btn.disabled = false; });
     };
 
     if (f) {
@@ -1144,8 +1139,23 @@ function addShipInfo() {
         uploadTask.on('state_changed', null, null, () => {
             uploadTask.snapshot.ref.getDownloadURL().then(url => finalizeSave(url));
         });
+    } else { finalizeSave(); }
+}
+
+/* 🚢 수정 권한 체크 함수 */
+async function tryEditShip(id, name, feat, savedPw) {
+    const inputPw = prompt("비밀번호를 입력하세요 (작성자 또는 관리자):");
+    if (!inputPw) return;
+
+    // 관리자 비번 확인 (서버 연동)
+    const adminDoc = await db.collection('settings').doc('admin').get();
+    const isAdmin = adminDoc.exists && adminDoc.data().password === inputPw;
+
+    // 본인 비번이거나 관리자일 경우만 통과
+    if (inputPw === savedPw || isAdmin) {
+        startEditShip(id, name, feat);
     } else {
-        finalizeSave();
+        alert("⚠️ 권한이 없습니다. 비밀번호를 확인하세요.");
     }
 }
 
@@ -1190,32 +1200,28 @@ function filterShips() {
     renderShipPage(1); 
 }
         /* 🚢 선박 목록 출력 (기존 디자인 100% 유지) */
-// 4. 선박 목록 출력 (수정 버튼 추가됨)
+/* 🚢 목록 렌더링 (수정 버튼에 권한 체크 연결) */
 function renderShipPage(p) {
     const l = document.getElementById("shipList");
-    if(!l) return;
     l.innerHTML = "";
     const pageData = filteredShips.slice((p-1)*postsPerPage, p*postsPerPage);
     
     pageData.forEach(x => {
-        let photoHtml = x.imageUrl ? `<img src="${x.imageUrl}" style="width:100%; border-radius:10px; margin-top:10px;" onclick="document.getElementById('imageModal').style.display='flex'; document.getElementById('modalImage').src=this.src;">` : '';
-        
-        // 특수기호 에러 방지를 위한 텍스트 처리
         const safeName = (x.shipName || "").replace(/'/g, "\\'");
         const safeFeat = (x.onboardFeat || "").replace(/'/g, "\\'").replace(/\n/g, "\\n");
+        const savedPw = x.password || ""; // 저장된 비번
 
         l.innerHTML += `
-            <li class="post-item" style="border-bottom: 2px solid var(--border);">
+            <li class="post-item">
                 <div class="post-header-row" onclick="toggleContent('s-${x.id}')">
-                    <div class="post-title-text">🚢 ${x.shipName || '미기입'}</div>
-                    <span style="color:var(--primary);">▼</span>
+                    <div class="post-title-text">🚢 ${x.shipName}</div>
+                    <span>▼</span>
                 </div>
                 <div id="s-${x.id}" class="post-body-content" style="display:none; padding:15px;">
-                    <div style="font-weight:bold; color:var(--primary); margin-bottom:5px;">작업내용:</div>
-                    <div style="white-space:pre-wrap;">${x.onboardFeat || '내용 없음'}</div>
-                    ${photoHtml}
+                    <div style="white-space:pre-wrap;">${x.onboardFeat}</div>
                     <div style="text-align:right; margin-top:15px;">
-                        <button class="mini-btn" style="background:var(--primary-light);" onclick="startEditShip('${x.id}', '${safeName}', '${safeFeat}')">✏️ 수정</button>
+                        <button class="mini-btn" style="background:var(--primary-light);" 
+                            onclick="tryEditShip('${x.id}', '${safeName}', '${safeFeat}', '${savedPw}')">✏️ 수정</button>
                         <button class="mini-btn btn-del" onclick="deleteShip('${x.id}',event)">🗑️ 삭제</button>
                     </div>
                 </div>
@@ -1297,6 +1303,7 @@ async function overrideLeader(dStr, currentLeader) { if (!(await verifyAdmin()))
     </script>
 </body>
 </html>
+
 
 
 
