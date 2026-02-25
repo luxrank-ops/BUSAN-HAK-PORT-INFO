@@ -628,26 +628,49 @@
                 </div>
             </div>
 
-            <div id="info-card" class="dash-card">
-                <div class="dash-header tap-effect" onclick="toggleDashItem('info-card')">
-                    <span class="dash-title" style="font-weight:bold;">ℹ️ 서비스 안내</span><span class="toggle-icon">▼</span>
-                </div>
-                <div class="dash-content" style="font-size: 0.85rem; line-height: 1.6; color: var(--text-main);">
-                    <section style="margin-bottom: 20px; padding: 10px; background: rgba(0,0,0,0.02); border-radius: 8px;">
-                        <h4 style="color: var(--primary); margin-bottom: 10px;">🚢 부산항 통합 가이드</h4>
-                        <p>본 플랫폼은 부산항 신항/북항 근로자를 위한 현장 맞춤형 관리 시스템입니다.</p>
-                    </section>
-                    <div style="border-top: 1px solid var(--border); padding-top: 15px;">
-                        <h5 style="font-weight: bold;">[책임고지]</h5>
-                        <p style="font-size: 0.75rem; color: var(--text-sub);">1. 비영리 목적 운영<br>2. 임금 계산 결과는 참고용</p>
-                    </div>
-                    <div style="margin-top: 15px; text-align: center; border-top: 1px solid var(--border); padding-top: 10px;">
-                        <p style="font-size: 0.75rem; color: var(--text-sub);">문의: luxrank@gmail.com</p>
-                    </div>
-                </div>
-            </div>
+           <div id="privacy-center-card" class="dash-card" style="border-top: 4px solid var(--success); margin-bottom: 20px;">
+    <div class="dash-header tap-effect" onclick="toggleDashItem('privacy-center-card')">
+        <span class="dash-title" style="font-weight:bold; color:var(--text-main);">🛡️ 개인정보 처리방침 및 운영 정책</span>
+        <span class="toggle-icon">▼</span>
+    </div>
+    <div class="dash-content" style="font-size: 0.85rem; line-height: 1.8; color: var(--text-main); padding: 15px; background: #fff;">
+        
+        <p style="background: #f8fafc; padding: 12px; border-radius: 8px; border-left: 4px solid var(--success); margin-bottom: 20px; font-size: 0.8rem; color: #475569;">
+            본 플랫폼은 항만 근로자의 안전과 권익을 위해 운영되며, 정보통신망법 및 개인정보보호법에 의거하여 사용자의 소중한 정보를 철저히 보호합니다.
+        </p>
 
+        <h4 style="color: var(--primary); border-left: 3px solid var(--primary); padding-left: 8px; font-size: 0.95rem; margin-bottom: 8px;">1. 수집하는 개인정보 항목 명시</h4>
+        <ul style="padding-left: 20px; color: var(--text-sub); margin-bottom: 15px;">
+            <li><b>로그인 및 기록:</b> 닉네임(ID), 접속 패스워드</li>
+            <li><b>활동 로그:</b> 게시물 등록 데이터, 사진(업로드 시), 접속 IP 및 쿠키(Cookie)</li>
+        </ul>
+
+        <h4 style="color: var(--primary); border-left: 3px solid var(--primary); padding-left: 8px; font-size: 0.95rem; margin-bottom: 8px;">2. 개인정보 보유 및 이용기간</h4>
+        <p style="padding-left: 10px; color: var(--text-sub); margin-bottom: 15px;">
+            원칙적으로 개인정보 수집 및 이용 목적이 달성된 후에는 해당 정보를 지체 없이 파기합니다. 단, 게시판 및 근무 일지 데이터는 사용자가 직접 삭제를 요청하거나 서비스를 탈퇴하기 전까지 안전하게 보관됩니다.
+        </p>
+
+        <h4 style="color: var(--primary); border-left: 3px solid var(--primary); padding-left: 8px; font-size: 0.95rem; margin-bottom: 8px;">3. 개인정보 제3자 제공 내역</h4>
+        <p style="padding-left: 10px; color: var(--text-sub); margin-bottom: 15px;">
+            본 서비스는 사용자의 동의 없이 개인정보를 외부에 제공하지 않습니다. 다만, 구글 애드센스(Google AdSense) 광고 게재를 위해 식별할 수 없는 형태의 쿠키 데이터가 활용될 수 있으며, 법령에 따른 수사 기관의 요청이 있는 경우에 한하여 예외로 합니다.
+        </p>
+
+        <h4 style="color: var(--primary); border-left: 3px solid var(--primary); padding-left: 8px; font-size: 0.95rem; margin-bottom: 8px;">4. 정보주체의 권리 및 행사방법</h4>
+        <p style="padding-left: 10px; color: var(--text-sub); margin-bottom: 15px;">
+            사용자는 언제든지 본인의 정보를 조회, 수정할 수 있으며 직접 게시물을 삭제함으로써 즉시 파기할 권리가 있습니다. 만약 직접 처리가 어려운 경우, 아래 보호책임자에게 이메일로 데이터 파기를 요청하실 수 있습니다.
+        </p>
+
+        <h4 style="color: var(--primary); border-left: 3px solid var(--primary); padding-left: 8px; font-size: 0.95rem; margin-bottom: 8px;">5. 개인정보 보호책임자 및 연락처</h4>
+        <div style="background: #f1f5f9; padding: 12px; border-radius: 8px; border: 1px solid var(--border); margin-top: 5px;">
+            <p style="margin: 0; font-weight: bold;">관리책임자: 이춘학 (Chunhak Lee)</p>
+            <p style="margin: 4px 0 0 0;">대표 이메일: <a href="mailto:luxrank@gmail.com" style="color:var(--primary); text-decoration:none;">luxrank@gmail.com</a></p>
         </div>
+
+        <div style="margin-top: 20px; text-align: center; border-top: 1px dashed var(--border); padding-top: 15px;">
+            <p style="font-size: 0.75rem; color: var(--text-sub);">공고 및 시행일자: 2026년 02월 25일</p>
+        </div>
+    </div>
+</div>
 
         <footer><p>© 2026 BUSAN HAK PORT INFO. All rights reserved.</p><div style="margin-top:10px;"><span class="footer-link" onclick="openPrivacy()">개인정보처리방침</span></div></footer>
     </div>
@@ -1331,6 +1354,7 @@ async function overrideLeader(dStr, currentLeader) { if (!(await verifyAdmin()))
     </script>
 </body>
 </html>
+
 
 
 
