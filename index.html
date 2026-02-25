@@ -205,6 +205,18 @@ img:not([src]) { visibility: hidden; }
     </nav>
     <button class="theme-toggle tap-effect" onclick="toggleDarkMode()">🌙</button>
 </header>
+ <div class="ad-container" style="text-align:center; margin: 10px auto; min-height: 90px; max-width: 600px;">
+    <p style="font-size: 10px; color: #ccc; margin: 0;">ADVERTISEMENT</p>
+    <ins class="adsbygoogle"
+         style="display:block"
+         data-ad-client="ca-pub-6024353303588422"
+         data-ad-slot="" 
+         data-ad-format="auto"
+         data-full-width-responsive="true"></ins>
+    <script>(adsbygoogle = window.adsbygoogle || []).push({});</script>
+</div>
+
+<div id="safetyTicker" class="ticker-container">   
 
     <div id="safetyTicker" class="ticker-container">
         <div class="ticker-wrap"><div id="tickerText" class="ticker-item">🚨 안전 제일! 오늘도 무사고!</div></div>
@@ -635,7 +647,24 @@ img:not([src]) { visibility: hidden; }
                     </div>
                 </div>
             </div>
-
+<div id="terms-about-card" class="dash-card" style="border-top: 4px solid var(--primary-light); margin-bottom: 20px;">
+    <div class="dash-header tap-effect" onclick="toggleDashItem('terms-about-card')">
+        <span class="dash-title" style="font-weight:bold; color:var(--text-main);">📄 이용약관 및 서비스 소개</span>
+        <span class="toggle-icon">▼</span>
+    </div>
+    <div class="dash-content" style="font-size: 0.85rem; line-height: 1.8; color: var(--text-main); padding: 15px; background: #fff;">
+        <h4 style="color: var(--primary); border-left: 3px solid var(--primary); padding-left: 8px; font-size: 0.95rem; margin-bottom: 8px;">1. 서비스 소개 (About)</h4>
+        <p style="padding-left: 10px; color: var(--text-sub); margin-bottom: 15px;">
+            <b>BUSAN HAK PORT INFO</b>는 부산항 현장 근로자분들을 위해 개발된 가이드 플랫폼입니다.
+        </p>
+        <h4 style="color: var(--primary); border-left: 3px solid var(--primary); padding-left: 8px; font-size: 0.95rem; margin-bottom: 8px;">2. 이용 약관 (Terms)</h4>
+        <p style="padding-left: 10px; color: var(--text-sub); margin-bottom: 15px;">본 앱의 정보는 참고용이며 실제와 다를 수 있습니다.</p>
+        <h4 style="color: var(--primary); border-left: 3px solid var(--primary); padding-left: 8px; font-size: 0.95rem; margin-bottom: 8px;">3. 관리자 정보 (Contact)</h4>
+        <div style="background: #f1f5f9; padding: 12px; border-radius: 8px; border: 1px solid var(--border);">
+            <p style="margin: 0; font-weight: bold;">운영관리자: 이춘학 | luxrank@gmail.com</p>
+        </div>
+    </div>
+</div>
            <div id="privacy-center-card" class="dash-card" style="border-top: 4px solid var(--success); margin-bottom: 20px;">
     <div class="dash-header tap-effect" onclick="toggleDashItem('privacy-center-card')">
         <span class="dash-title" style="font-weight:bold; color:var(--text-main);">🛡️ 개인정보 처리방침 및 운영 정책</span>
@@ -1390,6 +1419,7 @@ async function overrideLeader(dStr, currentLeader) { if (!(await verifyAdmin()))
     </script>
 </body>
 </html>
+
 
 
 
