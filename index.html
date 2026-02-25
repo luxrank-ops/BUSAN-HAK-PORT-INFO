@@ -810,22 +810,20 @@ function renderTickerList() {
     if (data.userMessages) { data.userMessages.forEach((m, i) => { hasData = true; listContainer.innerHTML += `<div class="ticker-manage-item"><span style="flex:1;">${i + 1}. ${m}</span><button onclick="deleteTickerMsg('user', ${i})" class="mini-btn btn-del-mini">삭제</button></div>`; }); }
     if (!hasData) listContainer.innerHTML = '<div style="padding:10px; text-align:center;">내용 없음</div>';
 }
-/* 🌸 ALL BAY PLAN 접속 함수 (비밀번호 보안) */
-async function openAllBayPlan() {
+/* 🌸 ALL BAY PLAN 전용 접속 함수 (비번: 9445) */
+function openAllBayPlan() {
     const inputPw = prompt("ALL BAY PLAN 접속 비밀번호를 입력하세요:");
-    if (!inputPw) return;
-
-    // 관리자 비번과 동일하게 설정하거나, 특정 비번으로 설정 가능해
-    const doc = await db.collection('settings').doc('admin').get();
     
-    if (doc.exists && doc.data().password === inputPw) {
+    if (!inputPw) return; // 취소 누르면 중단
+
+    // 오빠가 지정한 비번 9445 체크
+    if (inputPw === "9445") {
         showToast("🔓 승인되었습니다. 페이지로 이동합니다.");
-        // 이동할 실제 주소를 아래 주소 대신 넣어줘 오빠!
-        window.open("https://h-bayplan.hjnc.co.kr/", "_blank"); 
+        window.open("http://112.163.71.98:8080/webits/bayplan", "_blank"); 
     } else {
         alert("⚠️ 비밀번호가 일치하지 않습니다. 접근 권한이 없습니다.");
     }
-}        
+}
 async function deleteTickerMsg(type, index){ 
     if(!confirm("삭제?")) return;
     if(type === 'admin') { delete globalTickerData.adminMessage; await db.collection('settings').doc('banner').update({ adminMessage: firebase.firestore.FieldValue.delete() }); } 
@@ -1387,6 +1385,7 @@ async function overrideLeader(dStr, currentLeader) { if (!(await verifyAdmin()))
     </script>
 </body>
 </html>
+
 
 
 
