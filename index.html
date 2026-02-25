@@ -150,7 +150,7 @@ img:not([src]) { visibility: hidden; }
         .board-content-row { display: none; background: rgba(0,0,0,0.015); }
         .board-content-row.show { display: table-row; }
         .board-content-box { padding: 15px 10px; text-align: left; word-break: break-all; font-size: 0.95rem; line-height: 1.6; white-space: pre-wrap; color: var(--text-main); }
-
+        
         .badge-new {
             background: #ef4444;
             color: white;
@@ -167,15 +167,15 @@ img:not([src]) { visibility: hidden; }
             50% { opacity: 0.2; }
             100% { opacity: 1; }
         }
-
+        
         .leader-badge { font-size: 0.75rem; color: white; border-radius: 12px; padding: 3px 6px; margin-top: 5px; display: inline-block; font-weight: 800; white-space: nowrap; }
         .leader-jaekyung { background-color: #374151; } 
         .leader-sungchul { background-color: #fbbf24; color: #000; } 
         .leader-gaegool { background-color: #3b82f6; } 
         .leader-custom { border: 2px solid #ef4444; box-shadow: 0 0 5px rgba(239,68,68,0.5); }  
-
+        
         .coworker-badge { font-size: 0.65rem; color: #1e3a8a; background: rgba(59, 130, 246, 0.15); border-radius: 4px; padding: 2px 4px; margin-top: 2px; width: 95%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: center; font-weight: bold; }        
-
+        
         @keyframes golden-glow {
             0% { box-shadow: 0 0 5px rgba(234, 179, 8, 0.4); border-color: rgba(234, 179, 8, 0.5); }
             50% { box-shadow: 0 0 20px rgba(234, 179, 8, 0.9), inset 0 0 10px rgba(254, 240, 138, 0.5); border-color: rgba(234, 179, 8, 1); }
@@ -270,7 +270,7 @@ img:not([src]) { visibility: hidden; }
                 <div class="calc-layout">
                    <div class="calc-left">
                             <div class="wage-row"><label>시급(기본)</label><input type="number" id="wageHourly" class="input-field" value="10320" style="text-align:right; font-weight:bold; color:#ef4444; font-size:1.1rem;" readonly></div>
-
+                            
                             <div style="background: rgba(59, 130, 246, 0.05); border: 1px solid var(--primary-light); padding: 8px; border-radius: 8px; margin-bottom: 8px;">
                                 <div class="wage-row" style="margin-bottom: 5px;">
                                     <label style="min-width: 50px; color:var(--primary); font-size:0.85rem;">🟢 시작</label>
@@ -396,7 +396,7 @@ img:not([src]) { visibility: hidden; }
                 </div>                 
                 <div class="terminal-block"><div class="terminal-header tap-effect" onclick="toggleContent('term-bnct')">부산신항컨테이너 고려 (BNCT) ▼</div><div id="term-bnct" class="terminal-body"><div class="terminal-actions"><a href="https://info.bnctkorea.com/esvc/vessel/berthScheduleT" target="_blank" class="terminal-btn">스케줄</a><a href="https://info.bnctkorea.com/esvc/vessel/berthScheduleG" target="_blank" class="terminal-btn">차트</a><a href="https://info.bnctkorea.com/esvc/vessel/vesselStatus" target="_blank" class="terminal-btn">현황</a></div></div></div>
                 <div class="terminal-block"><div class="terminal-header tap-effect" onclick="toggleContent('term-dgt')">동원로엑스 (DGT) ▼</div><div id="term-dgt" class="terminal-body"><div class="terminal-actions"><a href="https://www.dgtbusan.com/DGT/esvc/vessel/berthScheduleT" target="_blank" class="terminal-btn">스케줄</a><a href="https://www.dgtbusan.com/DGT/esvc/vessel/berthScheduleG" target="_blank" class="terminal-btn">차트</a><a href="https://www.dgtbusan.com/DGT/esvc/vessel/vesselStatus" target="_blank" class="terminal-btn">현황</a></div></div></div>
-
+                
                 <div class="terminal-block">
                     <div class="terminal-header tap-effect" onclick="toggleContent('term-bct')">부산컨테이너 터미널 (BCT) ▼</div>
                     <div id="term-bct" class="terminal-body">
@@ -426,7 +426,7 @@ img:not([src]) { visibility: hidden; }
         </div>
 
         <div class="dash-grid">
-
+            
             <div id="weather-card" class="dash-card">
                 <div class="dash-header tap-effect" onclick="toggleDashItem('weather-card')">
                     <span class="dash-title" style="color:var(--text-main); font-weight:bold;">📡 날씨 및 도선상황</span><span class="toggle-icon">▼</span>
@@ -559,13 +559,13 @@ img:not([src]) { visibility: hidden; }
 
 <div id="shipForm" class="hidden">
     <input type="password" id="shipPw" class="input-field" placeholder="비밀번호 (수정/삭제용)" style="text-align:left; margin-bottom:8px;">
-
+    
     <input type="text" id="shipName" class="input-field" placeholder="선박명" style="text-align:left;">
     <textarea id="shipOnboard" class="input-field textarea-field" placeholder="작업내용"></textarea>
     <input type="file" id="shipFileInput" class="input-field">
     <button id="shipSubmitBtn" class="action-btn bg-submit" onclick="addShipInfo()">등록/수정</button>
 </div>
-
+        
         <ul id="shipList" class="post-list"></ul>
     </div>
 </div>
@@ -637,7 +637,7 @@ img:not([src]) { visibility: hidden; }
         <span class="toggle-icon">▼</span>
     </div>
     <div class="dash-content" style="font-size: 0.85rem; line-height: 1.8; color: var(--text-main); padding: 15px; background: #fff;">
-
+        
         <p style="background: #f8fafc; padding: 12px; border-radius: 8px; border-left: 4px solid var(--success); margin-bottom: 20px; font-size: 0.8rem; color: #475569;">
             본 플랫폼은 항만 근로자의 안전과 권익을 위해 운영되며, 정보통신망법 및 개인정보보호법에 의거하여 사용자의 소중한 정보를 철저히 보호합니다.
         </p>
@@ -810,28 +810,6 @@ function renderTickerList() {
     if (data.userMessages) { data.userMessages.forEach((m, i) => { hasData = true; listContainer.innerHTML += `<div class="ticker-manage-item"><span style="flex:1;">${i + 1}. ${m}</span><button onclick="deleteTickerMsg('user', ${i})" class="mini-btn btn-del-mini">삭제</button></div>`; }); }
     if (!hasData) listContainer.innerHTML = '<div style="padding:10px; text-align:center;">내용 없음</div>';
 }
-/* 🌸 ALL BAY PLAN 접속 함수 (비밀번호 보안) */
-async function openAllBayPlan() {
-/* 🌸 ALL BAY PLAN 전용 접속 함수 (비번: 9445) */
-function openAllBayPlan() {
-    const inputPw = prompt("ALL BAY PLAN 접속 비밀번호를 입력하세요:");
-    if (!inputPw) return;
-    // 관리자 비번과 동일하게 설정하거나, 특정 비번으로 설정 가능해
-    const doc = await db.collection('settings').doc('admin').get();
-
-    if (doc.exists && doc.data().password === inputPw) {
-    if (!inputPw) return; // 취소 누르면 중단
-    // 오빠가 지정한 비번 9445 체크
-    if (inputPw === "9445") {
-        showToast("🔓 승인되었습니다. 페이지로 이동합니다.");
-        // 이동할 실제 주소를 아래 주소 대신 넣어줘 오빠!
-        window.open("https://h-bayplan.hjnc.co.kr/", "_blank"); 
-        window.open("http://112.163.71.98:8080/webits/bayplan", "_blank"); 
-    } else {
-        alert("⚠️ 비밀번호가 일치하지 않습니다. 접근 권한이 없습니다.");
-    }
-}        
-}
 async function deleteTickerMsg(type, index){ 
     if(!confirm("삭제?")) return;
     if(type === 'admin') { delete globalTickerData.adminMessage; await db.collection('settings').doc('banner').update({ adminMessage: firebase.firestore.FieldValue.delete() }); } 
@@ -850,7 +828,7 @@ function downloadWorkLogsExcel() {
 
     // 3. 저장된 데이터를 날짜순으로 정렬해서 한 줄씩 채우기
     const sortedDates = Object.keys(adminWorkLogs).sort();
-
+    
     sortedDates.forEach(date => {
         const d = adminWorkLogs[date];
         const ship = d.shipName || "";
@@ -867,12 +845,12 @@ function downloadWorkLogsExcel() {
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
-
+    
     // 파일 이름 예쁘게 정하기 (예: 이춘학_2026년 02월_근무기록.csv)
     const monthTitle = document.getElementById('calMonthYear').innerText;
     link.href = url;
     link.download = `${currentWorkerId}_${monthTitle}_근무기록.csv`;
-
+    
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link); // 클릭 후 링크 삭제
@@ -1046,12 +1024,12 @@ function calcTimeAndFill() {
         const sh = parseInt(document.getElementById('wageStartHour').value) || 0;
         const ed = document.getElementById('wageEndDate').value;
         const eh = parseInt(document.getElementById('wageEndHour').value) || 0;
-
+        
         if(sd && ed) {
             const startD = new Date(`${sd}T${String(sh).padStart(2,'0')}:00:00`);
             const endD = new Date(`${ed}T${String(eh).padStart(2,'0')}:00:00`);
             const diffMs = endD.getTime() - startD.getTime();
-
+            
             if(diffMs > 0) {
                 const hours = Math.floor(diffMs / (1000 * 60 * 60)); 
                 document.getElementById('wageTotalHours').value = hours;
@@ -1104,10 +1082,10 @@ function calculateWage() {
         const totalHours = parseFloat(document.getElementById('wageTotalHours').value) || 0;
         const sd = document.getElementById('wageStartDate').value;
         const sh = parseInt(document.getElementById('wageStartHour').value) || 0;
-
+        
         if (!sd || !document.getElementById('wageEndDate').value) { alert("근무 날짜를 선택해주세요."); return; }
         if (totalHours <= 0) { alert("총 근무 시간이 0시간입니다. 시간을 다시 설정해주세요."); return; }
-
+        
         const startTime = sh; // 0~23
         const isSkilled = document.getElementById('role-skilled').checked;
 
@@ -1194,7 +1172,7 @@ function addShipInfo() {
     const btn = document.getElementById('shipSubmitBtn');
 
     if (!n || !p) return alert("선박명과 비밀번호는 필수입니다!");
-
+    
     btn.innerText = "서버 기록 중...";
     btn.disabled = true;
 
@@ -1250,11 +1228,11 @@ function startEditShip(id, name, feat) {
     currentEditShipId = id;
     document.getElementById('shipName').value = name;
     document.getElementById('shipOnboard').value = feat;
-
+    
     // 등록 폼이 닫혀있다면 열어주기
     const form = document.getElementById('shipForm');
     if (form.classList.contains('hidden')) form.classList.remove('hidden');
-
+    
     // 폼 위치로 스크롤 이동
     form.scrollIntoView({behavior: 'smooth', block: 'center'});
     showToast("수정 모드로 전환되었습니다.");
@@ -1271,7 +1249,7 @@ function resetShipForm() {
 /* 🚢 선박 검색 기능 수정 (기존 틀 유지) */
 function filterShips() {
     const searchTerm = document.getElementById('shipSearch').value.trim().toUpperCase();
-
+    
     if (searchTerm === "") {
         // 검색어가 없으면 전체 데이터를 다시 보여줌
         filteredShips = allShipsData;
@@ -1281,7 +1259,7 @@ function filterShips() {
             (ship.shipName && ship.shipName.toUpperCase().includes(searchTerm))
         );
     }
-
+    
     // 검색 결과를 1페이지부터 다시 그려줌
     renderShipPage(1); 
 }
@@ -1291,7 +1269,7 @@ function renderShipPage(p) {
     const l = document.getElementById("shipList");
     l.innerHTML = "";
     const pageData = filteredShips.slice((p-1)*postsPerPage, p*postsPerPage);
-
+    
     pageData.forEach(x => {
         const safeName = (x.shipName || "").replace(/'/g, "\\'");
         const safeFeat = (x.onboardFeat || "").replace(/'/g, "\\'").replace(/\n/g, "\\n");
@@ -1334,13 +1312,13 @@ window.onload = () => {
         const now = new Date();
         now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
         const todayStr = now.toISOString().split('T')[0];
-
+        
         const sDate = document.getElementById('wageStartDate');
         const eDate = document.getElementById('wageEndDate');
         if(sDate) sDate.value = todayStr;
         if(eDate) eDate.value = todayStr;
     } catch(e) { console.error("날짜 초기화 오류", e); }
-
+    
     loadBanner();
     try {
         db.collection("notices").orderBy("timestamp","desc").onSnapshot(s => {
@@ -1393,6 +1371,12 @@ async function overrideLeader(dStr, currentLeader) { if (!(await verifyAdmin()))
     </script>
 </body>
 </html>
+
+
+
+
+
+
 
 
 
