@@ -152,12 +152,13 @@
         .nav-item.active { color: var(--primary); font-weight: 900; transform: scale(1.05); }
 
        /* 🔄 모바일 세로 모드 50:50 정밀 압축 - 이 블록 전체를 교체 */
+/* 🔄 모바일 세로 모드: 임금계산기 정밀 50:50 레이아웃 최적화 */
 @media screen and (max-width: 480px) and (orientation: portrait) {
     /* 1. 레이아웃 강제 50:50 고정 */
     .calc-layout { 
         display: flex !important; 
         flex-direction: row !important; 
-        gap: 4px !important; 
+        gap: 6px !important; 
         align-items: stretch !important;
         width: 100% !important;
     }
@@ -167,25 +168,50 @@
         min-width: 0 !important; 
     }
 
-    /* 2. 왼쪽 입력부 극한 압축 */
-    .dash-header { padding: 12px 8px; flex-direction: row !important; justify-content: space-between; align-items: center; min-height: 54px; gap: 4px; }
-    .dash-title { font-size: clamp(0.85rem, 4vw, 0.95rem); font-weight: 800; word-break: keep-all; overflow-wrap: break-word; line-height: 1.3; text-align: left; flex: 1; letter-spacing: -0.5px; }
-    .wage-row { flex-direction: column !important; align-items: flex-start !important; gap: 1px !important; margin-bottom: 5px !important; }
-    .wage-row label { font-size: 0.7rem !important; font-weight: 800; min-width: auto; margin-bottom: 1px; letter-spacing: -0.5px; }
-    .input-field { height: 32px !important; padding: 0 4px !important; font-size: 0.85rem !important; font-weight: 800; }
+    /* 2. 왼쪽 입력부: 오빠 지시사항(이미지 레이아웃) 정밀 반영 */
+    .wage-row { 
+        display: flex !important;
+        flex-direction: column !important; /* 항목(라벨)은 위로 */
+        align-items: stretch !important;
+        gap: 2px !important;
+        margin-bottom: 6px !important;
+    }
+    
+    /* 시작/종료 내부의 날짜(Date)와 시간(Select)을 가로로 나란히 배치 */
+    .calc-left .wage-row > div { 
+        display: flex !important; 
+        flex-direction: row !important; 
+        gap: 4px !important; 
+        width: 100% !important;
+    }
+
+    .wage-row label { font-size: 0.72rem !important; font-weight: 800; letter-spacing: -0.5px; }
+    
+    /* 입력창 크기 압축 및 폰트 강화 */
+    .input-field { height: 32px !important; padding: 0 4px !important; font-size: 0.82rem !important; font-weight: 900; }
+    
+    /* 시간 설정 완료 버튼 압축 */
+    .calc-left .action-btn { 
+        padding: 8px 2px !important; 
+        font-size: 0.8rem !important; 
+        margin-top: 4px !important;
+        height: 34px !important;
+        display: flex; align-items: center; justify-content: center;
+    }
     
     /* 3. 오른쪽 참조표 극한 압축 */
     .ref-table { font-size: 0.62rem !important; table-layout: fixed !important; height: 100% !important; }
     .ref-table th, .ref-table td { 
-        padding: 4px 1px !important; 
+        padding: 5px 1px !important; 
         font-size: 0.62rem !important; 
-        letter-spacing: -0.8px !important; 
+        letter-spacing: -1px !important; 
         white-space: nowrap !important; 
-        font-weight: 700;
+        font-weight: 800;
     }
     
-    /* 기타 버튼 및 캘린더 압축 유지 */
-    .action-btn { padding: 8px 4px; font-size: 0.85rem; font-weight: 900; }
+    /* 기타 UI 유지 */
+    .dash-header { padding: 12px 8px; flex-direction: row !important; }
+    .dash-title { font-size: 0.92rem; font-weight: 800; }
     .cal-day { min-height: 40px; padding: 4px 1px; font-size: 0.85rem; font-weight: 800; }
     .terminal-actions { grid-template-columns: 1fr 1fr; }
 }
@@ -760,4 +786,5 @@ let leaderCurrentDate = new Date(); let leaderOverrides = []; const baseCycle = 
 </script>
 </body>
 </html>
+
 
