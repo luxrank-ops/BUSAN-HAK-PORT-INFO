@@ -151,26 +151,44 @@
         .nav-item { flex: 1; text-align: center; color: var(--text-sub); font-size: clamp(0.8rem, 2.5vw, 0.9rem); font-weight: 700; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; height: 100%; touch-action: manipulation; }
         .nav-item.active { color: var(--primary); font-weight: 900; transform: scale(1.05); }
 
-        /* 🔄 모바일 세로 모드 50:50 전용 압축 CSS (비율 유지하되 글자는 읽기 쉽게) */
-        @media screen and (max-width: 480px) and (orientation: portrait) {
-            .dash-header { padding: 12px 8px; flex-direction: row !important; justify-content: space-between; align-items: center; min-height: 54px; gap: 4px; }
-            .dash-title { font-size: clamp(0.85rem, 4vw, 0.95rem); font-weight: 800; word-break: keep-all; overflow-wrap: break-word; line-height: 1.3; text-align: left; flex: 1; letter-spacing: -0.5px; }
-            .toggle-icon { font-size: 0.8rem; flex-shrink: 0; }
-            .dash-content { padding: 8px 4px; }
-            
-            .wage-row { flex-direction: column; align-items: flex-start; gap: 2px; margin-bottom: 6px; }
-            .wage-row label { font-size: 0.75rem; font-weight: 800; min-width: auto; margin-bottom: 2px; }
-            .input-field { height: 36px; padding: 0 6px; font-size: 0.85rem; font-weight: 800; }
-            .wage-row > div { width: 100%; display: flex; flex-direction: column; gap: 4px; }
-            
-            .ref-table th, .ref-table td { padding: 5px 2px; font-size: 0.7rem; letter-spacing: -0.5px; word-break: keep-all; font-weight: 700; }
-            .role-selector label { padding: 8px 2px; font-size: 0.75rem; font-weight: 800; min-width: 0; word-break: keep-all; }
-            .action-btn { padding: 10px 4px; font-size: 0.85rem; font-weight: 900; height: auto; }
-            .allowance-grid { grid-template-columns: 1fr; gap: 4px; }
-            
-            .cal-day { min-height: 40px; padding: 4px 1px; font-size: 0.85rem; font-weight: 800; }
-            .terminal-actions { grid-template-columns: 1fr 1fr; }
-        }
+       /* 🔄 모바일 세로 모드 50:50 정밀 압축 - 이 블록 전체를 교체 */
+@media screen and (max-width: 480px) and (orientation: portrait) {
+    /* 1. 레이아웃 강제 50:50 고정 */
+    .calc-layout { 
+        display: flex !important; 
+        flex-direction: row !important; 
+        gap: 4px !important; 
+        align-items: stretch !important;
+        width: 100% !important;
+    }
+    .calc-left, .calc-right { 
+        flex: 1 1 50% !important; 
+        max-width: 50% !important;
+        min-width: 0 !important; 
+    }
+
+    /* 2. 왼쪽 입력부 극한 압축 */
+    .dash-header { padding: 12px 8px; flex-direction: row !important; justify-content: space-between; align-items: center; min-height: 54px; gap: 4px; }
+    .dash-title { font-size: clamp(0.85rem, 4vw, 0.95rem); font-weight: 800; word-break: keep-all; overflow-wrap: break-word; line-height: 1.3; text-align: left; flex: 1; letter-spacing: -0.5px; }
+    .wage-row { flex-direction: column !important; align-items: flex-start !important; gap: 1px !important; margin-bottom: 5px !important; }
+    .wage-row label { font-size: 0.7rem !important; font-weight: 800; min-width: auto; margin-bottom: 1px; letter-spacing: -0.5px; }
+    .input-field { height: 32px !important; padding: 0 4px !important; font-size: 0.85rem !important; font-weight: 800; }
+    
+    /* 3. 오른쪽 참조표 극한 압축 */
+    .ref-table { font-size: 0.62rem !important; table-layout: fixed !important; height: 100% !important; }
+    .ref-table th, .ref-table td { 
+        padding: 4px 1px !important; 
+        font-size: 0.62rem !important; 
+        letter-spacing: -0.8px !important; 
+        white-space: nowrap !important; 
+        font-weight: 700;
+    }
+    
+    /* 기타 버튼 및 캘린더 압축 유지 */
+    .action-btn { padding: 8px 4px; font-size: 0.85rem; font-weight: 900; }
+    .cal-day { min-height: 40px; padding: 4px 1px; font-size: 0.85rem; font-weight: 800; }
+    .terminal-actions { grid-template-columns: 1fr 1fr; }
+}
 
         @media screen and (orientation: landscape) {
             .container { max-width: 900px; }
@@ -742,3 +760,4 @@ let leaderCurrentDate = new Date(); let leaderOverrides = []; const baseCycle = 
 </script>
 </body>
 </html>
+
