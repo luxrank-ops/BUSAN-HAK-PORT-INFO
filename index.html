@@ -397,7 +397,26 @@
             <div class="terminal-block"><div class="terminal-header tap-effect" onclick="toggleContent('term-dgt')">동원로엑스 (DGT) ▼</div><div id="term-dgt" class="terminal-body"><div class="terminal-actions"><a href="https://www.dgtbusan.com/DGT/esvc/vessel/berthScheduleT" target="_blank" class="terminal-btn">스케줄</a><a href="https://www.dgtbusan.com/DGT/esvc/vessel/berthScheduleG" target="_blank" class="terminal-btn">차트</a><a href="https://www.dgtbusan.com/DGT/esvc/vessel/vesselStatus" target="_blank" class="terminal-btn">현황</a></div></div></div>
         </div> 
     </div>
+<div class="card" style="border-left: 5px solid #10b981; margin-bottom: 12px;">
+        <div class="section-header tap-effect" onclick="toggleSection('t2-content', this)">
+            <span class="section-title">🏗️ 2항업 (신항 북측) ▼</span>
+        </div>
+        <div id="t2-content" class="collapsible-content collapsed">
+            <div class="terminal-block"><div class="terminal-header tap-effect" onclick="toggleContent('term-pnc')">부산신항만 (PNC) ▼</div><div id="term-pnc" class="terminal-body"><div class="terminal-actions"><a href="https://www.pncport.com/esvc/vessel/berthScheduleT" target="_blank" class="terminal-btn">스케줄</a><a href="https://www.pncport.com/esvc/vessel/berthScheduleG" target="_blank" class="terminal-btn">차트</a><a href="https://www.pncport.com/esvc/vessel/vesselStatus" target="_blank" class="terminal-btn">현황</a></div></div></div>
+            <div class="terminal-block"><div class="terminal-header tap-effect" onclick="toggleContent('term-pnit')">부산신항국제터미널 (PNIT) ▼</div><div id="term-pnit" class="terminal-body"><div class="terminal-actions"><a href="https://www.pnitbc.com/esvc/vessel/berthScheduleT" target="_blank" class="terminal-btn">스케줄</a><a href="https://www.pnitbc.com/esvc/vessel/berthScheduleG" target="_blank" class="terminal-btn">차트</a><a href="https://www.pnitbc.com/esvc/vessel/vesselStatus" target="_blank" class="terminal-btn">현황</a></div></div></div>
+            <div class="terminal-block"><div class="terminal-header tap-effect" onclick="toggleContent('term-bct')">부산컨테이너 터미널 (BCT) ▼</div><div id="term-bct" class="terminal-body"><div class="terminal-actions"><a href="https://www.bct21.com/esvc/vessel/berthScheduleT" target="_blank" class="terminal-btn">스케줄</a><a href="https://www.bct21.com/esvc/vessel/berthScheduleG" target="_blank" class="terminal-btn">차트</a><a href="https://www.bct21.com/esvc/vessel/vesselStatus" target="_blank" class="terminal-btn">현황</a></div></div></div>
+        </div>
+    </div>
 
+    <div class="card" style="border-left: 5px solid #f59e0b; margin-bottom: 25px;">
+        <div class="section-header tap-effect" onclick="toggleSection('t1-content', this)">
+            <span class="section-title">⚓ 1항업 (북항) ▼</span>
+        </div>
+        <div id="t1-content" class="collapsible-content collapsed">
+            <div class="terminal-block"><div class="terminal-header tap-effect" onclick="toggleContent('term-bptc')">부산항터미널 (BPTC) ▼</div><div id="term-bptc" class="terminal-body"><div class="terminal-actions"><a href="https://www.bptc.co.kr/esvc/vessel/berthScheduleT" target="_blank" class="terminal-btn">스케줄</a><a href="https://www.bptc.co.kr/esvc/vessel/berthScheduleG" target="_blank" class="terminal-btn">차트</a><a href="https://www.bptc.co.kr/esvc/vessel/vesselStatus" target="_blank" class="terminal-btn">현황</a></div></div></div>
+            <div class="terminal-block"><div class="terminal-header tap-effect" onclick="toggleContent('term-hkt')">한국허치슨터미널 (HKT) ▼</div><div id="term-hkt" class="terminal-body"><div class="terminal-actions"><a href="https://www.hutchisonports.co.kr/esvc/vessel/berthScheduleT" target="_blank" class="terminal-btn">스케줄</a><a href="https://www.hutchisonports.co.kr/esvc/vessel/berthScheduleG" target="_blank" class="terminal-btn">차트</a><a href="https://www.hutchisonports.co.kr/esvc/vessel/vesselStatus" target="_blank" class="terminal-btn">현황</a></div></div></div>
+        </div>
+    </div>
     <div class="dash-grid">
         
         <div id="notice-card" class="dash-card">
@@ -689,3 +708,4 @@ let leaderCurrentDate = new Date(); let leaderOverrides = []; const baseCycle = 
 </script>
 </body>
 </html>
+
