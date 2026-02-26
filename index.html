@@ -571,68 +571,77 @@
             </div>
         </div>
 
-        <div id="safety-card" class="dash-card">
+      <div id="safety-card" class="dash-card">
             <div class="dash-header tap-effect" onclick="toggleDashItem('safety-card')">
                 <span class="dash-title" style="color:var(--primary); font-weight:bold;">📘 통합 안전 지침 (HSE)</span><span class="toggle-icon">▼</span>
             </div>
             <div class="dash-content">
-                <div class="guide-text" style="font-size: 0.9rem; line-height: 1.8; color: var(--text-main); padding: 5px;">
-                    <p style="background: #f1f5f9; padding: 10px; border-radius: 8px; border-left: 5px solid var(--primary); margin-bottom: 15px; font-size: 0.8rem;">
-                        본 지침은 항만안전특별법을 준수합니다.
+                <div class="guide-text" style="font-size: 0.85rem; line-height: 1.6; color: var(--text-main); padding: 5px;">
+                    <p style="background: #f1f5f9; padding: 10px; border-radius: 8px; border-left: 5px solid var(--primary); margin-bottom: 12px; font-weight: bold;">
+                        ⚓ 항만안전특별법 및 산업안전보건법 준수 지침
                     </p>
-                    <h4 style="color: #ea580c; border-bottom: 2px solid #fed7aa; padding-bottom: 5px; margin-top: 15px; font-size:0.9rem;">1. 기본 안전 장구 착용</h4>
-                    <p style="font-size:0.8rem; color:var(--text-sub);">보호구(안전모, 안전조끼, 안전화) 착용은 필수.</p>
-                    <div style="margin-top: 15px; background: rgba(239, 68, 68, 0.05); border: 1px solid var(--danger); padding: 10px; border-radius: 10px;">
-                        <strong style="color: var(--danger); font-size: 0.85rem;">🚨 비상대응 연락망</strong>
-                        <p style="margin: 5px 0 0 0; font-size: 0.75rem; color: #444;">항만 소방대: 051-XXX-XXXX</p>
+                    <ul style="padding-left: 20px; margin-bottom: 15px; font-size: 0.8rem;">
+                        <li style="margin-bottom: 8px;"><b>1. 필수 보호구 착용:</b> 작업장 진입 시 안전모, 반사 조끼, 안전화 착용은 선택이 아닌 필수입니다. 미착용 시 즉각 퇴장 조치됩니다.</li>
+                        <li style="margin-bottom: 8px;"><b>2. 중장비 접근 통제:</b> 야드 트랙터(YT), 스트래들 캐리어, 리치 스태커 등 하역 장비 작업 반경 5m 이내 접근을 엄격히 금지합니다.</li>
+                        <li style="margin-bottom: 8px;"><b>3. 고소 작업 수칙:</b> 선상 라싱 작업 및 2m 이상 고소 구역 이동 시 반드시 안전대(Harness)를 체결하십시오.</li>
+                        <li><b>4. 비상 연락망:</b> 사고 발생 시 최초 발견자는 즉각 '작업 중지'를 외치고 조장 및 안전관리자에게 보고하십시오.</li>
+                    </ul>
+                    <div style="background: rgba(239, 68, 68, 0.05); border: 1px solid var(--danger); padding: 10px; border-radius: 10px; text-align: center;">
+                        <strong style="color: var(--danger); font-size: 0.9rem;">🚨 부산항 24시간 비상대응 연락망</strong>
+                        <p style="margin: 5px 0 0 0; font-weight: bold; font-size: 0.9rem; color: #444;">119 / 항만 소방대 직통 연결망 상시 확인</p>
                     </div>
                 </div>
             </div>
         </div>
 
-        <div id="guide-card" class="dash-card">
+      <div id="guide-card" class="dash-card">
             <div class="dash-header tap-effect" onclick="toggleDashItem('guide-card')">
                 <span class="dash-title" style="font-weight:bold;">📚 용어 가이드</span><span class="toggle-icon">▼</span>
             </div>
             <div class="dash-content">
                 <div style="margin-bottom:15px;">
-                    <input type="text" id="guideSearch" class="input-field" placeholder="용어 검색" onkeyup="filterGuide()">
+                    <input type="text" id="guideSearch" class="input-field" placeholder="항만 용어 검색" onkeyup="filterGuide()">
                 </div>
                 <div class="guide-container" style="max-height: 500px; overflow-y: auto; background: #fff; border-radius: 8px; border: 1px solid var(--border);">
-                    <table class="board-table">
+                    <table class="board-table" style="margin-top: 0; border: none;">
                         <thead style="position: sticky; top: 0; z-index: 10;">
-                            <tr><th style="width: 35%;">용어</th><th style="width: 65%;">정의</th></tr>
+                            <tr><th style="width: 35%;">용어</th><th style="width: 65%;">정의 및 설명</th></tr>
                         </thead>
                         <tbody id="guideBody">
-                            <tr>
-                                <td class="board-no"><b>라싱</b></td>
-                                <td class="board-title" style="text-align:left; font-size:0.8rem; line-height:1.5; white-space:normal; padding:8px; border-bottom:1px solid var(--border);">
-                                    화물 고정 핵심 작업. 추락주의.
-                                </td>
-                            </tr>
+                            <tr><td class="board-no" style="font-weight:900; color:var(--primary);">라싱<br>(Lashing)</td><td class="board-title" style="white-space:normal; line-height:1.4; font-weight:normal; font-size:0.75rem; padding:8px;">선박 운항 중 흔들림을 막기 위해 컨테이너를 턴버클, 라싱바 등으로 단단히 고정하는 핵심 안전 작업.</td></tr>
+                            <tr><td class="board-no" style="font-weight:900; color:var(--primary);">언라싱<br>(Unlashing)</td><td class="board-title" style="white-space:normal; line-height:1.4; font-weight:normal; font-size:0.75rem; padding:8px;">양하(하역) 작업을 위해 고정되어 있던 체인, 로프, 라싱 장비 등을 해체하는 작업.</td></tr>
+                            <tr><td class="board-no" style="font-weight:900; color:var(--primary);">쇼어링<br>(Shoring)</td><td class="board-title" style="white-space:normal; line-height:1.4; font-weight:normal; font-size:0.75rem; padding:8px;">컨테이너 내부 화물이 전후좌우로 움직이지 않도록 목재 등을 괴어 단단히 지지하는 작업.</td></tr>
+                            <tr><td class="board-no" style="font-weight:900; color:var(--primary);">콘<br>(Twist Cone)</td><td class="board-title" style="white-space:normal; line-height:1.4; font-weight:normal; font-size:0.75rem; padding:8px;">컨테이너를 상하로 쌓을 때 네 모서리에 끼워 넣어 서로 맞물리게 하는 필수 고정구.</td></tr>
+                            <tr><td class="board-no" style="font-weight:900; color:var(--primary);">베이 플랜<br>(Bay Plan)</td><td class="board-title" style="white-space:normal; line-height:1.4; font-weight:normal; font-size:0.75rem; padding:8px;">선박 내 컨테이너의 적재 위치를 좌표(Bay-Row-Tier)로 표시한 도면. 하역 작업의 필수 지도.</td></tr>
                         </tbody>
                     </table>
                 </div>
             </div>
         </div>
-
-        <div id="privacy-center-card" class="dash-card" style="border-top: 4px solid var(--success); margin-bottom: 20px;">
+       <div id="privacy-center-card" class="dash-card" style="border-top: 4px solid var(--success); margin-bottom: 20px;">
             <div class="dash-header tap-effect" onclick="toggleDashItem('privacy-center-card')">
-                <span class="dash-title" style="font-weight:bold; color:var(--text-main);">🛡️ 개인정보 정책</span>
+                <span class="dash-title" style="font-weight:bold; color:var(--text-main);">🛡️ 보안 및 개인정보</span>
                 <span class="toggle-icon">▼</span>
             </div>
             <div class="dash-content" style="font-size: 0.8rem; line-height: 1.6; color: var(--text-main); padding: 15px; background: #fff;">
-                <p style="background: #f8fafc; padding: 10px; border-radius: 8px; border-left: 4px solid var(--success); margin-bottom: 15px; font-size: 0.75rem; color: #475569;">
-                    정보통신망법 준수.
+                <p style="background: #f8fafc; padding: 10px; border-radius: 8px; border-left: 4px solid var(--success); margin-bottom: 12px; font-size: 0.75rem; font-weight: bold; color: #0f172a;">
+                    정보통신망법 철저 준수
                 </p>
-                <div style="background: #f1f5f9; padding: 10px; border-radius: 8px; border: 1px solid var(--border); margin-top: 5px;">
-                    <p style="margin: 0; font-weight: bold; font-size:0.8rem;">관리: 이춘학</p>
-                    <p style="margin: 4px 0 0 0; font-size:0.75rem;">이메일: luxrank@gmail.com</p>
+                <ul style="padding-left: 20px; margin-bottom: 15px; color: #475569; font-size: 0.75rem;">
+                    <li style="margin-bottom: 5px;"><b>목적:</b> 임금 데이터 보존 및 보안 운영</li>
+                    <li style="margin-bottom: 5px;"><b>보안 조치:</b> 데이터 암호화 및 로컬 스토리지 안전 보관</li>
+                    <li><b>파기:</b> 이용자 탈퇴 시 지체 없이 파기</li>
+                </ul>
+                <div style="background: #f1f5f9; padding: 12px; border-radius: 8px; border: 1px solid var(--border); margin-top: 10px;">
+                    <p style="margin: 0; font-weight: 900; font-size:0.8rem; color: var(--primary);">👤 관리 책임자</p>
+                    <div style="margin-top: 6px; font-size: 0.75rem; color: #333;">
+                        <p style="margin: 2px 0;"><b>성명:</b> 이춘학</p>
+                        <p style="margin: 2px 0;"><b>이메일:</b> luxrank@gmail.com</p>
+                        <p style="margin: 2px 0;"><b>주소:</b> 부산광역시 강서구 명지동</p>
+                    </div>
                 </div>
             </div>
         </div>
-        
-    </div>
 
 <footer>
     <div style="text-align: center; padding: 20px 10px; color: var(--text-sub); font-size: 0.75rem; border-top: 1px solid var(--border);">
@@ -819,6 +828,7 @@ let leaderCurrentDate = new Date(); let leaderOverrides = []; const baseCycle = 
 </script>
 </body>
 </html>
+
 
 
 
