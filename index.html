@@ -120,13 +120,16 @@
         .terminal-actions { display: grid; grid-template-columns: repeat(auto-fit, minmax(80px, 1fr)); gap: 6px; }
         .terminal-btn { background: var(--card-bg); border: 1px solid var(--border); color: var(--text-main); padding: 12px 4px; border-radius: 6px; text-decoration: none; font-size: clamp(0.75rem, 2.5vw, 0.85rem); text-align: center; font-weight: 700; display:flex; align-items:center; justify-content:center; word-break: keep-all; min-height: 44px; touch-action: manipulation; }
 
-        .board-table { width: 100%; border-collapse: collapse; font-size: clamp(0.8rem, 2.5vw, 0.95rem); margin-top: 10px; table-layout: fixed; }
-        .board-table th { border-bottom: 2px solid var(--border); padding: 12px 4px; color: var(--text-sub); font-weight: 700; text-align: center; background: rgba(0,0,0,0.02); word-break: keep-all; }
-        .board-table td { border-bottom: 1px solid var(--border); padding: 14px 4px; color: var(--text-main); vertical-align: middle; overflow-wrap: break-word; word-break: keep-all; }
-        .board-no { text-align: center; width: 10%; color: var(--text-sub); font-size: 0.75rem; }
-        .board-title { text-align: left; font-weight: 600; cursor: pointer; padding-left: 8px; width: 60%; word-break: keep-all; line-height: 1.4; }
-        .board-date { text-align: center; font-size: 0.75rem; color: var(--text-sub); width: 15%; word-break: keep-all; white-space: normal !important; }
-        .board-nick { text-align: center; font-size: 0.8rem; color: var(--text-sub); width: 15%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+       /* 📋 정통 바둑판형 게시판 테이블 CSS */
+        .board-table { width: 100%; border-collapse: collapse; font-size: clamp(0.75rem, 2.5vw, 0.9rem); margin-top: 10px; table-layout: fixed; border: 1px solid var(--border); }
+        .board-table th { border: 1px solid var(--border); padding: 10px 2px; color: white; font-weight: 800; text-align: center; background: var(--primary); letter-spacing: -0.5px; white-space: nowrap; }
+        .board-table td { border: 1px solid var(--border); padding: 12px 2px; color: var(--text-main); vertical-align: middle; }
+        
+        /* 각 칼럼 너비 및 텍스트 줄바꿈 방지 족쇄 */
+        .board-no { text-align: center; width: 12%; color: var(--text-sub); font-size: 0.7rem; white-space: nowrap; overflow: hidden; }
+        .board-title { text-align: left; font-weight: 700; cursor: pointer; padding-left: 6px; width: 53%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .board-date { text-align: center; font-size: 0.65rem; color: var(--text-sub); width: 18%; white-space: nowrap; overflow: hidden; letter-spacing: -0.5px; }
+        .board-nick { text-align: center; font-size: 0.7rem; color: var(--text-sub); width: 17%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; letter-spacing: -0.5px; }gn: center; font-size: 0.8rem; color: var(--text-sub); width: 15%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
         .board-content-row { display: none; background: rgba(0,0,0,0.015); width: 100%; }
         .board-content-row.show { display: table-row; }
@@ -679,5 +682,6 @@ let leaderCurrentDate = new Date(); let leaderOverrides = []; const baseCycle = 
 </script>
 </body>
 </html>
+
 
 
