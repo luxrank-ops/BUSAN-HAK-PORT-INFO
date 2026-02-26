@@ -20,177 +20,167 @@
     <link rel="stylesheet" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.8/dist/web/static/pretendard.css" />
     <link rel="manifest" href="manifest.json">
     <style>
-        /* 사진이 없을 때나 로딩 중일 때 레이아웃이 깨지지 않게 방지 */
+       /* 사진이 없을 때나 로딩 중일 때 레이아웃이 깨지지 않게 방지 */
 img { max-width: 100%; height: auto; object-fit: cover; background: #eee; }
 img:not([src]) { visibility: hidden; }
-        :root { --primary: #1e3a8a; --primary-light: #3b82f6; --accent: #f59e0b; --bg-color: #f3f4f6; --card-bg: rgba(255, 255, 255, 0.98); --text-main: #1f2937; --text-sub: #6b7280; --border: rgba(229, 231, 235, 0.9); --danger: #ef4444; --success: #10b981; }
-        body.dark-mode { --primary: #60a5fa; --primary-light: #93c5fd; --accent: #fbbf24; --bg-color: #0f172a; --card-bg: rgba(30, 41, 59, 0.98); --text-main: #f3f4f6; --text-sub: #9ca3af; --border: rgba(55, 65, 81, 0.7); }
-        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; font-family: 'Pretendard', sans-serif; }
-        body { background-color: var(--bg-color); color: var(--text-main); margin: 0; padding: 0; padding-bottom: 90px; padding-top: env(safe-area-inset-top); font-size: 16px; }
 
-        header { background: linear-gradient(135deg, var(--primary), var(--primary-light)); color: white; padding: 14px 0; text-align: center; position: sticky; top: 0; z-index: 100; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
-        header h1 { margin: 0; font-size: 1.2rem; font-weight: 900; }
-        .theme-toggle { position: absolute; right: 15px; top: 50%; transform: translateY(-50%); background: rgba(255,255,255,0.2); border: none; width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 1.1rem; }
+:root { --primary: #1e3a8a; --primary-light: #3b82f6; --accent: #f59e0b; --bg-color: #f3f4f6; --card-bg: rgba(255, 255, 255, 0.98); --text-main: #1f2937; --text-sub: #6b7280; --border: rgba(229, 231, 235, 0.9); --danger: #ef4444; --success: #10b981; }
+body.dark-mode { --primary: #60a5fa; --primary-light: #93c5fd; --accent: #fbbf24; --bg-color: #0f172a; --card-bg: rgba(30, 41, 59, 0.98); --text-main: #f3f4f6; --text-sub: #9ca3af; --border: rgba(55, 65, 81, 0.7); }
 
-        .ticker-container { background: var(--accent); color: #000; font-weight: 800; height: 45px; display: flex; align-items: center; overflow: visible; position: relative; font-size: 0.9rem; border-bottom: 1px solid rgba(0,0,0,0.1); }
-        .ticker-wrap { flex: 1; overflow: hidden; height: 100%; position: relative; margin-right: 50px; }
-        .ticker-item { padding-left: 100%; animation: ticker 20s linear infinite; white-space: nowrap; line-height: 45px; }
-        @keyframes ticker { 100% { transform: translate3d(-100%, 0, 0); } }
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; font-family: 'Pretendard', sans-serif; }
 
-        .ticker-setting-area {
-            position: absolute; right: 0; top: 0; width: 50px; height: 100%;
-            display: flex; align-items: center; justify-content: center;
-            background: rgba(255,255,255,0.15); border-left: 1px solid rgba(0,0,0,0.05);
-            z-index: 100; cursor: pointer;
-        }
-        .setting-icon { font-size: 1.4rem; transition: transform 0.3s; }
-        .ticker-setting-area:hover .setting-icon { transform: rotate(90deg); }
+/* 📱 모바일 스크롤 & 폰트 반응형 최적화 */
+html, body { 
+    width: 100%; max-width: 100vw; overflow-x: hidden; /* 가로 스크롤 원천 차단 */
+    background-color: var(--bg-color); color: var(--text-main); 
+    margin: 0; padding: 0; padding-bottom: 90px; padding-top: env(safe-area-inset-top); 
+    font-size: clamp(14px, 3.5vw, 16px); /* 화면 크기에 맞춰 14~16px 자동 조절 */
+    -webkit-text-size-adjust: 100%; 
+}
 
-        .hover-menu-box {
-            display: none; position: absolute; top: 100%; right: 5px;
-            background: var(--card-bg); border: 1px solid var(--border); border-radius: 8px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-            flex-direction: column; overflow: hidden; z-index: 9999; width: 140px;
-        }
-        .ticker-setting-area:hover .hover-menu-box, .hover-menu-box:hover { display: flex !important; }
+header { background: linear-gradient(135deg, var(--primary), var(--primary-light)); color: white; padding: 14px 0; text-align: center; position: sticky; top: 0; z-index: 100; box-shadow: 0 4px 15px rgba(0,0,0,0.1); width: 100%; }
+header h1 { margin: 0; font-size: clamp(1.1rem, 4vw, 1.3rem); font-weight: 900; }
+.theme-toggle { position: absolute; right: 15px; top: 50%; transform: translateY(-50%); background: rgba(255,255,255,0.2); border: none; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 1.2rem; touch-action: manipulation; }
 
-        .menu-btn { 
-            padding: 12px; border: none; background: transparent; 
-            color: var(--text-main); font-weight: bold; cursor: pointer; 
-            text-align: left; font-size: 0.85rem; border-bottom: 1px solid rgba(0,0,0,0.05); 
-            transition: background 0.2s; display: flex; align-items: center; gap: 8px;
-        }
-        .menu-btn:last-child { border-bottom: none; }
-        .menu-btn:hover { background: var(--primary); color: white; }
-        .btn-del-menu { color: var(--danger); }
-        .btn-del-menu:hover { background: var(--danger); color: white; }
+.ticker-container { background: var(--accent); color: #000; font-weight: 800; height: 45px; display: flex; align-items: center; overflow: visible; position: relative; font-size: clamp(0.85rem, 2.5vw, 0.95rem); border-bottom: 1px solid rgba(0,0,0,0.1); width: 100%; }
+.ticker-wrap { flex: 1; overflow: hidden; height: 100%; position: relative; margin-right: 50px; }
+.ticker-item { padding-left: 100%; animation: ticker 20s linear infinite; white-space: nowrap; line-height: 45px; }
+@keyframes ticker { 100% { transform: translate3d(-100%, 0, 0); } }
 
-        .container { width: 96%; max-width: 600px; margin: 0 auto; padding: 8px; }
-        .dash-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; }
-        .dash-card { background: var(--card-bg); border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); border: 1px solid var(--border); overflow: hidden; }
-        .dash-card.expanded { grid-column: span 2; }
-        .dash-header { padding: 14px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.05); min-height: 50px; }
-        .dash-content { display: none; padding: 12px; background: var(--card-bg); animation: fadeIn 0.2s; }
-        .card { background: var(--card-bg); border-radius: 12px; margin-bottom: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); border: 1px solid var(--border); overflow: hidden; }
-        .section-header { display: flex; justify-content: space-between; align-items: center; padding: 12px 14px; cursor: pointer; border-bottom: 1px solid var(--border); }
-        .collapsible-content { display: block; padding: 12px; }
-        .collapsible-content.collapsed { display: none !important; }
-        .input-field { width: 100%; padding: 0 10px; margin-bottom: 0; border: 1px solid var(--border); border-radius: 8px; background: rgba(255,255,255,0.6); color: var(--text-main); font-size: 1rem; height: 40px; text-align: right; font-weight: bold; display: flex; align-items: center; }
-        .textarea-field { height: 80px; resize: none; text-align: left; font-weight: normal; padding: 10px; }
-        .action-btn { width: 100%; padding: 14px; border: none; border-radius: 10px; font-weight: 800; color: white; cursor: pointer; background: var(--primary); font-size: 1rem; margin-top: 5px; }
-        .bg-submit { background: var(--success); } .bg-calc { background: linear-gradient(135deg, #ef4444, #b91c1c); } .bg-cancel { background: var(--text-sub); }
-        .wage-row { display: flex; align-items: center; margin-bottom: 8px; width: 100%; justify-content: space-between; }
-        .wage-row label { width: auto; min-width: 60px; font-weight: 700; margin-right: 5px; }
-        .allowance-grid { display: grid; grid-template-columns: 1fr 1fr; column-gap: 8px; row-gap: 2px; }
-        .calc-layout { display: flex; gap: 10px; margin-bottom: 12px; }
-        .calc-left { flex: 1; display: flex; flex-direction: column; justify-content: center; }
-        .calc-right { flex: 1; display: flex; flex-direction: column; justify-content: center; }
-        .wage-result-box { background: linear-gradient(135deg, #ffffff, #f9fafb); border: 2px solid var(--primary); border-radius: 10px; padding: 15px; margin-top: 15px; }
-        .spec-table { width: 100%; border-collapse: collapse; margin: 8px 0; font-size: 0.85rem; }
-        .spec-table td { padding: 6px 0; color: var(--text-main); }
-        .wage-total { font-size: 1.5rem; color: #c2410c; font-weight: 900; text-align: center; border-top: 2px solid var(--primary); padding-top: 10px; margin-top: 10px; }
-        .role-selector { display: flex; gap: 4px; margin-bottom: 12px; background: rgba(0,0,0,0.05); padding: 4px; border-radius: 10px; }
-        .role-selector label { flex: 1; text-align: center; padding: 10px 0; border-radius: 8px; font-weight: 700; cursor: pointer; color: var(--text-sub); }
-        .role-selector input[type="radio"]:checked + label { background: var(--primary); color: white; }
-        .role-selector input[type="radio"] { display: none; }
-        .ref-table { width: 100%; border-collapse: collapse; font-size: 0.75rem; text-align: center; background: rgba(0,0,0,0.02); border-radius: 8px; overflow: hidden; height: 100%; border: 1px solid var(--border); }
-        .ref-table th { background: var(--primary); color: white; padding: 6px; }
-        .ref-table td { border: 1px solid var(--border); padding: 6px; color: var(--text-main); }
-        .ref-table .highlight { background: rgba(245, 158, 11, 0.2); font-weight: bold; color: #b45309; }
-        .terminal-block { background: rgba(0,0,0,0.03); border-radius: 8px; margin-bottom: 6px; border: 1px solid var(--border); overflow: hidden; }
-        .terminal-header { padding: 12px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; font-weight: 700; font-size: 0.9rem; }
-        .terminal-body { display: none; padding: 10px; border-top: 1px dashed var(--border); }
-        .terminal-actions { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; }
-        .terminal-btn { background: var(--card-bg); border: 1px solid var(--border); color: var(--text-main); padding: 10px 0; border-radius: 6px; text-decoration: none; font-size: 0.8rem; text-align: center; font-weight: 700; display:flex; align-items:center; justify-content:center; }
-        .btn-premium { grid-column: span 3; background: linear-gradient(135deg, #fffbeb, #fef3c7); border: 1px solid #fcd34d; color: #92400e; margin-top: 4px; }
-        .control-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-        .control-btn { background: var(--card-bg); border: 1px solid var(--border); color: var(--text-main); padding: 14px; border-radius: 10px; text-decoration: none; font-size: 0.9rem; font-weight: 700; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; }
-        .post-list { list-style: none; padding: 0; margin: 0; }
-        .post-item { border-bottom: 1px solid var(--border); padding: 10px 0; }
-        .post-header-row { padding: 4px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
-        .post-title-text { font-weight: 700; font-size: 0.95rem; color: var(--text-main); display: flex; align-items: center; gap: 5px; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-right: 8px; }
-        .post-meta-info { font-size: 0.75rem; color: var(--text-sub); white-space: nowrap; }
-        .post-body-content { display: none; padding: 12px; background: rgba(0,0,0,0.02); border-top: 1px dashed var(--border); font-size: 0.9rem; line-height: 1.6; white-space: pre-wrap; color: var(--text-main); word-break: break-all; }
-        .comment-section { margin-top: 10px; border-top: 1px dashed var(--border); padding-top: 8px; background: rgba(0,0,0,0.015); border-radius: 6px; padding: 8px; }
-        .comment-item { display: flex; justify-content: space-between; align-items: flex-start; font-size: 0.8rem; padding: 5px 0; border-bottom: 1px solid rgba(0,0,0,0.05); }
-        .comment-form { display: flex; gap: 4px; align-items: center; flex-wrap: wrap; margin-top: 8px; }
-        .comment-input-sm { width: 60px; padding: 6px; border: 1px solid var(--border); border-radius: 4px; font-size: 0.8rem; }
-        .comment-input-lg { flex: 1; padding: 6px; border: 1px solid var(--border); border-radius: 4px; font-size: 0.8rem; min-width: 100px; }
-        .comment-submit { padding: 6px 10px; background: var(--text-sub); color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.75rem; font-weight: bold; }
-        .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px; text-align: center; }
-        .cal-day { padding: 8px 0; border-radius: 6px; background: rgba(255,255,255,0.5); border: 1px solid var(--border); font-weight: 700; font-size: 0.85rem; cursor: pointer; min-height: 40px; display: flex; flex-direction: column; justify-content: center; align-items: center; }
-        .cal-day.has-data { border: 2px solid var(--success); background: rgba(16, 185, 129, 0.1); }
-        .cal-dot { width: 5px; height: 5px; background-color: var(--success); border-radius: 50%; margin-top: 3px; display: none; }
-        .cal-day.has-data .cal-dot { display: block; }
-        .bottom-nav { position: fixed; bottom: 0; left: 0; width: 100%; height: 60px; background: rgba(255,255,255,0.98); border-top: 1px solid var(--border); display: flex; justify-content: space-around; align-items: center; z-index: 1000; padding-bottom: env(safe-area-inset-bottom); box-shadow: 0 -2px 10px rgba(0,0,0,0.05); }
-        .nav-item { flex: 1; text-align: center; color: var(--text-sub); font-size: 0.7rem; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 2px; }
-        .nav-item.active { color: var(--primary); font-weight: 800; transform: scale(1.05); }
-        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 3000; justify-content: center; align-items: center; padding: 15px; }
-        .modal-content { background: var(--card-bg); padding: 15px; border-radius: 16px; max-width: 100%; max-height: 85%; overflow-y: auto; width: 100%; }
-        .modal-img { width: 100%; height: auto; border-radius: 8px; }
-        .hidden { display: none !important; }
-        #toast { position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.85); color: white; padding: 10px 20px; border-radius: 30px; font-size: 0.9rem; z-index: 5000; opacity: 0; transition: 0.3s; pointer-events: none; }
-        #toast.show { opacity: 1; }
-        .ticker-manage-item { display: flex; justify-content: space-between; align-items: center; padding: 10px; border-bottom: 1px solid var(--border); }
-        .page-num { padding: 6px 12px; border: 1px solid var(--border); cursor: pointer; border-radius: 6px; font-size: 0.85rem; margin: 0 2px; }
-        .page-num.active { background: var(--primary); color: white; }
-        .mini-btn { padding: 4px 8px; font-size: 0.75rem; border-radius: 4px; border: none; cursor: pointer; color: white; margin-left: 4px; }
-        .btn-del { background: var(--danger); }
-        .btn-del-mini { background: var(--danger); }
-        .user-auth-bar { display: flex; justify-content: space-between; align-items: center; background: rgba(59, 130, 246, 0.1); padding: 10px; border-radius: 8px; margin-bottom: 10px; border: 1px solid var(--primary-light); }
-        .user-name { font-weight: 800; color: var(--primary); font-size: 0.9rem; }
-        .user-status { font-size: 0.75rem; color: var(--success); }
-        .logout-btn { background: var(--text-sub); color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 0.75rem; font-weight: bold; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
+.ticker-setting-area { position: absolute; right: 0; top: 0; width: 50px; height: 100%; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.15); border-left: 1px solid rgba(0,0,0,0.05); z-index: 100; cursor: pointer; touch-action: manipulation; }
+.setting-icon { font-size: 1.4rem; transition: transform 0.3s; }
+.ticker-setting-area:hover .setting-icon { transform: rotate(90deg); }
 
-        .board-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; margin-top: 10px; table-layout: fixed; }
-        .board-table th { border-bottom: 2px solid var(--border); padding: 10px 4px; color: var(--text-sub); font-weight: 700; text-align: center; background: rgba(0,0,0,0.02); font-size: 0.85rem; }
-        .board-table td { border-bottom: 1px solid var(--border); padding: 12px 4px; color: var(--text-main); vertical-align: middle; }
+.hover-menu-box { display: none; position: absolute; top: 100%; right: 5px; background: var(--card-bg); border: 1px solid var(--border); border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); flex-direction: column; overflow: hidden; z-index: 9999; width: 150px; }
+.ticker-setting-area:hover .hover-menu-box, .hover-menu-box:hover { display: flex !important; }
+.menu-btn { padding: 14px 12px; border: none; background: transparent; color: var(--text-main); font-weight: bold; cursor: pointer; text-align: left; font-size: 0.9rem; border-bottom: 1px solid rgba(0,0,0,0.05); transition: background 0.2s; display: flex; align-items: center; gap: 8px; touch-action: manipulation; }
+.menu-btn:hover { background: var(--primary); color: white; }
+.btn-del-menu { color: var(--danger); }
+.btn-del-menu:hover { background: var(--danger); color: white; }
 
-        .board-no { text-align: center; width: 35px; color: var(--text-sub); font-size: 0.75rem; }
-        .board-title { text-align: left; font-weight: 600; cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding-left: 8px; width: auto; }
-        .board-date { text-align: center; font-size: 0.7rem; color: var(--text-sub); width: 90px; white-space: nowrap; }
-        .board-nick { text-align: center; font-size: 0.75rem; color: var(--text-sub); width: 50px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.container { width: 100%; max-width: 800px; margin: 0 auto; padding: 10px; overflow-x: hidden; }
+.dash-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 10px; margin-bottom: 12px; width: 100%; }
+.dash-card { background: var(--card-bg); border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); border: 1px solid var(--border); overflow: hidden; width: 100%; }
+.dash-card.expanded { grid-column: 1 / -1; }
+.dash-header { padding: 15px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.05); min-height: 54px; touch-action: manipulation; }
+.dash-title { font-size: clamp(0.95rem, 3vw, 1.1rem); word-break: keep-all; }
+.dash-content { display: none; padding: 15px 12px; background: var(--card-bg); animation: fadeIn 0.2s; width: 100%; box-sizing: border-box; }
 
-        .board-content-row { display: none; background: rgba(0,0,0,0.015); }
-        .board-content-row.show { display: table-row; }
-        .board-content-box { padding: 15px 10px; text-align: left; word-break: break-all; font-size: 0.95rem; line-height: 1.6; white-space: pre-wrap; color: var(--text-main); }
-        
-        .badge-new {
-            background: #ef4444;
-            color: white;
-            font-size: 0.65rem;
-            font-weight: 900;
-            padding: 2px 6px;
-            border-radius: 10px;
-            margin-left: 6px;
-            vertical-align: middle;
-            animation: blink 1s infinite; 
-        }
-        @keyframes blink {
-            0% { opacity: 1; }
-            50% { opacity: 0.2; }
-            100% { opacity: 1; }
-        }
-        
-        .leader-badge { font-size: 0.75rem; color: white; border-radius: 12px; padding: 3px 6px; margin-top: 5px; display: inline-block; font-weight: 800; white-space: nowrap; }
-        .leader-jaekyung { background-color: #374151; } 
-        .leader-sungchul { background-color: #fbbf24; color: #000; } 
-        .leader-gaegool { background-color: #3b82f6; } 
-        .leader-custom { border: 2px solid #ef4444; box-shadow: 0 0 5px rgba(239,68,68,0.5); }  
-        
-        .coworker-badge { font-size: 0.65rem; color: #1e3a8a; background: rgba(59, 130, 246, 0.15); border-radius: 4px; padding: 2px 4px; margin-top: 2px; width: 95%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: center; font-weight: bold; }        
-        
-        @keyframes golden-glow {
-            0% { box-shadow: 0 0 5px rgba(234, 179, 8, 0.4); border-color: rgba(234, 179, 8, 0.5); }
-            50% { box-shadow: 0 0 20px rgba(234, 179, 8, 0.9), inset 0 0 10px rgba(254, 240, 138, 0.5); border-color: rgba(234, 179, 8, 1); }
-            100% { box-shadow: 0 0 5px rgba(234, 179, 8, 0.4); border-color: rgba(234, 179, 8, 0.5); }
-        }
-        .manual-card {
-            animation: golden-glow 2s infinite alternate;
-            background: linear-gradient(135deg, #ffffff 0%, #fffcf0 100%);
-            border: 2px solid #eab308;
-        }
+.card { background: var(--card-bg); border-radius: 12px; margin-bottom: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); border: 1px solid var(--border); overflow: hidden; width: 100%; }
+.section-header { display: flex; justify-content: space-between; align-items: center; padding: 14px; cursor: pointer; border-bottom: 1px solid var(--border); touch-action: manipulation; min-height: 50px; }
+.collapsible-content { display: block; padding: 12px; }
+.collapsible-content.collapsed { display: none !important; }
+
+/* ⌨️ 입력창 및 버튼 최적화 */
+.input-field { width: 100%; padding: 0 12px; margin-bottom: 0; border: 1px solid var(--border); border-radius: 8px; background: rgba(255,255,255,0.6); color: var(--text-main); font-size: clamp(0.95rem, 3vw, 1rem); height: 44px; text-align: right; font-weight: bold; display: flex; align-items: center; box-sizing: border-box; appearance: none; }
+.textarea-field { height: 90px; resize: none; text-align: left; font-weight: normal; padding: 12px; line-height: 1.5; }
+.action-btn { width: 100%; padding: 15px; border: none; border-radius: 10px; font-weight: 800; color: white; cursor: pointer; background: var(--primary); font-size: clamp(0.95rem, 3vw, 1.05rem); margin-top: 8px; touch-action: manipulation; }
+.bg-submit { background: var(--success); } .bg-calc { background: linear-gradient(135deg, #ef4444, #b91c1c); } .bg-cancel { background: var(--text-sub); }
+
+.wage-row { display: flex; align-items: center; margin-bottom: 10px; width: 100%; justify-content: space-between; gap: 8px; }
+.wage-row label { width: auto; min-width: max-content; font-weight: 700; font-size: clamp(0.85rem, 2.5vw, 0.95rem); word-break: keep-all; }
+.allowance-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 8px; }
+.calc-layout { display: flex; flex-direction: column; gap: 12px; margin-bottom: 12px; width: 100%; }
+.wage-result-box { background: linear-gradient(135deg, #ffffff, #f9fafb); border: 2px solid var(--primary); border-radius: 10px; padding: 15px; margin-top: 15px; width: 100%; overflow-x: auto; }
+.spec-table { width: 100%; border-collapse: collapse; margin: 8px 0; font-size: clamp(0.8rem, 2.5vw, 0.9rem); table-layout: fixed; }
+.spec-table td { padding: 8px 4px; color: var(--text-main); word-break: keep-all; }
+.wage-total { font-size: clamp(1.3rem, 5vw, 1.6rem); color: #c2410c; font-weight: 900; text-align: center; border-top: 2px solid var(--primary); padding-top: 12px; margin-top: 12px; }
+
+.role-selector { display: flex; gap: 4px; margin-bottom: 12px; background: rgba(0,0,0,0.05); padding: 4px; border-radius: 10px; flex-wrap: wrap; }
+.role-selector label { flex: 1; text-align: center; padding: 12px 4px; border-radius: 8px; font-weight: 700; cursor: pointer; color: var(--text-sub); font-size: clamp(0.8rem, 2.5vw, 0.95rem); min-width: 80px; touch-action: manipulation; word-break: keep-all; }
+.role-selector input[type="radio"]:checked + label { background: var(--primary); color: white; }
+.role-selector input[type="radio"] { display: none; }
+
+/* 📅 달력 및 표 UI/UX 절대 안 깨지게 강제 고정 */
+.ref-table { width: 100%; border-collapse: collapse; font-size: clamp(0.7rem, 2vw, 0.85rem); text-align: center; background: rgba(0,0,0,0.02); border-radius: 8px; overflow: hidden; border: 1px solid var(--border); table-layout: fixed; }
+.ref-table th { background: var(--primary); color: white; padding: 8px 4px; word-break: keep-all; }
+.ref-table td { border: 1px solid var(--border); padding: 8px 4px; color: var(--text-main); word-break: keep-all; }
+
+.calendar-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)) !important; gap: clamp(2px, 1vw, 4px); text-align: center; width: 100%; box-sizing: border-box; }
+.cal-day { padding: 8px 2px; border-radius: 6px; background: rgba(255,255,255,0.5); border: 1px solid var(--border); font-weight: 700; font-size: clamp(0.8rem, 3vw, 0.95rem); cursor: pointer; min-height: 50px; display: flex; flex-direction: column; justify-content: center; align-items: center; box-sizing: border-box; touch-action: manipulation; overflow: hidden; }
+.cal-day.has-data { border: 2px solid var(--success); background: rgba(16, 185, 129, 0.1); }
+.cal-dot { width: 6px; height: 6px; background-color: var(--success); border-radius: 50%; margin-top: 4px; display: none; }
+.cal-day.has-data .cal-dot { display: block; }
+
+/* 📛 조장 뱃지 & 동료 뱃지 (줄바꿈 자동 처리 완벽 대응) */
+.leader-badge { font-size: clamp(0.6rem, 2.5vw, 0.8rem); color: white; border-radius: 6px; padding: 3px 2px; margin-top: 4px; display: flex; justify-content: center; align-items: center; font-weight: 800; white-space: normal !important; word-break: keep-all; overflow-wrap: break-word; line-height: 1.2; width: 98%; max-width: 100%; box-sizing: border-box; text-align: center; }
+.coworker-badge { font-size: clamp(0.55rem, 2vw, 0.7rem); color: #1e3a8a; background: rgba(59, 130, 246, 0.15); border-radius: 4px; padding: 3px 2px; margin-top: 3px; width: 98%; max-width: 100%; white-space: normal !important; word-break: keep-all; overflow-wrap: break-word; text-align: center; font-weight: bold; line-height: 1.15; box-sizing: border-box; }
+
+.leader-jaekyung { background-color: #374151; } 
+.leader-sungchul { background-color: #fbbf24; color: #000; } 
+.leader-gaegool { background-color: #3b82f6; } 
+
+/* 📋 터미널 & 게시판 최적화 */
+.terminal-block { background: rgba(0,0,0,0.03); border-radius: 8px; margin-bottom: 8px; border: 1px solid var(--border); overflow: hidden; width: 100%; }
+.terminal-header { padding: 14px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; font-weight: 700; font-size: clamp(0.85rem, 3vw, 1rem); touch-action: manipulation; }
+.terminal-body { display: none; padding: 12px; border-top: 1px dashed var(--border); }
+.terminal-actions { display: grid; grid-template-columns: repeat(auto-fit, minmax(80px, 1fr)); gap: 6px; }
+.terminal-btn { background: var(--card-bg); border: 1px solid var(--border); color: var(--text-main); padding: 12px 4px; border-radius: 6px; text-decoration: none; font-size: clamp(0.75rem, 2.5vw, 0.85rem); text-align: center; font-weight: 700; display:flex; align-items:center; justify-content:center; word-break: keep-all; min-height: 44px; touch-action: manipulation; }
+
+.board-table { width: 100%; border-collapse: collapse; font-size: clamp(0.8rem, 2.5vw, 0.95rem); margin-top: 10px; table-layout: fixed; }
+.board-table th { border-bottom: 2px solid var(--border); padding: 12px 4px; color: var(--text-sub); font-weight: 700; text-align: center; background: rgba(0,0,0,0.02); word-break: keep-all; }
+.board-table td { border-bottom: 1px solid var(--border); padding: 14px 4px; color: var(--text-main); vertical-align: middle; overflow-wrap: break-word; word-break: keep-all; }
+.board-no { text-align: center; width: 10%; color: var(--text-sub); font-size: 0.75rem; }
+.board-title { text-align: left; font-weight: 600; cursor: pointer; padding-left: 8px; width: 60%; word-break: keep-all; line-height: 1.4; }
+.board-date { text-align: center; font-size: 0.75rem; color: var(--text-sub); width: 15%; word-break: keep-all; white-space: normal !important; }
+.board-nick { text-align: center; font-size: 0.8rem; color: var(--text-sub); width: 15%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.board-content-row { display: none; background: rgba(0,0,0,0.015); width: 100%; }
+.board-content-row.show { display: table-row; }
+.board-content-box { padding: 15px 12px; text-align: left; overflow-wrap: anywhere; word-break: break-all; font-size: clamp(0.9rem, 3vw, 1rem); line-height: 1.6; white-space: pre-wrap; color: var(--text-main); width: 100%; box-sizing: border-box; }
+
+.post-list { list-style: none; padding: 0; margin: 0; width: 100%; }
+.post-item { border-bottom: 1px solid var(--border); padding: 12px 0; width: 100%; }
+.post-header-row { padding: 8px 4px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; min-height: 44px; touch-action: manipulation; }
+.post-title-text { font-weight: 700; font-size: clamp(0.9rem, 3vw, 1.05rem); color: var(--text-main); flex: 1; word-break: keep-all; line-height: 1.4; padding-right: 10px; }
+.post-body-content { display: none; padding: 15px 12px; background: rgba(0,0,0,0.02); border-top: 1px dashed var(--border); font-size: clamp(0.85rem, 3vw, 0.95rem); line-height: 1.6; white-space: pre-wrap; overflow-wrap: break-word; word-break: keep-all; width: 100%; box-sizing: border-box; }
+
+.bottom-nav { position: fixed; bottom: 0; left: 0; width: 100%; height: max(60px, env(safe-area-inset-bottom) + 50px); background: rgba(255,255,255,0.98); border-top: 1px solid var(--border); display: flex; justify-content: space-around; align-items: center; z-index: 1000; padding-bottom: env(safe-area-inset-bottom); box-shadow: 0 -2px 10px rgba(0,0,0,0.05); }
+.nav-item { flex: 1; text-align: center; color: var(--text-sub); font-size: clamp(0.7rem, 2vw, 0.8rem); cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; height: 100%; touch-action: manipulation; }
+.nav-item.active { color: var(--primary); font-weight: 800; transform: scale(1.05); }
+
+/* 🔄 모바일 가로/세로 전환 시 유동적 레이아웃 제어 (Media Queries) */
+@media screen and (orientation: landscape) {
+    .container { max-width: 900px; }
+    .calc-layout { flex-direction: row; }
+    .dash-grid { grid-template-columns: repeat(2, 1fr); }
+    .allowance-grid { grid-template-columns: repeat(4, 1fr); }
+    header h1 { font-size: 1.2rem; }
+    .cal-day { min-height: 60px; }
+}
+
+@media screen and (max-width: 480px) and (orientation: portrait) {
+    .calc-layout { flex-direction: column; }
+    .allowance-grid { grid-template-columns: repeat(2, 1fr); }
+    .dash-grid { grid-template-columns: 1fr; } /* 세로 모드에선 카드를 1열로 꽉 차게 */
+    .terminal-actions { grid-template-columns: 1fr 1fr; }
+    .wage-row { flex-direction: column; align-items: flex-start; gap: 4px; } /* 임금 텍스트/인풋 분리 */
+    .wage-row input, .wage-row select { width: 100% !important; margin-left: 0 !important; }
+    .wage-row > div { width: 100%; display: flex; gap: 5px; } /* 시작/종료 시간 정렬용 */
+}
+
+/* 기타 유틸 및 모달 */
+.badge-new { background: #ef4444; color: white; font-size: clamp(0.6rem, 2vw, 0.7rem); font-weight: 900; padding: 2px 6px; border-radius: 10px; margin-left: 6px; vertical-align: middle; animation: blink 1s infinite; }
+@keyframes blink { 0% { opacity: 1; } 50% { opacity: 0.2; } 100% { opacity: 1; } }
+.modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 3000; justify-content: center; align-items: center; padding: 15px; box-sizing: border-box; }
+.modal-content { background: var(--card-bg); padding: 20px; border-radius: 16px; max-width: 100%; max-height: 90vh; overflow-y: auto; width: 100%; box-sizing: border-box; }
+.modal-img { width: 100%; height: auto; border-radius: 8px; }
+.hidden { display: none !important; }
+#toast { position: fixed; bottom: max(80px, env(safe-area-inset-bottom) + 70px); left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.85); color: white; padding: 12px 24px; border-radius: 30px; font-size: clamp(0.85rem, 3vw, 1rem); z-index: 5000; opacity: 0; transition: 0.3s; pointer-events: none; width: max-content; max-width: 90vw; text-align: center; word-break: keep-all; }
+#toast.show { opacity: 1; }
+
+.mini-btn { padding: 8px 12px; font-size: clamp(0.75rem, 2.5vw, 0.85rem); border-radius: 6px; border: none; cursor: pointer; color: white; margin-left: 4px; touch-action: manipulation; }
+.btn-del { background: var(--danger); }
+.btn-del-mini { background: var(--danger); }
+.user-auth-bar { display: flex; justify-content: space-between; align-items: center; background: rgba(59, 130, 246, 0.1); padding: 12px; border-radius: 8px; margin-bottom: 12px; border: 1px solid var(--primary-light); flex-wrap: wrap; gap: 8px; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
+
+@keyframes golden-glow {
+    0% { box-shadow: 0 0 5px rgba(234, 179, 8, 0.4); border-color: rgba(234, 179, 8, 0.5); }
+    50% { box-shadow: 0 0 20px rgba(234, 179, 8, 0.9), inset 0 0 10px rgba(254, 240, 138, 0.5); border-color: rgba(234, 179, 8, 1); }
+    100% { box-shadow: 0 0 5px rgba(234, 179, 8, 0.4); border-color: rgba(234, 179, 8, 0.5); }
+}
+.manual-card { animation: golden-glow 2s infinite alternate; background: linear-gradient(135deg, #ffffff 0%, #fffcf0 100%); border: 2px solid #eab308; }
     </style>
 </head>
 <body>
@@ -350,7 +340,7 @@ img:not([src]) { visibility: hidden; }
                     <span id="calMonthYear" style="font-weight:bold; font-size:1.1rem;"></span>
                     <button class="mini-btn" style="padding:6px 12px; font-size:1rem;" onclick="changeMonth(1)">▶</button>
                 </div>
-                <div class="calendar-grid" style="grid-template-columns: repeat(7, 1fr); gap: 3px; text-align: center; font-size: 0.85rem; font-weight: 900; margin-bottom: 5px;">
+                <div class="calendar-grid" style=gap: 3px; text-align: center; font-size: 0.85rem; font-weight: 900; margin-bottom: 5px;">
                     <div style="color:#ef4444;">일</div><div>월</div><div>화</div><div>수</div><div>목</div><div>금</div><div style="color:#3b82f6;">토</div>
                 </div>
                 <div id="calendarGrid" class="calendar-grid"></div>
@@ -508,7 +498,7 @@ img:not([src]) { visibility: hidden; }
                 </div>
                 <div class="dash-content">
                     <table class="board-table" style="margin-top:0;">
-                        <thead><tr><th style="width: 45px;">분류</th><th style="width: auto;">제목</th><th style="width: 90px;">등록일</th></tr></thead>
+                        <thead><tr><th style="width: 15%;">분류</th><th style="width: auto;">제목</th><th style="width: 90px;">등록일</th></tr></thead>
                         <tbody id="noticeList"></tbody>
                     </table>
                     <button class="action-btn" style="background:var(--text-sub); margin-top:15px; margin-bottom:10px;" onclick="toggleHidden('noticeForm')">✍️ 공지 쓰기 (Admin)</button>
@@ -532,7 +522,7 @@ img:not([src]) { visibility: hidden; }
                 </div>
                 <div class="dash-content">
                     <table class="board-table">
-                        <thead><tr><th style="width: 40px;">No.</th><th style="width: auto;">제 목</th><th style="width: 100px;">날짜</th><th style="width: 60px;">닉네임</th></tr></thead>
+                        <thead><tr><th style="width: 15%;">No.</th><th style="width: auto;">제 목</th><th style="width: 100px;">날짜</th><th style="width: 60px;">닉네임</th></tr></thead>
                         <tbody id="boardList"></tbody>
                     </table>
                     <div id="pagination" style="display:flex; justify-content:center; gap:5px; margin-top:10px; margin-bottom: 15px;"></div>
@@ -703,7 +693,7 @@ img:not([src]) { visibility: hidden; }
                 <span id="leaderCalMonthYear" style="font-weight:900; font-size:1.1rem; color:var(--text-main);"></span>
                 <button class="mini-btn" style="padding:8px 15px; font-size:1rem; background:var(--primary);" onclick="changeLeaderMonth(1)">▶</button>
             </div>
-            <div class="calendar-grid" style="grid-template-columns: repeat(7, 1fr); gap: 3px; text-align: center; font-size: 0.85rem; font-weight: 900; margin-bottom: 5px;">
+            <div class="calendar-grid" style=gap: 3px; text-align: center; font-size: 0.85rem; font-weight: 900; margin-bottom: 5px;">
                 <div style="color:#ef4444;">일</div><div>월</div><div>화</div><div>수</div><div>목</div><div>금</div><div style="color:#3b82f6;">토</div>
             </div>
             <div id="leaderCalendarGrid" class="calendar-grid"></div>
@@ -1390,6 +1380,7 @@ async function overrideLeader(dStr, currentLeader) { if (!(await verifyAdmin()))
     </script>
 </body>
 </html>
+
 
 
 
