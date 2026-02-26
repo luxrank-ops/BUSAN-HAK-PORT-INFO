@@ -59,7 +59,7 @@ header h1 { margin: 0; font-size: clamp(1.1rem, 4vw, 1.3rem); font-weight: 900; 
 .btn-del-menu:hover { background: var(--danger); color: white; }
 
 .container { width: 100%; max-width: 800px; margin: 0 auto; padding: 10px; overflow-x: hidden; }
-.dash-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 10px; margin-bottom: 12px; width: 100%; }
+.dash-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)) !important; gap: 6px; margin-bottom: 12px; width: 100%; }
 .dash-card { background: var(--card-bg); border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); border: 1px solid var(--border); overflow: hidden; width: 100%; }
 .dash-card.expanded { grid-column: 1 / -1; }
 .dash-header { padding: 15px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.05); min-height: 54px; touch-action: manipulation; }
@@ -80,7 +80,8 @@ header h1 { margin: 0; font-size: clamp(1.1rem, 4vw, 1.3rem); font-weight: 900; 
 .wage-row { display: flex; align-items: center; margin-bottom: 10px; width: 100%; justify-content: space-between; gap: 8px; }
 .wage-row label { width: auto; min-width: max-content; font-weight: 700; font-size: clamp(0.85rem, 2.5vw, 0.95rem); word-break: keep-all; }
 .allowance-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 8px; }
-.calc-layout { display: flex; flex-direction: column; gap: 12px; margin-bottom: 12px; width: 100%; }
+.calc-layout { display: flex; flex-direction: row !important; gap: 6px; margin-bottom: 12px; width: 100%; align-items: stretch; }
+.calc-left, .calc-right { flex: 1; min-width: 0; }
 .wage-result-box { background: linear-gradient(135deg, #ffffff, #f9fafb); border: 2px solid var(--primary); border-radius: 10px; padding: 15px; margin-top: 15px; width: 100%; overflow-x: auto; }
 .spec-table { width: 100%; border-collapse: collapse; margin: 8px 0; font-size: clamp(0.8rem, 2.5vw, 0.9rem); table-layout: fixed; }
 .spec-table td { padding: 8px 4px; color: var(--text-main); word-break: keep-all; }
@@ -150,13 +151,26 @@ header h1 { margin: 0; font-size: clamp(1.1rem, 4vw, 1.3rem); font-weight: 900; 
 }
 
 @media screen and (max-width: 480px) and (orientation: portrait) {
-    .calc-layout { flex-direction: column; }
-    .allowance-grid { grid-template-columns: repeat(2, 1fr); }
-    .dash-grid { grid-template-columns: 1fr; } /* 세로 모드에선 카드를 1열로 꽉 차게 */
+    /* 50:50 강제 유지를 위해 1열 변환 코드 삭제 및 내부 UI 극한 압축 */
+    .dash-header { padding: 10px 4px; flex-direction: column; justify-content: center; text-align: center; gap: 4px; min-height: 48px; }
+    .dash-title { font-size: clamp(0.7rem, 3vw, 0.85rem); word-break: keep-all; line-height: 1.2; letter-spacing: -0.5px; }
+    .dash-content { padding: 8px 4px; }
+    
+    /* 임금계산기 내부 최적화 (좁은 왼쪽 영역) */
+    .wage-row { flex-direction: column; align-items: flex-start; gap: 2px; margin-bottom: 6px; }
+    .wage-row label { font-size: 0.65rem; min-width: auto; margin-bottom: 2px; }
+    .input-field { height: 32px; padding: 0 4px; font-size: 0.75rem; }
+    .wage-row > div { width: 100%; display: flex; flex-direction: column; gap: 4px; }
+    
+    /* 참조표 및 버튼 최적화 (좁은 오른쪽 영역) */
+    .ref-table th, .ref-table td { padding: 4px 1px; font-size: 0.6rem; letter-spacing: -0.5px; word-break: keep-all; }
+    .role-selector label { padding: 6px 1px; font-size: 0.65rem; min-width: 0; word-break: keep-all; }
+    .action-btn { padding: 8px 4px; font-size: 0.75rem; height: auto; }
+    .allowance-grid { grid-template-columns: 1fr; gap: 4px; } /* 공간 부족으로 수당 입력은 1열 */
+    
+    /* 캘린더 압축 */
+    .cal-day { min-height: 35px; padding: 4px 1px; font-size: 0.75rem; }
     .terminal-actions { grid-template-columns: 1fr 1fr; }
-    .wage-row { flex-direction: column; align-items: flex-start; gap: 4px; } /* 임금 텍스트/인풋 분리 */
-    .wage-row input, .wage-row select { width: 100% !important; margin-left: 0 !important; }
-    .wage-row > div { width: 100%; display: flex; gap: 5px; } /* 시작/종료 시간 정렬용 */
 }
 
 /* 기타 유틸 및 모달 */
@@ -1380,6 +1394,7 @@ async function overrideLeader(dStr, currentLeader) { if (!(await verifyAdmin()))
     </script>
 </body>
 </html>
+
 
 
 
