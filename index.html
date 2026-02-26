@@ -142,35 +142,35 @@
         .nav-item { flex: 1; text-align: center; color: var(--text-sub); font-size: clamp(0.7rem, 2vw, 0.8rem); cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; height: 100%; touch-action: manipulation; }
         .nav-item.active { color: var(--primary); font-weight: 800; transform: scale(1.05); }
 
-        /* 🔄 모바일 세로 모드 50:50 전용 압축 CSS (정밀 밸런스 패치) */
+       /* 🔄 모바일 세로 모드 50:50 전용 압축 CSS (가독성 극대화 및 타이포그래피 최적화) */
         @media screen and (max-width: 480px) and (orientation: portrait) {
-            .dash-header { padding: 12px 8px; flex-direction: row !important; justify-content: space-between; align-items: center; min-height: 54px; gap: 4px; }
-            .dash-title { font-size: clamp(0.7rem, 3.5vw, 0.85rem); word-break: keep-all; overflow-wrap: break-word; line-height: 1.3; text-align: left; flex: 1; letter-spacing: -0.5px; }
-            .toggle-icon { font-size: 0.7rem; flex-shrink: 0; }
+            .dash-header { padding: 10px 6px; flex-direction: row !important; justify-content: space-between; align-items: center; min-height: 50px; gap: 4px; }
+            .dash-title { font-size: clamp(0.85rem, 4vw, 1rem); font-weight: 900; word-break: keep-all; overflow-wrap: break-word; line-height: 1.2; text-align: left; flex: 1; letter-spacing: -0.5px; }
+            .toggle-icon { font-size: 0.8rem; font-weight: 900; flex-shrink: 0; }
             .dash-content { padding: 8px 4px; }
             
             /* 🔥 임금계산기 내부 50:50 정밀 동기화 및 밸런스 패치 */
-            .calc-layout { flex-direction: row !important; gap: 6px; align-items: stretch; margin-bottom: 8px; }
+            .calc-layout { flex-direction: row !important; gap: 4px; align-items: stretch; margin-bottom: 8px; }
             .calc-left, .calc-right { width: 50%; min-width: 0; display: flex; flex-direction: column; justify-content: center; }
             
-            /* ⬅️ 왼쪽 입력부: 오른쪽 표 높이와 맞추기 위해 가로 1줄 강제 유지 및 극한 압축 */
+            /* ⬅️ 왼쪽 입력부: 폰트 확 키우고, 패딩과 자간을 깎아 50:50 영역 절대 방어 */
             .wage-row { flex-direction: row !important; align-items: center; gap: 2px; margin-bottom: 4px; }
-            .wage-row label { font-size: 0.6rem; min-width: 35px; margin: 0; white-space: nowrap; letter-spacing: -0.5px; }
-            .input-field { height: 26px !important; padding: 0 2px !important; font-size: 0.6rem !important; }
+            .wage-row label { font-size: 0.75rem; font-weight: 800; min-width: 32px; margin: 0; white-space: nowrap; letter-spacing: -0.5px; color: var(--text-main); }
+            .input-field { height: 28px !important; padding: 0 4px !important; font-size: 0.8rem !important; font-weight: 900 !important; letter-spacing: -0.5px; }
             
-            /* ➡️ 오른쪽 표: 폭이 좁아져도 절대 찢어지지 않도록 강제 고정 */
-            .ref-table { height: 100%; margin: 0; }
-            .ref-table th, .ref-table td { padding: 4px 1px; font-size: 0.55rem; letter-spacing: -0.5px; white-space: nowrap !important; word-break: keep-all; }
+            /* ➡️ 오른쪽 표: 가독성 확보(폰트업, 굵기업)하되 찢어짐 절대 방어 */
+            .ref-table { height: 100%; margin: 0; table-layout: fixed; }
+            .ref-table th { padding: 2px 0; font-size: 0.75rem; font-weight: 900; letter-spacing: -0.5px; white-space: nowrap !important; }
+            .ref-table td { padding: 2px 0; font-size: 0.75rem; font-weight: 700; letter-spacing: -0.5px; white-space: nowrap !important; word-break: keep-all; }
             
-            /* 기타 UI 밸런스 조정 */
-            .role-selector label { padding: 6px 1px; font-size: 0.6rem; min-width: 0; white-space: nowrap; }
-            .action-btn { padding: 6px 4px; font-size: 0.75rem; height: auto; margin-top: 2px; }
-            .allowance-grid { grid-template-columns: repeat(2, 1fr); gap: 4px; } /* 수당 입력도 2열 유지 */
+            /* 기타 UI 밸런스 조정 (버튼, 탭, 달력 등) */
+            .role-selector label { padding: 6px 0; font-size: 0.75rem; font-weight: 800; min-width: 0; white-space: nowrap; letter-spacing: -0.5px; }
+            .action-btn { padding: 8px 4px; font-size: 0.85rem; font-weight: 900; height: auto; margin-top: 2px; letter-spacing: -0.5px; }
+            .allowance-grid { grid-template-columns: repeat(2, 1fr); gap: 4px; } 
             
-            .cal-day { min-height: 35px; padding: 4px 1px; font-size: 0.75rem; }
+            .cal-day { min-height: 40px; padding: 4px 1px; font-size: 0.85rem; font-weight: 900; }
             .terminal-actions { grid-template-columns: 1fr 1fr; }
         }
-
         @media screen and (orientation: landscape) {
             .container { max-width: 900px; }
             header h1 { font-size: 1.2rem; }
@@ -679,4 +679,5 @@ let leaderCurrentDate = new Date(); let leaderOverrides = []; const baseCycle = 
 </script>
 </body>
 </html>
+
 
