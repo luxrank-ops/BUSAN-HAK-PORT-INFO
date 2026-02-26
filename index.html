@@ -150,15 +150,14 @@
         .bottom-nav { position: fixed; bottom: 0; left: 0; width: 100%; height: max(65px, env(safe-area-inset-bottom) + 55px); background: rgba(255,255,255,0.98); border-top: 1px solid var(--border); display: flex; justify-content: space-around; align-items: center; z-index: 1000; padding-bottom: env(safe-area-inset-bottom); box-shadow: 0 -2px 10px rgba(0,0,0,0.05); }
         .nav-item { flex: 1; text-align: center; color: var(--text-sub); font-size: clamp(0.8rem, 2.5vw, 0.9rem); font-weight: 700; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; height: 100%; touch-action: manipulation; }
         .nav-item.active { color: var(--primary); font-weight: 900; transform: scale(1.05); }
-/* 🔄 모바일 세로 모드: 임금계산기 50:50 정밀 라인 정렬 (최종본) */
+/* 🔄 모바일 세로 모드: 임금계산기 50:50 정밀 라인 정렬 및 날짜/시간 동기화 */
 @media screen and (max-width: 480px) and (orientation: portrait) {
-    /* 1. 레이아웃 강제 50:50 고정 */
+    /* 1. 전체 레이아웃 50:50 유지 */
     .calc-layout { 
         display: flex !important; 
         flex-direction: row !important; 
         gap: 6px !important; 
         align-items: stretch !important;
-        width: 100% !important;
     }
     .calc-left, .calc-right { 
         flex: 1 1 50% !important; 
@@ -166,65 +165,72 @@
         min-width: 0 !important; 
     }
 
-    /* 2. 왼쪽 입력부: 오빠 지시사항(이미지 레이아웃) 정밀 반영 */
+    /* 2. 왼쪽 입력부: 지시사항 기반 정밀 라인 정렬 */
     .wage-row { 
         display: flex !important;
         flex-direction: column !important; 
         align-items: stretch !important;
         gap: 2px !important;
-        margin-bottom: 6px !important;
+        margin-bottom: 8px !important;
     }
-    
-    /* [핵심] 시작/종료 내부의 날짜와 시간을 한 줄로 정렬 */
+
+    /* 시작/종료 내의 날짜와 시간을 강제로 한 줄 배치 */
     .calc-left .wage-row > div { 
         display: flex !important; 
-        flex-direction: row !important; 
+        flex-direction: row !important; /* 날짜와 시간을 가로로 나란히 */
         gap: 4px !important; 
         width: 100% !important;
     }
 
-    /* 날짜와 시간의 너비 비율 조정 (6:4) */
-    .calc-left input[type="date"] { flex: 6 !important; min-width: 0; }
-    .calc-left select { flex: 4 !important; min-width: 0; }
+    /* 날짜(60%)와 시간(40%) 비율 고정으로 라인 유지 */
+    .calc-left input[type="date"] { flex: 6 !important; min-width: 0 !important; }
+    .calc-left select { flex: 4 !important; min-width: 0 !important; }
 
-    .wage-row label { font-size: 0.72rem !important; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 2px; }
-    
-    /* 모든 입력창 높이 통일 및 폰트 강화 */
+    /* 라벨 텍스트 스타일 및 정렬 */
+    .wage-row label { 
+        font-size: 0.72rem !important; 
+        font-weight: 800; 
+        margin-bottom: 1px;
+        text-align: left;
+    }
+
+    /* 입력창 높이 통일 및 폰트 크기 상향 */
     .input-field { 
-        height: 34px !important; 
+        height: 36px !important; 
         padding: 0 4px !important; 
         font-size: 0.82rem !important; 
         font-weight: 900; 
-        width: 100% !important; 
+        width: 100% !important;
+        box-sizing: border-box !important;
     }
-    
-    /* 시간 설정 완료 버튼 라인 맞춤 */
+
+    /* 시간 설정 완료 버튼: 50% 폭에 딱 맞게 정렬 */
     .calc-left .action-btn { 
-        padding: 0 !important; 
-        font-size: 0.8rem !important; 
-        margin-top: 4px !important;
-        height: 36px !important;
-        display: flex; align-items: center; justify-content: center;
+        height: 38px !important;
+        font-size: 0.85rem !important;
+        margin-top: 5px !important;
+        padding: 0 !important;
+        display: flex;
+        align-items: center;
+        justify-content: center;
         width: 100% !important;
     }
-    
-    /* 3. 오른쪽 참조표 극한 압축 */
-    .ref-table { font-size: 0.62rem !important; table-layout: fixed !important; height: 100% !important; }
+
+    /* 3. 오른쪽 참조표: 왼쪽 라인을 침범하지 않도록 압축 */
+    .ref-table { font-size: 0.62rem !important; table-layout: fixed !important; }
     .ref-table th, .ref-table td { 
         padding: 5px 1px !important; 
-        font-size: 0.62rem !important; 
         letter-spacing: -1px !important; 
-        white-space: nowrap !important; 
+        white-space: nowrap !important;
         font-weight: 800;
     }
-    
-    /* 기타 UI 유지 */
+
+ /* 4. 기타 모바일 요소 마감 */
     .dash-header { padding: 12px 8px; flex-direction: row !important; }
     .dash-title { font-size: 0.92rem; font-weight: 800; }
     .cal-day { min-height: 40px; padding: 4px 1px; font-size: 0.85rem; font-weight: 800; }
     .terminal-actions { grid-template-columns: 1fr 1fr; }
 }
-
         @media screen and (orientation: landscape) {
             .container { max-width: 900px; }
             header h1 { font-size: 1.3rem; }
@@ -795,6 +801,7 @@ let leaderCurrentDate = new Date(); let leaderOverrides = []; const baseCycle = 
 </script>
 </body>
 </html>
+
 
 
 
