@@ -142,24 +142,30 @@
         .nav-item { flex: 1; text-align: center; color: var(--text-sub); font-size: clamp(0.7rem, 2vw, 0.8rem); cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; height: 100%; touch-action: manipulation; }
         .nav-item.active { color: var(--primary); font-weight: 800; transform: scale(1.05); }
 
-        /* 🔄 모바일 세로 모드 50:50 전용 압축 CSS */
+        /* 🔄 모바일 세로 모드 50:50 전용 압축 CSS (정밀 밸런스 패치) */
         @media screen and (max-width: 480px) and (orientation: portrait) {
             .dash-header { padding: 12px 8px; flex-direction: row !important; justify-content: space-between; align-items: center; min-height: 54px; gap: 4px; }
             .dash-title { font-size: clamp(0.7rem, 3.5vw, 0.85rem); word-break: keep-all; overflow-wrap: break-word; line-height: 1.3; text-align: left; flex: 1; letter-spacing: -0.5px; }
             .toggle-icon { font-size: 0.7rem; flex-shrink: 0; }
             .dash-content { padding: 8px 4px; }
             
-            /* 임금계산기 내부 좁은 왼쪽 영역 압축 */
-            .wage-row { flex-direction: column; align-items: flex-start; gap: 2px; margin-bottom: 6px; }
-            .wage-row label { font-size: 0.65rem; min-width: auto; margin-bottom: 2px; }
-            .input-field { height: 32px; padding: 0 4px; font-size: 0.75rem; }
-            .wage-row > div { width: 100%; display: flex; flex-direction: column; gap: 4px; }
+            /* 🔥 임금계산기 내부 50:50 정밀 동기화 및 밸런스 패치 */
+            .calc-layout { flex-direction: row !important; gap: 6px; align-items: stretch; margin-bottom: 8px; }
+            .calc-left, .calc-right { width: 50%; min-width: 0; display: flex; flex-direction: column; justify-content: center; }
             
-            /* 참조표 좁은 오른쪽 영역 압축 */
-            .ref-table th, .ref-table td { padding: 4px 1px; font-size: 0.6rem; letter-spacing: -0.5px; word-break: keep-all; }
-            .role-selector label { padding: 6px 1px; font-size: 0.65rem; min-width: 0; word-break: keep-all; }
-            .action-btn { padding: 8px 4px; font-size: 0.75rem; height: auto; }
-            .allowance-grid { grid-template-columns: 1fr; gap: 4px; }
+            /* ⬅️ 왼쪽 입력부: 오른쪽 표 높이와 맞추기 위해 가로 1줄 강제 유지 및 극한 압축 */
+            .wage-row { flex-direction: row !important; align-items: center; gap: 2px; margin-bottom: 4px; }
+            .wage-row label { font-size: 0.6rem; min-width: 35px; margin: 0; white-space: nowrap; letter-spacing: -0.5px; }
+            .input-field { height: 26px !important; padding: 0 2px !important; font-size: 0.6rem !important; }
+            
+            /* ➡️ 오른쪽 표: 폭이 좁아져도 절대 찢어지지 않도록 강제 고정 */
+            .ref-table { height: 100%; margin: 0; }
+            .ref-table th, .ref-table td { padding: 4px 1px; font-size: 0.55rem; letter-spacing: -0.5px; white-space: nowrap !important; word-break: keep-all; }
+            
+            /* 기타 UI 밸런스 조정 */
+            .role-selector label { padding: 6px 1px; font-size: 0.6rem; min-width: 0; white-space: nowrap; }
+            .action-btn { padding: 6px 4px; font-size: 0.75rem; height: auto; margin-top: 2px; }
+            .allowance-grid { grid-template-columns: repeat(2, 1fr); gap: 4px; } /* 수당 입력도 2열 유지 */
             
             .cal-day { min-height: 35px; padding: 4px 1px; font-size: 0.75rem; }
             .terminal-actions { grid-template-columns: 1fr 1fr; }
@@ -673,3 +679,4 @@ let leaderCurrentDate = new Date(); let leaderOverrides = []; const baseCycle = 
 </script>
 </body>
 </html>
+
