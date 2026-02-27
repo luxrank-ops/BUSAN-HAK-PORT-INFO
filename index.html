@@ -301,7 +301,10 @@
 
                 <div class="calc-layout">
                     <div class="calc-left">
-                        <div class="wage-row"><label>시급(기본)</label><input type="number" id="wageHourly" class="input-field" value="10320" style="text-align:right; font-weight:900; color:#ef4444; font-size:1.15rem; border: 2px solid #cbd5e1;" readonly></div>
+                        <div class="wage-row" style="flex-direction: row !important; align-items: center !important; flex-wrap: nowrap !important;">
+                            <label style="min-width: 80px; margin-bottom: 0 !important; font-weight: 900;">시급(기본)</label>
+                            <input type="number" id="wageHourly" class="input-field" value="10320" style="flex: 1; min-width: 0; text-align:right; font-weight:900; color:#ef4444; font-size:1.15rem; border: 2px solid #cbd5e1;" readonly>
+                        </div>
                         
                         <div style="background: rgba(59, 130, 246, 0.05); border: 2px solid var(--primary-light); padding: 10px; border-radius: 10px; margin-bottom: 10px;">
                             <div class="wage-row" style="margin-bottom: 5px;">
@@ -324,7 +327,11 @@
                             </div>
                             <button class="action-btn" style="background:var(--primary); padding:10px; margin:0; font-size:1rem; border: 2px solid #1e3a8a;" onclick="calcTimeAndFill()">⏱️ 시간 설정 완료</button>
                         </div>
-                        <div class="wage-row"><label style="min-width: 65px; font-weight:900;">⏳ 총근무</label><input type="number" id="wageTotalHours" class="input-field" placeholder="자동계산됨" style="text-align:right; font-weight:900; color:var(--primary); border: 2px solid #cbd5e1;" oninput="autoFillWeekendHoliday()"></div>
+                        
+                        <div class="wage-row" style="flex-direction: row !important; align-items: center !important; flex-wrap: nowrap !important;">
+                            <label style="min-width: 70px; font-weight:900; margin-bottom: 0 !important;">⏳ 총근무</label>
+                            <input type="number" id="wageTotalHours" class="input-field" placeholder="자동계산됨" style="flex: 1; min-width: 0; text-align:right; font-weight:900; color:var(--primary); border: 2px solid #cbd5e1;" oninput="autoFillWeekendHoliday()">
+                        </div>
                     </div>
                     <div class="calc-right">
                         <table class="ref-table" style="border: 2px solid #94a3b8;">
@@ -343,11 +350,12 @@
                 
                 <div style="border-top: 2px dashed #94a3b8; margin:15px 0; padding-top:15px;">
                     <p style="font-size:0.95rem; color:var(--primary); font-weight:900; margin-bottom:10px;">✅ 추가 수당 시간 입력</p>
-                    <div class="allowance-grid">
-                        <div class="wage-row"><label>공휴일</label><input type="number" id="wageHoliday" class="input-field" placeholder="H" style="border: 2px solid #cbd5e1;"></div>
-                        <div class="wage-row"><label>주말</label><input type="number" id="wageWeekend" class="input-field" placeholder="H" style="border: 2px solid #cbd5e1;"></div>
-                        <div class="wage-row"><label>우천</label><input type="number" id="wageRain" class="input-field" placeholder="H" style="border: 2px solid #cbd5e1;"></div>
-                        <div class="wage-row"><label>혹서기</label><input type="number" id="wageHotTime" class="input-field" placeholder="H" style="border: 2px solid #cbd5e1;"></div>
+                    
+                    <div class="allowance-grid" style="display: grid !important; grid-template-columns: repeat(2, 1fr) !important; gap: 8px !important;">
+                        <div class="wage-row" style="margin-bottom: 0 !important;"><label style="margin-bottom:2px;">공휴일</label><input type="number" id="wageHoliday" class="input-field" placeholder="H" style="border: 2px solid #cbd5e1;"></div>
+                        <div class="wage-row" style="margin-bottom: 0 !important;"><label style="margin-bottom:2px;">주말</label><input type="number" id="wageWeekend" class="input-field" placeholder="H" style="border: 2px solid #cbd5e1;"></div>
+                        <div class="wage-row" style="margin-bottom: 0 !important;"><label style="margin-bottom:2px;">우천</label><input type="number" id="wageRain" class="input-field" placeholder="H" style="border: 2px solid #cbd5e1;"></div>
+                        <div class="wage-row" style="margin-bottom: 0 !important;"><label style="margin-bottom:2px;">혹서기</label><input type="number" id="wageHotTime" class="input-field" placeholder="H" style="border: 2px solid #cbd5e1;"></div>
                     </div>
                 </div>
                 
@@ -370,7 +378,6 @@
                 </div>
             </div>
         </div>
-
         <div id="log-card" class="dash-card" style="border:2px solid #60a5fa; border-radius: 18px; box-shadow: 0 4px 12px rgba(0,0,0,0.06);">
             <div class="dash-header tap-effect" onclick="toggleDashItem('log-card')" style="flex-direction: column !important; justify-content: center !important; align-items: center !important; padding: 25px 10px !important; background: #fff !important; min-height: 120px; gap: 12px !important;">
                 <span style="font-size: 2.8rem; line-height: 1; display: block;">📅</span>
@@ -1111,6 +1118,7 @@ let leaderCurrentDate = new Date(); let leaderOverrides = []; const baseCycle = 
 </script>
 </body>
 </html>
+
 
 
 
