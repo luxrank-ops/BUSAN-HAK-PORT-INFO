@@ -698,25 +698,215 @@
                 </div>
             </div>
         </div>
-        <div id="guide-card" class="dash-card">
+       <div id="guide-card" class="dash-card">
             <div class="dash-header tap-effect" onclick="toggleDashItem('guide-card')">
-                <span class="dash-title" style="font-weight:bold;">📚 용어 가이드</span><span class="toggle-icon">▼</span>
+                <span class="dash-title" style="font-weight:900;">📚 현장 실무 용어 가이드 (바이블)</span><span class="toggle-icon">▼</span>
             </div>
             <div class="dash-content">
-                <div style="margin-bottom:15px;">
-                    <input type="text" id="guideSearch" class="input-field" placeholder="항만 용어 검색" onkeyup="filterGuide()">
+                <div style="margin-bottom:15px; position:relative;">
+                    <input type="text" id="guideSearch" class="input-field" placeholder="항만 용어 또는 카테고리(장비, 실무 등) 검색" onkeyup="filterGuide()" style="padding-left:35px; border:2px solid var(--primary-light);">
+                    <span style="position:absolute; left:12px; top:50%; transform:translateY(-50%); font-size:1.2rem;">🔍</span>
                 </div>
-                <div class="guide-container" style="max-height: 500px; overflow-y: auto; background: #fff; border-radius: 8px; border: 1px solid var(--border);">
+                
+                <div style="display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px;">
+                    <span style="background:#e0f2fe; color:#0369a1; padding:4px 8px; border-radius:6px; font-size:0.75rem; font-weight:800;">#작업·도구</span>
+                    <span style="background:#f3e8ff; color:#6b21a8; padding:4px 8px; border-radius:6px; font-size:0.75rem; font-weight:800;">#중장비</span>
+                    <span style="background:#dcfce7; color:#15803d; padding:4px 8px; border-radius:6px; font-size:0.75rem; font-weight:800;">#선박구조</span>
+                    <span style="background:#ffedd5; color:#c2410c; padding:4px 8px; border-radius:6px; font-size:0.75rem; font-weight:800;">#현장실무</span>
+                </div>
+
+                <div class="guide-container" style="max-height: 550px; overflow-y: auto; background: #fff; border-radius: 8px; border: 1px solid var(--border); box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);">
                     <table class="board-table" style="margin-top: 0; border: none;">
-                        <thead style="position: sticky; top: 0; z-index: 10;">
-                            <tr><th style="width: 35%;">용어</th><th style="width: 65%;">정의 및 설명</th></tr>
+                        <thead style="position: sticky; top: 0; z-index: 10; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+                            <tr>
+                                <th style="width: 32%; background: var(--card-bg);">분류 / 용어</th>
+                                <th style="width: 68%; background: var(--card-bg);">정의 및 실무 적용</th>
+                            </tr>
                         </thead>
                         <tbody id="guideBody">
-                            <tr><td class="board-no" style="font-weight:900; color:var(--primary); font-size:0.85rem;">라싱<br>(Lashing)</td><td class="board-title" style="white-space:normal; line-height:1.4; font-weight:600; font-size:0.85rem; padding:8px; border-bottom:1px solid var(--border);">선박 운항 중 흔들림을 막기 위해 컨테이너를 턴버클, 라싱바 등으로 단단히 고정하는 핵심 안전 작업.</td></tr>
-                            <tr><td class="board-no" style="font-weight:900; color:var(--primary); font-size:0.85rem;">언라싱<br>(Unlashing)</td><td class="board-title" style="white-space:normal; line-height:1.4; font-weight:600; font-size:0.85rem; padding:8px; border-bottom:1px solid var(--border);">양하(하역) 작업을 위해 고정되어 있던 체인, 로프, 라싱 장비 등을 해체하는 작업.</td></tr>
-                            <tr><td class="board-no" style="font-weight:900; color:var(--primary); font-size:0.85rem;">쇼어링<br>(Shoring)</td><td class="board-title" style="white-space:normal; line-height:1.4; font-weight:600; font-size:0.85rem; padding:8px; border-bottom:1px solid var(--border);">컨테이너 내부 화물이 전후좌우로 움직이지 않도록 목재 등을 괴어 단단히 지지하는 작업.</td></tr>
-                            <tr><td class="board-no" style="font-weight:900; color:var(--primary); font-size:0.85rem;">콘<br>(Twist Cone)</td><td class="board-title" style="white-space:normal; line-height:1.4; font-weight:600; font-size:0.85rem; padding:8px; border-bottom:1px solid var(--border);">컨테이너를 상하로 쌓을 때 네 모서리에 끼워 넣어 서로 맞물리게 하는 필수 고정구.</td></tr>
-                            <tr><td class="board-no" style="font-weight:900; color:var(--primary); font-size:0.85rem;">베이 플랜<br>(Bay Plan)</td><td class="board-title" style="white-space:normal; line-height:1.4; font-weight:600; font-size:0.85rem; padding:8px; border-bottom:1px solid var(--border);">선박 내 컨테이너의 적재 위치를 좌표(Bay-Row-Tier)로 표시한 도면. 하역 작업의 필수 지도.</td></tr>
+                            <tr>
+                                <td class="board-no" style="font-weight:900; color:var(--text-main); font-size:0.85rem; vertical-align:top; padding-top:12px;">
+                                    <div style="margin-bottom:6px;"><span style="background:#e0f2fe; color:#0369a1; padding:3px 6px; border-radius:4px; font-size:0.7rem; font-weight:900;">작업·도구</span></div>
+                                    라싱<br><span style="font-size:0.75rem; color:var(--text-sub);">(Lashing)</span>
+                                </td>
+                                <td class="board-title" style="white-space:normal; line-height:1.5; font-weight:600; font-size:0.85rem; padding:12px 8px; border-bottom:1px solid var(--border);">
+                                    선박 운항 중 파도로 인한 흔들림을 막기 위해 컨테이너를 라싱바, 턴버클 등으로 단단히 고정하는 핵심 안전 작업.<br>
+                                    <span style="display:inline-block; margin-top:6px; color:#ea580c; font-size:0.75rem; font-weight:800; background:rgba(234,88,12,0.1); padding:4px 6px; border-radius:4px;">💡 실무: 장력이 풀리지 않게 턴버클을 끝까지 쪼아주는 것이 생명.</span>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="board-no" style="font-weight:900; color:var(--text-main); font-size:0.85rem; vertical-align:top; padding-top:12px;">
+                                    <div style="margin-bottom:6px;"><span style="background:#e0f2fe; color:#0369a1; padding:3px 6px; border-radius:4px; font-size:0.7rem; font-weight:900;">작업·도구</span></div>
+                                    언라싱<br><span style="font-size:0.75rem; color:var(--text-sub);">(Unlashing)</span>
+                                </td>
+                                <td class="board-title" style="white-space:normal; line-height:1.5; font-weight:600; font-size:0.85rem; padding:12px 8px; border-bottom:1px solid var(--border);">
+                                    양하(하역)를 위해 묶여있던 체인, 턴버클, 라싱 장비 등을 해체하는 작업.<br>
+                                    <span style="display:inline-block; margin-top:6px; color:#ea580c; font-size:0.75rem; font-weight:800; background:rgba(234,88,12,0.1); padding:4px 6px; border-radius:4px;">💡 실무: 녹이 슨 턴버클은 해체 시 튕길 수 있으니 타격 주의.</span>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="board-no" style="font-weight:900; color:var(--text-main); font-size:0.85rem; vertical-align:top; padding-top:12px;">
+                                    <div style="margin-bottom:6px;"><span style="background:#e0f2fe; color:#0369a1; padding:3px 6px; border-radius:4px; font-size:0.7rem; font-weight:900;">작업·도구</span></div>
+                                    쇼어링/초킹<br><span style="font-size:0.7rem; color:var(--text-sub);">(Shoring/Chocking)</span>
+                                </td>
+                                <td class="board-title" style="white-space:normal; line-height:1.5; font-weight:600; font-size:0.85rem; padding:12px 8px; border-bottom:1px solid var(--border);">
+                                    컨테이너 내부 화물이 움직이지 않게 목재(Timber)나 쐐기를 괴어 지지하는 작업.<br>
+                                    <span style="display:inline-block; margin-top:6px; color:#ea580c; font-size:0.75rem; font-weight:800; background:rgba(234,88,12,0.1); padding:4px 6px; border-radius:4px;">💡 실무: 특수 화물(코일, 기계류) 고박 시 주로 육상 기능공이 수행.</span>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="board-no" style="font-weight:900; color:var(--text-main); font-size:0.85rem; vertical-align:top; padding-top:12px;">
+                                    <div style="margin-bottom:6px;"><span style="background:#e0f2fe; color:#0369a1; padding:3px 6px; border-radius:4px; font-size:0.7rem; font-weight:900;">작업·도구</span></div>
+                                    콘<br><span style="font-size:0.75rem; color:var(--text-sub);">(Twist Cone)</span>
+                                </td>
+                                <td class="board-title" style="white-space:normal; line-height:1.5; font-weight:600; font-size:0.85rem; padding:12px 8px; border-bottom:1px solid var(--border);">
+                                    컨테이너를 상하로 쌓을 때 4모서리(캐스팅)에 끼워 맞물리게 하는 잠금장치.<br>
+                                    <span style="display:inline-block; margin-top:6px; color:#ea580c; font-size:0.75rem; font-weight:800; background:rgba(234,88,12,0.1); padding:4px 6px; border-radius:4px;">💡 실무: 오토콘(Auto)과 수동콘(Manual) 구분 필수. 던지기 절대 금지.</span>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="board-no" style="font-weight:900; color:var(--text-main); font-size:0.85rem; vertical-align:top; padding-top:12px;">
+                                    <div style="margin-bottom:6px;"><span style="background:#e0f2fe; color:#0369a1; padding:3px 6px; border-radius:4px; font-size:0.7rem; font-weight:900;">작업·도구</span></div>
+                                    턴버클<br><span style="font-size:0.75rem; color:var(--text-sub);">(Turnbuckle)</span>
+                                </td>
+                                <td class="board-title" style="white-space:normal; line-height:1.5; font-weight:600; font-size:0.85rem; padding:12px 8px; border-bottom:1px solid var(--border);">
+                                    라싱바와 연결하여 길이를 조이거나 늘리며 텐션을 가하는 조절 도구.<br>
+                                    <span style="display:inline-block; margin-top:6px; color:#ea580c; font-size:0.75rem; font-weight:800; background:rgba(234,88,12,0.1); padding:4px 6px; border-radius:4px;">💡 실무: 구리스 도포 불량 시 헛돌 수 있으므로 작업 전 상태 확인.</span>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="board-no" style="font-weight:900; color:var(--text-main); font-size:0.85rem; vertical-align:top; padding-top:12px;">
+                                    <div style="margin-bottom:6px;"><span style="background:#e0f2fe; color:#0369a1; padding:3px 6px; border-radius:4px; font-size:0.7rem; font-weight:900;">작업·도구</span></div>
+                                    브릿지 피팅<br><span style="font-size:0.7rem; color:var(--text-sub);">(Bridge Fitting)</span>
+                                </td>
+                                <td class="board-title" style="white-space:normal; line-height:1.5; font-weight:600; font-size:0.85rem; padding:12px 8px; border-bottom:1px solid var(--border);">
+                                    갑판 최상단에 적재된 좌우 컨테이너 사이를 가로로 연결해 벌어짐을 방지하는 고정쇠.<br>
+                                    <span style="display:inline-block; margin-top:6px; color:#ea580c; font-size:0.75rem; font-weight:800; background:rgba(234,88,12,0.1); padding:4px 6px; border-radius:4px;">💡 실무: 고소 구역 작업이므로 반드시 안전대(하네스) 체결 후 체결.</span>
+                                </td>
+                            </tr>
+
+                            <tr>
+                                <td class="board-no" style="font-weight:900; color:var(--text-main); font-size:0.85rem; vertical-align:top; padding-top:12px;">
+                                    <div style="margin-bottom:6px;"><span style="background:#f3e8ff; color:#6b21a8; padding:3px 6px; border-radius:4px; font-size:0.7rem; font-weight:900;">중장비</span></div>
+                                    QC<br><span style="font-size:0.75rem; color:var(--text-sub);">(Quay Crane)</span>
+                                </td>
+                                <td class="board-title" style="white-space:normal; line-height:1.5; font-weight:600; font-size:0.85rem; padding:12px 8px; border-bottom:1px solid var(--border);">
+                                    안벽(부두 끝)에 설치되어 선박과 야드 사이의 컨테이너를 직접 싣고 내리는 대형 크레인. 일명 갠트리 크레인.<br>
+                                    <span style="display:inline-block; margin-top:6px; color:#ea580c; font-size:0.75rem; font-weight:800; background:rgba(234,88,12,0.1); padding:4px 6px; border-radius:4px;">💡 실무: 매달린 화물(스프레더) 밑으로는 절대 통행 불가.</span>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="board-no" style="font-weight:900; color:var(--text-main); font-size:0.85rem; vertical-align:top; padding-top:12px;">
+                                    <div style="margin-bottom:6px;"><span style="background:#f3e8ff; color:#6b21a8; padding:3px 6px; border-radius:4px; font-size:0.7rem; font-weight:900;">중장비</span></div>
+                                    YT<br><span style="font-size:0.75rem; color:var(--text-sub);">(Yard Tractor)</span>
+                                </td>
+                                <td class="board-title" style="white-space:normal; line-height:1.5; font-weight:600; font-size:0.85rem; padding:12px 8px; border-bottom:1px solid var(--border);">
+                                    터미널 야드 내에서 샤시(트레일러)에 컨테이너를 싣고 이동하는 전용 견인 차량.<br>
+                                    <span style="display:inline-block; margin-top:6px; color:#ea580c; font-size:0.75rem; font-weight:800; background:rgba(234,88,12,0.1); padding:4px 6px; border-radius:4px;">💡 실무: 사각지대가 넓으므로 반경 5m 이내 접근 엄금.</span>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="board-no" style="font-weight:900; color:var(--text-main); font-size:0.85rem; vertical-align:top; padding-top:12px;">
+                                    <div style="margin-bottom:6px;"><span style="background:#f3e8ff; color:#6b21a8; padding:3px 6px; border-radius:4px; font-size:0.7rem; font-weight:900;">중장비</span></div>
+                                    스프레더<br><span style="font-size:0.75rem; color:var(--text-sub);">(Spreader)</span>
+                                </td>
+                                <td class="board-title" style="white-space:normal; line-height:1.5; font-weight:600; font-size:0.85rem; padding:12px 8px; border-bottom:1px solid var(--border);">
+                                    크레인 와이어 끝에 매달려 컨테이너의 4개 코너 캐스팅을 잡아 올리는 장치.<br>
+                                    <span style="display:inline-block; margin-top:6px; color:#ea580c; font-size:0.75rem; font-weight:800; background:rgba(234,88,12,0.1); padding:4px 6px; border-radius:4px;">💡 실무: 라싱 작업 중 스프레더가 다가오면 즉각 안전 구역으로 대피.</span>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="board-no" style="font-weight:900; color:var(--text-main); font-size:0.85rem; vertical-align:top; padding-top:12px;">
+                                    <div style="margin-bottom:6px;"><span style="background:#f3e8ff; color:#6b21a8; padding:3px 6px; border-radius:4px; font-size:0.7rem; font-weight:900;">중장비</span></div>
+                                    리치 스태커<br><span style="font-size:0.7rem; color:var(--text-sub);">(Reach Stacker)</span>
+                                </td>
+                                <td class="board-title" style="white-space:normal; line-height:1.5; font-weight:600; font-size:0.85rem; padding:12px 8px; border-bottom:1px solid var(--border);">
+                                    붐(Boom)을 뻗어 무거운 컨테이너를 집어 올리고 짧은 거리를 이동시키는 중장비.<br>
+                                    <span style="display:inline-block; margin-top:6px; color:#ea580c; font-size:0.75rem; font-weight:800; background:rgba(234,88,12,0.1); padding:4px 6px; border-radius:4px;">💡 실무: 선적 전 야드에서 특수 화물 위치 조정 시 빈번하게 작동함.</span>
+                                </td>
+                            </tr>
+
+                            <tr>
+                                <td class="board-no" style="font-weight:900; color:var(--text-main); font-size:0.85rem; vertical-align:top; padding-top:12px;">
+                                    <div style="margin-bottom:6px;"><span style="background:#dcfce7; color:#15803d; padding:3px 6px; border-radius:4px; font-size:0.7rem; font-weight:900;">선박구조</span></div>
+                                    베이 플랜<br><span style="font-size:0.75rem; color:var(--text-sub);">(Bay Plan)</span>
+                                </td>
+                                <td class="board-title" style="white-space:normal; line-height:1.5; font-weight:600; font-size:0.85rem; padding:12px 8px; border-bottom:1px solid var(--border);">
+                                    선박 내 컨테이너 적재 위치를 입체 좌표(Bay-Row-Tier)로 표시한 도면. 하역 작업의 지도 역할.<br>
+                                    <span style="display:inline-block; margin-top:6px; color:#ea580c; font-size:0.75rem; font-weight:800; background:rgba(234,88,12,0.1); padding:4px 6px; border-radius:4px;">💡 실무: 작업 전 베이 플랜을 숙지해야 언라싱 순서 꼬임을 방지함.</span>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="board-no" style="font-weight:900; color:var(--text-main); font-size:0.85rem; vertical-align:top; padding-top:12px;">
+                                    <div style="margin-bottom:6px;"><span style="background:#dcfce7; color:#15803d; padding:3px 6px; border-radius:4px; font-size:0.7rem; font-weight:900;">선박구조</span></div>
+                                    해치 커버<br><span style="font-size:0.75rem; color:var(--text-sub);">(Hatch Cover)</span>
+                                </td>
+                                <td class="board-title" style="white-space:normal; line-height:1.5; font-weight:600; font-size:0.85rem; padding:12px 8px; border-bottom:1px solid var(--border);">
+                                    갑판 아래(선창/Hold)를 덮는 거대한 철제 뚜껑. 이 위로 갑판 적재(On Deck)가 시작됨.<br>
+                                    <span style="display:inline-block; margin-top:6px; color:#ea580c; font-size:0.75rem; font-weight:800; background:rgba(234,88,12,0.1); padding:4px 6px; border-radius:4px;">💡 실무: 해치 커버 주변 틈새는 추락 위험이 크므로 발밑 주의.</span>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="board-no" style="font-weight:900; color:var(--text-main); font-size:0.85rem; vertical-align:top; padding-top:12px;">
+                                    <div style="margin-bottom:6px;"><span style="background:#dcfce7; color:#15803d; padding:3px 6px; border-radius:4px; font-size:0.7rem; font-weight:900;">선박구조</span></div>
+                                    셀 가이드<br><span style="font-size:0.75rem; color:var(--text-sub);">(Cell Guide)</span>
+                                </td>
+                                <td class="board-title" style="white-space:normal; line-height:1.5; font-weight:600; font-size:0.85rem; padding:12px 8px; border-bottom:1px solid var(--border);">
+                                    선창(Hold) 내부에 수직으로 설치된 뼈대 레일. 컨테이너가 미끄러져 제자리에 안착하게 도움.<br>
+                                    <span style="display:inline-block; margin-top:6px; color:#ea580c; font-size:0.75rem; font-weight:800; background:rgba(234,88,12,0.1); padding:4px 6px; border-radius:4px;">💡 실무: 셀 가이드가 있는 갑판 아래는 별도의 라싱이 필요 없음.</span>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="board-no" style="font-weight:900; color:var(--text-main); font-size:0.85rem; vertical-align:top; padding-top:12px;">
+                                    <div style="margin-bottom:6px;"><span style="background:#dcfce7; color:#15803d; padding:3px 6px; border-radius:4px; font-size:0.7rem; font-weight:900;">선박구조</span></div>
+                                    티어 / 로우<br><span style="font-size:0.75rem; color:var(--text-sub);">(Tier / Row)</span>
+                                </td>
+                                <td class="board-title" style="white-space:normal; line-height:1.5; font-weight:600; font-size:0.85rem; padding:12px 8px; border-bottom:1px solid var(--border);">
+                                    티어(Tier)는 수직으로 쌓은 높이 층수, 로우(Row)는 선박 중앙에서 좌우로 나눈 가로 열.<br>
+                                    <span style="display:inline-block; margin-top:6px; color:#ea580c; font-size:0.75rem; font-weight:800; background:rgba(234,88,12,0.1); padding:4px 6px; border-radius:4px;">💡 실무: "Bay 06, Row 04, Tier 82 찾아가" 식의 무전 지시에 익숙해져야 함.</span>
+                                </td>
+                            </tr>
+
+                            <tr>
+                                <td class="board-no" style="font-weight:900; color:var(--text-main); font-size:0.85rem; vertical-align:top; padding-top:12px;">
+                                    <div style="margin-bottom:6px;"><span style="background:#ffedd5; color:#c2410c; padding:3px 6px; border-radius:4px; font-size:0.7rem; font-weight:900;">현장실무</span></div>
+                                    갱<br><span style="font-size:0.75rem; color:var(--text-sub);">(Gang)</span>
+                                </td>
+                                <td class="board-title" style="white-space:normal; line-height:1.5; font-weight:600; font-size:0.85rem; padding:12px 8px; border-bottom:1px solid var(--border);">
+                                    1대의 크레인(QC)에 할당되어 하역을 수행하는 하나의 작업조 단위 (조장, 신호수, 라싱공 등).<br>
+                                    <span style="display:inline-block; margin-top:6px; color:#ea580c; font-size:0.75rem; font-weight:800; background:rgba(234,88,12,0.1); padding:4px 6px; border-radius:4px;">💡 실무: 1번 갱, 2번 갱 등 자신의 소속 갱 위치를 무전으로 확인.</span>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="board-no" style="font-weight:900; color:var(--text-main); font-size:0.85rem; vertical-align:top; padding-top:12px;">
+                                    <div style="margin-bottom:6px;"><span style="background:#ffedd5; color:#c2410c; padding:3px 6px; border-radius:4px; font-size:0.7rem; font-weight:900;">현장실무</span></div>
+                                    시프팅<br><span style="font-size:0.75rem; color:var(--text-sub);">(Shifting)</span>
+                                </td>
+                                <td class="board-title" style="white-space:normal; line-height:1.5; font-weight:600; font-size:0.85rem; padding:12px 8px; border-bottom:1px solid var(--border);">
+                                    목표 하역 컨테이너를 꺼내기 위해, 그 위에 쌓인 다른 컨테이너를 잠시 옆으로 옮기는 작업.<br>
+                                    <span style="display:inline-block; margin-top:6px; color:#ea580c; font-size:0.75rem; font-weight:800; background:rgba(234,88,12,0.1); padding:4px 6px; border-radius:4px;">💡 실무: 시프팅이 잦으면 예상 소요 시간이 크게 길어지므로 페이스 조절 필요.</span>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="board-no" style="font-weight:900; color:var(--text-main); font-size:0.85rem; vertical-align:top; padding-top:12px;">
+                                    <div style="margin-bottom:6px;"><span style="background:#ffedd5; color:#c2410c; padding:3px 6px; border-radius:4px; font-size:0.7rem; font-weight:900;">현장실무</span></div>
+                                    더블 오더<br><span style="font-size:0.75rem; color:var(--text-sub);">(Double Order)</span>
+                                </td>
+                                <td class="board-title" style="white-space:normal; line-height:1.5; font-weight:600; font-size:0.85rem; padding:12px 8px; border-bottom:1px solid var(--border);">
+                                    야간/주간 작업이 겹치거나 두 가지 다른 선박의 작업 스케줄이 중첩되어 배정된 상황.<br>
+                                    <span style="display:inline-block; margin-top:6px; color:#ea580c; font-size:0.75rem; font-weight:800; background:rgba(234,88,12,0.1); padding:4px 6px; border-radius:4px;">💡 실무: 임금계산기 입력 시 겹치는 시간을 별도 수당으로 산정해야 함.</span>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="board-no" style="font-weight:900; color:var(--text-main); font-size:0.85rem; vertical-align:top; padding-top:12px;">
+                                    <div style="margin-bottom:6px;"><span style="background:#ffedd5; color:#c2410c; padding:3px 6px; border-radius:4px; font-size:0.7rem; font-weight:900;">현장실무</span></div>
+                                    ETA / ETD<br><span style="font-size:0.7rem; color:var(--text-sub);">(Arrival/Departure)</span>
+                                </td>
+                                <td class="board-title" style="white-space:normal; line-height:1.5; font-weight:600; font-size:0.85rem; padding:12px 8px; border-bottom:1px solid var(--border);">
+                                    선박의 도착 예정 시간(ETA)과 출항(작업 종료) 예정 시간(ETD).<br>
+                                    <span style="display:inline-block; margin-top:6px; color:#ea580c; font-size:0.75rem; font-weight:800; background:rgba(234,88,12,0.1); padding:4px 6px; border-radius:4px;">💡 실무: 날씨(파고)에 따라 ETA가 수시로 변하므로 선박정보 탭 수시 확인.</span>
+                                </td>
+                            </tr>
                         </tbody>
                     </table>
                 </div>
@@ -912,6 +1102,7 @@ let leaderCurrentDate = new Date(); let leaderOverrides = []; const baseCycle = 
 </script>
 </body>
 </html>
+
 
 
 
