@@ -398,10 +398,6 @@
         <div class="section-header tap-effect" onclick="toggleSection('t3-content', this)" style="background: var(--primary); color: white; border-radius: 8px; padding: 15px;">
             <span class="section-title" style="font-size: 1.1rem; font-weight: 900;">🚢 3항업 (신항 남측) ▼</span>
         </div>
-     <div class="card" style="margin-bottom: 8px; border: none; box-shadow: none; background: transparent;">
-        <div class="section-header tap-effect" onclick="toggleSection('t3-content', this)" style="background: var(--primary); color: white; border-radius: 8px; padding: 15px;">
-            <span class="section-title" style="font-size: 1.1rem; font-weight: 900;">🚢 3항업 (신항 남측) ▼</span>
-        </div>
         <div id="t3-content" class="collapsible-content collapsed" style="background: white; border: 1px solid var(--border); border-radius: 8px; margin-top: 4px;">
             <div class="terminal-block">
                 <div class="terminal-header tap-effect" onclick="toggleContent('term-hjnc')">한진신항만 (HJNC) ▼</div>
@@ -410,60 +406,21 @@
                         <a href="https://www.hjnc.co.kr/esvc/vessel/berthScheduleT" target="_blank" class="terminal-btn">스케줄</a>
                         <a href="https://www.hjnc.co.kr/esvc/vessel/berthScheduleG" target="_blank" class="terminal-btn">차트</a>
                         <a href="https://www.hjnc.co.kr/esvc/vessel/vesselStatus" target="_blank" class="terminal-btn">현황</a>
+                        <div style="grid-column: 1 / -1; display: flex; gap: 5px; margin-top: 4px;">
+                            <a href="http://bayplan.hjnc.co.kr" target="_blank" class="terminal-btn" style="flex: 1; margin: 0; background: linear-gradient(135deg, #fffbeb, #fef3c7); border: 1px solid #fcd34d; color: #92400e;">🧩 BAY PLAN</a>
+                            <button onclick="openLeaderSchedule()" class="terminal-btn" style="flex: 1; margin: 0; background: linear-gradient(135deg, #e0f2fe, #bae6fd); border: 1px solid #7dd3fc; color: #0369a1;">📅 조장 근무일</button>
+                        </div>
+                        <div style="grid-column: 1 / -1; margin-top: 5px;">
+                            <button onclick="openAllBayPlan()" class="terminal-btn" style="width: 100%; margin: 0; background: linear-gradient(135deg, #fdf2f8, #fbcfe8); border: 1px solid #f9a8d4; color: #be185d; font-weight: bold;">🌸 ALL BAY PLAN (비번입력)</button>
+                        </div>
                     </div>
                 </div>
             </div>                 
-            <div class="terminal-block"><div class="terminal-header tap-effect" onclick="toggleContent('term-bnct')">부산신항컨테이너 고려 (BNCT) ▼</div><div id="term-bnct" class="terminal-body"><div class="terminal-actions"><a href="https://info.bnctkorea.com/esvc/vessel/berthScheduleT" target="_blank" class="terminal-btn">스케줄</a></div></div></div>
-            <div class="terminal-block"><div class="terminal-header tap-effect" onclick="toggleContent('term-dgt')">동원로엑스 (DGT) ▼</div><div id="term-dgt" class="terminal-body"><div class="terminal-actions"><a href="https://www.dgtbusan.com/DGT/esvc/vessel/berthScheduleT" target="_blank" class="terminal-btn">스케줄</a></div></div></div>
-            <div class="terminal-block"><div class="terminal-header tap-effect" onclick="toggleContent('term-bct')">부산컨테이너 터미널 (BCT) ▼</div><div id="term-bct" class="terminal-body"><div class="terminal-actions"><a href="https://info.bct2-4.com/infoservice/index.html" target="_blank" class="terminal-btn">스케줄</a></div></div></div>
+            <div class="terminal-block"><div class="terminal-header tap-effect" onclick="toggleContent('term-bnct')">부산신항컨테이너 고려 (BNCT) ▼</div><div id="term-bnct" class="terminal-body"><div class="terminal-actions"><a href="https://info.bnctkorea.com/esvc/vessel/berthScheduleT" target="_blank" class="terminal-btn">스케줄</a><a href="https://info.bnctkorea.com/esvc/vessel/berthScheduleG" target="_blank" class="terminal-btn">차트</a><a href="https://info.bnctkorea.com/esvc/vessel/vesselStatus" target="_blank" class="terminal-btn">현황</a></div></div></div>
+            <div class="terminal-block"><div class="terminal-header tap-effect" onclick="toggleContent('term-dgt')">동원로엑스 (DGT) ▼</div><div id="term-dgt" class="terminal-body"><div class="terminal-actions"><a href="https://www.dgtbusan.com/DGT/esvc/vessel/berthScheduleT" target="_blank" class="terminal-btn">스케줄</a><a href="https://www.dgtbusan.com/DGT/esvc/vessel/berthScheduleG" target="_blank" class="terminal-btn">차트</a><a href="https://www.dgtbusan.com/DGT/esvc/vessel/vesselStatus" target="_blank" class="terminal-btn">현황</a></div></div></div>
+            <div class="terminal-block"><div class="terminal-header tap-effect" onclick="toggleContent('term-bct')">부산컨테이너 터미널 (BCT) ▼</div><div id="term-bct" class="terminal-body"><div class="terminal-actions"><a href="https://info.bct2-4.com/infoservice/index.html" target="_blank" class="terminal-btn">스케줄</a><a href="https://info.bct2-4.com/infoservice/index.html" target="_blank" class="terminal-btn">차트</a><a href="https://info.bct2-4.com/infoservice/index.html" target="_blank" class="terminal-btn">현황</a></div></div></div>
         </div> 
     </div>
-
-    <div class="card" style="margin-bottom: 8px; border: none; box-shadow: none; background: transparent;">
-        <div class="section-header tap-effect" onclick="toggleSection('t2-content', this)" style="background: var(--primary); color: white; border-radius: 8px; padding: 15px;">
-            <span class="section-title" style="font-size: 1.1rem; font-weight: 900;">🏗️ 2항업 (신항 북측) ▼</span>
-        </div>
-        <div id="t2-content" class="collapsible-content collapsed" style="background: white; border: 1px solid var(--border); border-radius: 8px; margin-top: 4px;">
-            <div class="terminal-block"><div class="terminal-header tap-effect" onclick="toggleContent('term-pnc')">부산신항만 (PNC) ▼</div><div id="term-pnc" class="terminal-body"><div class="terminal-actions"><a href="https://svc.pncport.com/info/CMS/Ship/Info.pnc?mCode=MN014" target="_blank" class="terminal-btn">스케줄</a></div></div></div>
-        </div>
-    </div>
-
-    <div class="card" style="margin-bottom: 25px; border: none; box-shadow: none; background: transparent;">
-        <div class="section-header tap-effect" onclick="toggleSection('t1-content', this)" style="background: var(--primary); color: white; border-radius: 8px; padding: 15px;">
-            <span class="section-title" style="font-size: 1.1rem; font-weight: 900;">⚓ 1항업 (북항) ▼</span>
-        </div>
-        <div id="t1-content" class="collapsible-content collapsed" style="background: white; border: 1px solid var(--border); border-radius: 8px; margin-top: 4px;">
-            <div class="terminal-block"><div class="terminal-header tap-effect" onclick="toggleContent('term-bptc')">북항 통합 (BPTC) ▼</div><div id="term-bptc" class="terminal-body"><div class="terminal-actions"><a href="http://info.bptc.co.kr:9084" target="_blank" class="terminal-btn">스케줄</a></div></div></div>
-        </div>
-    </div>
-        <div class="terminal-block" style="margin-bottom: 0; border: 1px solid var(--border); border-radius: 12px; aspect-ratio: 1 / 1; display: flex; flex-direction: column; overflow: hidden;">
-            <div class="terminal-header tap-effect" onclick="toggleContent('term-dgt')" style="flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 10px; text-align: center; gap: 5px;">
-                <span style="font-size: 1.8rem;">🚛</span>
-                <div style="font-size: 0.85rem; font-weight: 900; line-height: 1.2; word-break: keep-all;">동원로엑스<br>(DGT)</div>
-                <span style="font-size: 0.7rem; color: var(--primary);">▼ 상세정보</span>
-            </div>
-            <div id="term-dgt" class="terminal-body" style="background: var(--bg-color); font-size: 0.8rem;">
-                <div class="terminal-actions" style="padding: 5px;">
-                    <a href="https://www.dgtbusan.com/DGT/esvc/vessel/berthScheduleT" target="_blank" class="terminal-btn" style="padding: 5px 0; font-size: 0.7rem;">스케줄 확인</a>
-                </div>
-            </div>
-        </div>
-
-        <div class="terminal-block" style="margin-bottom: 0; border: 1px solid var(--border); border-radius: 12px; aspect-ratio: 1 / 1; display: flex; flex-direction: column; overflow: hidden;">
-            <div class="terminal-header tap-effect" onclick="toggleContent('term-bct')" style="flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 10px; text-align: center; gap: 5px;">
-                <span style="font-size: 1.8rem;">⚓</span>
-                <div style="font-size: 0.85rem; font-weight: 900; line-height: 1.2; word-break: keep-all;">부산컨테이너<br>(BCT)</div>
-                <span style="font-size: 0.7rem; color: var(--primary);">▼ 상세정보</span>
-            </div>
-            <div id="term-bct" class="terminal-body" style="background: var(--bg-color); font-size: 0.8rem;">
-                <div class="terminal-actions" style="padding: 5px;">
-                    <a href="https://info.bct2-4.com/infoservice/index.html" target="_blank" class="terminal-btn" style="padding: 5px 0; font-size: 0.7rem;">스케줄 확인</a>
-                </div>
-            </div>
-        </div>
-
-    </div>
-</div>
 
     <div class="card" style="margin-bottom: 8px; border: none; box-shadow: none; background: transparent;">
         <div class="section-header tap-effect" onclick="toggleSection('t2-content', this)" style="background: var(--primary); color: white; border-radius: 8px; padding: 15px;">
@@ -1052,5 +1009,3 @@ let leaderCurrentDate = new Date(); let leaderOverrides = []; const baseCycle = 
 </script>
 </body>
 </html>
-
-
