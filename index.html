@@ -961,7 +961,94 @@ function renderCalendar(y, m){ const g = document.getElementById('calendarGrid')
 function clickDate(dStr){ document.getElementById('selectedDateText').innerText = dStr; document.getElementById('dailyLogForm').classList.remove('hidden'); document.getElementById('dailyLogForm').setAttribute('data-date', dStr); const d = adminWorkLogs[dStr]; document.getElementById('logShipName').value = d ? (d.shipName || '') : ''; document.getElementById('logWage1').value = d ? (d.wage1 || '') : ''; document.getElementById('logWage2').value = d ? (d.wage2 || '') : ''; document.getElementById('logCoworkers').value = d ? (d.coworkers || '') : ''; document.getElementById('logMemo').value = d ? d.memo : ''; const img = document.getElementById('logImagePreview'); if(d && d.imageUrl){ img.src = d.imageUrl; img.style.display = 'block'; } else { img.style.display = 'none'; img.src = ""; } document.getElementById('logImageInput').value = ''; }
 function trySaveWorkLog(){ if(currentWorkerId) saveWorkLog(); else document.getElementById('loginModal').style.display = 'flex'; }
 async function confirmLoginAndSave(){ const nick = document.getElementById('loginNick').value.trim(), pw = document.getElementById('loginPw').value.trim(); if(!nick || !pw) return alert("입력 필요"); const userRef = db.collection('user_profiles').doc(nick); const doc = await safeGet(userRef); if (doc && doc.exists && doc.data().password !== pw) return alert("비번 틀림"); if (!doc || !doc.exists) await userRef.set({ password: pw }); loginSuccess(nick); closeLoginModal(); saveWorkLog(); }
-function saveWorkLog(){ const btn = document.getElementById('saveLogBtn'); const dStr = document.getElementById('dailyLogForm').getAttribute('data-date'); if(!dStr) { alert("날짜가 선택되지 않았습니다."); return; } btn.innerText = "저장 중... (0%)"; btn.disabled = true; const shipNameInfo = document.getElementById('logShipName').value.trim(); const w1 = parseFloat(document.getElementById('logWage1').value) || 0; const w2 = parseFloat(document.getElementById('logWage2').value) || 0; const coworkersInfo = document.getElementById('logCoworkers').value.trim(); const memo = document.getElementById('logMemo').value; const file = document.getElementById('logImageInput').files[0]; const pay = w1 + w2; const docId = `${currentWorkerId}_${dStr}`; const finalizeSave = (url) => { btn.innerText = "데이터 기록 중..."; const logData = { date: dStr, workerId: currentWorkerId, shipName: shipNameInfo, wage1: w1, wage2: w2, coworkers: coworkersInfo, memo: memo, totalPay: pay, imageUrl: url }; db.collection('work_logs').doc(docId).set(logData, {merge: true}).then(() => { btn.innerText = "✅ 저장 완료!"; btn.style.background = "var(--success)"; showToast("저장되었습니다."); adminWorkLogs[dStr] = logData; renderCalendar(currentDate.getFullYear(), currentDate.getMonth()); setTimeout(() => { btn.innerText = "저장하기"; btn.style.background = "#ef4444"; btn.disabled = false; }, 1500); }).catch(err => { alert("데이터베이스 저장 실패: " + err.message); btn.innerText = "저장하기"; btn.disabled = false; }); }; if(file) { const storageRef = storage.ref(`logs/${currentWorkerId}/${Date.now()}_${file.name}`); const uploadTask = storageRef.put(file); uploadTask.on('state_changed', (snapshot) => { const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100; btn.innerText = `업로드 중... ${Math.round(progress)}%`; }, (error) => { alert("사진 업로드 실패: " + error.message); btn.innerText = "저장하기"; btn.disabled = false; }, () => { uploadTask.snapshot.ref.getDownloadURL().then((downloadURL) => { finalizeSave(downloadURL); }); }); } else { const existingUrl = adminWorkLogs[dStr] ? adminWorkLogs[dStr].imageUrl : null; finalizeSave(existingUrl); } }
+function saveWorkLog(){ 
+    const btn = document.getElementById('saveLogBtn'); 
+    const dStr = document.getElementById('dailyLogForm').getAttribute('data-date'); 
+
+    // 🚩 [보안 강화] 로그인이 안 되어 있으면 저장 차단 및 로그인창 표시
+    if(!currentWorkerId) {
+        alert("로그인이 필요합니다. 닉네임과 비번을 먼저 입력해주세요!");
+        document.getElementById('loginModal').style.display = 'flex';
+        return;
+    }
+
+    if(!dStr) { 
+        alert("날짜가 선택되지 않았습니다."); 
+        return; 
+    } 
+
+    btn.innerText = "저장 중... (0%)"; 
+    btn.disabled = true; 
+
+    const shipNameInfo = document.getElementById('logShipName').value.trim(); 
+    const w1 = parseFloat(document.getElementById('logWage1').value) || 0; 
+    const w2 = parseFloat(document.getElementById('logWage2').value) || 0; 
+    const coworkersInfo = document.getElementById('logCoworkers').value.trim(); 
+    const memo = document.getElementById('logMemo').value; 
+    const file = document.getElementById('logImageInput').files[0]; 
+    const pay = w1 + w2; 
+    
+    // 문서 ID 생성 (닉네임_날짜 형식)
+    const docId = `${currentWorkerId}_${dStr}`; 
+
+    const finalizeSave = (url) => { 
+        btn.innerText = "데이터 기록 중..."; 
+        const logData = { 
+            date: dStr, 
+            workerId: currentWorkerId, 
+            shipName: shipNameInfo, 
+            wage1: w1, 
+            wage2: w2, 
+            coworkers: coworkersInfo, 
+            memo: memo, 
+            totalPay: pay, 
+            imageUrl: url,
+            timestamp: firebase.firestore.FieldValue.serverTimestamp() // 🚩 저장 시간 기록 추가
+        }; 
+
+        db.collection('work_logs').doc(docId).set(logData, {merge: true}).then(() => { 
+            btn.innerText = "✅ 저장 완료!"; 
+            btn.style.background = "var(--success)"; 
+            showToast("근무일지가 안전하게 저장되었습니다."); 
+            
+            // 데이터 즉시 갱신
+            adminWorkLogs[dStr] = logData; 
+            renderCalendar(currentDate.getFullYear(), currentDate.getMonth()); 
+
+            setTimeout(() => { 
+                btn.innerText = "저장하기"; 
+                btn.style.background = ""; // 기본색으로 복구
+                btn.disabled = false; 
+            }, 1500); 
+        }).catch(err => { 
+            alert("데이터베이스 저장 실패: " + err.message); 
+            btn.innerText = "저장하기"; 
+            btn.disabled = false; 
+        }); 
+    }; 
+
+    // 사진 업로드 로직
+    if(file) { 
+        const storageRef = storage.ref(`logs/${currentWorkerId}/${Date.now()}_${file.name}`); 
+        const uploadTask = storageRef.put(file); 
+        uploadTask.on('state_changed', (snapshot) => { 
+            const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100; 
+            btn.innerText = `업로드 중... ${Math.round(progress)}%`; 
+        }, (error) => { 
+            alert("사진 업로드 실패: " + error.message); 
+            btn.innerText = "저장하기"; 
+            btn.disabled = false; 
+        }, () => { 
+            uploadTask.snapshot.ref.getDownloadURL().then((downloadURL) => { 
+                finalizeSave(downloadURL); 
+            }); 
+        }); 
+    } else { 
+        // 기존 사진 유지 또는 사진 없음 처리
+        const existingUrl = (adminWorkLogs[dStr] && adminWorkLogs[dStr].imageUrl) ? adminWorkLogs[dStr].imageUrl : null; 
+        finalizeSave(existingUrl); 
+    } 
+}
 function loginSuccess(name) { currentWorkerId = name; localStorage.setItem('myWorkerId', currentWorkerId); updateUserBar(); renderCalendar(currentDate.getFullYear(), currentDate.getMonth()); }
 function closeLoginModal(){ document.getElementById('loginModal').style.display = 'none'; }
 function updateUserBar() { document.getElementById('userProfileBar').style.display = currentWorkerId ? 'flex' : 'none'; if(currentWorkerId) document.getElementById('currentUserDisplay').innerText = `👤 ${currentWorkerId}`; }
@@ -1009,3 +1096,4 @@ let leaderCurrentDate = new Date(); let leaderOverrides = []; const baseCycle = 
 </script>
 </body>
 </html>
+
