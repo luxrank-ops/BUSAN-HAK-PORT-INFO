@@ -596,29 +596,108 @@
             </div>
         </div>
 
-        <div id="safety-card" class="dash-card">
+      <div id="safety-card" class="dash-card">
             <div class="dash-header tap-effect" onclick="toggleDashItem('safety-card')">
-                <span class="dash-title" style="color:var(--primary); font-weight:bold;">📘 통합 안전 지침 (HSE)</span><span class="toggle-icon">▼</span>
+                <span class="dash-title" style="color:var(--primary); font-weight:900;">📘 실전 통합 안전 지침 (HSE)</span><span class="toggle-icon">▼</span>
             </div>
-            <div class="dash-content">
-                <div class="guide-text" style="font-size: 0.9rem; line-height: 1.6; color: var(--text-main); padding: 5px; font-weight: 500;">
-                    <p style="background: #f1f5f9; padding: 10px; border-radius: 8px; border-left: 5px solid var(--primary); margin-bottom: 12px; font-weight: 800;">
-                        ⚓ 항만안전특별법 및 산업안전보건법 준수 지침
+            <div class="dash-content" style="padding: 10px;">
+                <div class="guide-text" style="font-size: 0.9rem; line-height: 1.6; color: var(--text-main); font-weight: 500;">
+                    
+                    <p style="background: #f8fafc; padding: 12px; border-radius: 8px; border-left: 5px solid var(--primary); margin-bottom: 15px; font-weight: 800; font-size: 0.95rem; text-align: center; word-break: keep-all;">
+                        "나의 안전이 곧 가족의 행복입니다."<br>
+                        <span style="font-size: 0.8rem; color: var(--text-sub); font-weight: 600;">항만안전특별법 및 산업안전보건법에 의거한 현장 행동 매뉴얼</span>
                     </p>
-                    <ul style="padding-left: 20px; margin-bottom: 15px; font-size: 0.85rem;">
-                        <li style="margin-bottom: 8px;"><b>1. 필수 보호구 착용:</b> 작업장 진입 시 안전모, 반사 조끼, 안전화 착용은 선택이 아닌 필수입니다. 미착용 시 즉각 퇴장 조치됩니다.</li>
-                        <li style="margin-bottom: 8px;"><b>2. 중장비 접근 통제:</b> 야드 트랙터(YT), 스트래들 캐리어, 리치 스태커 등 하역 장비 작업 반경 5m 이내 접근을 엄격히 금지합니다.</li>
-                        <li style="margin-bottom: 8px;"><b>3. 고소 작업 수칙:</b> 선상 라싱 작업 및 2m 이상 고소 구역 이동 시 반드시 안전대(Harness)를 체결하십시오.</li>
-                        <li><b>4. 비상 연락망:</b> 사고 발생 시 최초 발견자는 즉각 '작업 중지'를 외치고 조장 및 안전관리자에게 보고하십시오.</li>
-                    </ul>
-                    <div style="background: rgba(239, 68, 68, 0.05); border: 1px solid var(--danger); padding: 10px; border-radius: 10px; text-align: center;">
-                        <strong style="color: var(--danger); font-size: 0.95rem; font-weight: 900;">🚨 부산항 24시간 비상대응 연락망</strong>
-                        <p style="margin: 5px 0 0 0; font-weight: 800; font-size: 0.95rem; color: #444;">119 / 항만 소방대 직통 연결망 상시 확인</p>
+
+                    <div style="margin-bottom: 15px; border: 1px solid var(--border); border-radius: 8px; overflow: hidden;">
+                        <div style="background: rgba(59,130,246,0.1); padding: 10px 12px; font-weight: 900; color: #1e40af; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 8px;">
+                            <span>🦺</span> 1단계: 출근 및 필수 보호구 (PPE) 착용
+                        </div>
+                        <div style="padding: 12px; font-size: 0.85rem;">
+                            
+                            <ul style="padding-left: 20px; margin: 0;">
+                                <li style="margin-bottom: 6px;"><b>안전모:</b> 턱끈을 반드시 조여 착용하며, 파손된 안전모는 즉시 조장에게 교체를 요청합니다.</li>
+                                <li style="margin-bottom: 6px;"><b>안전 조끼:</b> 야간 및 우천 시 시인성 확보를 위해 반사 띠가 훼손되지 않은 조끼를 외투 가장 겉면에 착용합니다.</li>
+                                <li style="margin-bottom: 6px;"><b>안전화:</b> 미끄럼 방지 및 토캡(철판)이 내장된 규격 안전화 착용은 필수입니다. (운동화, 슬리퍼 절대 금지)</li>
+                                <li><b>건강 상태 보고:</b> 전날 과음, 수면 부족, 감기약 복용 등으로 컨디션이 저하된 경우 작업 투입 전 반드시 관리자에게 보고해야 합니다.</li>
+                            </ul>
+                        </div>
                     </div>
+
+                    <div style="margin-bottom: 15px; border: 1px solid var(--border); border-radius: 8px; overflow: hidden;">
+                        <div style="background: rgba(16,185,129,0.1); padding: 10px 12px; font-weight: 900; color: #065f46; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 8px;">
+                            <span>🚶</span> 2단계: 터미널 야드(Yard) 보행 수칙
+                        </div>
+                        <div style="padding: 12px; font-size: 0.85rem;">
+                            <ul style="padding-left: 20px; margin: 0;">
+                                <li style="margin-bottom: 6px;"><b>지정 통로 이용:</b> 야드 내 이동 시 반드시 초록색 보행자 전용 통로(Safe Walkway)만 이용합니다.</li>
+                                <li style="margin-bottom: 6px;"><b>스마트폰 사용 금지:</b> 보행 중 스마트폰 조작 및 이어폰 착용은 중장비 접근 소리를 차단하여 사망 사고로 직결됩니다.</li>
+                                <li style="margin-bottom: 6px;"><b>교차로 일단 멈춤:</b> 야드 교차로에서는 무조건 '일단 멈춤' 후 좌우를 살피고 야드 트랙터(YT)가 완전히 정차한 것을 확인한 뒤 횡단합니다.</li>
+                                <li><b>셔틀버스 탑승:</b> 본선 이동 시 도보 이동을 최소화하고 반드시 지정된 터미널 셔틀버스를 이용하십시오.</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div style="margin-bottom: 15px; border: 1px solid var(--border); border-radius: 8px; overflow: hidden;">
+                        <div style="background: rgba(245,158,11,0.1); padding: 10px 12px; font-weight: 900; color: #92400e; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 8px;">
+                            <span>⛓️</span> 3단계: 본선 라싱(Lashing) 핵심 안전
+                        </div>
+                        <div style="padding: 12px; font-size: 0.85rem;">
+                            
+                            <ul style="padding-left: 20px; margin: 0;">
+                                <li style="margin-bottom: 6px;"><b>추락 방지 (2m 룰):</b> 해치 커버 및 2단 이상 컨테이너 상부 등 2m 이상의 고소 구역 작업 시 <span style="color:var(--danger); font-weight:bold;">반드시 안전대(Safety Harness)의 죔줄을 튼튼한 구조물에 체결</span>해야 합니다.</li>
+                                <li style="margin-bottom: 6px;"><b>슬립(미끄러짐) 주의:</b> 우천, 결빙, 또는 기름때로 인해 데크(Deck)가 매우 미끄러울 수 있습니다. 라싱바를 들고 이동할 때는 뛰지 않고 보폭을 줄여 걷습니다.</li>
+                                <li style="margin-bottom: 6px;"><b>도구 투척 금지:</b> 트위스트 콘(Twist Cone)이나 턴버클을 위아래로 던져서 주고받는 행위는 절대 금지합니다. (낙하물 타격 사고 예방)</li>
+                                <li><b>2인 1조 작업:</b> 라싱 텐션 조절 및 긴 라싱바 취급 시 근골격계 질환 예방과 시야 확보를 위해 2인 1조로 상호 확인하며 작업합니다.</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div style="margin-bottom: 15px; border: 1px solid var(--border); border-radius: 8px; overflow: hidden;">
+                        <div style="background: rgba(139,92,246,0.1); padding: 10px 12px; font-weight: 900; color: #5b21b6; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 8px;">
+                            <span>🚜</span> 4단계: 중장비(QC, YT) 협착 사고 예방
+                        </div>
+                        <div style="padding: 12px; font-size: 0.85rem;">
+                            
+                            <ul style="padding-left: 20px; margin: 0;">
+                                <li style="margin-bottom: 6px;"><b>사각지대 접근 엄금:</b> 야드 트랙터(YT), 스트래들 캐리어, 리치 스태커의 작업 반경 5m 이내는 생명 위협 구역입니다.</li>
+                                <li style="margin-bottom: 6px;"><b>매달린 화물 하부 통과 금지:</b> 안벽 크레인(QC) 스프레더에 컨테이너가 매달려 있을 때, 그 아래를 지나가거나 머무르는 행위는 어떠한 경우에도 금지됩니다.</li>
+                                <li><b>아이 컨택(Eye Contact):</b> 크레인 기사(신호수) 및 YT 기사와 눈을 맞추거나 수신호를 교환하여, 나의 위치를 장비 조종수가 완벽히 인지한 상태에서만 후속 작업을 진행합니다.</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div style="margin-bottom: 15px; border: 1px solid var(--border); border-radius: 8px; overflow: hidden;">
+                        <div style="background: rgba(56,189,248,0.1); padding: 10px 12px; font-weight: 900; color: #0369a1; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 8px;">
+                            <span>⛈️</span> 5단계: 기상 악화 시 작업 통제 기준
+                        </div>
+                        <div style="padding: 12px; font-size: 0.85rem;">
+                            <ul style="padding-left: 20px; margin: 0;">
+                                <li style="margin-bottom: 6px;"><b>강풍:</b> 순간 최대 풍속이 15m/s를 초과할 경우 컨테이너 흔들림이 심해지므로 고소 작업을 중단하고 지시를 대기합니다.</li>
+                                <li style="margin-bottom: 6px;"><b>폭우 및 낙뢰:</b> 시야 확보가 불가능한 폭우나 낙뢰 발생 시 즉각 금속성 장비(라싱바 등)에서 손을 떼고 안전한 선실이나 대피소로 이동합니다.</li>
+                                <li><b>폭염(혹서기):</b> 온열 질환 예방을 위해 작업 중 수시로 그늘에서 물을 섭취하며, 어지럼증 발생 시 지체 없이 동료에게 알리고 휴식을 취합니다.</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div style="background: rgba(239, 68, 68, 0.05); border: 2px solid var(--danger); padding: 15px; border-radius: 10px;">
+                        <div style="display: flex; justify-content: center; align-items: center; gap: 8px; margin-bottom: 12px;">
+                            <span style="font-size: 1.5rem;">🚨</span>
+                            <strong style="color: var(--danger); font-size: 1.1rem; font-weight: 900;">6단계: 중대 사고 발생 시 대처 매뉴얼</strong>
+                        </div>
+                        <ul style="padding-left: 20px; margin-bottom: 15px; font-size: 0.85rem; color: #444; font-weight: 600;">
+                            <li style="margin-bottom: 6px;"><b>1. 작업 즉각 중지:</b> 사고 발생 즉시 큰 소리로 "작업 중지!"를 외치고 주변 장비의 가동을 멈추게 합니다.</li>
+                            <li style="margin-bottom: 6px;"><b>2. 섣불리 만지지 않기:</b> 추락 및 협착 환자의 목이나 허리를 무리하게 들어 올리면 2차 신경 손상이 발생합니다. 호흡만 확인하고 그대로 둡니다.</li>
+                            <li><b>3. 신속한 전파:</b> 즉각 119 및 터미널 통제실(안전관리자)에 [정확한 터미널, 선석 번호, 베이(Bay) 위치]를 알립니다.</li>
+                        </ul>
+                        <div style="background: white; border: 1px dashed var(--danger); padding: 10px; border-radius: 8px; text-align: center;">
+                            <p style="margin: 0; font-weight: 900; font-size: 1.05rem; color: #b91c1c;">☎️ 부산항 24시간 비상 핫라인: 119</p>
+                            <p style="margin: 4px 0 0 0; font-size: 0.8rem; color: var(--text-sub); font-weight: 700;">※ 앱 상단의 [선박정보] 탭에서 해당 터미널 통제실 연락처 확인 가능</p>
+                        </div>
+                    </div>
+
                 </div>
             </div>
         </div>
-
         <div id="guide-card" class="dash-card">
             <div class="dash-header tap-effect" onclick="toggleDashItem('guide-card')">
                 <span class="dash-title" style="font-weight:bold;">📚 용어 가이드</span><span class="toggle-icon">▼</span>
@@ -779,4 +858,5 @@ let leaderCurrentDate = new Date(); let leaderOverrides = []; const baseCycle = 
 </script>
 </body>
 </html>
+
 
