@@ -963,43 +963,61 @@ function trySaveWorkLog(){ if(currentWorkerId) saveWorkLog(); else document.getE
 async function confirmLoginAndSave() {
     const nick = document.getElementById('loginNick').value.trim();
     const pw = document.getElementById('loginPw').value.trim();
+    const btn = event.target; // 클릭된 버튼
 
     if (!nick || !pw) {
-        alert("닉네임과 비밀번호를 모두 입력해주세요.");
+        alert("닉네임과 비밀번호를 입력해주세요.");
         return;
     }
 
-    try {
-        const userRef = db.collection('user_profiles').doc(nick);
-        const doc = await userRef.get();
+    // 버튼 중복 클릭 방지
+    btn.disabled = true;
+    btn.innerText = "연결 시도 중...";
 
-        // 1. 기존 사용자인 경우 비밀번호 확인
+    try {
+        // 네트워크 상태와 상관없이 Firestore 참조를 명확히 가져옴
+        const userRef = db.collection('user_profiles').doc(nick);
+        
+        // 데이터 가져오기 (get) 시도
+        const doc = await userRef.get().catch(e => {
+            throw new Error("서버 연결 실패 (네트워크를 확인하세요)");
+        });
+
         if (doc.exists) {
             if (doc.data().password !== pw) {
-                alert("비밀번호가 틀렸습니다. 다시 확인해주세요.");
+                alert("비밀번호가 일치하지 않습니다.");
+                btn.disabled = false;
+                btn.innerText = "확인 및 저장";
                 return;
             }
-        } 
-        // 2. 신규 사용자인 경우 자동 가입 처리
-        else {
-            if(!confirm("신규 닉네임입니다. 이 정보로 가입하고 저장할까요?")) return;
-            await userRef.set({ password: pw, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
+        } else {
+            if(!confirm("새로운 닉네임입니다. 가입하시겠습니까?")) {
+                btn.disabled = false;
+                btn.innerText = "확인 및 저장";
+                return;
+            }
+            await userRef.set({ 
+                password: pw, 
+                createdAt: firebase.firestore.FieldValue.serverTimestamp() 
+            });
         }
 
-        // 3. 로그인 성공 처리 (ID 저장 및 UI 갱신)
+        // 로그인 성공 세션 저장
         currentWorkerId = nick;
         localStorage.setItem('myWorkerId', nick);
         updateUserBar();
         
-        // 4. 즉시 저장 로직 실행
+        // 모달 닫고 저장 실행
         closeLoginModal();
-        saveWorkLog(); // 기존에 점검했던 저장 함수 호출
+        saveWorkLog(); 
         
-        showToast("🔓 로그인 성공 및 저장이 시작되었습니다.");
+        showToast("🔓 로그인 및 저장 성공!");
 
     } catch (err) {
-        console.error("로그인/저장 오류:", err);
-        alert("서버 연결에 실패했습니다: " + err.message);
+        console.error("에러 디테일:", err);
+        alert("⚠️ 오류 발생: " + err.message);
+        btn.disabled = false;
+        btn.innerText = "확인 및 저장";
     }
 }
 function saveWorkLog(){ 
@@ -1137,5 +1155,6 @@ let leaderCurrentDate = new Date(); let leaderOverrides = []; const baseCycle = 
 </script>
 </body>
 </html>
+
 
 
