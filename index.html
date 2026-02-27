@@ -379,9 +379,12 @@
             </div>
         </div>
         <div id="log-card" class="dash-card" style="border:2px solid #60a5fa; border-radius: 18px; box-shadow: 0 4px 12px rgba(0,0,0,0.06);">
-            <div class="dash-header tap-effect" onclick="toggleDashItem('log-card')" style="flex-direction: column !important; justify-content: center !important; align-items: center !important; padding: 25px 10px !important; background: #fff !important; min-height: 120px; gap: 12px !important;">
+            <div class="dash-header tap-effect" onclick="toggleDashItem('log-card')" style="flex-direction: column !important; justify-content: center !important; align-items: center !important; padding: 20px 5px !important; background: #fff !important; min-height: 120px; gap: 8px !important;">
                 <span style="font-size: 2.8rem; line-height: 1; display: block;">📅</span>
-                <span class="dash-title" style="color:#2563eb; font-size: 1.15rem !important; font-weight: 900 !important; text-align: center !important; flex: none !important; margin: 0 !important; letter-spacing: -0.5px;">근무일지</span>
+                <div style="text-align: center; width: 100%;">
+                    <span class="dash-title" style="color:#2563eb; font-size: 1.15rem !important; font-weight: 900 !important; display: block; margin: 0 !important; letter-spacing: -0.5px;">근무일지</span>
+                    <span style="font-size: 0.75rem; color: #64748b; font-weight: 700; display: block; margin-top: 4px; letter-spacing: -0.5px; word-break: keep-all;">(날짜를 클릭해서 내용 입력 가능)</span>
+                </div>
             </div>
             <div id="workLogArea" class="dash-content" style="display:none; border-top: 1px dashed #60a5fa;">
                 <div id="userProfileBar" class="user-auth-bar" style="display:none;">
@@ -418,8 +421,6 @@
                 <div id="monthlyTotalDisplay" style="text-align:center; margin-top:20px; font-weight:900; color:var(--primary); font-size:1.25rem; border-top:1px dashed var(--border); padding-top:15px;">이번달 총액: 0원</div>
             </div>
         </div>
-    </div>
-
     <div class="card" style="border-left: 5px solid #3b82f6;">
         <div class="section-header tap-effect" onclick="toggleSection('t3-content', this)"><span class="section-title">⛴️ 3항업 (신항 남측) ▼</span></div>
         <div id="t3-content" class="collapsible-content collapsed">
@@ -1118,6 +1119,7 @@ let leaderCurrentDate = new Date(); let leaderOverrides = []; const baseCycle = 
 </script>
 </body>
 </html>
+
 
 
 
