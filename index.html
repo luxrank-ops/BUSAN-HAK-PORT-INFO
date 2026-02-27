@@ -960,7 +960,48 @@ function downloadWorkLogsExcel() { if (!currentWorkerId || Object.keys(adminWork
 function renderCalendar(y, m){ const g = document.getElementById('calendarGrid'); g.innerHTML = ""; document.getElementById('calMonthYear').innerText = `${y}년 ${m+1}월`; const fD = new Date(y, m, 1).getDay(), lD = new Date(y, m+1, 0).getDate(); for(let i=0; i<fD; i++) g.innerHTML += `<div></div>`; for(let d=1; d<=lD; d++){ const dStr = `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`; let dayColor = "var(--text-main)"; let currentDayObj = new Date(y, m, d).getDay(); if (currentDayObj === 0) dayColor = "#ef4444"; if (currentDayObj === 6) dayColor = "#3b82f6"; g.innerHTML += `<div id="cal-day-${d}" class="cal-day tap-effect" onclick="clickDate('${dStr}')" style="color: ${dayColor};">${d}<div class="cal-dot"></div></div>`; } if(currentWorkerId) { const sDate = `${y}-${String(m+1).padStart(2,'0')}-01`, eDate = `${y}-${String(m+1).padStart(2,'0')}-${lD}`; db.collection('work_logs').where('date', '>=', sDate).where('date', '<=', eDate).get().then(s => { adminWorkLogs = {}; let total = 0; s.forEach(doc => { const data = doc.data(); if(data.workerId === currentWorkerId) { adminWorkLogs[data.date] = data; const day = parseInt(data.date.split('-')[2]); const el = document.getElementById(`cal-day-${day}`); if(el) { el.classList.add('has-data'); if (data.coworkers) { if (!el.querySelector('.coworker-badge')) { el.innerHTML += `<div class="coworker-badge">${data.coworkers}</div>`; } else { el.querySelector('.coworker-badge').innerText = data.coworkers; } } } total += (data.totalPay || 0); } }); document.getElementById('monthlyTotalDisplay').innerText = `이번달 총액: ${total.toLocaleString()}원`; }); } }
 function clickDate(dStr){ document.getElementById('selectedDateText').innerText = dStr; document.getElementById('dailyLogForm').classList.remove('hidden'); document.getElementById('dailyLogForm').setAttribute('data-date', dStr); const d = adminWorkLogs[dStr]; document.getElementById('logShipName').value = d ? (d.shipName || '') : ''; document.getElementById('logWage1').value = d ? (d.wage1 || '') : ''; document.getElementById('logWage2').value = d ? (d.wage2 || '') : ''; document.getElementById('logCoworkers').value = d ? (d.coworkers || '') : ''; document.getElementById('logMemo').value = d ? d.memo : ''; const img = document.getElementById('logImagePreview'); if(d && d.imageUrl){ img.src = d.imageUrl; img.style.display = 'block'; } else { img.style.display = 'none'; img.src = ""; } document.getElementById('logImageInput').value = ''; }
 function trySaveWorkLog(){ if(currentWorkerId) saveWorkLog(); else document.getElementById('loginModal').style.display = 'flex'; }
-async function confirmLoginAndSave(){ const nick = document.getElementById('loginNick').value.trim(), pw = document.getElementById('loginPw').value.trim(); if(!nick || !pw) return alert("입력 필요"); const userRef = db.collection('user_profiles').doc(nick); const doc = await safeGet(userRef); if (doc && doc.exists && doc.data().password !== pw) return alert("비번 틀림"); if (!doc || !doc.exists) await userRef.set({ password: pw }); loginSuccess(nick); closeLoginModal(); saveWorkLog(); }
+async function confirmLoginAndSave() {
+    const nick = document.getElementById('loginNick').value.trim();
+    const pw = document.getElementById('loginPw').value.trim();
+
+    if (!nick || !pw) {
+        alert("닉네임과 비밀번호를 모두 입력해주세요.");
+        return;
+    }
+
+    try {
+        const userRef = db.collection('user_profiles').doc(nick);
+        const doc = await userRef.get();
+
+        // 1. 기존 사용자인 경우 비밀번호 확인
+        if (doc.exists) {
+            if (doc.data().password !== pw) {
+                alert("비밀번호가 틀렸습니다. 다시 확인해주세요.");
+                return;
+            }
+        } 
+        // 2. 신규 사용자인 경우 자동 가입 처리
+        else {
+            if(!confirm("신규 닉네임입니다. 이 정보로 가입하고 저장할까요?")) return;
+            await userRef.set({ password: pw, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
+        }
+
+        // 3. 로그인 성공 처리 (ID 저장 및 UI 갱신)
+        currentWorkerId = nick;
+        localStorage.setItem('myWorkerId', nick);
+        updateUserBar();
+        
+        // 4. 즉시 저장 로직 실행
+        closeLoginModal();
+        saveWorkLog(); // 기존에 점검했던 저장 함수 호출
+        
+        showToast("🔓 로그인 성공 및 저장이 시작되었습니다.");
+
+    } catch (err) {
+        console.error("로그인/저장 오류:", err);
+        alert("서버 연결에 실패했습니다: " + err.message);
+    }
+}
 function saveWorkLog(){ 
     const btn = document.getElementById('saveLogBtn'); 
     const dStr = document.getElementById('dailyLogForm').getAttribute('data-date'); 
@@ -1096,4 +1137,5 @@ let leaderCurrentDate = new Date(); let leaderOverrides = []; const baseCycle = 
 </script>
 </body>
 </html>
+
 
