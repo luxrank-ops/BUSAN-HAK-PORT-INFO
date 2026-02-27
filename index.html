@@ -288,46 +288,51 @@
                 <span style="font-size: 2.8rem; line-height: 1; display: block;">🧮</span>
                 <span class="dash-title" style="color:#dc2626; font-size: 1.15rem !important; font-weight: 900 !important; text-align: center !important; flex: none !important; margin: 0 !important; letter-spacing: -0.5px;">임금계산기</span>
             </div>
-            <div class="dash-content" style="display:none; border-top: 1px dashed #f87171;">
-                <div class="role-selector">
-                    <input type="radio" id="role-main" name="workRole" value="main" checked><label for="role-main">🚢 본선</label>
-                    <input type="radio" id="role-skilled" name="workRole" value="skilled"><label for="role-skilled">🔧 기능공</label>
-                    <input type="radio" id="role-onshore" name="workRole" value="onshore"><label for="role-onshore">🚛 육상</label>
+            <div class="dash-content" style="display:none; border-top: 2px dashed #f87171;">
+                
+                <div class="role-selector" style="border: 2px solid #cbd5e1; padding: 6px; background: #f8fafc; border-radius: 12px; margin-bottom: 15px;">
+                    <input type="radio" id="role-main" name="workRole" value="main" checked>
+                    <label for="role-main" style="font-size: 1.15rem; font-weight: 900; padding: 14px 4px; border-radius: 8px;">🚢 본선</label>
+                    <input type="radio" id="role-skilled" name="workRole" value="skilled">
+                    <label for="role-skilled" style="font-size: 1.15rem; font-weight: 900; padding: 14px 4px; border-radius: 8px;">🔧 기능공</label>
+                    <input type="radio" id="role-onshore" name="workRole" value="onshore">
+                    <label for="role-onshore" style="font-size: 1.15rem; font-weight: 900; padding: 14px 4px; border-radius: 8px;">🚛 육상</label>
                 </div>
 
                 <div class="calc-layout">
                     <div class="calc-left">
-                        <div class="wage-row"><label>시급(기본)</label><input type="number" id="wageHourly" class="input-field" value="10320" style="text-align:right; font-weight:900; color:#ef4444; font-size:1.15rem;" readonly></div>
-                        <div style="background: rgba(59, 130, 246, 0.05); border: 1px solid var(--primary-light); padding: 8px; border-radius: 8px; margin-bottom: 8px;">
+                        <div class="wage-row"><label>시급(기본)</label><input type="number" id="wageHourly" class="input-field" value="10320" style="text-align:right; font-weight:900; color:#ef4444; font-size:1.15rem; border: 2px solid #cbd5e1;" readonly></div>
+                        
+                        <div style="background: rgba(59, 130, 246, 0.05); border: 2px solid var(--primary-light); padding: 10px; border-radius: 10px; margin-bottom: 10px;">
                             <div class="wage-row" style="margin-bottom: 5px;">
-                                <label style="min-width: 50px; color:var(--primary); font-size:0.9rem;">🟢 시작</label>
+                                <label style="min-width: 50px; color:var(--primary); font-size:0.95rem; font-weight: 900;">🟢 시작</label>
                                 <div>
-                                    <input type="date" id="wageStartDate" class="input-field" style="font-size:0.8rem; padding:0 2px;">
-                                    <select id="wageStartHour" class="input-field" style="font-size:0.9rem; padding:0 2px; margin-left:4px; text-align:center;">
+                                    <input type="date" id="wageStartDate" class="input-field" style="font-size:0.85rem; padding:0 4px; border: 2px solid #cbd5e1;">
+                                    <select id="wageStartHour" class="input-field" style="font-size:0.95rem; padding:0 4px; margin-left:4px; text-align:center; border: 2px solid #cbd5e1;">
                                         <option value="0">00시</option><option value="1">01시</option><option value="2">02시</option><option value="3">03시</option><option value="4">04시</option><option value="5">05시</option><option value="6">06시</option><option value="7">07시</option><option value="8" selected>08시</option><option value="9">09시</option><option value="10">10시</option><option value="11">11시</option><option value="12">12시</option><option value="13">13시</option><option value="14">14시</option><option value="15">15시</option><option value="16">16시</option><option value="17">17시</option><option value="18">18시</option><option value="19">19시</option><option value="20">20시</option><option value="21">21시</option><option value="22">22시</option><option value="23">23시</option>
                                     </select>
                                 </div>
                             </div>
                             <div class="wage-row" style="margin-bottom: 8px;">
-                                <label style="min-width: 50px; color:var(--danger); font-size:0.9rem;">🔴 종료</label>
+                                <label style="min-width: 50px; color:var(--danger); font-size:0.95rem; font-weight: 900;">🔴 종료</label>
                                 <div>
-                                    <input type="date" id="wageEndDate" class="input-field" style="font-size:0.8rem; padding:0 2px;">
-                                    <select id="wageEndHour" class="input-field" style="font-size:0.9rem; padding:0 2px; margin-left:4px; text-align:center;">
+                                    <input type="date" id="wageEndDate" class="input-field" style="font-size:0.85rem; padding:0 4px; border: 2px solid #cbd5e1;">
+                                    <select id="wageEndHour" class="input-field" style="font-size:0.95rem; padding:0 4px; margin-left:4px; text-align:center; border: 2px solid #cbd5e1;">
                                         <option value="0">00시</option><option value="1">01시</option><option value="2">02시</option><option value="3">03시</option><option value="4">04시</option><option value="5">05시</option><option value="6">06시</option><option value="7">07시</option><option value="8">08시</option><option value="9">09시</option><option value="10">10시</option><option value="11">11시</option><option value="12">12시</option><option value="13">13시</option><option value="14">14시</option><option value="15">15시</option><option value="16">16시</option><option value="17" selected>17시</option><option value="18">18시</option><option value="19">19시</option><option value="20">20시</option><option value="21">21시</option><option value="22">22시</option><option value="23">23시</option>
                                     </select>
                                 </div>
                             </div>
-                            <button class="action-btn" style="background:var(--primary); padding:8px; margin:0; font-size:0.95rem;" onclick="calcTimeAndFill()">⏱️ 시간 설정 완료</button>
+                            <button class="action-btn" style="background:var(--primary); padding:10px; margin:0; font-size:1rem; border: 2px solid #1e3a8a;" onclick="calcTimeAndFill()">⏱️ 시간 설정 완료</button>
                         </div>
-                        <div class="wage-row"><label style="min-width: 65px;">⏳ 총근무</label><input type="number" id="wageTotalHours" class="input-field" placeholder="자동계산됨" style="text-align:right; font-weight:900; color:var(--primary);" oninput="autoFillWeekendHoliday()"></div>
+                        <div class="wage-row"><label style="min-width: 65px; font-weight:900;">⏳ 총근무</label><input type="number" id="wageTotalHours" class="input-field" placeholder="자동계산됨" style="text-align:right; font-weight:900; color:var(--primary); border: 2px solid #cbd5e1;" oninput="autoFillWeekendHoliday()"></div>
                     </div>
                     <div class="calc-right">
-                        <table class="ref-table">
-                            <thead><tr><th>월(Month)</th><th>주간</th><th>야간</th></tr></thead>
+                        <table class="ref-table" style="border: 2px solid #94a3b8;">
+                            <thead><tr><th style="border: 2px solid #94a3b8;">월(Month)</th><th style="border: 2px solid #94a3b8;">주간</th><th style="border: 2px solid #94a3b8;">야간</th></tr></thead>
                             <tbody>
-                                <tr id="row-jan"><td>1~3월</td><td>08~18</td><td>18~08</td></tr>
-                                <tr id="row-apr"><td>4~9월</td><td>06~19</td><td>19~06</td></tr>
-                                <tr id="row-oct"><td>10~12월</td><td>07~17</td><td>17~07</td></tr>
+                                <tr id="row-jan"><td style="border: 2px solid #94a3b8;">1~3월</td><td style="border: 2px solid #94a3b8;">08~18</td><td style="border: 2px solid #94a3b8;">18~08</td></tr>
+                                <tr id="row-apr"><td style="border: 2px solid #94a3b8;">4~9월</td><td style="border: 2px solid #94a3b8;">06~19</td><td style="border: 2px solid #94a3b8;">19~06</td></tr>
+                                <tr id="row-oct"><td style="border: 2px solid #94a3b8;">10~12월</td><td style="border: 2px solid #94a3b8;">07~17</td><td style="border: 2px solid #94a3b8;">17~07</td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -335,28 +340,32 @@
 
                 <p style="font-size:0.8rem; font-weight:700; color:var(--text-sub); margin:0; text-align:center;">※ 현재 월에 맞춰 주/야간및 주말 공휴일 수당이자동 적용됩니다.</p>
                 <p style="font-size:0.85rem; color:#ef4444; font-weight:900; margin:4px 0 12px 0; text-align:center;">더블 오더로 겹치는 시간은 별도로 시간을 계산 하여야 합니다!!</p>
-                <div style="border-top:1px dashed var(--border); margin:10px 0; padding-top:12px;">
-                    <p style="font-size:0.9rem; color:var(--primary); font-weight:900; margin-bottom:8px;">✅ 추가 수당 시간 입력</p>
+                
+                <div style="border-top: 2px dashed #94a3b8; margin:15px 0; padding-top:15px;">
+                    <p style="font-size:0.95rem; color:var(--primary); font-weight:900; margin-bottom:10px;">✅ 추가 수당 시간 입력</p>
                     <div class="allowance-grid">
-                        <div class="wage-row"><label>공휴일</label><input type="number" id="wageHoliday" class="input-field" placeholder="H"></div>
-                        <div class="wage-row"><label>주말</label><input type="number" id="wageWeekend" class="input-field" placeholder="H"></div>
-                        <div class="wage-row"><label>우천</label><input type="number" id="wageRain" class="input-field" placeholder="H"></div>
-                        <div class="wage-row"><label>혹서기</label><input type="number" id="wageHotTime" class="input-field" placeholder="H"></div>
+                        <div class="wage-row"><label>공휴일</label><input type="number" id="wageHoliday" class="input-field" placeholder="H" style="border: 2px solid #cbd5e1;"></div>
+                        <div class="wage-row"><label>주말</label><input type="number" id="wageWeekend" class="input-field" placeholder="H" style="border: 2px solid #cbd5e1;"></div>
+                        <div class="wage-row"><label>우천</label><input type="number" id="wageRain" class="input-field" placeholder="H" style="border: 2px solid #cbd5e1;"></div>
+                        <div class="wage-row"><label>혹서기</label><input type="number" id="wageHotTime" class="input-field" placeholder="H" style="border: 2px solid #cbd5e1;"></div>
                     </div>
                 </div>
-                <select id="wageTaxType" class="input-field" style="margin-top:5px; text-align:center;">
+                
+                <select id="wageTaxType" class="input-field" style="margin-top:8px; text-align:center; border: 2px solid #cbd5e1; font-weight: 900;">
                     <option value="0">공제 없음 (0%)</option>
                     <option value="0.033">프리랜서 (3.3%)</option>
                     <option value="0.094">4대보험 (9.4%)</option>
                 </select>
-                <div style="display:flex; gap:10px; margin-top:10px;">
-                    <button class="action-btn bg-calc" style="flex:2" onclick="calculateWage()">내역서 생성 및 계산</button>
-                    <button class="action-btn bg-cancel" style="flex:1" onclick="resetWageForm()">초기화</button>
+                
+                <div style="display:flex; gap:10px; margin-top:15px;">
+                    <button class="action-btn bg-calc" style="flex:2; border: 2px solid #991b1b;" onclick="calculateWage()">내역서 생성 및 계산</button>
+                    <button class="action-btn bg-cancel" style="flex:1; border: 2px solid #475569;" onclick="resetWageForm()">초기화</button>
                 </div>
-                <div id="wageResultBox" class="hidden wage-result-box">
+                
+                <div id="wageResultBox" class="hidden wage-result-box" style="border: 3px solid var(--primary);">
                     <h4 style="margin:0; text-align:center; color:var(--primary); font-size:1.15rem; font-weight:900;">📋 임금 산정 내역서</h4>
                     <table class="spec-table"><tbody id="wageSpecBody"></tbody></table>
-                    <div id="wageTotal" class="wage-total">0원</div>
+                    <div id="wageTotal" class="wage-total" style="border-top: 2px solid var(--primary);">0원</div>
                     <p style="font-size:0.8rem; font-weight:700; color:var(--text-sub); text-align:center; margin-top:5px;">※ 2026년 3항업지부 임금표 기준</p>
                 </div>
             </div>
@@ -1102,6 +1111,7 @@ let leaderCurrentDate = new Date(); let leaderOverrides = []; const baseCycle = 
 </script>
 </body>
 </html>
+
 
 
 
