@@ -49,9 +49,6 @@
 
         .ticker-setting-area { position: absolute; right: 0; top: 0; width: 50px; height: 100%; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.15); border-left: 1px solid rgba(0,0,0,0.05); z-index: 100; cursor: pointer; touch-action: manipulation; }
         .setting-icon { font-size: 1.4rem; transition: transform 0.3s; }
-        .ticker-setting-area:hover .setting-icon { transform: rotate(90deg); }
-
-        .hover-menu-box { display: none; position: absolute; top: 100%; right: 5px; background: var(--card-bg); border: 1px solid var(--border); border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); flex-direction: column; overflow: hidden; z-index: 9999; width: 150px; }
         .ticker-setting-area:hover .hover-menu-box, .hover-menu-box:hover { display: flex !important; }
         .menu-btn { padding: 14px 12px; border: none; background: transparent; color: var(--text-main); font-weight: bold; cursor: pointer; text-align: left; font-size: 0.95rem; border-bottom: 1px solid rgba(0,0,0,0.05); transition: background 0.2s; display: flex; align-items: center; gap: 8px; touch-action: manipulation; }
         .menu-btn:hover { background: var(--primary); color: white; }
@@ -284,12 +281,12 @@
     </div>
 
     <div class="dash-grid">
-        <div id="wage-card" class="dash-card" style="border:1px solid var(--danger);">
-            <div class="dash-header tap-effect" onclick="toggleDashItem('wage-card')">
-                <span class="dash-title" style="color:var(--danger);">💰 임금계산기</span>
-                <span class="toggle-icon">▼</span>
+        <div id="wage-card" class="dash-card" style="border:2px solid #f87171; border-radius: 18px; box-shadow: 0 4px 12px rgba(0,0,0,0.06);">
+            <div class="dash-header tap-effect" onclick="toggleDashItem('wage-card')" style="flex-direction: column !important; justify-content: center !important; align-items: center !important; padding: 25px 10px !important; background: #fff !important; min-height: 120px; gap: 12px !important;">
+                <span style="font-size: 2.8rem; line-height: 1; display: block;">🧮</span>
+                <span class="dash-title" style="color:#dc2626; font-size: 1.15rem !important; font-weight: 900 !important; text-align: center !important; flex: none !important; margin: 0 !important; letter-spacing: -0.5px;">임금계산기</span>
             </div>
-            <div class="dash-content" style="display:none;">
+            <div class="dash-content" style="display:none; border-top: 1px dashed #f87171;">
                 <div class="role-selector">
                     <input type="radio" id="role-main" name="workRole" value="main" checked><label for="role-main">🚢 본선</label>
                     <input type="radio" id="role-skilled" name="workRole" value="skilled"><label for="role-skilled">🔧 기능공</label>
@@ -363,11 +360,12 @@
             </div>
         </div>
 
-        <div id="log-card" class="dash-card" style="border:1px solid var(--primary);">
-            <div class="dash-header tap-effect" onclick="toggleDashItem('log-card')">
-                <span class="dash-title" style="color:var(--primary);">📅 근무일지</span><span class="toggle-icon">▼</span>
+        <div id="log-card" class="dash-card" style="border:2px solid #60a5fa; border-radius: 18px; box-shadow: 0 4px 12px rgba(0,0,0,0.06);">
+            <div class="dash-header tap-effect" onclick="toggleDashItem('log-card')" style="flex-direction: column !important; justify-content: center !important; align-items: center !important; padding: 25px 10px !important; background: #fff !important; min-height: 120px; gap: 12px !important;">
+                <span style="font-size: 2.8rem; line-height: 1; display: block;">📅</span>
+                <span class="dash-title" style="color:#2563eb; font-size: 1.15rem !important; font-weight: 900 !important; text-align: center !important; flex: none !important; margin: 0 !important; letter-spacing: -0.5px;">근무일지</span>
             </div>
-            <div id="workLogArea" class="dash-content">
+            <div id="workLogArea" class="dash-content" style="display:none; border-top: 1px dashed #60a5fa;">
                 <div id="userProfileBar" class="user-auth-bar" style="display:none;">
                     <div class="user-info"><span id="currentUserDisplay" class="user-name"></span><span class="user-status">🔒 내 저장소</span></div>
                     <button class="action-btn bg-cancel" style="padding: 5px 10px; width:auto; font-size:0.85rem;" onclick="logoutWorker()">로그아웃</button>
@@ -779,4 +777,3 @@ let leaderCurrentDate = new Date(); let leaderOverrides = []; const baseCycle = 
 </script>
 </body>
 </html>
-
