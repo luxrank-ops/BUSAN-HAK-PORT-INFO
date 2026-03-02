@@ -1152,23 +1152,37 @@ window.onload = () => {
 };
 
 let leaderCurrentDate = new Date(); let leaderOverrides = []; const baseCycle = ["재경", "성철", "개굴"]; const baseAnchor = "2026-02-01"; function openLeaderSchedule() { document.getElementById('leaderCalendarModal').style.display = 'flex'; leaderCurrentDate = new Date(); renderLeaderCalendar(leaderCurrentDate.getFullYear(), leaderCurrentDate.getMonth()); } function closeLeaderCalendar() { document.getElementById('leaderCalendarModal').style.display = 'none'; } function changeLeaderMonth(s) { leaderCurrentDate.setMonth(leaderCurrentDate.getMonth() + s); renderLeaderCalendar(leaderCurrentDate.getFullYear(), leaderCurrentDate.getMonth()); } function getSlotIndex(dStr) { const target = new Date(dStr); const anchor = new Date(baseAnchor); const diffDays = Math.floor((target.getTime() - anchor.getTime()) / (1000 * 60 * 60 * 24)); return ((diffDays % 3) + 3) % 3; } function getCalculatedLeader(targetDateStr) { const targetSlot = getSlotIndex(targetDateStr); for (let i = leaderOverrides.length - 1; i >= 0; i--) { const ov = leaderOverrides[i]; if (ov.date <= targetDateStr) { if (getSlotIndex(ov.date) === targetSlot) return ov.leader; } } return baseCycle[targetSlot]; } function renderLeaderCalendar(y, m) { document.getElementById('leaderCalMonthYear').innerText = `${y}년 ${m+1}월`; const lD = new Date(y, m+1, 0).getDate(); db.collection('leader_overrides').get().then(s => { leaderOverrides = []; s.forEach(doc => { leaderOverrides.push(doc.data()); }); leaderOverrides.sort((a, b) => a.date.localeCompare(b.date)); drawLeaderGrid(y, m, lD); }).catch(err => { drawLeaderGrid(y, m, lD); }); } function drawLeaderGrid(y, m, lD) { const g = document.getElementById('leaderCalendarGrid'); g.innerHTML = ""; const fD = new Date(y, m, 1).getDay(); for(let i=0; i<fD; i++) { g.innerHTML += `<div style="background:transparent; border:none;"></div>`; } for(let d=1; d<=lD; d++) { const dStr = `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`; const isAnchor = leaderOverrides.some(ov => ov.date === dStr); const leaderName = getCalculatedLeader(dStr); let badgeClass = "leader-badge "; if (leaderName.includes("재경")) badgeClass += "leader-jaekyung"; else if (leaderName.includes("성철")) badgeClass += "leader-sungchul"; else if (leaderName.includes("개굴")) badgeClass += "leader-gaegool"; else badgeClass += "leader-jaekyung"; let customStyle = isAnchor ? "border: 2px solid #ef4444;" : ""; if (!baseCycle.includes(leaderName)) customStyle += "background-color: #8b5cf6; color: white;"; let dayColor = "var(--text-main)"; let currentDayObj = new Date(y, m, d).getDay(); if (currentDayObj === 0) dayColor = "#ef4444"; if (currentDayObj === 6) dayColor = "#3b82f6"; g.innerHTML += `<div class="cal-day tap-effect" onclick="overrideLeader('${dStr}', '${leaderName}')" style="min-height: 65px; justify-content: flex-start; padding-top: 5px; background: white;"><span style="color: ${dayColor}; font-weight: 900; font-size: 0.95rem;">${d}</span><div class="${badgeClass}" style="${customStyle}">${leaderName}</div></div>`; } } async function overrideLeader(dStr, currentLeader) { if (!(await verifyAdmin())) return; const newLeader = prompt(`[${dStr}] 조장을 변경합니다.\n\n👉 이곳에 새 이름(예: 용병)을 넣으면 이후 3일마다 돌아오는 이 근무조의 스케줄이 모두 교체됩니다.\n\n※ 취소하려면 '초기화'를 입력하세요.`, currentLeader); if (newLeader === null) return; if (newLeader.trim() === "" || newLeader === "초기화") { db.collection('leader_overrides').doc(dStr).delete().then(() => { showToast("기존 패턴 복구완료."); renderLeaderCalendar(leaderCurrentDate.getFullYear(), leaderCurrentDate.getMonth()); }); } else { db.collection('leader_overrides').doc(dStr).set({ date: dStr, leader: newLeader.trim() }).then(() => { showToast("새 근무조 적용완료."); renderLeaderCalendar(leaderCurrentDate.getFullYear(), leaderCurrentDate.getMonth()); }); } }
-<div id="splitViewer" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; z-index:10000; background:#000; flex-direction:column; pointer-events: auto;">
+<div id="splitViewer" style="display: none !important; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: -1; background: #000; flex-direction: column;">
     
-    <button onclick="closeSplitViewer()" style="position:absolute; top:15px; right:15px; z-index:10002; background:#ef4444; color:#fff; border:none; border-radius:10px; padding:10px 20px; font-weight:bold; cursor:pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.3);">닫기 ✕</button>
+    <button onclick="closeSplitViewer()" style="position: absolute; top: 15px; right: 15px; z-index: 10005; background: #ff4444; color: #fff; border: none; border-radius: 12px; padding: 12px 24px; font-size: 18px; font-weight: bold; cursor: pointer; box-shadow: 0 4px 15px rgba(0,0,0,0.5);">닫기 ✕</button>
     
-    <div style="height:70%; width:100%; background:#fff; -webkit-overflow-scrolling: touch;">
-        <iframe id="chartFrame" src="" style="width:100%; height:100%; border:none;"></iframe>
+    <div style="height: 70%; width: 100%; background: #fff; position: relative;">
+        <iframe id="chartFrame" src="" style="width: 100%; height: 100%; border: none;"></iframe>
     </div>
 
-    <div id="simpleCalc" style="height:30%; width:100%; background:#111; display:flex; flex-direction:column; padding:15px; box-sizing:border-box; border-top:3px solid #333;">
-        <div id="calcDisplay" style="height:45px; color:#00ff00; text-align:right; font-size:28px; padding:5px 15px; background:#000; border-radius:8px; margin-bottom:15px; font-family:monospace; border:1px solid #333; line-height:35px;">0</div>
+    <div id="simpleCalc" style="height: 30%; width: 100%; background: #111; display: flex; flex-direction: column; padding: 15px; box-sizing: border-box; border-top: 4px solid #333;">
+        <div id="calcDisplay" style="height: 50px; color: #00ff00; text-align: right; font-size: 32px; padding: 5px 15px; background: #000; border-radius: 8px; margin-bottom: 10px; font-family: 'Courier New', monospace; border: 2px solid #444; line-height: 40px; overflow: hidden;">0</div>
         
-        <div style="flex:1; display:grid; grid-template-columns: repeat(5, 1fr); gap:10px;">
-            <button class="c-btn" onclick="appendCalc('7')">7</button><button class="c-btn" onclick="appendCalc('8')">8</button><button class="c-btn" onclick="appendCalc('9')">9</button><button class="c-btn op" onclick="appendCalc('/')">÷</button><button class="c-btn ac" onclick="clearCalc()">AC</button>
-            <button class="c-btn" onclick="appendCalc('4')">4</button><button class="c-btn" onclick="appendCalc('5')">5</button><button class="c-btn" onclick="appendCalc('6')">6</button><button class="c-btn op" onclick="appendCalc('*')">×</button><button class="c-btn op" onclick="appendCalc('-')">-</button>
-            <button class="c-btn" onclick="appendCalc('1')">1</button><button class="c-btn" onclick="appendCalc('2')">2</button><button class="c-btn" onclick="appendCalc('3')">3</button><button class="c-btn" onclick="appendCalc('0')">0</button><button class="c-btn res" onclick="calculate()">=</button>
+        <div style="flex: 1; display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px;">
+            <button class="c-btn" onclick="appendCalc('7')">7</button>
+            <button class="c-btn" onclick="appendCalc('8')">8</button>
+            <button class="c-btn" onclick="appendCalc('9')">9</button>
+            <button class="c-btn op" onclick="appendCalc('/')">÷</button>
+            <button class="c-btn ac" onclick="clearCalc()">AC</button>
+            
+            <button class="c-btn" onclick="appendCalc('4')">4</button>
+            <button class="c-btn" onclick="appendCalc('5')">5</button>
+            <button class="c-btn" onclick="appendCalc('6')">6</button>
+            <button class="c-btn op" onclick="appendCalc('*')">×</button>
+            <button class="c-btn op" onclick="appendCalc('-')">-</button>
+            
+            <button class="c-btn" onclick="appendCalc('1')">1</button>
+            <button class="c-btn" onclick="appendCalc('2')">2</button>
+            <button class="c-btn" onclick="appendCalc('3')">3</button>
+            <button class="c-btn" onclick="appendCalc('0')">0</button>
+            <button class="c-btn res" onclick="calculate()">=</button>
         </div>
-        <div style="display:grid; grid-template-columns: 1fr 4fr; gap:10px; margin-top:10px;">
+        <div style="display: grid; grid-template-columns: 1fr 4fr; gap: 10px; margin-top: 10px; height: 50px;">
             <button class="c-btn" onclick="appendCalc('.')">.</button>
             <button class="c-btn op" onclick="appendCalc('+')">+</button>
         </div>
@@ -1189,17 +1203,22 @@ let currentExpr = "0";
 function openChartWithCalc(url) {
     const viewer = document.getElementById('splitViewer');
     document.getElementById('chartFrame').src = url;
-    viewer.style.display = 'flex'; // 🚩 여기서 나타나게 함
+    
+    // 🚩 나타날 때만 앞으로 튀어나오게 설정
+    viewer.style.setProperty('display', 'flex', 'important');
+    viewer.style.zIndex = "10000"; 
     clearCalc();
 }
 
 function closeSplitViewer() {
     const viewer = document.getElementById('splitViewer');
-    viewer.style.display = 'none'; // 🚩 여기서 완전히 숨김
+    
+    // 🚩 닫을 때는 완전히 뒤로 숨기고 없애버림
+    viewer.style.setProperty('display', 'none', 'important');
+    viewer.style.zIndex = "-1"; 
     document.getElementById('chartFrame').src = '';
     currentExpr = "0";
 }
-
 function appendCalc(val) {
     if (currentExpr === "0" && !isNaN(val)) currentExpr = val;
     else currentExpr += val;
@@ -1230,6 +1249,7 @@ function updateDisplay() {
 </script>
 </body>
 </html>
+
 
 
 
