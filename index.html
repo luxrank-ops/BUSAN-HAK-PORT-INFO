@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-<meta charset="UTF-8">
+    <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="description" content="부산항 신항·북항 현장 근로자를 위한 스마트 작업 관리 플랫폼. 정확한 임금 계산, 실시간 선박 정보, 근무일지 관리, 안전 가이드를 제공합니다.">
     <meta name="keywords" content="부산항, 항만근로자, 임금계산기, 선박정보, HJNC, BNCT, 하역작업, 라싱, 부산신항">
@@ -127,7 +127,7 @@
         .terminal-header { padding: 14px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; font-weight: 900; font-size: clamp(0.95rem, 3.5vw, 1.1rem); touch-action: manipulation; color: var(--text-main); }
         .terminal-body { display: none; padding: 12px; border-top: 1px dashed var(--border); }
         .terminal-actions { display: grid; grid-template-columns: repeat(auto-fit, minmax(80px, 1fr)); gap: 6px; }
-        .terminal-btn { background: var(--card-bg); border: 1px solid var(--border); color: var(--text-main); padding: 12px 4px; border-radius: 6px; text-decoration: none; font-size: clamp(0.85rem, 3vw, 0.95rem); text-align: center; font-weight: 800; display:flex; align-items:center; justify-content:center; word-break: keep-all; min-height: 44px; touch-action: manipulation; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
+        .terminal-btn { background: var(--card-bg); border: 1px solid var(--border); color: var(--text-main); padding: 12px 4px; border-radius: 6px; text-decoration: none; font-size: clamp(0.85rem, 3vw, 0.95rem); text-align: center; font-weight: 800; display:flex; align-items:center; justify-content:center; word-break: keep-all; min-height: 44px; touch-action: manipulation; box-shadow: 0 1px 2px rgba(0,0,0,0.05); cursor: pointer; }
 
         .board-table { width: 100%; border-collapse: collapse; font-size: clamp(0.85rem, 3vw, 1rem); margin-top: 10px; table-layout: fixed; }
         .board-table th { border-bottom: 2px solid var(--border); padding: 12px 4px; color: var(--text-sub); font-weight: 800; text-align: center; background: rgba(0,0,0,0.02); word-break: keep-all; }
@@ -151,7 +151,31 @@
         .nav-item { flex: 1; text-align: center; color: var(--text-sub); font-size: clamp(0.8rem, 2.5vw, 0.9rem); font-weight: 700; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; height: 100%; touch-action: manipulation; }
         .nav-item.active { color: var(--primary); font-weight: 900; transform: scale(1.05); }
 
-        /* 🚀 모바일 세로 모드 최적화 (강제 가로 유지 및 격자 유지) */
+        /* 🚀 [수정완료] 메인화면 클릭 완벽 보장 + 분할 화면 모달 */
+        #masterSplitViewer {
+            display: none !important; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            z-index: -1; background: #000; flex-direction: column; overflow: hidden; pointer-events: none;
+        }
+        #masterSplitViewer.active { display: flex !important; z-index: 999999 !important; pointer-events: auto !important; }
+        
+        .chart-area { height: 70%; width: 100%; background: #fff; position: relative; border-bottom: 3px solid #444; }
+        .chart-area iframe { width: 100%; height: 100%; border: none; }
+        
+        .calc-area { height: 30%; width: 100%; background: #111; padding: 10px; box-sizing: border-box; display: flex; flex-direction: column; }
+        .calc-display {
+            height: 45px; background: #000; color: #0f0; text-align: right;
+            font-size: 32px; padding: 0 15px; margin-bottom: 10px; border-radius: 8px;
+            border: 1px solid #333; font-family: monospace; line-height: 45px;
+        }
+        .calc-grid { flex: 1; display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
+        .btn-c { background: #333; color: #fff; border: none; border-radius: 10px; font-size: 22px; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+        .btn-c.op { background: #ff9f0a; }
+        .btn-c.ac { background: #666; }
+        .btn-c.eq { background: #22c55e; }
+        .btn-c:active { opacity: 0.6; transform: scale(0.95); }
+        .close-master-btn { position: absolute; top: 12px; right: 12px; z-index: 1000000; background: #ef4444; color: #fff; border: none; padding: 10px 20px; border-radius: 8px; font-weight: bold; box-shadow: 0 4px 10px rgba(0,0,0,0.3); cursor: pointer; }
+
+        /* 모바일 세로 모드 최적화 (강제 가로 유지 및 격자 유지) */
         @media screen and (max-width: 480px) and (orientation: portrait) {
             .calc-layout { display: flex !important; flex-direction: row !important; gap: 6px !important; align-items: stretch !important; width: 100% !important; }
             .calc-left, .calc-right { flex: 1 1 50% !important; max-width: 50% !important; min-width: 0 !important; }
@@ -403,11 +427,11 @@
                 <div class="terminal-header tap-effect" onclick="toggleContent('term-hjnc')">한진신항만 (HJNC) ▼</div>
                 <div id="term-hjnc" class="terminal-body">
                     <div class="terminal-actions">
-                        <a href="https://www.hjnc.co.kr/esvc/vessel/berthScheduleT" target="_blank" class="terminal-btn">스케줄</a>
-                        <a href="https://www.hjnc.co.kr/esvc/vessel/berthScheduleG" target="_blank" class="terminal-btn">차트</a>
-                        <a href="https://www.hjnc.co.kr/esvc/vessel/vesselStatus" target="_blank" class="terminal-btn">현황</a>
+                        <div class="terminal-btn" onclick="openFullView('https://www.hjnc.co.kr/esvc/vessel/berthScheduleT')">스케줄</div>
+                        <div class="terminal-btn" onclick="openFullView('https://www.hjnc.co.kr/esvc/vessel/berthScheduleG')">차트</div>
+                        <div class="terminal-btn" onclick="openFullView('https://www.hjnc.co.kr/esvc/vessel/vesselStatus')">현황</div>
                         <div style="grid-column: 1 / -1; display: flex; gap: 5px; margin-top: 4px;">
-                            <a href="http://bayplan.hjnc.co.kr" target="_blank" class="terminal-btn" style="flex: 1; margin: 0; background: linear-gradient(135deg, #fffbeb, #fef3c7); border: 1px solid #fcd34d; color: #92400e;">🧩 BAY PLAN</a>
+                            <a href="http://bayplan.hjnc.co.kr" target="_blank" class="terminal-btn" style="flex: 1; margin: 0; background: linear-gradient(135deg, #fffbeb, #fef3c7); border: 1px solid #fcd34d; color: #92400e; text-decoration: none;">🧩 BAY PLAN</a>
                             <button onclick="openLeaderSchedule()" class="terminal-btn" style="flex: 1; margin: 0; background: linear-gradient(135deg, #e0f2fe, #bae6fd); border: 1px solid #7dd3fc; color: #0369a1;">📅 조장 근무일</button>
                         </div>
                         <div style="grid-column: 1 / -1; margin-top: 5px;">
@@ -416,9 +440,9 @@
                     </div>
                 </div>
             </div>                 
-            <div class="terminal-block"><div class="terminal-header tap-effect" onclick="toggleContent('term-bnct')">부산신항컨테이너 고려 (BNCT) ▼</div><div id="term-bnct" class="terminal-body"><div class="terminal-actions"><a href="https://info.bnctkorea.com/esvc/vessel/berthScheduleT" target="_blank" class="terminal-btn">스케줄</a><a href="https://info.bnctkorea.com/esvc/vessel/berthScheduleG" target="_blank" class="terminal-btn">차트</a><a href="https://info.bnctkorea.com/esvc/vessel/vesselStatus" target="_blank" class="terminal-btn">현황</a></div></div></div>
-            <div class="terminal-block"><div class="terminal-header tap-effect" onclick="toggleContent('term-dgt')">동원로엑스 (DGT) ▼</div><div id="term-dgt" class="terminal-body"><div class="terminal-actions"><a href="https://www.dgtbusan.com/DGT/esvc/vessel/berthScheduleT" target="_blank" class="terminal-btn">스케줄</a><a href="https://www.dgtbusan.com/DGT/esvc/vessel/berthScheduleG" target="_blank" class="terminal-btn">차트</a><a href="https://www.dgtbusan.com/DGT/esvc/vessel/vesselStatus" target="_blank" class="terminal-btn">현황</a></div></div></div>
-            <div class="terminal-block"><div class="terminal-header tap-effect" onclick="toggleContent('term-bct')">부산컨테이너 터미널 (BCT) ▼</div><div id="term-bct" class="terminal-body"><div class="terminal-actions"><a href="https://info.bct2-4.com/infoservice/index.html" target="_blank" class="terminal-btn">스케줄</a><a href="https://info.bct2-4.com/infoservice/index.html" target="_blank" class="terminal-btn">차트</a><a href="https://info.bct2-4.com/infoservice/index.html" target="_blank" class="terminal-btn">현황</a></div></div></div>
+            <div class="terminal-block"><div class="terminal-header tap-effect" onclick="toggleContent('term-bnct')">부산신항컨테이너 고려 (BNCT) ▼</div><div id="term-bnct" class="terminal-body"><div class="terminal-actions"><div class="terminal-btn" onclick="openFullView('https://info.bnctkorea.com/esvc/vessel/berthScheduleT')">스케줄</div><div class="terminal-btn" onclick="openFullView('https://info.bnctkorea.com/esvc/vessel/berthScheduleG')">차트</div><div class="terminal-btn" onclick="openFullView('https://info.bnctkorea.com/esvc/vessel/vesselStatus')">현황</div></div></div></div>
+            <div class="terminal-block"><div class="terminal-header tap-effect" onclick="toggleContent('term-dgt')">동원로엑스 (DGT) ▼</div><div id="term-dgt" class="terminal-body"><div class="terminal-actions"><div class="terminal-btn" onclick="openFullView('https://www.dgtbusan.com/DGT/esvc/vessel/berthScheduleT')">스케줄</div><div class="terminal-btn" onclick="openFullView('https://www.dgtbusan.com/DGT/esvc/vessel/berthScheduleG')">차트</div><div class="terminal-btn" onclick="openFullView('https://www.dgtbusan.com/DGT/esvc/vessel/vesselStatus')">현황</div></div></div></div>
+            <div class="terminal-block"><div class="terminal-header tap-effect" onclick="toggleContent('term-bct')">부산컨테이너 터미널 (BCT) ▼</div><div id="term-bct" class="terminal-body"><div class="terminal-actions"><div class="terminal-btn" onclick="openFullView('https://info.bct2-4.com/infoservice/index.html')">스케줄</div><div class="terminal-btn" onclick="openFullView('https://info.bct2-4.com/infoservice/index.html')">차트</div><div class="terminal-btn" onclick="openFullView('https://info.bct2-4.com/infoservice/index.html')">현황</div></div></div></div>
         </div> 
     </div>
 
@@ -427,9 +451,9 @@
             <span class="section-title" style="font-size: 1.1rem; font-weight: 900;">🏗️ 2항업 (신항 북측) ▼</span>
         </div>
         <div id="t2-content" class="collapsible-content collapsed" style="background: white; border: 1px solid var(--border); border-radius: 8px; margin-top: 4px;">
-            <div class="terminal-block"><div class="terminal-header tap-effect" onclick="toggleContent('term-pnc')">부산신항만 (PNC) ▼</div><div id="term-pnc" class="terminal-body"><div class="terminal-actions"><a href="https://svc.pncport.com/info/CMS/Ship/Info.pnc?mCode=MN014" target="_blank" class="terminal-btn">스케줄</a><a href="https://svc.pncport.com/info/CMS/Ship/ShipBerthC.pnc?mCode=MN019" target="_blank" class="terminal-btn">차트</a><a href="https://svc.pncport.com/info/CMS/Ship/ShipVslStatus.pnc?mCode=MN020" target="_blank" class="terminal-btn">현황</a></div><button class="action-btn" style="background:#f39c12; margin-top:8px; padding:10px;" onclick="openBusSchedule()">🚌 셔틀버스 시간표</button></div></div>
-            <div class="terminal-block"><div class="terminal-header tap-effect" onclick="toggleContent('term-hpnt')">HMM (HPNT) ▼</div><div id="term-hpnt" class="terminal-body"><div class="terminal-actions"><a href="https://www.hpnt.co.kr/infoservice/vessel/vslScheduleList.jsp" target="_blank" class="terminal-btn">스케줄</a><a href="https://www.hpnt.co.kr/infoservice/vessel/vslScheduleChart.jsp" target="_blank" class="terminal-btn">차트</a><a href="https://www.hpnt.co.kr/infoservice/vessel/vslWorkStatus.jsp" target="_blank" class="terminal-btn">현황</a></div></div></div>
-            <div class="terminal-block"><div class="terminal-header tap-effect" onclick="toggleContent('term-pnit')">신항국제 (PNIT) ▼</div><div id="term-pnit" class="terminal-body"><div class="terminal-actions"><a href="https://www.pnitl.com/infoservice/vessel/vslScheduleList.jsp" target="_blank" class="terminal-btn">스케줄</a><a href="https://www.pnitl.com/infoservice/vessel/vslScheduleChart.jsp" target="_blank" class="terminal-btn">차트</a><a href="https://www.pnitl.com/infoservice/vessel/vslWorkStatus.jsp" target="_blank" class="terminal-btn">현황</a></div></div></div>
+            <div class="terminal-block"><div class="terminal-header tap-effect" onclick="toggleContent('term-pnc')">부산신항만 (PNC) ▼</div><div id="term-pnc" class="terminal-body"><div class="terminal-actions"><div class="terminal-btn" onclick="openFullView('https://svc.pncport.com/info/CMS/Ship/Info.pnc?mCode=MN014')">스케줄</div><div class="terminal-btn" onclick="openFullView('https://svc.pncport.com/info/CMS/Ship/ShipBerthC.pnc?mCode=MN019')">차트</div><div class="terminal-btn" onclick="openFullView('https://svc.pncport.com/info/CMS/Ship/ShipVslStatus.pnc?mCode=MN020')">현황</div></div><button class="action-btn" style="background:#f39c12; margin-top:8px; padding:10px;" onclick="openBusSchedule()">🚌 셔틀버스 시간표</button></div></div>
+            <div class="terminal-block"><div class="terminal-header tap-effect" onclick="toggleContent('term-hpnt')">HMM (HPNT) ▼</div><div id="term-hpnt" class="terminal-body"><div class="terminal-actions"><div class="terminal-btn" onclick="openFullView('https://www.hpnt.co.kr/infoservice/vessel/vslScheduleList.jsp')">스케줄</div><div class="terminal-btn" onclick="openFullView('https://www.hpnt.co.kr/infoservice/vessel/vslScheduleChart.jsp')">차트</div><div class="terminal-btn" onclick="openFullView('https://www.hpnt.co.kr/infoservice/vessel/vslWorkStatus.jsp')">현황</div></div></div></div>
+            <div class="terminal-block"><div class="terminal-header tap-effect" onclick="toggleContent('term-pnit')">신항국제 (PNIT) ▼</div><div id="term-pnit" class="terminal-body"><div class="terminal-actions"><div class="terminal-btn" onclick="openFullView('https://www.pnitl.com/infoservice/vessel/vslScheduleList.jsp')">스케줄</div><div class="terminal-btn" onclick="openFullView('https://www.pnitl.com/infoservice/vessel/vslScheduleChart.jsp')">차트</div><div class="terminal-btn" onclick="openFullView('https://www.pnitl.com/infoservice/vessel/vslWorkStatus.jsp')">현황</div></div></div></div>
         </div>
     </div>
 
@@ -438,8 +462,8 @@
             <span class="section-title" style="font-size: 1.1rem; font-weight: 900;">⚓ 1항업 (북항) ▼</span>
         </div>
         <div id="t1-content" class="collapsible-content collapsed" style="background: white; border: 1px solid var(--border); border-radius: 8px; margin-top: 4px;">
-            <div class="terminal-block"><div class="terminal-header tap-effect" onclick="toggleContent('term-bptc')">북항 통합 (BPTC) ▼</div><div id="term-bptc" class="terminal-body"><div class="terminal-actions"><a href="http://info.bptc.co.kr:9084/content/sw/frame/berth_status_text_frame_sw_kr.jsp?p_id=BETX_SH_KR&snb_num=2&snb_div=service" target="_blank" class="terminal-btn">스케줄</a><a href="http://info.bptc.co.kr:9084/content/sw/frame/berth_status_text_frame_sw_kr.jsp?p_id=BETX_SH_KR&snb_num=2&snb_div=service" target="_blank" class="terminal-btn">차트</a><a href="http://info.bptc.co.kr:9084/content/index.jsp#03" target="_blank" class="terminal-btn">현황</a></div></div></div>
-            <div class="terminal-block"><div class="terminal-header tap-effect" onclick="toggleContent('term-hbct')">허치슨 (HBCT/자성대) ▼</div><div id="term-hbct" class="terminal-body"><div class="terminal-actions"><a href="https://custom.hktl.com/jsp/T01/sunsuk.jsp" target="_blank" class="terminal-btn">스케줄</a><a href="https://custom.hktl.com/jsp/T01/sunsuk.jsp" target="_blank" class="terminal-btn">차트</a><a href="https://custom.hktl.com/jsp/T03/bonsun.jsp" target="_blank" class="terminal-btn">현황</a></div></div></div>
+            <div class="terminal-block"><div class="terminal-header tap-effect" onclick="toggleContent('term-bptc')">북항 통합 (BPTC) ▼</div><div id="term-bptc" class="terminal-body"><div class="terminal-actions"><div class="terminal-btn" onclick="openFullView('http://info.bptc.co.kr:9084/content/sw/frame/berth_status_text_frame_sw_kr.jsp?p_id=BETX_SH_KR&snb_num=2&snb_div=service')">스케줄</div><div class="terminal-btn" onclick="openFullView('http://info.bptc.co.kr:9084/content/sw/frame/berth_status_text_frame_sw_kr.jsp?p_id=BETX_SH_KR&snb_num=2&snb_div=service')">차트</div><div class="terminal-btn" onclick="openFullView('http://info.bptc.co.kr:9084/content/index.jsp#03')">현황</div></div></div></div>
+            <div class="terminal-block"><div class="terminal-header tap-effect" onclick="toggleContent('term-hbct')">허치슨 (HBCT/자성대) ▼</div><div id="term-hbct" class="terminal-body"><div class="terminal-actions"><div class="terminal-btn" onclick="openFullView('https://custom.hktl.com/jsp/T01/sunsuk.jsp')">스케줄</div><div class="terminal-btn" onclick="openFullView('https://custom.hktl.com/jsp/T01/sunsuk.jsp')">차트</div><div class="terminal-btn" onclick="openFullView('https://custom.hktl.com/jsp/T03/bonsun.jsp')">현황</div></div></div></div>
         </div>
     </div>
 
@@ -547,9 +571,9 @@
             </div>
             <div class="dash-content">
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
-                    <a href="http://www.busanpilot.co.kr/popup/monitoring" class="terminal-btn" target="_blank">🛥️ 모니터</a>
-                    <a href="http://www.busanpilot.co.kr/boards/lists/weather" class="terminal-btn" target="_blank">📋 도선상황</a>
-                    <a href="https://weather.naver.com/today/08440585" class="terminal-btn" target="_blank" style="grid-column: 1 / -1; color:var(--danger);">☀️ 실시간 날씨</a>
+                    <a href="http://www.busanpilot.co.kr/popup/monitoring" class="terminal-btn" target="_blank" style="text-decoration:none;">🛥️ 모니터</a>
+                    <a href="http://www.busanpilot.co.kr/boards/lists/weather" class="terminal-btn" target="_blank" style="text-decoration:none;">📋 도선상황</a>
+                    <a href="https://weather.naver.com/today/08440585" class="terminal-btn" target="_blank" style="grid-column: 1 / -1; color:var(--danger); text-decoration:none;">☀️ 실시간 날씨</a>
                 </div>
             </div>
         </div>
@@ -902,7 +926,8 @@
             </div>
         </div>
 
-    </div> </div>
+    </div> 
+</div>
 
 <footer style="background: #f1f5f9; padding: 30px 15px 90px 15px; text-align: center; border-top: 1px solid var(--border);">
     <div style="color: var(--primary); font-size: 0.85rem; font-weight: 600; line-height: 1.6;">
@@ -919,6 +944,39 @@
     <div class="nav-item tap-effect" onclick="toggleDashItem('ship-card')">🚢 선박</div>
     <div class="nav-item tap-effect" onclick="toggleDashItem('archive-card')">📂 자료</div>
 </nav>
+
+<div id="masterSplitViewer">
+    <button class="close-master-btn" onclick="closeFullView()">닫기 ✕</button>
+    <div class="chart-area">
+        <iframe id="masterIframe" src=""></iframe>
+    </div>
+    <div class="calc-area">
+        <div id="disp" class="calc-display">0</div>
+        <div class="calc-grid">
+            <button class="btn-c" onclick="cBtn('7')">7</button>
+            <button class="btn-c" onclick="cBtn('8')">8</button>
+            <button class="btn-c" onclick="cBtn('9')">9</button>
+            <button class="btn-c op" onclick="cBtn('/')">÷</button>
+            <button class="btn-c ac" onclick="cReset()">AC</button>
+            
+            <button class="btn-c" onclick="cBtn('4')">4</button>
+            <button class="btn-c" onclick="cBtn('5')">5</button>
+            <button class="btn-c" onclick="cBtn('6')">6</button>
+            <button class="btn-c op" onclick="cBtn('*')">×</button>
+            <button class="btn-c op" onclick="cBtn('-')">-</button>
+            
+            <button class="btn-c" onclick="cBtn('1')">1</button>
+            <button class="btn-c" onclick="cBtn('2')">2</button>
+            <button class="btn-c" onclick="cBtn('3')">3</button>
+            <button class="btn-c" onclick="cBtn('0')">0</button>
+            <button class="btn-c eq" onclick="cExec()">=</button>
+            
+            <button class="btn-c" onclick="cBtn('.')">.</button>
+            <button class="btn-c op" style="grid-column: span 4;" onclick="cBtn('+')">+</button>
+        </div>
+    </div>
+</div>
+
 <div id="toast">알림</div>
 
 <div id="leaderCalendarModal" class="modal-overlay" style="display:none;" onclick="closeLeaderCalendar()"><div class="modal-content" onclick="event.stopPropagation()" style="background:#f3f4f6;"><h3 style="margin-top:0; text-align:center; color:var(--primary); font-weight:900;">📅 조장 근무표</h3><div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; background:white; padding:10px; border-radius:10px; box-shadow:0 2px 5px rgba(0,0,0,0.05);"><button class="mini-btn-old" style="padding:8px 15px; font-size:1rem; background:var(--primary);" onclick="changeLeaderMonth(-1)">◀</button><span id="leaderCalMonthYear" style="font-weight:900; font-size:1.15rem; color:var(--text-main);"></span><button class="mini-btn-old" style="padding:8px 15px; font-size:1rem; background:var(--primary);" onclick="changeLeaderMonth(1)">▶</button></div><div class="calendar-grid" style="font-size: 0.9rem; font-weight: 900; margin-bottom: 5px;"><div style="color:#ef4444;">일</div><div>월</div><div>화</div><div>수</div><div>목</div><div>금</div><div style="color:#3b82f6;">토</div></div><div id="leaderCalendarGrid" class="calendar-grid"></div><p style="font-size:0.8rem; color:var(--text-sub); text-align:center; margin-top:10px; font-weight:600;">※ 날짜를 터치하면 근무자를 임의로 변경할 수 있습니다. (Admin 전용)</p><button class="action-btn bg-cancel" style="margin-top:10px;" onclick="closeLeaderCalendar()">닫기</button></div></div>  
@@ -1139,6 +1197,36 @@ function loadComments(pid){if(commentUnsubscribes[pid]) commentUnsubscribes[pid]
 
 function openBusSchedule(){ const m=document.getElementById('imageModal'); document.getElementById('modalImage').src='https://firebasestorage.googleapis.com/v0/b/busan-hak-port.firebasestorage.app/o/KakaoTalk_20260129_001114789.jpg?alt=media'; m.style.display='flex'; } function closeImageModal(){ document.getElementById('imageModal').style.display='none'; } function openPrivacy() { toggleDashItem('privacy-center-card'); document.getElementById('privacy-center-card').scrollIntoView({behavior: 'smooth', block: 'center'}); }
 
+// 🚩 [기능 통합] 분할 화면 웹뷰어 + 계산기 함수
+let calcVal = "0";
+function openFullView(url) {
+    const viewer = document.getElementById('masterSplitViewer');
+    document.getElementById('masterIframe').src = url;
+    viewer.classList.add('active'); // 화면 띄우기
+    cReset();
+}
+function closeFullView() {
+    const viewer = document.getElementById('masterSplitViewer');
+    viewer.classList.remove('active'); // 화면 숨기기
+    document.getElementById('masterIframe').src = '';
+}
+function cBtn(v) {
+    if (calcVal === "0") calcVal = v;
+    else calcVal += v;
+    cUpdate();
+}
+function cReset() { calcVal = "0"; cUpdate(); }
+function cExec() {
+    try {
+        let result = Function('"use strict"; return (' + calcVal + ')')();
+        calcVal = Number.isInteger(result) ? result.toString() : result.toFixed(2);
+    } catch (e) {
+        calcVal = "Error"; setTimeout(cReset, 1000);
+    }
+    cUpdate();
+}
+function cUpdate() { document.getElementById('disp').innerText = calcVal; }
+
 window.onload = () => { 
     try { const now = new Date(); now.setMinutes(now.getMinutes() - now.getTimezoneOffset()); const todayStr = now.toISOString().split('T')[0]; const sDate = document.getElementById('wageStartDate'); const eDate = document.getElementById('wageEndDate'); if(sDate) sDate.value = todayStr; if(eDate) eDate.value = todayStr; } catch(e) { console.error("날짜 초기화 오류", e); } 
     loadBanner(); 
@@ -1155,5 +1243,3 @@ let leaderCurrentDate = new Date(); let leaderOverrides = []; const baseCycle = 
 </script>
 </body>
 </html>
-
-
