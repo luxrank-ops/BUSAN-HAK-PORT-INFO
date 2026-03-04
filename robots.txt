@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://busan-hak-port.web.app/sitemap.xml
