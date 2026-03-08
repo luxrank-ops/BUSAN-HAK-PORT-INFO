@@ -958,8 +958,8 @@ function writeUserTicker(){ const m = prompt("현장 안전 문구 입력:"); if
 async function setAdminTicker(){ if(await verifyAdmin()){ const m = prompt("관리자 공지:"); if(m) db.collection('settings').doc('banner').set({adminMessage:m}, {merge:true}); } }
 async function openTickerManager(){ if(await verifyAdmin()){ document.getElementById('tickerManageModal').style.display='flex'; renderTickerList(); } }
 function renderTickerList() { const listContainer = document.getElementById('tickerListContainer'); listContainer.innerHTML = ''; const data = globalTickerData; let hasData = false; if (data.adminMessage) { hasData = true; listContainer.innerHTML += `<div class="ticker-manage-item"><span style="color:red; flex:1; font-weight:800;">📢 [관리자] ${data.adminMessage}</span><button onclick="deleteTickerMsg('admin', 0)" class="mini-btn btn-del-mini">삭제</button></div>`; } if (data.userMessages) { data.userMessages.forEach((m, i) => { hasData = true; listContainer.innerHTML += `<div class="ticker-manage-item"><span style="flex:1; font-weight:700;">${i + 1}. ${m}</span><button onclick="deleteTickerMsg('user', ${i})" class="mini-btn btn-del-mini">삭제</button></div>`; }); } if (!hasData) listContainer.innerHTML = '<div style="padding:10px; text-align:center; font-weight:700;">내용 없음</div>'; }
-function openBayPlan() {
-    // 모든 보안 검증을 생략하고 해당 주소로 즉시 연결합니다.
+// 이렇게 이름을 고쳐주시면 바로 작동합니다!
+function openAllBayPlan() {
     window.open("http://112.163.71.98:8080/webits/bayplan", "_blank"); 
 }
 async function deleteTickerMsg(type, index){ if(!confirm("삭제?")) return; if(type === 'admin') { delete globalTickerData.adminMessage; await db.collection('settings').doc('banner').update({ adminMessage: firebase.firestore.FieldValue.delete() }); } else { globalTickerData.userMessages.splice(index, 1); await db.collection('settings').doc('banner').update({ userMessages: globalTickerData.userMessages }); } renderTickerList(); showToast("삭제됨"); }
@@ -1162,6 +1162,7 @@ let leaderCurrentDate = new Date(); let leaderOverrides = []; const baseCycle = 
 </script>
 </body>
 </html>
+
 
 
 
