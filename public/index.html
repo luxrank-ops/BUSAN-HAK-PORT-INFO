@@ -1038,6 +1038,139 @@ async function confirmLoginAndSave() {
         btn.innerText = "확인 및 저장";
     }
 }
+ /**
+ * 선박정보 전체 검색 및 게시판형 리스트 렌더링 모듈
+ * @param {string} keyword - 사용자가 입력한 검색어
+ */
+async function searchAllVessels(keyword) {
+    try {
+        // 1. 입력값 정제 및 DOM 요소 확인 (예외 처리)
+        const searchKeyword = keyword ? keyword.trim().toLowerCase() : "";
+        const container = document.getElementById("vessel-result-container"); // 결과를 표시할 HTML 영역 ID
+        
+        if (!container) {
+            console.error("결과를 표시할 'vessel-result-container' 요소를 찾을 수 없습니다.");
+            return;
+        }
+
+        container.innerHTML = "<p style='text-align:center; padding:20px; color:var(--text-sub);'>전체 데이터를 불러오는 중입니다...</p>";
+
+        // 2. Firebase Firestore 인스턴스 검증 (8버전 네임스페이스 기준)
+        if (typeof firebase === "undefined" || !firebase.firestore) {
+            throw new Error("Firebase firestore가 초기화되지 않았습니다.");
+        }
+
+        const db = firebase.firestore();
+
+        // ★ 중요: .limit(5) 등의 개수 제한 코드를 완전히 제거하여 저장된 모든 데이터를 조회합니다.
+        // 'vessels'는 실제 파이어베이스 컬렉션명이므로 본인의 코드와 일치하는지 확인하세요.
+        const snapshot = await db.collection("vessels").get();
+
+        if (snapshot.empty) {
+            container.innerHTML = "<p style='text-align:center; padding:20px; color:var(--text-sub);'>등록된 선박 데이터가 없습니다.</p>";
+            return;
+        }
+
+        let vesselList = [];
+        snapshot.forEach(doc => {
+            const data = doc.data();
+            data.docId = doc.id; // 문서 고유 ID 저장
+            vesselList.push(data);
+        });
+
+        // 3. 검색어가 있는 경우 클라이언트 필터링 수행
+        if (searchKeyword !== "") {
+            vesselList = vesselList.filter(item => {
+                const name = (item.name || item.vesselName || "").toLowerCase();
+                const code = (item.code || item.number || "").toLowerCase();
+                return name.includes(searchKeyword) || code.includes(searchKeyword);
+            });
+        }
+
+        // 4. 검색 결과가 없을 경우 예외 처리
+        if (vesselList.length === 0) {
+            container.innerHTML = `<p style='text-align:center; padding:20px; color:var(--text-sub);'>'${searchKeyword}'에 대한 검색 결과가 없습니다.</p>`;
+            return;
+        }
+
+        // 5. 게시판(테이블) 형태로 전체 데이터 동적 생성
+        let boardHTML = `
+            <div style="width:100%; overflow-x:auto;">
+                <table style="width:100%; border-collapse: collapse; font-size:0.95rem; text-align:left;">
+                    <thead>
+                        <tr style="background:var(--primary); color:white; border-bottom:2px solid var(--border);">
+                            <th style="padding:12px; font-weight:800;">선박명 / 주요 정보</th>
+                            <th style="padding:12px; font-weight:800; width:90px; text-align:center;">상세보기</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+        `;
+
+        vesselList.forEach((item, index) => {
+            const title = item.name || item.vesselName || `선박 #${index + 1}`;
+            const subText = item.memo || item.schedule || item.info || "클릭하여 상세 내용을 확인하세요.";
+
+            boardHTML += `
+                <tr style="border-bottom:1px solid var(--border); cursor:pointer; transition: background 0.2s;" onclick="openVesselDetailModal('${item.docId}')" onmouseover="this.style.background='rgba(0,0,0,0.02)'" onmouseout="this.style.background='transparent'">
+                    <td style="padding:12px;">
+                        <div style="font-weight:800; color:var(--text-main);">${title}</div>
+                        <div style="font-size:0.85rem; color:var(--text-sub); margin-top:4px;">${subText}</div>
+                    </td>
+                    <td style="padding:12px; text-align:center;">
+                        <button type="button" style="padding:6px 10px; background:var(--primary-light); color:white; border:none; border-radius:6px; font-size:0.8rem; font-weight:700; cursor:pointer;">열기</button>
+                    </td>
+                </tr>
+            `;
+        });
+
+        boardHTML += `
+                    </tbody>
+                </table>
+                <div style="padding:10px 4px; text-align:right; font-size:0.85rem; color:var(--text-sub);">
+                    검색된 총 데이터: <strong>${vesselList.length}개</strong>
+                </div>
+            </div>
+        `;
+
+        container.innerHTML = boardHTML;
+
+    } catch (error) {
+        // 6. 런타임 에러 핸들링 (Fail-Safe)
+        console.error("선박 정보 전체 조회 중 오류 발생:", error);
+        const container = document.getElementById("vessel-result-container");
+        if (container) {
+            container.innerHTML = "<p style='text-align:center; padding:20px; color:var(--danger);'>데이터를 불러오는 중 오류가 발생했습니다.</p>";
+        }
+    }
+}
+
+/**
+ * 게시판 항목 클릭 시 해당 문서의 상세 내용을 불러오는 모듈
+ * @param {string} docId - Firestore 문서 ID
+ */
+async function openVesselDetailModal(docId) {
+    try {
+        const db = firebase.firestore();
+        const docSnap = await db.doc(`vessels/${docId}`).get();
+
+        if (!docSnap.exists) {
+            alert("해당 데이터를 찾을 수 없습니다.");
+            return;
+        }
+
+        const data = docSnap.data();
+        let detailContent = "📌 [선박 상세 정보]\n\n";
+        for (const [key, val] of Object.entries(data)) {
+            detailContent += `${key}: ${val}\n`;
+        }
+        
+        alert(detailContent); // 추후 커스텀 모달 창으로 확장 가능
+
+    } catch (error) {
+        console.error("상세 정보 조회 오류:", error);
+        alert("상세 내용을 불러오지 못했습니다.");
+    }
+}   
 function saveWorkLog(){ 
     const btn = document.getElementById('saveLogBtn'); 
     const dStr = document.getElementById('dailyLogForm').getAttribute('data-date'); 
