@@ -412,7 +412,8 @@
                         <a href="https://www.hjnc.co.kr/esvc/vessel/vesselStatus" target="_blank" class="terminal-btn">현황</a>
                         <div style="grid-column: 1 / -1; display: flex; gap: 5px; margin-top: 4px;">
                             <a href="http://bayplan.hjnc.co.kr" target="_blank" class="terminal-btn" style="flex: 1; margin: 0; background: linear-gradient(135deg, #fffbeb, #fef3c7); border: 1px solid #fcd34d; color: #92400e;">🧩 BAY PLAN</a>
-                            <button onclick="openLeaderSchedule()" class="terminal-btn" style="flex: 1; margin: 0; background: linear-gradient(135deg, #e0f2fe, #bae6fd); border: 1px solid #7dd3fc; color: #0369a1;">📅 조장 근무일</button>
+                            <!-- 변경된 조장 근무일 버튼 (기존 버튼 코드를 이것으로 교체하세요) -->
+<button onclick="verifyLeaderAccess(event)" class="terminal-btn" style="flex: 1; margin: 0; background: linear-gradient(135deg, #e0f2fe, #bae6fd); border: 1px solid #7dd3fc; color: #0369a1;">📅 조장 근무일</button>
                         </div>
                         <div style="grid-column: 1 / -1; margin-top: 5px;">
                             <button onclick="openAllBayPlan()" class="terminal-btn" style="width: 100%; margin: 0; background: linear-gradient(135deg, #fdf2f8, #fbcfe8); border: 1px solid #f9a8d4; color: #be185d; font-weight: bold;">🌸 ALL BAY PLAN </button>
@@ -1160,6 +1161,44 @@ window.onload = () => {
 
 let leaderCurrentDate = new Date(); let leaderOverrides = []; const baseCycle = ["재경", "성철", "개굴"]; const baseAnchor = "2026-02-01"; function openLeaderSchedule() { document.getElementById('leaderCalendarModal').style.display = 'flex'; leaderCurrentDate = new Date(); renderLeaderCalendar(leaderCurrentDate.getFullYear(), leaderCurrentDate.getMonth()); } function closeLeaderCalendar() { document.getElementById('leaderCalendarModal').style.display = 'none'; } function changeLeaderMonth(s) { leaderCurrentDate.setMonth(leaderCurrentDate.getMonth() + s); renderLeaderCalendar(leaderCurrentDate.getFullYear(), leaderCurrentDate.getMonth()); } function getSlotIndex(dStr) { const target = new Date(dStr); const anchor = new Date(baseAnchor); const diffDays = Math.floor((target.getTime() - anchor.getTime()) / (1000 * 60 * 60 * 24)); return ((diffDays % 3) + 3) % 3; } function getCalculatedLeader(targetDateStr) { const targetSlot = getSlotIndex(targetDateStr); for (let i = leaderOverrides.length - 1; i >= 0; i--) { const ov = leaderOverrides[i]; if (ov.date <= targetDateStr) { if (getSlotIndex(ov.date) === targetSlot) return ov.leader; } } return baseCycle[targetSlot]; } function renderLeaderCalendar(y, m) { document.getElementById('leaderCalMonthYear').innerText = `${y}년 ${m+1}월`; const lD = new Date(y, m+1, 0).getDate(); db.collection('leader_overrides').get().then(s => { leaderOverrides = []; s.forEach(doc => { leaderOverrides.push(doc.data()); }); leaderOverrides.sort((a, b) => a.date.localeCompare(b.date)); drawLeaderGrid(y, m, lD); }).catch(err => { drawLeaderGrid(y, m, lD); }); } function drawLeaderGrid(y, m, lD) { const g = document.getElementById('leaderCalendarGrid'); g.innerHTML = ""; const fD = new Date(y, m, 1).getDay(); for(let i=0; i<fD; i++) { g.innerHTML += `<div style="background:transparent; border:none;"></div>`; } for(let d=1; d<=lD; d++) { const dStr = `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`; const isAnchor = leaderOverrides.some(ov => ov.date === dStr); const leaderName = getCalculatedLeader(dStr); let badgeClass = "leader-badge "; if (leaderName.includes("재경")) badgeClass += "leader-jaekyung"; else if (leaderName.includes("성철")) badgeClass += "leader-sungchul"; else if (leaderName.includes("개굴")) badgeClass += "leader-gaegool"; else badgeClass += "leader-jaekyung"; let customStyle = isAnchor ? "border: 2px solid #ef4444;" : ""; if (!baseCycle.includes(leaderName)) customStyle += "background-color: #8b5cf6; color: white;"; let dayColor = "var(--text-main)"; let currentDayObj = new Date(y, m, d).getDay(); if (currentDayObj === 0) dayColor = "#ef4444"; if (currentDayObj === 6) dayColor = "#3b82f6"; g.innerHTML += `<div class="cal-day tap-effect" onclick="overrideLeader('${dStr}', '${leaderName}')" style="min-height: 65px; justify-content: flex-start; padding-top: 5px; background: white;"><span style="color: ${dayColor}; font-weight: 900; font-size: 0.95rem;">${d}</span><div class="${badgeClass}" style="${customStyle}">${leaderName}</div></div>`; } } async function overrideLeader(dStr, currentLeader) { if (!(await verifyAdmin())) return; const newLeader = prompt(`[${dStr}] 조장을 변경합니다.\n\n👉 이곳에 새 이름(예: 용병)을 넣으면 이후 3일마다 돌아오는 이 근무조의 스케줄이 모두 교체됩니다.\n\n※ 취소하려면 '초기화'를 입력하세요.`, currentLeader); if (newLeader === null) return; if (newLeader.trim() === "" || newLeader === "초기화") { db.collection('leader_overrides').doc(dStr).delete().then(() => { showToast("기존 패턴 복구완료."); renderLeaderCalendar(leaderCurrentDate.getFullYear(), leaderCurrentDate.getMonth()); }); } else { db.collection('leader_overrides').doc(dStr).set({ date: dStr, leader: newLeader.trim() }).then(() => { showToast("새 근무조 적용완료."); renderLeaderCalendar(leaderCurrentDate.getFullYear(), leaderCurrentDate.getMonth()); }); } }
 </script>
+    <!-- [여기서부터 복사] 조장 근무일 비밀번호 검증 스크립트 -->
+<script>
+function checkLeaderPassword(event) {
+    try {
+        // 기존 버튼의 기본 이동 기능을 잠시 차단합니다.
+        if (event) {
+            event.preventDefault();
+        }
+        
+        // 사용자에게 비밀번호를 묻는 안내창을 띄웁니다.
+        const userPw = prompt(" 비번 입력하세요.\n(비번은 제작자에게 문의 바랍니다. 문의  :  luxrank@gmail.com )");
+        
+        // 사용자가 '취소'를 누르거나 아무것도 입력하지 않은 경우 (예외 처리)
+        if (userPw === null || userPw.trim() === "") {
+            return false; 
+        }
+        
+        // 비밀번호 확인 로직 (요청하신 9363)
+        if (userPw === "9363") {
+            alert("인증되었습니다.");
+            
+            // ★ 중요: 여기에 조장 근무일 버튼을 눌렀을 때 원래 가야 할 주소를 적어주세요.
+            // 예시: window.location.href = "원래가야할링크.html";
+            
+        } else {
+            // 비밀번호가 틀렸을 경우
+            alert("비밀번호가 일치하지 않습니다.");
+            return false;
+        }
+    } catch (error) {
+        // 에러 핸들링: 오류 발생 시 웹사이트가 멈추지 않도록 안전망 구축
+        console.error("비밀번호 처리 중 오류 발생:", error);
+        alert("일시적인 오류가 발생했습니다. 다시 시도해주세요.");
+        return false;
+    }
+}
+</script>
+<!-- [여기까지 복사] -->
 </body>
 </html>
 
