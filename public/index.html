@@ -1349,6 +1349,51 @@ let globalVesselList = [];
 /**
  * 파이어베이스에서 제한 없이 모든 선박 데이터를 가져와 렌더링하는 함수
  */
+    /**
+ * 선박 정보를 개수 제한 없이 전부 가져와서 화면에 카드/블록 형태로 모두 출력하는 함수
+ */
+async function loadAllVessels() {
+    try {
+        const container = document.getElementById("vessel-container"); // 선박 목록이 들어가는 HTML 상자 ID (원본 코드에 맞게 확인)
+        if (!container) return;
+
+        container.innerHTML = "<p style='text-align:center; padding:10px;'>전체 선박 목록을 불러오는 중...</p>";
+
+        const db = firebase.firestore();
+        
+        // ★ 핵심: .limit(5)를 완전히 제거하고 전체 문서(.get())를 가져옵니다.
+        const snapshot = await db.collection("vessels").get();
+
+        if (snapshot.empty) {
+            container.innerHTML = "<p style='text-align:center; padding:10px;'>등록된 선박이 없습니다.</p>";
+            return;
+        }
+
+        let htmlContent = "";
+        snapshot.forEach(doc => {
+            const data = doc.data();
+            const vesselName = data.name || data.vesselName || "선박명 없음";
+            
+            // 기존 화면에 출력되던 카드/버튼 디자인 형태를 유지하면서 전체 반복 생성
+            htmlContent += `
+                <div class="vessel-card" style="background:var(--card-bg); border:1px solid var(--border); border-radius:10px; padding:15px; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center; cursor:pointer;" onclick="openVesselDetail('${doc.id}')">
+                    <span style="font-weight:800; color:var(--text-main);">🚢 ${vesselName}</span>
+                    <span>▼</span>
+                </div>
+            `;
+        });
+
+        container.innerHTML = htmlContent;
+
+    } catch (error) {
+        console.error("선박 목록 전체 로드 실패:", error);
+    }
+}
+
+// 페이지가 열릴 때 위 함수가 실행되도록 연결
+window.addEventListener("DOMContentLoaded", () => {
+    loadAllVessels();
+});
 async function fetchAndRenderAllVessels() {
     const tbody = document.getElementById("vessel-board-tbody");
     try {
@@ -1357,7 +1402,7 @@ async function fetchAndRenderAllVessels() {
         }
 
         const db = firebase.firestore();
-        // ★ 중요: .limit() 제한을 완전히 배제하고 저장된 모든 문서를 조회합니다.
+        // ★ 중요: .limit(5) 제한을 완전히 배제하고 저장된 모든 문서를 조회합니다.
         const snapshot = await db.collection("vessels").get();
 
         if (snapshot.empty) {
