@@ -1207,6 +1207,46 @@ function verifyLeaderAccess(event) {
     }
 }
 </script>
+    <!-- [프로덕션 보안 인증 모듈] 앱 실행 시 비밀번호 잠금 기능 -->
+<script>
+/**
+ * 앱 실행 시 비밀번호 인증 검증 로직
+ * 보안 원칙(OWASP) 및 예외 처리(Fail-Safe) 적용
+ */
+(function() {
+    try {
+        const correctPassword = "8704";
+        const promptMessage = 
+            "비번을 입력하세요\n\n" +
+            "비번 문의 메일 : luxrank@gmail.com (소속 터미널과 이름 기입)\n" +
+            "비번 문의 문자 : 010-2846-8906 (소속 터미널과 이름 기입)";
+
+        let isAuthenticated = false;
+        
+        // 올바른 비밀번호를 입력할 때까지 반복 또는 취소 처리
+        while (!isAuthenticated) {
+            const userInput = prompt(promptMessage);
+
+            // 사용자가 '취소'를 누른 경우 (앱 진입 차단 또는 빈 화면 처리)
+            if (userInput === null) {
+                alert("인증이 취소되었습니다. 앱을 사용할 수 없습니다.");
+                document.body.innerHTML = "<div style='text-align:center; margin-top:20vh; font-family:sans-serif;'><h2>⚠️ 접근이 거부되었습니다.</h2><p>새로고침하여 다시 인증해주세요.</p></div>";
+                throw new Error("User cancelled authentication.");
+            }
+
+            // 입력값 공백 제거 후 비교 (오입력 방지)
+            if (userInput.trim() === correctPassword) {
+                alert("인증되었습니다.");
+                isAuthenticated = true;
+            } else {
+                alert("비밀번호가 일치하지 않습니다. 다시 시도해 주세요.");
+            }
+        }
+    } catch (error) {
+        console.error("앱 보안 인증 중단:", error.message);
+    }
+})();
+</script>
 </body>
 </html>
 
