@@ -1172,156 +1172,7 @@ window.onload = () => {
 
 let leaderCurrentDate = new Date(); let leaderOverrides = []; const baseCycle = ["재경", "성철", "개굴"]; const baseAnchor = "2026-02-01"; function openLeaderSchedule() { document.getElementById('leaderCalendarModal').style.display = 'flex'; leaderCurrentDate = new Date(); renderLeaderCalendar(leaderCurrentDate.getFullYear(), leaderCurrentDate.getMonth()); } function closeLeaderCalendar() { document.getElementById('leaderCalendarModal').style.display = 'none'; } function changeLeaderMonth(s) { leaderCurrentDate.setMonth(leaderCurrentDate.getMonth() + s); renderLeaderCalendar(leaderCurrentDate.getFullYear(), leaderCurrentDate.getMonth()); } function getSlotIndex(dStr) { const target = new Date(dStr); const anchor = new Date(baseAnchor); const diffDays = Math.floor((target.getTime() - anchor.getTime()) / (1000 * 60 * 60 * 24)); return ((diffDays % 3) + 3) % 3; } function getCalculatedLeader(targetDateStr) { const targetSlot = getSlotIndex(targetDateStr); for (let i = leaderOverrides.length - 1; i >= 0; i--) { const ov = leaderOverrides[i]; if (ov.date <= targetDateStr) { if (getSlotIndex(ov.date) === targetSlot) return ov.leader; } } return baseCycle[targetSlot]; } function renderLeaderCalendar(y, m) { document.getElementById('leaderCalMonthYear').innerText = `${y}년 ${m+1}월`; const lD = new Date(y, m+1, 0).getDate(); db.collection('leader_overrides').get().then(s => { leaderOverrides = []; s.forEach(doc => { leaderOverrides.push(doc.data()); }); leaderOverrides.sort((a, b) => a.date.localeCompare(b.date)); drawLeaderGrid(y, m, lD); }).catch(err => { drawLeaderGrid(y, m, lD); }); } function drawLeaderGrid(y, m, lD) { const g = document.getElementById('leaderCalendarGrid'); g.innerHTML = ""; const fD = new Date(y, m, 1).getDay(); for(let i=0; i<fD; i++) { g.innerHTML += `<div style="background:transparent; border:none;"></div>`; } for(let d=1; d<=lD; d++) { const dStr = `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`; const isAnchor = leaderOverrides.some(ov => ov.date === dStr); const leaderName = getCalculatedLeader(dStr); let badgeClass = "leader-badge "; if (leaderName.includes("재경")) badgeClass += "leader-jaekyung"; else if (leaderName.includes("성철")) badgeClass += "leader-sungchul"; else if (leaderName.includes("개굴")) badgeClass += "leader-gaegool"; else badgeClass += "leader-jaekyung"; let customStyle = isAnchor ? "border: 2px solid #ef4444;" : ""; if (!baseCycle.includes(leaderName)) customStyle += "background-color: #8b5cf6; color: white;"; let dayColor = "var(--text-main)"; let currentDayObj = new Date(y, m, d).getDay(); if (currentDayObj === 0) dayColor = "#ef4444"; if (currentDayObj === 6) dayColor = "#3b82f6"; g.innerHTML += `<div class="cal-day tap-effect" onclick="overrideLeader('${dStr}', '${leaderName}')" style="min-height: 65px; justify-content: flex-start; padding-top: 5px; background: white;"><span style="color: ${dayColor}; font-weight: 900; font-size: 0.95rem;">${d}</span><div class="${badgeClass}" style="${customStyle}">${leaderName}</div></div>`; } } async function overrideLeader(dStr, currentLeader) { if (!(await verifyAdmin())) return; const newLeader = prompt(`[${dStr}] 조장을 변경합니다.\n\n👉 이곳에 새 이름(예: 용병)을 넣으면 이후 3일마다 돌아오는 이 근무조의 스케줄이 모두 교체됩니다.\n\n※ 취소하려면 '초기화'를 입력하세요.`, currentLeader); if (newLeader === null) return; if (newLeader.trim() === "" || newLeader === "초기화") { db.collection('leader_overrides').doc(dStr).delete().then(() => { showToast("기존 패턴 복구완료."); renderLeaderCalendar(leaderCurrentDate.getFullYear(), leaderCurrentDate.getMonth()); }); } else { db.collection('leader_overrides').doc(dStr).set({ date: dStr, leader: newLeader.trim() }).then(() => { showToast("새 근무조 적용완료."); renderLeaderCalendar(leaderCurrentDate.getFullYear(), leaderCurrentDate.getMonth()); }); } }
 </script>
-   <!-- [프로덕션 수준] 선박정보 전체 데이터 조회 및 게시판(테이블) 렌더링 모듈 -->
-<script>
-/**
- * 선박 정보 전체 목록을 조회하여 게시판 형태로 렌더링하고 검색어를 필터링하는 함수
- * @param {string} searchKeyword - 검색어 (선택 사항)
- */
-async function renderAllVesselsBoard(searchKeyword = "") {
-    const containerId = "vessel-result-container";
-    const resultContainer = document.getElementById(containerId);
-
-    try {
-        // 1. DOM 요소 존재 여부 예외 처리 (Fail-Safe)
-        if (!resultContainer) {
-            console.error(`[Error] '${containerId}' DOM 요소를 찾을 수 없습니다.`);
-            return;
-        }
-
-        // 로딩 상태 표시
-        resultContainer.innerHTML = "<p style='text-align:center; padding:20px; color:var(--text-sub);'>전체 선박 데이터를 불러오는 중입니다...</p>";
-
-        // 2. Firebase Firestore 인스턴스 유효성 검증
-        if (typeof firebase === "undefined" || !firebase.firestore) {
-            throw new Error("Firebase Firestore가 초기화되지 않았습니다.");
-        }
-
-        const db = firebase.firestore();
-        
-        // ★ 중요: .limit() 등의 개수 제한 코드를 완전히 배제하고 전체 문서를 조회합니다.
-        const querySnapshot = await db.collection("vessels").get();
-
-        if (querySnapshot.empty) {
-            resultContainer.innerHTML = "<p style='text-align:center; padding:20px; color:var(--text-sub);'>등록된 선박 데이터가 없습니다.</p>";
-            return;
-        }
-
-        let vesselItems = [];
-        querySnapshot.forEach(doc => {
-            let data = doc.data();
-            data.id = doc.id; // Firestore 문서 고유 ID 매핑
-            vesselItems.push(data);
-        });
-
-        // 3. 검색어 필터링 처리 (대소문자 무시, 공백 정제)
-        const keyword = searchKeyword ? searchKeyword.trim().toLowerCase() : "";
-        if (keyword !== "") {
-            vesselItems = vesselItems.filter(item => {
-                const vesselName = (item.name || item.vesselName || "").toLowerCase();
-                const vesselCode = (item.code || item.number || "").toLowerCase();
-                const vesselMemo = (item.memo || item.info || "").toLowerCase();
-                return vesselName.includes(keyword) || vesselCode.includes(keyword) || vesselMemo.includes(keyword);
-            });
-        }
-
-        // 4. 검색 결과 없음 예외 처리
-        if (vesselItems.length === 0) {
-            resultContainer.innerHTML = `<p style='text-align:center; padding:20px; color:var(--text-sub);'>'${escapeHtml(searchKeyword)}'에 대한 검색 결과가 없습니다.</p>`;
-            return;
-        }
-
-        // 5. 게시판(테이블) 형태로 전체 데이터 동적 생성 (XSS 방어 적용)
-        let boardHTML = `
-            <div style="width:100%; overflow-x:auto; margin-top: 10px;">
-                <table style="width:100%; border-collapse: collapse; font-size:0.95rem; text-align:left;">
-                    <thead>
-                        <tr style="background:var(--primary); color:white; border-bottom:2px solid var(--border);">
-                            <th style="padding:12px; font-weight:800;">선박명 / 주요 정보</th>
-                            <th style="padding:12px; font-weight:800; width:90px; text-align:center;">상세보기</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-        `;
-
-        vesselItems.forEach((item, index) => {
-            const title = escapeHtml(item.name || item.vesselName || `선박 정보 #${index + 1}`);
-            const subInfo = escapeHtml(item.memo || item.schedule || item.info || "클릭하여 상세 내용을 확인하세요.");
-
-            boardHTML += `
-                <tr style="border-bottom:1px solid var(--border); cursor:pointer; transition: background 0.2s;" onclick="openVesselDetailView('${item.id}')" onmouseover="this.style.background='rgba(0,0,0,0.02)'" onmouseout="this.style.background='transparent'">
-                    <td style="padding:12px;">
-                        <div style="font-weight:800; color:var(--text-main);">${title}</div>
-                        <div style="font-size:0.85rem; color:var(--text-sub); margin-top:4px;">${subInfo}</div>
-                    </td>
-                    <td style="padding:12px; text-align:center;">
-                        <button type="button" style="padding:6px 10px; background:var(--primary-light); color:white; border:none; border-radius:6px; font-size:0.8rem; font-weight:700; cursor:pointer;">열기</button>
-                    </td>
-                </tr>
-            `;
-        });
-
-        boardHTML += `
-                    </tbody>
-                </table>
-                <div style="padding:10px 4px; text-align:right; font-size:0.85rem; color:var(--text-sub);">
-                    총 조회된 데이터: <strong>${vesselItems.length}개</strong>
-                </div>
-            </div>
-        `;
-
-        resultContainer.innerHTML = boardHTML;
-
-    } catch (error) {
-        // 6. 런타임 에러 핸들링 및 로깅
-        console.error("[Fatal Error] 선박 정보 전체 조회 실패:", error);
-        if (resultContainer) {
-            resultContainer.innerHTML = "<p style='text-align:center; padding:20px; color:var(--danger);'>데이터를 불러오는 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.</p>";
-        }
-    }
-}
-
-/**
- * XSS 방어를 위한 HTML 특수문자 이스케이프 처리 함수
- */
-function escapeHtml(str) {
-    if (!str) return "";
-    return String(str)
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;")
-        .replace(/'/g, "&#039;");
-}
-
-/**
- * 게시판 항목 클릭 시 상세 내용을 모달/팝업 형태로 안전하게 출력하는 모듈
- * @param {string} docId - Firestore 문서 ID
- */
-async function openVesselDetailView(docId) {
-    try {
-        const db = firebase.firestore();
-        const docSnap = await db.collection("vessels").doc(docId).get();
-
-        if (!docSnap.exists) {
-            alert("해당 선박 정보를 찾을 수 없습니다.");
-            return;
-        }
-
-        const data = docSnap.data();
-        let detailText = "📌 [선박 상세 정보]\n\n";
-        for (const [key, val] of Object.entries(data)) {
-            detailText += `${key}: ${val}\n`;
-        }
-        
-        alert(detailText);
-
-    } catch (error) {
-        console.error("[Error] 상세 정보 로드 실패:", error);
-        alert("상세 내용을 불러오는 데 실패했습니다.");
-    }
-}
-</script>
+  
     <!-- [여기서부터 복사] 조장 근무일 비밀번호 검증 스크립트 -->
 <!-- [추가할 보안 및 실행 스크립트] -->
 <script>
@@ -1408,6 +1259,228 @@ function verifyLeaderAccess(event) {
     }
 })();
 </script>
+</script>
+    <!-- [프로덕션 수준] 선박정보 전체 데이터 게시판형 조회 및 검색 모듈 -->
+<script>
+/**
+ * 선박정보 블록 클릭 시 첨부된 이미지 형태의 통합 게시판 모달을 열고 전체 데이터를 로드하는 함수
+ */
+async function openVesselBoardModal() {
+    try {
+        let modalContainer = document.getElementById("vessel-board-modal");
+        if (!modalContainer) {
+            modalContainer = document.createElement("div");
+            modalContainer.id = "vessel-board-modal";
+            modalContainer.style.cssText = "position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.5); z-index:9999; display:flex; justify-content:center; align-items:center; padding:15px;";
+            document.body.appendChild(modalContainer);
+        }
+
+        modalContainer.innerHTML = `
+            <div style="background:var(--card-bg, #ffffff); width:100%; max-width:800px; max-height:90vh; border-radius:12px; box-shadow:0 4px 20px rgba(0,0,0,0.2); display:flex; flex-direction:column; overflow:hidden; font-family:'Pretendard',sans-serif; color:var(--text-main, #0f172a);">
+                <!-- 상단 헤더 -->
+                <div style="background:var(--primary, #0a1b3f); color:white; padding:15px 20px; display:flex; justify-content:space-between; align-items:center;">
+                    <h3 style="margin:0; font-size:1.1rem; font-weight:900;">🚢 부산항 선박정보 통합 게시판</h3>
+                    <button type="button" onclick="document.getElementById('vessel-board-modal').style.display='none'" style="background:transparent; border:none; color:white; font-size:1.2rem; cursor:pointer; font-weight:bold;">✕</button>
+                </div>
+
+                <!-- 게시판 본문 (이미지 스타일 반영) -->
+                <div style="padding:20px; overflow-y:auto; flex:1;">
+                    <!-- 검색 바 영역 -->
+                    <div style="display:flex; justify-content:flex-end; gap:8px; margin-bottom:15px;">
+                        <select id="vessel-search-type" style="padding:8px; border:1px solid var(--border, #cbd5e1); border-radius:6px; font-size:0.9rem; font-weight:600; background:var(--card-bg, #fff); color:var(--text-main, #0f172a);">
+                            <option value="title">제목/선박명</option>
+                            <option value="author">작성자</option>
+                        </select>
+                        <input type="text" id="vessel-search-input" placeholder="검색어를 입력하세요" style="padding:8px 12px; border:1px solid var(--border, #cbd5e1); border-radius:6px; font-size:0.9rem; width:200px; background:var(--card-bg, #fff); color:var(--text-main, #0f172a);">
+                        <button type="button" onclick="filterVesselBoardData()" style="padding:8px 16px; background:var(--primary-light, #1d366f); color:white; border:none; border-radius:6px; font-weight:bold; cursor:pointer;">검색</button>
+                    </div>
+
+                    <!-- 게시판 테이블 영역 -->
+                    <div style="border-top:2px solid var(--primary, #0a1b3f); border-bottom:1px solid var(--border, #cbd5e1); overflow-x:auto;">
+                        <table style="width:100%; border-collapse:collapse; font-size:0.95rem; text-align:left;">
+                            <thead>
+                                <tr style="border-bottom:1px solid var(--border, #cbd5e1); background:rgba(0,0,0,0.02);">
+                                    <th style="padding:10px; width:40px; text-align:center;"><input type="checkbox" id="vessel-select-all" onclick="toggleSelectAllVessels(this)"></th>
+                                    <th style="padding:10px; font-weight:800;">제목</th>
+                                    <th style="padding:10px; font-weight:800; width:120px;">작성자</th>
+                                    <th style="padding:10px; font-weight:800; width:100px;">날짜</th>
+                                </tr>
+                            </thead>
+                            <tbody id="vessel-board-tbody">
+                                <tr>
+                                    <td colspan="4" style="text-align:center; padding:30px; color:var(--text-sub, #64748b);">데이터를 불러오는 중입니다...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- 하단 액션 버튼 및 페이지네이션 -->
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-top:15px;">
+                        <div>
+                            <button type="button" onclick="alert('선택된 항목 삭제 기능')" style="padding:6px 12px; background:#fff; border:1px solid var(--border, #cbd5e1); border-radius:6px; font-weight:bold; cursor:pointer; color:var(--danger, #ef4444);">삭제</button>
+                        </div>
+                        <div style="display:flex; gap:4px; align-items:center;" id="vessel-pagination">
+                            <button style="padding:4px 8px; border:1px solid var(--border, #cbd5e1); background:#fff; cursor:pointer;">&lt;&lt;</button>
+                            <button style="padding:4px 8px; border:1px solid var(--border, #cbd5e1); background:#fff; cursor:pointer;">&lt;</button>
+                            <span style="padding:4px 10px; font-weight:bold; background:var(--border, #cbd5e1); border-radius:4px;">1</span>
+                            <button style="padding:4px 8px; border:1px solid var(--border, #cbd5e1); background:#fff; cursor:pointer;">&gt;</button>
+                            <button style="padding:4px 8px; border:1px solid var(--border, #cbd5e1); background:#fff; cursor:pointer;">&gt;&gt;</button>
+                        </div>
+                        <div>
+                            <button type="button" onclick="alert('새 글 작성 기능')" style="padding:6px 12px; background:#fff; border:1px solid var(--border, #cbd5e1); border-radius:6px; font-weight:bold; cursor:pointer;">글쓰기</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        modalContainer.style.display = "flex";
+        await fetchAndRenderAllVessels();
+
+    } catch (error) {
+        console.error("[Error] 선박 게시판 모달 오픈 실패:", error);
+        alert("게시판을 여는 중 오류가 발생했습니다.");
+    }
+}
+
+// 전역 캐시 배열
+let globalVesselList = [];
+
+/**
+ * 파이어베이스에서 제한 없이 모든 선박 데이터를 가져와 렌더링하는 함수
+ */
+async function fetchAndRenderAllVessels() {
+    const tbody = document.getElementById("vessel-board-tbody");
+    try {
+        if (typeof firebase === "undefined" || !firebase.firestore) {
+            throw new Error("Firebase가 초기화되지 않았습니다.");
+        }
+
+        const db = firebase.firestore();
+        // ★ 중요: .limit() 제한을 완전히 배제하고 저장된 모든 문서를 조회합니다.
+        const snapshot = await db.collection("vessels").get();
+
+        if (snapshot.empty) {
+            tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; padding:30px; color:var(--text-sub, #64748b);">등록된 선박 데이터가 없습니다.</td></tr>`;
+            globalVesselList = [];
+            return;
+        }
+
+        globalVesselList = [];
+        snapshot.forEach(doc => {
+            const data = doc.data();
+            data.id = doc.id;
+            globalVesselList.push(data);
+        });
+
+        renderVesselTable(globalVesselList);
+
+    } catch (error) {
+        console.error("[Error] 선박 데이터 전체 조회 실패:", error);
+        tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; padding:30px; color:var(--danger, #ef4444);">데이터를 불러오는 중 오류가 발생했습니다.</td></tr>`;
+    }
+}
+
+/**
+ * 테이블에 데이터 목록을 그리는 함수
+ */
+function renderVesselTable(items) {
+    const tbody = document.getElementById("vessel-board-tbody");
+    if (!tbody) return;
+
+    if (items.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; padding:30px; color:var(--text-sub, #64748b);">검색 결과가 없습니다.</td></tr>`;
+        return;
+    }
+
+    let html = "";
+    items.forEach((item, index) => {
+        const title = escapeHtml(item.name || item.vesselName || item.title || `선박 정보 #${index + 1}`);
+        const author = escapeHtml(item.author || item.writer || "관리자");
+        const dateStr = item.date || "16:42";
+
+        html += `
+            <tr style="border-bottom:1px solid var(--border, #cbd5e1); transition:background 0.2s;" onmouseover="this.style.background='rgba(0,0,0,0.02)'" onmouseout="this.style.background='transparent'">
+                <td style="padding:10px; text-align:center;"><input type="checkbox" class="vessel-row-chk" value="${item.id}"></td>
+                <td style="padding:10px; cursor:pointer; font-weight:600;" onclick="viewVesselDetail('${item.id}')">${title}</td>
+                <td style="padding:10px; color:var(--text-sub, #64748b);">${author}</td>
+                <td style="padding:10px; color:var(--text-sub, #64748b);">${dateStr}</td>
+            </tr>
+        `;
+    });
+
+    tbody.innerHTML = html;
+}
+
+/**
+ * 검색 실행 함수 (전체 데이터 대상 필터링)
+ */
+function filterVesselBoardData() {
+    const searchType = document.getElementById("vessel-search-type").value;
+    const keyword = document.getElementById("vessel-search-input").value.trim().toLowerCase();
+
+    if (keyword === "") {
+        renderVesselTable(globalVesselList);
+        return;
+    }
+
+    const filtered = globalVesselList.filter(item => {
+        if (searchType === "title") {
+            const val = (item.name || item.vesselName || item.title || "").toLowerCase();
+            return val.includes(keyword);
+        } else if (searchType === "author") {
+            const val = (item.author || item.writer || "").toLowerCase();
+            return val.includes(keyword);
+        }
+        return false;
+    });
+
+    renderVesselTable(filtered);
+}
+
+/**
+ * 상세 내용 확인 모달
+ */
+async function viewVesselDetail(docId) {
+    try {
+        const db = firebase.firestore();
+        const docSnap = await db.collection("vessels").doc(docId).get();
+        if (!docSnap.exists) {
+            alert("데이터를 찾을 수 없습니다.");
+            return;
+        }
+        const data = docSnap.data();
+        let content = "📌 [선박 상세 정보]\n\n";
+        for (const [k, v] of Object.entries(data)) {
+            content += `${k}: ${v}\n`;
+        }
+        alert(content);
+    } catch (e) {
+        console.error("상세 조회 오류:", e);
+        alert("상세 정보를 불러오지 못했습니다.");
+    }
+}
+
+/**
+ * 전체 선택 체크박스 제어
+ */
+function toggleSelectAllVessels(source) {
+    const checkboxes = document.querySelectorAll('.vessel-row-chk');
+    checkboxes.forEach(chk => chk.checked = source.checked);
+}
+
+/**
+ * XSS 방어용 이스케이프 함수
+ */
+function escapeHtml(str) {
+    if (!str) return "";
+    return String(str)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, '&#039;');
+}
 </script>
 </body>
 </html>
