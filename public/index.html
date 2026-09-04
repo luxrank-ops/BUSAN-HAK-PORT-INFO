@@ -1219,178 +1219,117 @@ function verifyLeaderAccess(event) {
     }
 }
 </script>
-   <!-- [프로덕션 보안 인증 모듈 - 알림창 없는 즉시 진입 버전] -->
-
-</script>
-    <!-- [프로덕션 수준] 선박정보 전체 데이터 게시판형 조회 및 검색 모듈 -->
+  <!-- [프로덕션 수준] 선박정보 전체 데이터 조회 및 검색 기능 구현 모듈 -->
 <script>
-    /**
- * 선박 정보를 개수 제한 없이 전부 가져와서 화면에 카드/블록 형태로 모두 출력하는 함수
+/**
+ * 파이어베이스 'vessels' 컬렉션에서 제한 없이 모든 데이터를 가져와 
+ * 게시판 형태로 렌더링하고 실시간 검색 기능을 수행하는 함수
+ * @param {string} searchKeyword - 검색어 (선택 사항)
  */
-async function loadAllVessels() {
-    try {
-        const container = document.getElementById("vessel-container"); // 선박 목록이 들어가는 HTML 상자 ID (원본 코드에 맞게 확인)
-        if (!container) return;
+async function loadAndSearchAllVessels(searchKeyword = "") {
+    const containerId = "vessel-result-container"; // 결과를 출력할 HTML 컨테이너 ID
+    const resultContainer = document.getElementById(containerId);
 
-        container.innerHTML = "<p style='text-align:center; padding:10px;'>전체 선박 목록을 불러오는 중...</p>";
+    try {
+        // 1. DOM 예외 처리 (Fail-Safe)
+        if (!resultContainer) {
+            console.error(`[Error] '${containerId}' 요소를 페이지에서 찾을 수 없습니다.`);
+            return;
+        }
+
+        resultContainer.innerHTML = "<p style='text-align:center; padding:20px; color:var(--text-sub);'>전체 선박 데이터를 불러오는 중입니다...</p>";
+
+        // 2. Firebase Firestore 인스턴스 검증 (8버전 네임스페이스 기준)
+        if (typeof firebase === "undefined" || !firebase.firestore) {
+            throw new Error("Firebase Firestore가 초기화되지 않았습니다.");
+        }
 
         const db = firebase.firestore();
         
-        // ★ 핵심: .limit(5)를 완전히 제거하고 전체 문서(.get())를 가져옵니다.
-        const snapshot = await db.collection("vessels").get();
+        // ★ 중요: .limit() 등의 개수 제한 코드를 완전히 배제하고 전체 문서 조회(.get()) 수행
+        const querySnapshot = await db.collection("vessels").get();
 
-        if (snapshot.empty) {
-            container.innerHTML = "<p style='text-align:center; padding:10px;'>등록된 선박이 없습니다.</p>";
+        if (querySnapshot.empty) {
+            resultContainer.innerHTML = "<p style='text-align:center; padding:20px; color:var(--text-sub);'>등록된 선박 데이터가 없습니다.</p>";
             return;
         }
 
-        let htmlContent = "";
-        snapshot.forEach(doc => {
-            const data = doc.data();
-            const vesselName = data.name || data.vesselName || "선박명 없음";
-            
-            // 기존 화면에 출력되던 카드/버튼 디자인 형태를 유지하면서 전체 반복 생성
-            htmlContent += `
-                <div class="vessel-card" style="background:var(--card-bg); border:1px solid var(--border); border-radius:10px; padding:15px; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center; cursor:pointer;" onclick="openVesselDetail('${doc.id}')">
-                    <span style="font-weight:800; color:var(--text-main);">🚢 ${vesselName}</span>
-                    <span>▼</span>
-                </div>
+        let vesselList = [];
+        querySnapshot.forEach(doc => {
+            let data = doc.data();
+            data.id = doc.id; // 문서 고유 ID 매핑
+            vesselList.push(data);
+        });
+
+        // 3. 검색어 필터링 처리 (대소문자 무시, 공백 정제)
+        const keyword = searchKeyword ? searchKeyword.trim().toLowerCase() : "";
+        if (keyword !== "") {
+            vesselList = vesselList.filter(item => {
+                const vesselName = (item.name || item.vesselName || "").toLowerCase();
+                const vesselCode = (item.code || item.number || "").toLowerCase();
+                const vesselMemo = (item.memo || item.info || "").toLowerCase();
+                return vesselName.includes(keyword) || vesselCode.includes(keyword) || vesselMemo.includes(keyword);
+            });
+        }
+
+        // 4. 검색 결과가 없을 경우 예외 처리
+        if (vesselList.length === 0) {
+            resultContainer.innerHTML = `<p style='text-align:center; padding:20px; color:var(--text-sub);'>'${escapeHtml(searchKeyword)}'에 대한 검색 결과가 없습니다.</p>`;
+            return;
+        }
+
+        // 5. 게시판(테이블) 형태로 전체 데이터 동적 생성 (XSS 방어 적용)
+        let boardHTML = `
+            <div style="width:100%; overflow-x:auto; margin-top: 10px;">
+                <table style="width:100%; border-collapse: collapse; font-size:0.95rem; text-align:left;">
+                    <thead>
+                        <tr style="background:var(--primary); color:white; border-bottom:2px solid var(--border);">
+                            <th style="padding:12px; font-weight:800;">선박명 / 주요 정보</th>
+                            <th style="padding:12px; font-weight:800; width:90px; text-align:center;">상세보기</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+        `;
+
+        vesselList.forEach((item, index) => {
+            const title = escapeHtml(item.name || item.vesselName || `선박 정보 #${index + 1}`);
+            const subInfo = escapeHtml(item.memo || item.schedule || item.info || "클릭하여 상세 내용을 확인하세요.");
+
+            boardHTML += `
+                <tr style="border-bottom:1px solid var(--border); cursor:pointer; transition: background 0.2s;" onclick="openVesselDetailView('${item.id}')" onmouseover="this.style.background='rgba(0,0,0,0.02)'" onmouseout="this.style.background='transparent'">
+                    <td style="padding:12px;">
+                        <div style="font-weight:800; color:var(--text-main);">${title}</div>
+                        <div style="font-size:0.85rem; color:var(--text-sub); margin-top:4px;">${subInfo}</div>
+                    </td>
+                    <td style="padding:12px; text-align:center;">
+                        <button type="button" style="padding:6px 10px; background:var(--primary-light); color:white; border:none; border-radius:6px; font-size:0.8rem; font-weight:700; cursor:pointer;">열기</button>
+                    </td>
+                </tr>
             `;
         });
 
-        container.innerHTML = htmlContent;
-
-    } catch (error) {
-        console.error("선박 목록 전체 로드 실패:", error);
-    }
-}
-
-// 페이지가 열릴 때 위 함수가 실행되도록 연결
-window.addEventListener("DOMContentLoaded", () => {
-    loadAllVessels();
-});
-async function fetchAndRenderAllVessels() {
-    const tbody = document.getElementById("vessel-board-tbody");
-    try {
-        if (typeof firebase === "undefined" || !firebase.firestore) {
-            throw new Error("Firebase가 초기화되지 않았습니다.");
-        }
-
-        const db = firebase.firestore();
-        // ★ 중요: .limit(5) 제한을 완전히 배제하고 저장된 모든 문서를 조회합니다.
-        const snapshot = await db.collection("vessels").get();
-
-        if (snapshot.empty) {
-            tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; padding:30px; color:var(--text-sub, #64748b);">등록된 선박 데이터가 없습니다.</td></tr>`;
-            globalVesselList = [];
-            return;
-        }
-
-        globalVesselList = [];
-        snapshot.forEach(doc => {
-            const data = doc.data();
-            data.id = doc.id;
-            globalVesselList.push(data);
-        });
-
-        renderVesselTable(globalVesselList);
-
-    } catch (error) {
-        console.error("[Error] 선박 데이터 전체 조회 실패:", error);
-        tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; padding:30px; color:var(--danger, #ef4444);">데이터를 불러오는 중 오류가 발생했습니다.</td></tr>`;
-    }
-}
-
-/**
- * 테이블에 데이터 목록을 그리는 함수
- */
-function renderVesselTable(items) {
-    const tbody = document.getElementById("vessel-board-tbody");
-    if (!tbody) return;
-
-    if (items.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; padding:30px; color:var(--text-sub, #64748b);">검색 결과가 없습니다.</td></tr>`;
-        return;
-    }
-
-    let html = "";
-    items.forEach((item, index) => {
-        const title = escapeHtml(item.name || item.vesselName || item.title || `선박 정보 #${index + 1}`);
-        const author = escapeHtml(item.author || item.writer || "관리자");
-        const dateStr = item.date || "16:42";
-
-        html += `
-            <tr style="border-bottom:1px solid var(--border, #cbd5e1); transition:background 0.2s;" onmouseover="this.style.background='rgba(0,0,0,0.02)'" onmouseout="this.style.background='transparent'">
-                <td style="padding:10px; text-align:center;"><input type="checkbox" class="vessel-row-chk" value="${item.id}"></td>
-                <td style="padding:10px; cursor:pointer; font-weight:600;" onclick="viewVesselDetail('${item.id}')">${title}</td>
-                <td style="padding:10px; color:var(--text-sub, #64748b);">${author}</td>
-                <td style="padding:10px; color:var(--text-sub, #64748b);">${dateStr}</td>
-            </tr>
+        boardHTML += `
+                    </tbody>
+                </table>
+                <div style="padding:10px 4px; text-align:right; font-size:0.85rem; color:var(--text-sub);">
+                    총 조회된 데이터: <strong>${vesselList.length}개</strong>
+                </div>
+            </div>
         `;
-    });
 
-    tbody.innerHTML = html;
-}
+        resultContainer.innerHTML = boardHTML;
 
-/**
- * 검색 실행 함수 (전체 데이터 대상 필터링)
- */
-function filterVesselBoardData() {
-    const searchType = document.getElementById("vessel-search-type").value;
-    const keyword = document.getElementById("vessel-search-input").value.trim().toLowerCase();
-
-    if (keyword === "") {
-        renderVesselTable(globalVesselList);
-        return;
-    }
-
-    const filtered = globalVesselList.filter(item => {
-        if (searchType === "title") {
-            const val = (item.name || item.vesselName || item.title || "").toLowerCase();
-            return val.includes(keyword);
-        } else if (searchType === "author") {
-            const val = (item.author || item.writer || "").toLowerCase();
-            return val.includes(keyword);
+    } catch (error) {
+        // 6. 런타임 에러 핸들링 (Fail-Safe)
+        console.error("[Fatal Error] 선박 정보 전체 조회 실패:", error);
+        if (resultContainer) {
+            resultContainer.innerHTML = "<p style='text-align:center; padding:20px; color:var(--danger);'>데이터를 불러오는 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.</p>";
         }
-        return false;
-    });
-
-    renderVesselTable(filtered);
-}
-
-/**
- * 상세 내용 확인 모달
- */
-async function viewVesselDetail(docId) {
-    try {
-        const db = firebase.firestore();
-        const docSnap = await db.collection("vessels").doc(docId).get();
-        if (!docSnap.exists) {
-            alert("데이터를 찾을 수 없습니다.");
-            return;
-        }
-        const data = docSnap.data();
-        let content = "📌 [선박 상세 정보]\n\n";
-        for (const [k, v] of Object.entries(data)) {
-            content += `${k}: ${v}\n`;
-        }
-        alert(content);
-    } catch (e) {
-        console.error("상세 조회 오류:", e);
-        alert("상세 정보를 불러오지 못했습니다.");
     }
 }
 
 /**
- * 전체 선택 체크박스 제어
- */
-function toggleSelectAllVessels(source) {
-    const checkboxes = document.querySelectorAll('.vessel-row-chk');
-    checkboxes.forEach(chk => chk.checked = source.checked);
-}
-
-/**
- * XSS 방어용 이스케이프 함수
+ * XSS 방어를 위한 HTML 특수문자 이스케이프 처리 함수
  */
 function escapeHtml(str) {
     if (!str) return "";
@@ -1401,6 +1340,40 @@ function escapeHtml(str) {
         .replace(/"/g, "&quot;")
         .replace(/'/g, '&#039;');
 }
+
+/**
+ * 게시판 항목 클릭 시 상세 내용을 모달/팝업 형태로 안전하게 출력하는 모듈
+ * @param {string} docId - Firestore 문서 ID
+ */
+async function openVesselDetailView(docId) {
+    try {
+        const db = firebase.firestore();
+        const docSnap = await db.collection("vessels").doc(docId).get();
+
+        if (!docSnap.exists) {
+            alert("해당 선박 정보를 찾을 수 없습니다.");
+            return;
+        }
+
+        const data = docSnap.data();
+        let detailText = "📌 [선박 상세 정보]\n\n";
+        for (const [key, val] of Object.entries(data)) {
+            detailText += `${key}: ${val}\n`;
+        }
+        
+        alert(detailText);
+
+    } catch (error) {
+        console.error("[Error] 상세 정보 로드 실패:", error);
+        alert("상세 내용을 불러오는 데 실패했습니다.");
+    }
+}
+
+// 페이지 로드 시 선박정보 전체 목록 자동 호출 연동
+window.addEventListener("DOMContentLoaded", () => {
+    // 만약 검색 입력창이 존재한다면 엔터 키 또는 검색 버튼 이벤트와 연동 가능
+    loadAndSearchAllVessels("");
+});
 </script>
 </body>
 </html>
