@@ -242,33 +242,53 @@
     </div>
 </div>
 
-<div class="container">
+<!-- [상세 앱 사용 설명서 카드] -->
+<div class="card" style="margin-bottom: 20px; border: 1px solid var(--border); border-radius: 12px; background: var(--card-bg); overflow: hidden;">
+    <div class="section-header" style="background: var(--primary); color: white; padding: 15px; font-weight: 900; display: flex; justify-content: space-between; align-items: center;">
+        <span>📖 부산항 스마트 작업 가이드 & 이용 지침</span>
+    </div>
     
-    <div id="main-manual-card" class="dash-card" style="margin-bottom: 12px; border: none; box-shadow: none; background: transparent;">
-        <div class="dash-header tap-effect" onclick="toggleDashItem('main-manual-card')" style="background: var(--primary); color: white; padding: 15px; border-radius: 8px; display: flex; align-items: center; justify-content: space-between;">
-            <div style="display: flex; align-items: center; gap: 8px;">
-                <span style="font-size: 1.2rem;">🔅</span>
-                <span class="dash-title" style="font-size: 1.15rem; font-weight: 900;">앱 사용 설명서 (v2026)</span>
-            </div>
-            <span class="toggle-icon" style="color:white; font-weight:bold;">▼</span>
-        </div>
-        <div class="dash-content" style="padding: 20px; font-size: 1rem; line-height: 1.8; font-weight: 500; background: white; border-radius: 8px; border: 1px solid var(--border); margin-top: 5px;">
-            <p style="margin-bottom: 20px; font-size: 1.1rem; background: #f8fafc; padding: 15px; border-radius: 10px; border-left: 5px solid var(--primary);">
-                <b>본 플랫폼은 대한민국 최대의 항만 시설인 부산항(신항/북항) 현장 근로자분들의 작업 효율성과 안전을 위해 개발되었습니다.</b><br>
-                단순한 임금 계산을 넘어, 실시간 선박 동향 파악과 현장 소통을 통해 더욱 스마트한 항만 생태계를 구축하는 것을 목표로 합니다.
-            </p>
-            <h4 style="color: var(--primary); margin-top: 25px; border-left: 4px solid var(--primary); padding-left: 10px;">📉 1. 정밀 임금 산정 및 세무 관리 시스템</h4>
-            <p>항만 노임 단가는 매년 갱신되며, 주간/야간/휴일 근무에 따른 복잡한 가산율이 적용됩니다. 본 계산기는 2026년 최신 노임 협정 표준을 준수하여 설계되었습니다.</p>
-            <ul style="background: rgba(10, 27, 63, 0.05); padding: 15px 15px 15px 35px; border-radius: 8px;">
-                <li><b>정확한 시간 입력:</b> 24시간제 입력 방식을 통해 자정(00시)을 넘기는 철야 작업도 오차 없이 계산합니다.</li>
-                <li><b>법정 가산 수당:</b> 근로기준법 및 항만 특수 근로 조건을 반영하여 야간 할증(50%), 주말 가산 등을 자동 산출합니다.</li>
-                <li><b>소득세 자동 계산:</b> 프리랜서(3.3%) 또는 4대 보험(9.4%) 공제율을 선택하여 실제 실령액을 미리 예측할 수 있습니다.</li>
+    <div class="collapsible-content" style="padding: 20px; color: var(--text-main); font-size: 0.95rem; line-height: 1.6;">
+        <p style="margin-top: 0; font-weight: 600; color: var(--text-sub);">
+            본 플랫폼은 부산항 신항·북항 현장 근로자 및 조장님들의 원활한 작업 관리와 정확한 급여 정산을 위해 제작된 스마트 현장 보조 도구입니다. 아래 항목별 상세 이용 방법을 숙지하여 주시기 바랍니다.
+        </p>
+
+        <hr style="border: none; border-top: 1px solid var(--border); margin: 15px 0;">
+
+        <div style="margin-bottom: 20px;">
+            <h3 style="color: var(--primary); font-size: 1.1rem; margin-bottom: 8px; font-weight: 800;">
+                🧮 1. 스마트 임금계산기 상세 이용 방법
+            </h3>
+            <ul style="padding-left: 20px; margin: 0;">
+                <li><strong>기본급 및 시급 설정:</strong> 본인의 근로 형태에 맞는 기본 단가를 확인하고 입력 칸에 정확한 수치를 기입합니다.</li>
+                <li><strong>근무 시간 입력:</strong> 출퇴근 시간 및 연장·야간 근로 시간을 입력하여 실시간 수당이 산출되도록 합니다.</li>
+                <li><strong>각종 수당 체크:</strong> 승선 수당, 위험 수당, 하역 작업별 특수 수당 항목을 체크하여 누락 금액을 방지합니다.</li>
+                <li><strong>결과 확인 및 초기화:</strong> '계산하기'로 총 지급액을 확인하고 '초기화'로 다음 계산을 준비합니다.</li>
             </ul>
-            <h4 style="color: var(--primary); margin-top: 25px; border-left: 4px solid var(--primary); padding-left: 10px;">🚢 2. 실시간 선박 물류 정보 및 도선 현황</h4>
-            <p>성공적인 하역 작업을 위해서는 선박의 정확한 ETA(도착 예정 시간) 파악이 필수입니다.</p>
+        </div>
+
+        <div style="margin-bottom: 20px;">
+            <h3 style="color: var(--primary); font-size: 1.1rem; margin-bottom: 8px; font-weight: 800;">
+                📝 2. 근무일지 및 조장 일정 관리 방법
+            </h3>
+            <ul style="padding-left: 20px; margin: 0;">
+                <li><strong>근무일지 작성:</strong> 당일 수행 작업, 투입 터미널(HJNC, BNCT 등), 특이사항을 기록하여 이력을 보존합니다.</li>
+                <li><strong>조장 근무일 조회:</strong> 상단의 '📅 조장 근무일' 버튼을 눌러 보안 비밀번호 인증 후 스케줄을 열람합니다.</li>
+                <li><strong>데이터 동기화:</strong> 파이어베이스(Firebase) DB와 연동되어 모바일과 웹에서 안전하게 관리됩니다.</li>
+            </ul>
+        </div>
+
+        <div>
+            <h3 style="color: var(--primary); font-size: 1.1rem; margin-bottom: 8px; font-weight: 800;">
+                🔒 3. 보안 인증 및 문의 안내
+            </h3>
+            <p style="margin: 0; font-size: 0.9rem; color: var(--text-sub);">
+                • <strong>문의 메일:</strong> luxrank@gmail.com (소속 터미널 및 성함 기입 필수)<br>
+                • <strong>문의 문자:</strong> 010-2846-8906 (소속 터미널 및 성함 기입 필수)
+            </p>
         </div>
     </div>
-
+</div>
     <div class="dash-grid" style="margin-bottom: 12px;">
         <div id="wage-card" class="dash-card" style="border: 2px solid var(--primary); border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.06);">
             <div class="dash-header tap-effect" onclick="toggleDashItem('wage-card')" style="flex-direction: column !important; justify-content: center !important; align-items: center !important; padding: 25px 10px !important; background: #fff !important; min-height: 120px; gap: 12px !important;">
