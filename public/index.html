@@ -23,9 +23,9 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-storage.js"></script>
     <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6024353303588422" crossorigin="anonymous"></script>
 
-    <link rel="icon" href="/favicon.ico">
+    <link rel="icon" href="./favicon.ico">
     <link rel="stylesheet" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.8/dist/web/static/pretendard.css" />
-    <link rel="manifest" href="/manifest.json">
+    <link rel="manifest" href="./manifest.json">
     <style>
         img { max-width: 100%; height: auto; object-fit: cover; background: #eee; }
         img:not([src]) { visibility: hidden; }
@@ -254,7 +254,7 @@
         
         .mini-btn-old { padding: 8px 12px; font-size: clamp(0.8rem, 2.5vw, 0.9rem); font-weight: 800; border-radius: 6px; border: none; cursor: pointer; color: white; margin-left: 4px; touch-action: manipulation; }
     </style>
-    <link rel="apple-touch-icon" href="/icon-192.png">
+    <link rel="apple-touch-icon" href="./icon-192.png">
 </head>
 <body>
 <header>
@@ -1568,7 +1568,7 @@ function openBusSchedule(){ const m=document.getElementById('imageModal'); docum
 
 if ("serviceWorker" in navigator) {
     window.addEventListener("load", () => {
-        navigator.serviceWorker.register("/service-worker.js").catch(error => console.warn("서비스 워커 등록 실패:", error));
+        navigator.serviceWorker.register(new URL("./service-worker.js", window.location.href).href).catch(error => console.warn("서비스 워커 등록 실패:", error));
     });
 }
 
