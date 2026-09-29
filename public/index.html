@@ -427,7 +427,7 @@
             <span class="section-title" style="font-size: 1.1rem; font-weight: 900;">🚢 3항업 (신항 남측) ▼</span>
         </div>
         <div id="t3-content" class="collapsible-content collapsed" style="background: white; border: 1px solid var(--border); border-radius: 8px; margin-top: 4px;">
-            <div class="terminal-ticker"><div class="terminal-ticker-wrap"><div id="t3TickerText" class="terminal-ticker-item">3항업 티커를 불러오는 중...</div></div><button class="terminal-ticker-admin" type="button" title="3항업 티커 관리" onclick="openT3TickerManager()">관리</button></div>
+            <div class="terminal-ticker"><div class="terminal-ticker-wrap"><div id="t3TickerText" class="terminal-ticker-item">3항업 티커를 불러오는 중...</div></div><button class="terminal-ticker-admin" type="button" title="3항업 티커 관리" onclick="openSectionTickerManager('t3')">관리</button></div>
             <div class="terminal-block">
                 <div class="terminal-header tap-effect" onclick="toggleContent('term-hjnc')">한진신항만 (HJNC) ▼</div>
                 <div id="term-hjnc" class="terminal-body">
@@ -460,6 +460,7 @@
             <span class="section-title" style="font-size: 1.1rem; font-weight: 900;">🏗️ 2항업 (신항 북측) ▼</span>
         </div>
         <div id="t2-content" class="collapsible-content collapsed" style="background: white; border: 1px solid var(--border); border-radius: 8px; margin-top: 4px;">
+            <div class="terminal-ticker"><div class="terminal-ticker-wrap"><div id="t2TickerText" class="terminal-ticker-item">2항업 티커를 불러오는 중...</div></div><button class="terminal-ticker-admin" type="button" title="2항업 티커 관리" onclick="openSectionTickerManager('t2')">관리</button></div>
             <div class="terminal-block"><div class="terminal-header tap-effect" onclick="toggleContent('term-pnc')">부산신항만 (PNC) ▼</div><div id="term-pnc" class="terminal-body"><div class="terminal-actions"><a href="https://svc.pncport.com/info/CMS/Ship/Info.pnc?mCode=MN014" target="_blank" class="terminal-btn">스케줄</a><a href="https://svc.pncport.com/info/CMS/Ship/ShipBerthC.pnc?mCode=MN019" target="_blank" class="terminal-btn">차트</a><a href="https://svc.pncport.com/info/CMS/Ship/ShipVslStatus.pnc?mCode=MN020" target="_blank" class="terminal-btn">현황</a></div><button class="action-btn" style="background:#f39c12; margin-top:8px; padding:10px;" onclick="openBusSchedule()">🚌 셔틀버스 시간표</button></div></div>
             <div class="terminal-block"><div class="terminal-header tap-effect" onclick="toggleContent('term-hpnt')">HMM (HPNT) ▼</div><div id="term-hpnt" class="terminal-body"><div class="terminal-actions"><a href="https://www.hpnt.co.kr/infoservice/vessel/vslScheduleList.jsp" target="_blank" class="terminal-btn">스케줄</a><a href="https://www.hpnt.co.kr/infoservice/vessel/vslScheduleChart.jsp" target="_blank" class="terminal-btn">차트</a><a href="https://www.hpnt.co.kr/infoservice/vessel/vslWorkStatus.jsp" target="_blank" class="terminal-btn">현황</a></div></div></div>
             <div class="terminal-block"><div class="terminal-header tap-effect" onclick="toggleContent('term-pnit')">신항국제 (PNIT) ▼</div><div id="term-pnit" class="terminal-body"><div class="terminal-actions"><a href="https://www.pnitl.com/infoservice/vessel/vslScheduleList.jsp" target="_blank" class="terminal-btn">스케줄</a><a href="https://www.pnitl.com/infoservice/vessel/vslScheduleChart.jsp" target="_blank" class="terminal-btn">차트</a><a href="https://www.pnitl.com/infoservice/vessel/vslWorkStatus.jsp" target="_blank" class="terminal-btn">현황</a></div></div></div>
@@ -471,6 +472,7 @@
             <span class="section-title" style="font-size: 1.1rem; font-weight: 900;">⚓ 1항업 (북항) ▼</span>
         </div>
         <div id="t1-content" class="collapsible-content collapsed" style="background: white; border: 1px solid var(--border); border-radius: 8px; margin-top: 4px;">
+            <div class="terminal-ticker"><div class="terminal-ticker-wrap"><div id="t1TickerText" class="terminal-ticker-item">1항업 티커를 불러오는 중...</div></div><button class="terminal-ticker-admin" type="button" title="1항업 티커 관리" onclick="openSectionTickerManager('t1')">관리</button></div>
             <div class="terminal-block"><div class="terminal-header tap-effect" onclick="toggleContent('term-bptc')">북항 통합 (BPTC) ▼</div><div id="term-bptc" class="terminal-body"><div class="terminal-actions"><a href="http://info.bptc.co.kr:9084/content/sw/frame/berth_status_text_frame_sw_kr.jsp?p_id=BETX_SH_KR&snb_num=2&snb_div=service" target="_blank" class="terminal-btn">스케줄</a><a href="http://info.bptc.co.kr:9084/content/sw/frame/berth_status_text_frame_sw_kr.jsp?p_id=BETX_SH_KR&snb_num=2&snb_div=service" target="_blank" class="terminal-btn">차트</a><a href="http://info.bptc.co.kr:9084/content/index.jsp#03" target="_blank" class="terminal-btn">현황</a></div></div></div>
             <div class="terminal-block"><div class="terminal-header tap-effect" onclick="toggleContent('term-hbct')">허치슨 (HBCT/자성대) ▼</div><div id="term-hbct" class="terminal-body"><div class="terminal-actions"><a href="https://custom.hktl.com/jsp/T01/sunsuk.jsp" target="_blank" class="terminal-btn">스케줄</a><a href="https://custom.hktl.com/jsp/T01/sunsuk.jsp" target="_blank" class="terminal-btn">차트</a><a href="https://custom.hktl.com/jsp/T03/bonsun.jsp" target="_blank" class="terminal-btn">현황</a></div></div></div>
         </div>
@@ -1052,45 +1054,49 @@ function renderTickerList() { const listContainer = document.getElementById('tic
 function openAllBayPlan() {
     window.open("http://112.163.71.98:8080/webits/bayplan", "_blank"); 
 }
-function loadT3Ticker() {
-    db.collection("settings").doc("t3_ticker").onSnapshot(snapshot => {
-        const ticker = document.getElementById("t3TickerText");
+const terminalTickerLabels = { t1: "1항업", t2: "2항업", t3: "3항업" };
+function loadSectionTicker(sectionId) {
+    const tickerId = `${sectionId}TickerText`;
+    db.collection("settings").doc(`${sectionId}_ticker`).onSnapshot(snapshot => {
+        const ticker = document.getElementById(tickerId);
         if (!ticker) return;
         const message = snapshot.exists ? String(snapshot.data().message || "").trim() : "";
-        ticker.innerText = message ? `📢 ${message}` : "3항업 공지사항이 없습니다.";
+        ticker.innerText = message ? `📢 ${message}` : `${terminalTickerLabels[sectionId]} 공지사항이 없습니다.`;
     }, error => {
-        const ticker = document.getElementById("t3TickerText");
-        if (ticker) ticker.innerText = "3항업 티커를 불러오지 못했습니다.";
-        console.error("3항업 티커 로드 오류:", error);
+        const ticker = document.getElementById(tickerId);
+        if (ticker) ticker.innerText = `${terminalTickerLabels[sectionId]} 티커를 불러오지 못했습니다.`;
+        console.error(`${terminalTickerLabels[sectionId]} 티커 로드 오류:`, error);
     });
 }
-async function openT3TickerManager() {
+async function openSectionTickerManager(sectionId) {
     if (!(await verifyAdmin())) return;
-    const tickerRef = db.collection("settings").doc("t3_ticker");
+    const sectionLabel = terminalTickerLabels[sectionId];
+    if (!sectionLabel) return;
+    const tickerRef = db.collection("settings").doc(`${sectionId}_ticker`);
     try {
         const snapshot = await tickerRef.get();
         const currentMessage = snapshot.exists ? String(snapshot.data().message || "").trim() : "";
         if (!currentMessage) {
-            const message = prompt("3항업 티커에 등록할 문구를 입력하세요:");
+            const message = prompt(`${sectionLabel} 티커에 등록할 문구를 입력하세요:`);
             if (message === null) return;
             if (!message.trim()) return alert("티커 문구를 입력해주세요.");
             await tickerRef.set({ message: message.trim(), updatedAt: firebase.firestore.FieldValue.serverTimestamp() });
-            showToast("3항업 티커가 등록되었습니다.");
+            showToast(`${sectionLabel} 티커가 등록되었습니다.`);
             return;
         }
-        const action = prompt(`현재 티커 문구:\n${currentMessage}\n\n1. 수정\n2. 삭제\n취소하려면 취소를 누르세요.`, "1");
+        const action = prompt(`[${sectionLabel}] 현재 티커 문구:\n${currentMessage}\n\n1. 수정\n2. 삭제\n취소하려면 취소를 누르세요.`, "1");
         if (action === "1") {
             const message = prompt("수정할 티커 문구를 입력하세요:", currentMessage);
             if (message === null) return;
             if (!message.trim()) return alert("티커 문구를 입력해주세요.");
             await tickerRef.set({ message: message.trim(), updatedAt: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true });
-            showToast("3항업 티커가 수정되었습니다.");
-        } else if (action === "2" && confirm("3항업 티커를 삭제할까요?")) {
+            showToast(`${sectionLabel} 티커가 수정되었습니다.`);
+        } else if (action === "2" && confirm(`${sectionLabel} 티커를 삭제할까요?`)) {
             await tickerRef.delete();
-            showToast("3항업 티커가 삭제되었습니다.");
+            showToast(`${sectionLabel} 티커가 삭제되었습니다.`);
         }
     } catch (error) {
-        alert("3항업 티커 관리 실패: " + error.message);
+        alert(`${sectionLabel} 티커 관리 실패: ` + error.message);
     }
 }
 let currentMealTerminalId = "hjnc";
@@ -1517,7 +1523,7 @@ function openBusSchedule(){ const m=document.getElementById('imageModal'); docum
 window.onload = () => { 
     applyOfficialTerminalNames();
     appendTerminalMealBlocks();
-    loadT3Ticker();
+    ["t1", "t2", "t3"].forEach(loadSectionTicker);
     trackVisitorSession();
     try { const now = new Date(); now.setMinutes(now.getMinutes() - now.getTimezoneOffset()); const todayStr = now.toISOString().split('T')[0]; const sDate = document.getElementById('wageStartDate'); const eDate = document.getElementById('wageEndDate'); if(sDate) sDate.value = todayStr; if(eDate) eDate.value = todayStr; } catch(e) { console.error("날짜 초기화 오류", e); } 
     loadBanner(); 
