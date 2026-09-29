@@ -1048,25 +1048,25 @@ function openAllBayPlan() {
 }
 let currentMealTerminalId = "hjnc";
 const terminalMealTargets = [
-    { id: "bnct", label: "부산신항컨테이너터미널(Busan New Container Terminal) 식단" },
-    { id: "dgt", label: "동원글로벌터미널부산(Dongwon Global Terminal Busan) 식단" },
-    { id: "bct", label: "부산컨테이너터미널(Busan Container Terminal) 식단" },
-    { id: "pnc", label: "부산신항만(Pusan Newport Company) 식단" },
-    { id: "hpnt", label: "HMM PSA 신항만(HMM PSA New-Port Terminal) 식단" },
-    { id: "pnit", label: "부산신항국제터미널(Pusan Newport International Terminal) 식단" },
-    { id: "bptc", label: "신선대감만터미널(Busan Port Terminal Corp.) 식단" },
-    { id: "hbct", label: "허치슨포트부산(Hutchison Ports Busan) 식단" }
+    { id: "bnct", label: "부산신항컨테이너터미널(BNCT) 식단" },
+    { id: "dgt", label: "동원글로벌터미널부산(DGT) 식단" },
+    { id: "bct", label: "부산컨테이너터미널(BCT) 식단" },
+    { id: "pnc", label: "부산신항만(PNC) 식단" },
+    { id: "hpnt", label: "HMM PSA 신항만(HPNT) 식단" },
+    { id: "pnit", label: "부산신항국제터미널(PNIT) 식단" },
+    { id: "bptc", label: "신선대감만터미널(BPTC) 식단" },
+    { id: "hbct", label: "허치슨포트부산(HBCT) 식단" }
 ];
 const officialTerminalNames = {
-    hjnc: "한진부산컨테이너터미널(HANJIN BUSAN NEWPORT)",
-    bnct: "부산신항컨테이너터미널(Busan New Container Terminal)",
-    dgt: "동원글로벌터미널부산(Dongwon Global Terminal Busan)",
-    bct: "부산컨테이너터미널(Busan Container Terminal)",
-    pnc: "부산신항만(Pusan Newport Company)",
-    hpnt: "HMM PSA 신항만(HMM PSA New-Port Terminal)",
-    pnit: "부산신항국제터미널(Pusan Newport International Terminal)",
-    bptc: "신선대감만터미널(Busan Port Terminal Corp.)",
-    hbct: "허치슨포트부산(Hutchison Ports Busan)"
+    hjnc: "한진부산컨테이너터미널(HJNC)",
+    bnct: "부산신항컨테이너터미널(BNCT)",
+    dgt: "동원글로벌터미널부산(DGT)",
+    bct: "부산컨테이너터미널(BCT)",
+    pnc: "부산신항만(PNC)",
+    hpnt: "HMM PSA 신항만(HPNT)",
+    pnit: "부산신항국제터미널(PNIT)",
+    bptc: "신선대감만터미널(BPTC)",
+    hbct: "허치슨포트부산(HBCT)"
 };
 function applyOfficialTerminalNames() {
     Object.entries(officialTerminalNames).forEach(([id, name]) => {
