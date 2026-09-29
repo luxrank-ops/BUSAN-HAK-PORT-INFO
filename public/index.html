@@ -557,7 +557,7 @@
                     <thead><tr><th style="width:10%">No.</th><th style="width:55%">선박명</th><th style="width:35%">등록일</th></tr></thead>
                     <tbody id="shipList"></tbody>
                 </table>
-                <div id="shipPagination" style="display:flex; justify-content:center; gap:5px; margin-top:10px; margin-bottom:15px;"></div>
+                <div id="shipPagination" style="display:flex; justify-content:flex-start; gap:5px; margin-top:10px; margin-bottom:15px; overflow-x:auto; overflow-y:hidden; white-space:nowrap; -webkit-overflow-scrolling:touch; overscroll-behavior-x:contain;"></div>
             </div>
         </div>
 
@@ -1164,6 +1164,7 @@ renderShipPage = function(p) {
     const pagination = document.getElementById("shipPagination");
     list.innerHTML = "";
     pagination.innerHTML = "";
+    if (p === 1) pagination.scrollLeft = 0;
     const pageData = filteredShips.slice((p - 1) * postsPerPage, p * postsPerPage);
     if (pageData.length === 0) {
         list.innerHTML = "<tr><td colspan='3' style='text-align:center; padding:20px; color:var(--text-sub); font-weight:700;'>등록된 선박정보가 없습니다.</td></tr>";
@@ -1184,7 +1185,7 @@ renderShipPage = function(p) {
     });
     const totalPages = Math.ceil(filteredShips.length / postsPerPage);
     for (let page = 1; page <= totalPages; page++) {
-        pagination.innerHTML += `<span class="page-num ${page === p ? 'active' : ''}" onclick="renderShipPage(${page})" style="cursor:pointer; padding:5px 12px; margin:2px; background:#e5e7eb; border-radius:8px; font-weight:800; font-size:0.9rem;">${page}</span>`;
+        pagination.innerHTML += `<span class="page-num ${page === p ? 'active' : ''}" onclick="renderShipPage(${page})" style="flex:0 0 auto; cursor:pointer; padding:5px 12px; margin:2px; background:#e5e7eb; border-radius:8px; font-weight:800; font-size:0.9rem;">${page}</span>`;
     }
 };
 function toggleBoardRow(id) { const el = document.getElementById(id); if(el.classList.contains('show')) el.classList.remove('show'); else el.classList.add('show'); } 
