@@ -226,7 +226,7 @@
 </head>
 <body>
 <header>
-    <h1>BUSAN HAK PORT</h1>
+    <h1 role="button" tabindex="0" onclick="openVisitorStats()" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openVisitorStats();}" style="cursor:pointer;" title="관리자 방문 통계">BUSAN HAK PORT</h1>
     <button class="theme-toggle tap-effect" onclick="toggleDarkMode()">🌙</button>
 </header>
 
@@ -866,6 +866,7 @@
                         <ul style="padding-left: 20px; margin: 0;">
                             <li style="margin-bottom: 6px;"><b>근무일지 데이터:</b> 작성하신 닉네임, 날짜, 선박명, 임금 내역, 메모, 현장 사진을 수집합니다. 이는 오직 <b>'사용자 본인의 한 달 월급 정산 및 근무 이력 확인'</b>을 위해서만 사용됩니다.</li>
                             <li style="margin-bottom: 6px;"><b>게시판 활동:</b> 게시판에 자발적으로 입력한 글, 비밀번호, 닉네임이 수집되며, 현장 작업자 간의 정보 공유 목적으로 쓰입니다.</li>
+                            <li style="margin-bottom: 6px;"><b>방문 통계:</b> 브라우저 탭 세션별 방문 횟수를 익명 집계하며, 새로고침으로 인한 중복 집계는 제외합니다.</li>
                             <li><span style="color:var(--danger); font-weight:bold;">※ 임금계산기 데이터:</span> 단순 계산 목적으로 쓰이며, 별도의 서버로 전송되거나 수집되지 않습니다.</li>
                         </ul>
                     </div>
@@ -948,6 +949,7 @@
 <div id="privacyModal" class="modal-overlay" onclick="document.getElementById('privacyModal').style.display='none'"><div class="modal-content"><h3 style="font-weight:900;">🛡️ 개인정보처리방침</h3><p style="font-weight:600;">본 사이트는 구글 애드센스 광고를 게재하며 쿠키를 사용합니다.</p><button class="action-btn" onclick="document.getElementById('privacyModal').style.display='none'">닫기</button></div></div>
 <div id="tickerManageModal" class="modal-overlay" onclick="document.getElementById('tickerManageModal').style.display='none'"><div class="modal-content" onclick="event.stopPropagation()"><h3 style="margin-top:0; font-weight:900;">⚙️ 알림글 삭제</h3><div id="tickerListContainer"></div><button class="action-btn bg-cancel" onclick="document.getElementById('tickerManageModal').style.display='none'" style="margin-top:10px;">닫기</button></div></div>
 <div id="loginModal" class="modal-overlay" style="display:none;" onclick="closeLoginModal()"><div class="modal-content" onclick="event.stopPropagation()"><h3 style="font-weight:900;">🔐 근무일지 로그인/가입</h3><p style="font-weight:600;">닉네임과 비밀번호를 입력하세요.</p><input type="text" id="loginNick" class="input-field" placeholder="닉네임 (ID)"><input type="password" id="loginPw" class="input-field" placeholder="비밀번호"><button class="action-btn" onclick="confirmLoginAndSave()">확인 및 저장</button><button class="action-btn bg-cancel" onclick="closeLoginModal()">취소</button></div></div>
+<div id="visitorStatsModal" class="modal-overlay" style="display:none;" onclick="closeVisitorStats()"><div class="modal-content" onclick="event.stopPropagation()" style="max-width:420px;"><h3 style="margin:0 0 16px; text-align:center; color:var(--primary); font-weight:900;">📊 방문자 통계</h3><div style="display:flex; justify-content:space-between; align-items:center; padding:14px 12px; margin-bottom:8px; background:var(--bg-color); border-radius:8px;"><span style="font-weight:800;">당일 방문자 수</span><strong id="todayVisitorCount" style="font-size:1.25rem; color:var(--primary);">-</strong></div><div style="display:flex; justify-content:space-between; align-items:center; padding:14px 12px; background:var(--bg-color); border-radius:8px;"><span style="font-weight:800;">총 방문자 수</span><strong id="totalVisitorCount" style="font-size:1.25rem; color:var(--primary);">-</strong></div><p style="font-size:0.78rem; color:var(--text-sub); text-align:center; margin:12px 0;">브라우저 탭 세션 기준 · 새로고침 중복 제외</p><button class="action-btn bg-cancel" onclick="closeVisitorStats()">닫기</button></div></div>
 
 <script>
 const firebaseConfig = { apiKey: "AIzaSyBWFZr9TE9yybZJCJjEXSsv1YCpGkVb0kA", authDomain: "busan-hak-port.firebaseapp.com", projectId: "busan-hak-port", storageBucket: "busan-hak-port.firebasestorage.app", messagingSenderId: "616469111502", appId: "1:616469111502:web:6f3c94b15e444e04c7669f", measurementId: "G-QQ728TDFJ2" };
@@ -957,11 +959,63 @@ db.enablePersistence({ synchronizeTabs: true }).catch(err => { console.warn("Per
 
 let allPostsData=[], allShipsData=[], filteredShips=[], adminWorkLogs={};
 let currentDate = new Date(); let currentWorkerId = localStorage.getItem('myWorkerId'); 
-let commentUnsubscribes = {}; let shipCommentUnsubscribes = {}; let shipCommentsById = {}; let editingShipComment = null; const postsPerPage = 5; let globalTickerData = { adminMessage: "", userMessages: [] };
+let commentUnsubscribes = {}; let shipCommentUnsubscribes = {}; let shipCommentsById = {}; let editingShipComment = null; let visitorCountPromise = null; const postsPerPage = 5; let globalTickerData = { adminMessage: "", userMessages: [] };
 let currentEditPostId = null;
 
 async function safeGet(ref) { if (!ref) return null; try { return await ref.get(); } catch (e) { return null; } }
 async function verifyAdmin() { const inputPw = prompt("관리자 비밀번호를 입력하세요:"); if (!inputPw) return false; const doc = await db.collection('settings').doc('admin').get(); if (doc.exists && doc.data().password === inputPw) return true; alert("⚠️ 비밀번호가 틀렸습니다."); return false; }
+function getVisitorDateKey(date = new Date()) { return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`; }
+function trackVisitorSession() {
+    if (visitorCountPromise) return visitorCountPromise;
+    const sessionKey = "busanHakPortVisitorCounted";
+    let canStoreSession = true;
+    try {
+        if (sessionStorage.getItem(sessionKey) === "1") return Promise.resolve();
+        sessionStorage.setItem(sessionKey, "pending");
+    } catch (error) {
+        canStoreSession = false;
+    }
+    const dateKey = getVisitorDateKey();
+    const totalRef = db.collection("visitor_stats").doc("total");
+    const dailyRef = db.collection("visitor_stats").doc(`daily-${dateKey}`);
+    visitorCountPromise = db.runTransaction(async transaction => {
+        const totalSnapshot = await transaction.get(totalRef);
+        const dailySnapshot = await transaction.get(dailyRef);
+        const totalCount = totalSnapshot.exists ? Number(totalSnapshot.data().count) || 0 : 0;
+        const dailyCount = dailySnapshot.exists ? Number(dailySnapshot.data().count) || 0 : 0;
+        transaction.set(totalRef, { count: totalCount + 1, updatedAt: firebase.firestore.FieldValue.serverTimestamp() });
+        transaction.set(dailyRef, { date: dateKey, count: dailyCount + 1, updatedAt: firebase.firestore.FieldValue.serverTimestamp() });
+    }).then(() => {
+        if (canStoreSession) sessionStorage.setItem(sessionKey, "1");
+    }).catch(error => {
+        if (canStoreSession) sessionStorage.removeItem(sessionKey);
+        console.warn("방문자 수 집계 오류:", error);
+    }).finally(() => {
+        visitorCountPromise = null;
+    });
+    return visitorCountPromise;
+}
+async function openVisitorStats() {
+    try {
+        if (!(await verifyAdmin())) return;
+        const modal = document.getElementById("visitorStatsModal");
+        const todayCount = document.getElementById("todayVisitorCount");
+        const totalCount = document.getElementById("totalVisitorCount");
+        todayCount.innerText = "불러오는 중...";
+        totalCount.innerText = "불러오는 중...";
+        modal.style.display = "flex";
+        const dateKey = getVisitorDateKey();
+        const [dailySnapshot, totalSnapshot] = await Promise.all([
+            db.collection("visitor_stats").doc(`daily-${dateKey}`).get(),
+            db.collection("visitor_stats").doc("total").get()
+        ]);
+        todayCount.innerText = (dailySnapshot.exists ? Number(dailySnapshot.data().count) || 0 : 0).toLocaleString();
+        totalCount.innerText = (totalSnapshot.exists ? Number(totalSnapshot.data().count) || 0 : 0).toLocaleString();
+    } catch (error) {
+        alert("방문자 통계를 불러오지 못했습니다: " + error.message);
+    }
+}
+function closeVisitorStats() { document.getElementById("visitorStatsModal").style.display = "none"; }
 
 function toggleDashItem(id){ const c = document.getElementById(id); if(!c) return; const e = c.classList.contains('expanded'); document.querySelectorAll('.dash-card').forEach(x=>{ x.classList.remove('expanded'); const content = x.querySelector('.dash-content'); if(content) content.style.display='none'; }); if(!e){ c.classList.add('expanded'); const content = c.querySelector('.dash-content'); if(content) content.style.display='block'; if(id === 'log-card') renderCalendar(currentDate.getFullYear(), currentDate.getMonth()); } }
 function toggleSection(id){ document.getElementById(id).classList.toggle('collapsed'); }
@@ -1297,6 +1351,7 @@ function loadComments(pid){if(commentUnsubscribes[pid]) commentUnsubscribes[pid]
 function openBusSchedule(){ const m=document.getElementById('imageModal'); document.getElementById('modalImage').src='https://firebasestorage.googleapis.com/v0/b/busan-hak-port.firebasestorage.app/o/KakaoTalk_20260129_001114789.jpg?alt=media'; m.style.display='flex'; } function closeImageModal(){ document.getElementById('imageModal').style.display='none'; } function openPrivacy() { toggleDashItem('privacy-center-card'); document.getElementById('privacy-center-card').scrollIntoView({behavior: 'smooth', block: 'center'}); }
 
 window.onload = () => { 
+    trackVisitorSession();
     try { const now = new Date(); now.setMinutes(now.getMinutes() - now.getTimezoneOffset()); const todayStr = now.toISOString().split('T')[0]; const sDate = document.getElementById('wageStartDate'); const eDate = document.getElementById('wageEndDate'); if(sDate) sDate.value = todayStr; if(eDate) eDate.value = todayStr; } catch(e) { console.error("날짜 초기화 오류", e); } 
     loadBanner(); 
     try { 
