@@ -2,23 +2,30 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <meta name="description" content="부산항 신항·북항 현장 근로자를 위한 스마트 작업 관리 플랫폼. 정확한 임금 계산, 실시간 선박 정보, 근무일지 관리, 안전 가이드를 제공합니다.">
     <meta name="keywords" content="부산항, 항만근로자, 임금계산기, 선박정보, HJNC, BNCT, 하역작업, 라싱, 부산신항">
     <title>부산항 스마트 작업 가이드 | Port Work Guide</title>
 
     <meta property="og:title" content="부산항 스마트 작업 가이드">
     <meta property="og:description" content="부산항 현장 근로자 필수 앱">
-    <meta property="og:url" content="https://yourdomain.com"> 
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://busan-hak-port.web.app/">
+    <meta property="og:image" content="https://busan-hak-port.web.app/icon-512.png">
+    <link rel="canonical" href="https://busan-hak-port.web.app/">
+    <meta name="theme-color" content="#0a1b3f">
 
+    <link rel="preconnect" href="https://www.gstatic.com" crossorigin>
+    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-storage.js"></script>
     <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6024353303588422" crossorigin="anonymous"></script>
 
-    <link rel="icon" type="image/png" sizes="32x32" href="icon.png">
+    <link rel="icon" href="/favicon.ico">
     <link rel="stylesheet" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.8/dist/web/static/pretendard.css" />
-    <link rel="manifest" href="manifest.json">
+    <link rel="manifest" href="/manifest.json">
     <style>
         img { max-width: 100%; height: auto; object-fit: cover; background: #eee; }
         img:not([src]) { visibility: hidden; }
@@ -247,10 +254,7 @@
         
         .mini-btn-old { padding: 8px 12px; font-size: clamp(0.8rem, 2.5vw, 0.9rem); font-weight: 800; border-radius: 6px; border: none; cursor: pointer; color: white; margin-left: 4px; touch-action: manipulation; }
     </style>
-    <link rel="icon" href="/favicon.ico">
-<link rel="manifest" href="/manifest.json">
     <link rel="apple-touch-icon" href="/icon-192.png">
-    <link rel="apple-touch-icon" sizes="152x152" href="/icon-152.png">
 </head>
 <body>
 <header>
@@ -914,7 +918,7 @@
                         <ul style="padding-left: 20px; margin: 0;">
                             <li style="margin-bottom: 6px;"><b>데이터 암호화:</b> 모든 근무일지 및 게시판 데이터는 구글 파이어베이스(Firebase)의 강력한 글로벌 보안망을 통해 암호화되어 전송 및 저장됩니다.</li>
                             <li style="margin-bottom: 6px;"><b>로컬 스토리지 보관:</b> 로그인 상태는 사용자의 스마트폰 기기 내부(Local Storage)에만 안전하게 암호화 보관됩니다.</li>
-                            <li><b>비밀번호 단방향 처리:</b> 게시글 작성 시 입력하는 비밀번호는 본인 확인(수정/삭제용)으로만 쓰이며, 관리자조차 원본을 알 수 없습니다.</li>
+                            <li><span style="color:var(--danger); font-weight:bold;">비밀번호 안내:</span> 관리자·근무일지 계정·게시글·댓글·선박정보 비밀번호는 현재 Firestore 문서에 원문으로 저장되어 본인 확인에 사용됩니다. 다른 서비스에서 사용하는 비밀번호는 입력하지 마세요.</li>
                         </ul>
                     </div>
                 </div>
@@ -1561,6 +1565,12 @@ function renderPagination(curr) { const total = Math.ceil(allPostsData.length / 
 function loadComments(pid){if(commentUnsubscribes[pid]) commentUnsubscribes[pid](); commentUnsubscribes[pid]=db.collection('posts').doc(pid).collection('comments').orderBy('timestamp','asc').onSnapshot(s=>{const el=document.getElementById(`cmt-list-${pid}`); if(!el) return; el.innerHTML=""; s.forEach(d=>{const c=d.data(); el.innerHTML+=`<div class="comment-item"><span><span class="comment-meta">${c.name}:</span><span class="comment-text">${c.text}</span></span><button class="comment-del-btn" onclick="deleteComment('${pid}','${d.id}','${c.password}')">×</button></div>`;});});} 
 
 function openBusSchedule(){ const m=document.getElementById('imageModal'); document.getElementById('modalImage').src='https://firebasestorage.googleapis.com/v0/b/busan-hak-port.firebasestorage.app/o/KakaoTalk_20260129_001114789.jpg?alt=media'; m.style.display='flex'; } function closeImageModal(){ document.getElementById('imageModal').style.display='none'; } function openPrivacy() { toggleDashItem('privacy-center-card'); document.getElementById('privacy-center-card').scrollIntoView({behavior: 'smooth', block: 'center'}); }
+
+if ("serviceWorker" in navigator) {
+    window.addEventListener("load", () => {
+        navigator.serviceWorker.register("/service-worker.js").catch(error => console.warn("서비스 워커 등록 실패:", error));
+    });
+}
 
 window.onload = () => { 
     applyOfficialTerminalNames();
