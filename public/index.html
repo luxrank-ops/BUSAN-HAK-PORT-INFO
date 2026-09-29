@@ -58,7 +58,12 @@
         .ticker-container { background: var(--primary); color: #ffffff; font-weight: 900; height: 45px; display: flex; align-items: center; overflow: visible; position: relative; font-size: clamp(0.9rem, 3vw, 1rem); width: 100%; z-index: 999; }
         .ticker-wrap { flex: 1; overflow: hidden; height: 100%; position: relative; margin-right: 50px; }
         .ticker-item { padding-left: 100%; animation: ticker 20s linear infinite; white-space: nowrap; line-height: 45px; }
+        .terminal-ticker { display: flex; align-items: center; width: 100%; height: 42px; margin-bottom: 8px; overflow: hidden; border-radius: 6px; background: var(--primary); color: #fff; font-size: 0.9rem; font-weight: 800; }
+        .terminal-ticker-wrap { flex: 1; min-width: 0; height: 100%; overflow: hidden; }
+        .terminal-ticker-item { padding-left: 100%; animation: ticker 20s linear infinite; white-space: nowrap; line-height: 42px; }
+        .terminal-ticker-admin { flex: 0 0 46px; height: 100%; border: 0; border-left: 1px solid rgba(255,255,255,0.2); background: rgba(255,255,255,0.12); color: #fff; font-size: 0.82rem; font-weight: 800; cursor: pointer; }
         @keyframes ticker { 100% { transform: translate3d(-100%, 0, 0); } }
+        @media (prefers-reduced-motion: reduce) { .terminal-ticker-item { animation: none; padding-left: 8px; } }
 
         .ticker-setting-area { position: absolute; right: 0; top: 0; width: 50px; height: 100%; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.1); border-left: 1px solid rgba(255,255,255,0.2); z-index: 100; cursor: pointer; touch-action: manipulation; }
         .setting-icon { font-size: 1.4rem; transition: transform 0.3s; color: white; }
@@ -422,6 +427,7 @@
             <span class="section-title" style="font-size: 1.1rem; font-weight: 900;">🚢 3항업 (신항 남측) ▼</span>
         </div>
         <div id="t3-content" class="collapsible-content collapsed" style="background: white; border: 1px solid var(--border); border-radius: 8px; margin-top: 4px;">
+            <div class="terminal-ticker"><div class="terminal-ticker-wrap"><div id="t3TickerText" class="terminal-ticker-item">3항업 티커를 불러오는 중...</div></div><button class="terminal-ticker-admin" type="button" title="3항업 티커 관리" onclick="openT3TickerManager()">관리</button></div>
             <div class="terminal-block">
                 <div class="terminal-header tap-effect" onclick="toggleContent('term-hjnc')">한진신항만 (HJNC) ▼</div>
                 <div id="term-hjnc" class="terminal-body">
@@ -1046,6 +1052,47 @@ function renderTickerList() { const listContainer = document.getElementById('tic
 function openAllBayPlan() {
     window.open("http://112.163.71.98:8080/webits/bayplan", "_blank"); 
 }
+function loadT3Ticker() {
+    db.collection("settings").doc("t3_ticker").onSnapshot(snapshot => {
+        const ticker = document.getElementById("t3TickerText");
+        if (!ticker) return;
+        const message = snapshot.exists ? String(snapshot.data().message || "").trim() : "";
+        ticker.innerText = message ? `📢 ${message}` : "3항업 공지사항이 없습니다.";
+    }, error => {
+        const ticker = document.getElementById("t3TickerText");
+        if (ticker) ticker.innerText = "3항업 티커를 불러오지 못했습니다.";
+        console.error("3항업 티커 로드 오류:", error);
+    });
+}
+async function openT3TickerManager() {
+    if (!(await verifyAdmin())) return;
+    const tickerRef = db.collection("settings").doc("t3_ticker");
+    try {
+        const snapshot = await tickerRef.get();
+        const currentMessage = snapshot.exists ? String(snapshot.data().message || "").trim() : "";
+        if (!currentMessage) {
+            const message = prompt("3항업 티커에 등록할 문구를 입력하세요:");
+            if (message === null) return;
+            if (!message.trim()) return alert("티커 문구를 입력해주세요.");
+            await tickerRef.set({ message: message.trim(), updatedAt: firebase.firestore.FieldValue.serverTimestamp() });
+            showToast("3항업 티커가 등록되었습니다.");
+            return;
+        }
+        const action = prompt(`현재 티커 문구:\n${currentMessage}\n\n1. 수정\n2. 삭제\n취소하려면 취소를 누르세요.`, "1");
+        if (action === "1") {
+            const message = prompt("수정할 티커 문구를 입력하세요:", currentMessage);
+            if (message === null) return;
+            if (!message.trim()) return alert("티커 문구를 입력해주세요.");
+            await tickerRef.set({ message: message.trim(), updatedAt: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true });
+            showToast("3항업 티커가 수정되었습니다.");
+        } else if (action === "2" && confirm("3항업 티커를 삭제할까요?")) {
+            await tickerRef.delete();
+            showToast("3항업 티커가 삭제되었습니다.");
+        }
+    } catch (error) {
+        alert("3항업 티커 관리 실패: " + error.message);
+    }
+}
 let currentMealTerminalId = "hjnc";
 const terminalMealTargets = [
     { id: "bnct", label: "부산신항컨테이너터미널(BNCT) 식단" },
@@ -1470,6 +1517,7 @@ function openBusSchedule(){ const m=document.getElementById('imageModal'); docum
 window.onload = () => { 
     applyOfficialTerminalNames();
     appendTerminalMealBlocks();
+    loadT3Ticker();
     trackVisitorSession();
     try { const now = new Date(); now.setMinutes(now.getMinutes() - now.getTimezoneOffset()); const todayStr = now.toISOString().split('T')[0]; const sDate = document.getElementById('wageStartDate'); const eDate = document.getElementById('wageEndDate'); if(sDate) sDate.value = todayStr; if(eDate) eDate.value = todayStr; } catch(e) { console.error("날짜 초기화 오류", e); } 
     loadBanner(); 
