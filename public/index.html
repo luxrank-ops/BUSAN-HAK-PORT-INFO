@@ -998,6 +998,7 @@ function trackVisitorSession() {
 async function openVisitorStats() {
     try {
         if (!(await verifyAdmin())) return;
+        await trackVisitorSession();
         const modal = document.getElementById("visitorStatsModal");
         const todayCount = document.getElementById("todayVisitorCount");
         const totalCount = document.getElementById("totalVisitorCount");
