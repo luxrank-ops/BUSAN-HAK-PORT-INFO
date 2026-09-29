@@ -557,6 +557,7 @@
                     <thead><tr><th style="width:10%">No.</th><th style="width:55%">선박명</th><th style="width:35%">등록일</th></tr></thead>
                     <tbody id="shipList"></tbody>
                 </table>
+                <div id="shipPagination" style="display:flex; justify-content:center; gap:5px; margin-top:10px; margin-bottom:15px;"></div>
             </div>
         </div>
 
@@ -1160,7 +1161,9 @@ let currentEditShipId = null; function addShipInfo() { const n = document.getEle
 function renderBoardPage(p){ currentBoardPage = p; const l = document.getElementById("boardList"); l.innerHTML = ""; const start = (p-1) * postsPerPage; const end = start + postsPerPage; const pageData = allPostsData.slice(start, end); if(pageData.length === 0) { l.innerHTML = "<tr><td colspan='4' style='text-align:center; padding:20px; color:var(--text-sub); font-weight:700;'>게시글이 없습니다.</td></tr>"; document.getElementById("pagination").innerHTML = ""; return; } pageData.forEach((x, i) => { let dateStr = ""; if(x.timestamp) { const d = x.timestamp.toDate(); const year = d.getFullYear(); const month = String(d.getMonth() + 1).padStart(2, '0'); const day = String(d.getDate()).padStart(2, '0'); const hour = String(d.getHours()).padStart(2, '0'); const min = String(d.getMinutes()).padStart(2, '0'); dateStr = `${year}/${month}/${day} ${hour}:${min}`; } const rowId = `p-${x.id}`; const authorName = x.nick || '익명'; const postNum = allPostsData.length - ((currentBoardPage - 1) * postsPerPage) - i; const safeTitle = (x.title || '').replace(/'/g, "\\'").replace(/"/g, "&quot;"); const safeContent = (x.content || '').replace(/'/g, "\\'").replace(/"/g, "&quot;").replace(/\n/g, "\\n"); l.innerHTML += `<tr onclick="toggleBoardRow('${rowId}')" style="cursor:pointer;"> <td class="board-no">${postNum}</td> <td class="board-title">${x.title} <span style="font-size:0.75rem; color:var(--primary); margin-left:4px;">▼</span></td> <td class="board-date">${dateStr}</td> <td class="board-nick">${authorName}</td> </tr> <tr id="${rowId}" class="board-content-row"> <td colspan="4" class="board-content-box"> <div style="margin-bottom:15px; font-weight:600;">${x.content}</div> <div style="text-align:right; border-bottom:1px dashed var(--border); padding-bottom:10px; margin-bottom:10px;"> <button class="mini-btn" style="background:var(--primary-light) !important; color:white !important;" onclick="tryEditPost('${x.id}', '${x.password}', '${authorName}', '${safeTitle}', '${safeContent}', event)">✏️ 수정</button> <button class="mini-btn btn-del" onclick="deletePost('${x.id}','${x.password}',event)">🗑️ 삭제</button> </div> <div id="cmt-list-${x.id}" class="comment-section"></div> <div class="comment-form"> <input id="cmt-name-${x.id}" class="comment-input-sm" placeholder="닉네임"> <input id="cmt-pw-${x.id}" class="comment-input-sm" type="password" placeholder="비밀번호"> <input id="cmt-txt-${x.id}" class="comment-input-lg" placeholder="따뜻한 댓글을 남겨주세요..."> <button class="comment-submit" onclick="addComment('${x.id}')">댓글 등록</button> </div> </td> </tr>`; loadComments(x.id); }); renderPagination(p); } 
 renderShipPage = function(p) {
     const list = document.getElementById("shipList");
+    const pagination = document.getElementById("shipPagination");
     list.innerHTML = "";
+    pagination.innerHTML = "";
     const pageData = filteredShips.slice((p - 1) * postsPerPage, p * postsPerPage);
     if (pageData.length === 0) {
         list.innerHTML = "<tr><td colspan='3' style='text-align:center; padding:20px; color:var(--text-sub); font-weight:700;'>등록된 선박정보가 없습니다.</td></tr>";
@@ -1179,6 +1182,10 @@ renderShipPage = function(p) {
         const postNum = filteredShips.length - ((p - 1) * postsPerPage) - index;
         list.innerHTML += `<tr onclick="toggleBoardRow('${rowId}')" style="cursor:pointer;"><td class="board-no">${postNum}</td><td class="board-title">🚢 ${ship.shipName || "선박명 없음"}<span style="font-size:0.75rem; color:var(--primary); margin-left:4px;">▼</span></td><td class="board-date">${dateStr}</td></tr><tr id="${rowId}" class="board-content-row"><td colspan="3" class="board-content-box"><div style="margin-bottom:15px; white-space:pre-wrap;">${ship.onboardFeat || ""}</div><div style="text-align:right; border-bottom:1px dashed var(--border); padding-bottom:10px; margin-bottom:10px;"><button class="mini-btn" style="background:var(--primary-light) !important; color:white !important;" onclick="tryEditShip('${ship.id}', '${safeName}', '${safeFeat}', '${savedPw}')">✏️ 수정</button><button class="mini-btn btn-del" onclick="deleteShip('${ship.id}',event)">🗑️ 삭제</button></div></td></tr>`;
     });
+    const totalPages = Math.ceil(filteredShips.length / postsPerPage);
+    for (let page = 1; page <= totalPages; page++) {
+        pagination.innerHTML += `<span class="page-num ${page === p ? 'active' : ''}" onclick="renderShipPage(${page})" style="cursor:pointer; padding:5px 12px; margin:2px; background:#e5e7eb; border-radius:8px; font-weight:800; font-size:0.9rem;">${page}</span>`;
+    }
 };
 function toggleBoardRow(id) { const el = document.getElementById(id); if(el.classList.contains('show')) el.classList.remove('show'); else el.classList.add('show'); } 
 function renderPagination(curr) { const total = Math.ceil(allPostsData.length / postsPerPage); const el = document.getElementById('pagination'); if(!el) return; el.innerHTML = ""; for(let i=1; i<=total; i++){ el.innerHTML += `<span class="page-num ${i===curr?'active':''}" onclick="renderBoardPage(${i})" style="cursor:pointer; padding:5px 12px; margin:2px; background:#e5e7eb; border-radius:8px; font-weight:800; font-size:0.9rem;">${i}</span>`; } } 
