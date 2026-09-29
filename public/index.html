@@ -957,7 +957,7 @@ db.enablePersistence({ synchronizeTabs: true }).catch(err => { console.warn("Per
 
 let allPostsData=[], allShipsData=[], filteredShips=[], adminWorkLogs={};
 let currentDate = new Date(); let currentWorkerId = localStorage.getItem('myWorkerId'); 
-let commentUnsubscribes = {}; const postsPerPage = 5; let globalTickerData = { adminMessage: "", userMessages: [] };
+let commentUnsubscribes = {}; let shipCommentUnsubscribes = {}; let shipCommentsById = {}; let editingShipComment = null; const postsPerPage = 5; let globalTickerData = { adminMessage: "", userMessages: [] };
 let currentEditPostId = null;
 
 async function safeGet(ref) { if (!ref) return null; try { return await ref.get(); } catch (e) { return null; } }
@@ -1162,6 +1162,10 @@ function renderBoardPage(p){ currentBoardPage = p; const l = document.getElement
 renderShipPage = function(p) {
     const list = document.getElementById("shipList");
     const pagination = document.getElementById("shipPagination");
+    Object.values(shipCommentUnsubscribes).forEach(unsubscribe => unsubscribe());
+    shipCommentUnsubscribes = {};
+    shipCommentsById = {};
+    editingShipComment = null;
     list.innerHTML = "";
     pagination.innerHTML = "";
     if (p === 1) pagination.scrollLeft = 0;
@@ -1182,13 +1186,111 @@ renderShipPage = function(p) {
         const rowId = `s-${ship.id}`;
         const postNum = filteredShips.length - ((p - 1) * postsPerPage) - index;
         list.innerHTML += `<tr onclick="toggleBoardRow('${rowId}')" style="cursor:pointer;"><td class="board-no">${postNum}</td><td class="board-title">🚢 ${ship.shipName || "선박명 없음"}<span style="font-size:0.75rem; color:var(--primary); margin-left:4px;">▼</span></td><td class="board-date">${dateStr}</td></tr><tr id="${rowId}" class="board-content-row"><td colspan="3" class="board-content-box"><div style="margin-bottom:15px; white-space:pre-wrap;">${ship.onboardFeat || ""}</div><div style="text-align:right; border-bottom:1px dashed var(--border); padding-bottom:10px; margin-bottom:10px;"><button class="mini-btn" style="background:var(--primary-light) !important; color:white !important;" onclick="tryEditShip('${ship.id}', '${safeName}', '${safeFeat}', '${savedPw}')">✏️ 수정</button><button class="mini-btn btn-del" onclick="deleteShip('${ship.id}',event)">🗑️ 삭제</button></div></td></tr>`;
+        document.getElementById(rowId).querySelector("td").insertAdjacentHTML("beforeend", renderShipCommentMarkup(ship.id));
     });
     const totalPages = Math.ceil(filteredShips.length / postsPerPage);
     for (let page = 1; page <= totalPages; page++) {
         pagination.innerHTML += `<span class="page-num ${page === p ? 'active' : ''}" onclick="renderShipPage(${page})" style="flex:0 0 auto; cursor:pointer; padding:5px 12px; margin:2px; background:#e5e7eb; border-radius:8px; font-weight:800; font-size:0.9rem;">${page}</span>`;
     }
 };
-function toggleBoardRow(id) { const el = document.getElementById(id); if(el.classList.contains('show')) el.classList.remove('show'); else el.classList.add('show'); } 
+function renderShipCommentMarkup(shipId) {
+    return `<div style="margin-top:15px; border-top:1px dashed var(--border); padding-top:12px;">
+        <div style="font-weight:900; margin-bottom:8px; color:var(--primary);">댓글</div>
+        <div id="ship-comment-list-${shipId}" class="comment-section"></div>
+        <div class="comment-form" style="border-radius:8px;">
+            <input id="ship-comment-name-${shipId}" class="comment-input-sm" placeholder="닉네임">
+            <input id="ship-comment-password-${shipId}" class="comment-input-sm" type="password" placeholder="비밀번호">
+            <input id="ship-comment-text-${shipId}" class="comment-input-lg" placeholder="댓글을 입력하세요">
+            <button id="ship-comment-submit-${shipId}" class="comment-submit" onclick="submitShipComment('${shipId}')">댓글 등록</button>
+            <button id="ship-comment-cancel-${shipId}" class="action-btn bg-cancel" style="display:none;" onclick="cancelShipCommentEdit('${shipId}')">취소</button>
+        </div>
+    </div>`;
+}
+function escapeShipCommentHtml(value) {
+    return String(value || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+}
+function toggleBoardRow(id) {
+    const row = document.getElementById(id);
+    if (!row) return;
+    if (row.classList.contains("show")) {
+        row.classList.remove("show");
+        return;
+    }
+    row.classList.add("show");
+    if (id.startsWith("s-")) loadShipComments(id.slice(2));
+}
+function loadShipComments(shipId) {
+    if (shipCommentUnsubscribes[shipId]) return;
+    shipCommentUnsubscribes[shipId] = db.collection("ships").doc(shipId).collection("comments").orderBy("timestamp", "asc").onSnapshot(snapshot => {
+        const list = document.getElementById(`ship-comment-list-${shipId}`);
+        if (!list) return;
+        shipCommentsById[shipId] = [];
+        list.innerHTML = "";
+        if (snapshot.empty) {
+            list.innerHTML = "<div style='color:var(--text-sub); font-size:0.85rem; padding:8px 0;'>첫 댓글을 남겨보세요.</div>";
+            return;
+        }
+        snapshot.forEach(doc => {
+            const comment = { ...doc.data(), id: doc.id };
+            shipCommentsById[shipId].push(comment);
+            list.innerHTML += `<div class="comment-item"><div><span class="comment-meta">${escapeShipCommentHtml(comment.name || "익명")}</span><div class="comment-text" style="white-space:pre-wrap;">${escapeShipCommentHtml(comment.text)}</div></div><div style="display:flex; gap:4px; flex-shrink:0;"><button class="mini-btn" onclick="editShipComment('${shipId}','${doc.id}')">수정</button><button class="mini-btn btn-del" onclick="deleteShipComment('${shipId}','${doc.id}')">삭제</button></div></div>`;
+        });
+    }, error => {
+        const list = document.getElementById(`ship-comment-list-${shipId}`);
+        if (list) list.innerHTML = "<div style='color:var(--danger); font-size:0.85rem;'>댓글을 불러오지 못했습니다.</div>";
+        console.error("선박 댓글 불러오기 오류:", error);
+    });
+}
+async function verifyShipCommentPassword(comment) {
+    const enteredPassword = prompt("댓글 비밀번호를 입력하세요. 관리자도 관리자 비밀번호로 관리할 수 있습니다:");
+    if (enteredPassword === null) return false;
+    if (enteredPassword === comment.password) return true;
+    const adminDoc = await db.collection("settings").doc("admin").get();
+    if (adminDoc.exists && adminDoc.data().password === enteredPassword) return true;
+    alert("비밀번호가 일치하지 않습니다.");
+    return false;
+}
+async function editShipComment(shipId, commentId) {
+    const comment = (shipCommentsById[shipId] || []).find(item => item.id === commentId);
+    if (!comment || !(await verifyShipCommentPassword(comment))) return;
+    document.getElementById(`ship-comment-name-${shipId}`).value = comment.name || "";
+    document.getElementById(`ship-comment-password-${shipId}`).value = comment.password || "";
+    document.getElementById(`ship-comment-text-${shipId}`).value = comment.text || "";
+    editingShipComment = { shipId, commentId };
+    document.getElementById(`ship-comment-submit-${shipId}`).innerText = "수정 완료";
+    document.getElementById(`ship-comment-cancel-${shipId}`).style.display = "block";
+}
+async function deleteShipComment(shipId, commentId) {
+    const comment = (shipCommentsById[shipId] || []).find(item => item.id === commentId);
+    if (!comment || !(await verifyShipCommentPassword(comment))) return;
+    if (!confirm("이 댓글을 삭제할까요?")) return;
+    db.collection("ships").doc(shipId).collection("comments").doc(commentId).delete().catch(error => alert("댓글 삭제 실패: " + error.message));
+}
+function cancelShipCommentEdit(shipId) {
+    document.getElementById(`ship-comment-name-${shipId}`).value = "";
+    document.getElementById(`ship-comment-password-${shipId}`).value = "";
+    document.getElementById(`ship-comment-text-${shipId}`).value = "";
+    document.getElementById(`ship-comment-submit-${shipId}`).innerText = "댓글 등록";
+    document.getElementById(`ship-comment-cancel-${shipId}`).style.display = "none";
+    editingShipComment = null;
+}
+function submitShipComment(shipId) {
+    const name = document.getElementById(`ship-comment-name-${shipId}`).value.trim();
+    const password = document.getElementById(`ship-comment-password-${shipId}`).value.trim();
+    const text = document.getElementById(`ship-comment-text-${shipId}`).value.trim();
+    if (!name || !password || !text) {
+        alert("닉네임, 비밀번호, 댓글 내용을 모두 입력해주세요.");
+        return;
+    }
+    const comments = db.collection("ships").doc(shipId).collection("comments");
+    const commentData = { name, password, text, timestamp: firebase.firestore.FieldValue.serverTimestamp() };
+    const isEditing = editingShipComment && editingShipComment.shipId === shipId;
+    const request = isEditing ? comments.doc(editingShipComment.commentId).update(commentData) : comments.add(commentData);
+    request.then(() => {
+        if (isEditing) cancelShipCommentEdit(shipId);
+        else document.getElementById(`ship-comment-text-${shipId}`).value = "";
+    }).catch(error => alert("댓글 저장 실패: " + error.message));
+}
 function renderPagination(curr) { const total = Math.ceil(allPostsData.length / postsPerPage); const el = document.getElementById('pagination'); if(!el) return; el.innerHTML = ""; for(let i=1; i<=total; i++){ el.innerHTML += `<span class="page-num ${i===curr?'active':''}" onclick="renderBoardPage(${i})" style="cursor:pointer; padding:5px 12px; margin:2px; background:#e5e7eb; border-radius:8px; font-weight:800; font-size:0.9rem;">${i}</span>`; } } 
 function loadComments(pid){if(commentUnsubscribes[pid]) commentUnsubscribes[pid](); commentUnsubscribes[pid]=db.collection('posts').doc(pid).collection('comments').orderBy('timestamp','asc').onSnapshot(s=>{const el=document.getElementById(`cmt-list-${pid}`); if(!el) return; el.innerHTML=""; s.forEach(d=>{const c=d.data(); el.innerHTML+=`<div class="comment-item"><span><span class="comment-meta">${c.name}:</span><span class="comment-text">${c.text}</span></span><button class="comment-del-btn" onclick="deleteComment('${pid}','${d.id}','${c.password}')">×</button></div>`;});});} 
 
