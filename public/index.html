@@ -1048,15 +1048,33 @@ function openAllBayPlan() {
 }
 let currentMealTerminalId = "hjnc";
 const terminalMealTargets = [
-    { id: "bnct", label: "부산신항컨테이너 고려 식단" },
-    { id: "dgt", label: "동원로엑스 (DGT) 식단" },
-    { id: "bct", label: "부산컨테이너 터미널 (BCT) 식단" },
-    { id: "pnc", label: "부산신항만 (PNC) 식단" },
-    { id: "hpnt", label: "HMM (HPNT) 식단" },
-    { id: "pnit", label: "신항국제 (PNIT) 식단" },
-    { id: "bptc", label: "북항 통합 (BPTC) 식단" },
-    { id: "hbct", label: "허치슨 (HBCT/자성대) 식단" }
+    { id: "bnct", label: "부산신항컨테이너터미널(Busan New Container Terminal) 식단" },
+    { id: "dgt", label: "동원글로벌터미널부산(Dongwon Global Terminal Busan) 식단" },
+    { id: "bct", label: "부산컨테이너터미널(Busan Container Terminal) 식단" },
+    { id: "pnc", label: "부산신항만(Pusan Newport Company) 식단" },
+    { id: "hpnt", label: "HMM PSA 신항만(HMM PSA New-Port Terminal) 식단" },
+    { id: "pnit", label: "부산신항국제터미널(Pusan Newport International Terminal) 식단" },
+    { id: "bptc", label: "신선대감만터미널(Busan Port Terminal Corp.) 식단" },
+    { id: "hbct", label: "허치슨포트부산(Hutchison Ports Busan) 식단" }
 ];
+const officialTerminalNames = {
+    hjnc: "한진부산컨테이너터미널(HANJIN BUSAN NEWPORT)",
+    bnct: "부산신항컨테이너터미널(Busan New Container Terminal)",
+    dgt: "동원글로벌터미널부산(Dongwon Global Terminal Busan)",
+    bct: "부산컨테이너터미널(Busan Container Terminal)",
+    pnc: "부산신항만(Pusan Newport Company)",
+    hpnt: "HMM PSA 신항만(HMM PSA New-Port Terminal)",
+    pnit: "부산신항국제터미널(Pusan Newport International Terminal)",
+    bptc: "신선대감만터미널(Busan Port Terminal Corp.)",
+    hbct: "허치슨포트부산(Hutchison Ports Busan)"
+};
+function applyOfficialTerminalNames() {
+    Object.entries(officialTerminalNames).forEach(([id, name]) => {
+        const terminal = document.getElementById(`term-${id}`);
+        const header = terminal && terminal.previousElementSibling;
+        if (header) header.innerText = `${name} ▼`;
+    });
+}
 function appendTerminalMealBlocks() {
     terminalMealTargets.forEach(({ id, label }) => {
         const terminal = document.getElementById(`term-${id}`);
@@ -1450,6 +1468,7 @@ function loadComments(pid){if(commentUnsubscribes[pid]) commentUnsubscribes[pid]
 function openBusSchedule(){ const m=document.getElementById('imageModal'); document.getElementById('modalImage').src='https://firebasestorage.googleapis.com/v0/b/busan-hak-port.firebasestorage.app/o/KakaoTalk_20260129_001114789.jpg?alt=media'; m.style.display='flex'; } function closeImageModal(){ document.getElementById('imageModal').style.display='none'; } function openPrivacy() { toggleDashItem('privacy-center-card'); document.getElementById('privacy-center-card').scrollIntoView({behavior: 'smooth', block: 'center'}); }
 
 window.onload = () => { 
+    applyOfficialTerminalNames();
     appendTerminalMealBlocks();
     trackVisitorSession();
     try { const now = new Date(); now.setMinutes(now.getMinutes() - now.getTimezoneOffset()); const todayStr = now.toISOString().split('T')[0]; const sDate = document.getElementById('wageStartDate'); const eDate = document.getElementById('wageEndDate'); if(sDate) sDate.value = todayStr; if(eDate) eDate.value = todayStr; } catch(e) { console.error("날짜 초기화 오류", e); } 
