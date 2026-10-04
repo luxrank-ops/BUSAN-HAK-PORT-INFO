@@ -141,8 +141,14 @@
         .calendar-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)) !important; gap: clamp(2px, 1vw, 4px); text-align: center; width: 100%; box-sizing: border-box; }
         .cal-day { padding: 8px 2px; border-radius: 6px; background: rgba(255,255,255,0.5); border: 1px solid var(--border); font-weight: 800; font-size: clamp(0.9rem, 3.5vw, 1.05rem); cursor: pointer; min-height: 50px; display: flex; flex-direction: column; justify-content: center; align-items: center; box-sizing: border-box; touch-action: manipulation; overflow: hidden; }
         .cal-day.has-data { border: 2px solid var(--success); background: rgba(16, 185, 129, 0.1); }
+        .cal-day.filter-match { border: 2px solid #f59e0b !important; background: rgba(245, 158, 11, 0.2) !important; box-shadow: 0 0 8px rgba(245, 158, 11, 0.4); }
+        .cal-day.filter-dim { opacity: 0.35; }
         .cal-dot { width: 6px; height: 6px; background-color: var(--success); border-radius: 50%; margin-top: 4px; display: none; }
         .cal-day.has-data .cal-dot { display: block; }
+        .log-filter-box { background: rgba(10, 27, 63, 0.04); border: 1px solid var(--border); border-radius: 10px; padding: 10px; margin-bottom: 12px; }
+        .log-filter-results { margin-top: 10px; max-height: 220px; overflow-y: auto; border-top: 1px dashed var(--border); padding-top: 8px; }
+        .log-filter-item { display: flex; justify-content: space-between; align-items: center; padding: 8px 10px; background: var(--card-bg); border: 1px solid var(--border); border-radius: 8px; margin-bottom: 6px; cursor: pointer; font-size: 0.85rem; gap: 8px; }
+        .log-filter-item:hover { border-color: var(--primary); background: rgba(59, 130, 246, 0.05); }
 
         .leader-badge { font-size: clamp(0.65rem, 2.8vw, 0.85rem); color: white; border-radius: 6px; padding: 3px 2px; margin-top: 4px; display: flex; justify-content: center; align-items: center; font-weight: 900; white-space: normal !important; word-break: keep-all; overflow-wrap: break-word; line-height: 1.2; width: 98%; max-width: 100%; box-sizing: border-box; text-align: center; margin-left: auto; margin-right: auto; }
         .coworker-badge { font-size: clamp(0.6rem, 2.5vw, 0.75rem); color: #1e3a8a; background: rgba(59, 130, 246, 0.15); border-radius: 4px; padding: 3px 2px; margin-top: 3px; width: 98%; max-width: 100%; white-space: normal !important; word-break: keep-all; overflow-wrap: break-word; text-align: center; font-weight: 800; line-height: 1.15; box-sizing: border-box; }
@@ -295,33 +301,56 @@
         <div class="dash-header tap-effect" onclick="toggleDashItem('main-manual-card')" style="background: var(--primary); color: white; padding: 15px; border-radius: 8px; display: flex; align-items: center; justify-content: space-between;">
             <div style="display: flex; align-items: center; gap: 8px;">
                 <span style="font-size: 1.2rem;">🔅</span>
-                <span class="dash-title" style="font-size: 1.15rem; font-weight: 900;">앱 사용 설명서 (v2026)</span>
+                <span class="dash-title" style="font-size: 1.15rem; font-weight: 900;">앱 사용 설명서 (v2027)</span>
             </div>
             <span class="toggle-icon" style="color:white; font-weight:bold;">▼</span>
         </div>
         <div class="dash-content" style="padding: 20px; font-size: 1rem; line-height: 1.8; font-weight: 500; background: white; border-radius: 8px; border: 1px solid var(--border); margin-top: 5px;">
-            <p style="margin-bottom: 20px; font-size: 1.1rem; background: #f8fafc; padding: 15px; border-radius: 10px; border-left: 5px solid var(--primary);">
-                <b>본 플랫폼은 대한민국 최대의 항만 시설인 부산항(신항/북항) 현장 근로자분들의 작업 효율성과 안전을 위해 개발되었습니다.</b><br>
-                단순한 임금 계산을 넘어, 실시간 선박 동향 파악과 현장 소통을 통해 더욱 스마트한 항만 생태계를 구축하는 것을 목표로 합니다.
+            <p style="margin-bottom: 20px; font-size: 1.05rem; background: #f8fafc; padding: 15px; border-radius: 10px; border-left: 5px solid var(--primary);">
+                <b>본 플랫폼은 2027년 차세대 스마트 항만 시대에 발맞추어, 부산항(신항·북항) 현장 근로자분들의 작업 효율성과 권익 보호, 무재해 안전 환경을 위해 전면 업그레이드되었습니다.</b><br>
+                정밀한 임금 정산과 근무일지 클라우드 백업부터 전 터미널 실시간 선석·식단·베이플랜 통합 조회까지 현장에 꼭 필요한 모든 기능을 한곳에서 제공합니다.
             </p>
-            <h4 style="color: var(--primary); margin-top: 25px; border-left: 4px solid var(--primary); padding-left: 10px;">📉 1. 정밀 임금 산정 및 세무 관리 시스템</h4>
-            <p>항만 노임 단가는 매년 갱신되며, 주간/야간/휴일 근무에 따른 복잡한 가산율이 적용됩니다. 본 계산기는 2026년 최신 노임 협정 표준을 준수하여 설계되었습니다.</p>
+
+            <h4 style="color: var(--primary); margin-top: 25px; border-left: 4px solid var(--primary); padding-left: 10px;">🧮 1. 2027년형 정밀 임금 산정 및 세무 시뮬레이션</h4>
+            <p>본선·기능공·육상 직군별 특성과 계절별 주·야간 시간대(1~3월, 4~9월, 10~12월)를 자동 판별하여 2027년 노임 기준에 맞춘 정밀 계산을 수행합니다.</p>
             <ul style="background: rgba(10, 27, 63, 0.05); padding: 15px 15px 15px 35px; border-radius: 8px;">
-                <li><b>정확한 시간 입력:</b> 24시간제 입력 방식을 통해 자정(00시)을 넘기는 철야 작업도 오차 없이 계산합니다.</li>
-                <li><b>법정 가산 수당:</b> 근로기준법 및 항만 특수 근로 조건을 반영하여 야간 할증(50%), 주말 가산 등을 자동 산출합니다.</li>
-                <li><b>소득세 자동 계산:</b> 프리및일용직(원청징수)(3.3%) 또는 4대 보험(9.4%) 공제율을 선택하여 실제 실령액을 미리 예측할 수 있습니다.</li>
+                <li><b>직군별 맞춤 자동 반영:</b> 본선, 기능공(주·야간 기능공 수당 자동 합산), 육상 선택 시 각 직무에 맞는 할증과 기본급이 즉시 적용됩니다.</li>
+                <li><b>24시간 철야·연속 작업 자동 분리:</b> 시작·종료 일시만 선택하면 자정을 넘기는 철야 작업도 주간/야간/주말/공휴일 시간을 1시간 단위로 정확히 분해합니다.</li>
+                <li><b>특수 수당 & 실수령액 예측:</b> 지게차, 특별수당, 우천 할증(50%), 혹서기 수당(30%)은 물론 3.3% 원천징수 및 4대 보험(9.4%) 공제 후 실수령 명세표를 즉시 생성합니다.</li>
             </ul>
-            <h4 style="color: var(--primary); margin-top: 25px; border-left: 4px solid var(--primary); padding-left: 10px;">🚢 2. 실시간 선박 물류 정보 및 도선 현황</h4>
-            <p>성공적인 하역 작업을 위해서는 선박의 정확한 ETA(도착 예정 시간) 파악이 필수입니다.</p>
-            <div>
-            <h3 style="color: var(--primary); font-size: 1.1rem; margin-bottom: 8px; font-weight: 800;">
-                🔒 3. 보안 인증 및 문의 안내
-            </h3>
-            <p style="margin: 0; font-size: 0.9rem; color: var(--text-sub);">
-                • <strong>문의 메일:</strong> luxrank@gmail.com (소속 터미널 및 성함 기입 필수)<br>
-                • <strong>문의 문자:</strong> 010-2846-8906 (소속 터미널 및 성함 기입 필수)
-            </p>
-        </div>
+
+            <h4 style="color: var(--primary); margin-top: 25px; border-left: 4px solid var(--primary); padding-left: 10px;">📅 2. 스마트 근무일지 & 원클릭 엑셀(CSV) 정산</h4>
+            <p>매일의 작업 이력을 달력에 기록하고 월별 총수입을 한눈에 관리할 수 있는 개인 전용 클라우드 저장소입니다.</p>
+            <ul style="background: rgba(10, 27, 63, 0.05); padding: 15px 15px 15px 35px; border-radius: 8px;">
+                <li><b>간편 보안 로그인:</b> 별도의 복잡한 가입 절차 없이 본인만의 닉네임과 비밀번호만으로 언제 어디서나 내 근무 기록을 불러옵니다.</li>
+                <li><b>현장 기록 통합 보관:</b> 작업 선박명, 임금1·임금2 분할 기록, 동반 근무자 배지 표시, 작업 메모, 현장 인증 사진까지 날짜별로 깔끔하게 저장됩니다.</li>
+                <li><b>한 달 기록 엑셀 다운로드:</b> 월말 정산 시 <b>[한달 기록 엑셀 저장(CSV)]</b> 버튼 하나로 전체 근무 내역을 파일로 내려받아 세무·정산 자료로 활용할 수 있습니다.</li>
+            </ul>
+
+            <h4 style="color: var(--primary); margin-top: 25px; border-left: 4px solid var(--primary); padding-left: 10px;">🚢 3. 1·2·3항업 전 터미널 통합 관제 & 편의 기능</h4>
+            <p>신항 남측(3항업: 한진·고려·동원·BCT), 신항 북측(2항업: PNC·HPNT·PNIT), 북항(1항업: BPTC·HBCT)의 핵심 현장 정보를 원터치로 연결합니다.</p>
+            <ul style="background: rgba(10, 27, 63, 0.05); padding: 15px 15px 15px 35px; border-radius: 8px;">
+                <li><b>실시간 선석 스케줄 & BAY PLAN:</b> 각 터미널의 선석 스케줄, 차트, 본선 작업 현황 및 한진/통합 BAY PLAN 도면을 즉시 열람할 수 있습니다.</li>
+                <li><b>터미널별 오늘의 식단표 & 셔틀버스:</b> 전 터미널 구내식당 식단 이미지 확인과 PNC 셔틀버스 시간표, 조장 근무일 캘린더를 지원합니다.</li>
+                <li><b>항업별 실시간 알림 티커:</b> 상단 안전 티커와 1·2·3항업 전용 공지 티커를 통해 현장 긴급 공지와 작업 유의사항을 실시간으로 공유합니다.</li>
+            </ul>
+
+            <h4 style="color: var(--primary); margin-top: 25px; border-left: 4px solid var(--primary); padding-left: 10px;">🤝 4. 선박 도감 · 커뮤니티 · 실전 안전(HSE)</h4>
+            <ul style="background: rgba(10, 27, 63, 0.05); padding: 15px 15px 15px 35px; border-radius: 8px;">
+                <li><b>선박 정보 & 댓글 공유:</b> 선박별 특이사항(라싱 브릿지 구조, 작업 난이도 등)을 검색·등록하고 동료 작업자들과 실시간 댓글로 노하우를 나눕니다.</li>
+                <li><b>현장 소통 & 자료실:</b> 공지사항, 왁자지껄 게시판, 각 터미널 셔틀·작업 문서를 모아둔 자료실 및 실무 용어 가이드를 제공합니다.</li>
+                <li><b>도선·기상 & HSE 안전 지침:</b> 부산항 도선사회 실시간 모니터링/도선상황, 기상청 날씨, 항만안전특별법 기반 6단계 필수 안전 매뉴얼을 수록했습니다.</li>
+            </ul>
+
+            <div style="margin-top: 20px; background: #f1f5f9; padding: 15px; border-radius: 8px; border: 1px solid var(--border);">
+                <h3 style="color: var(--primary); font-size: 1.05rem; margin: 0 0 8px 0; font-weight: 900;">
+                    🔒 5. 보안 인증 및 이용 문의 (v2027 고객지원)
+                </h3>
+                <p style="margin: 0; font-size: 0.9rem; color: var(--text-sub); line-height: 1.6;">
+                    • <strong>문의 메일:</strong> luxrank@gmail.com (소속 터미널 및 성함 기입 필수)<br>
+                    • <strong>문의 문자:</strong> 010-2846-8906 (소속 터미널 및 성함 기입 필수)
+                </p>
+            </div>
         </div>
     </div>
 
@@ -424,6 +453,22 @@
                 <div id="userProfileBar" class="user-auth-bar" style="display:none;">
                     <div class="user-info"><span id="currentUserDisplay" class="user-name"></span><span class="user-status">🔒 내 저장소</span></div>
                     <button class="action-btn bg-cancel" style="padding: 5px 10px; width:auto; font-size:0.85rem;" onclick="logoutWorker()">로그아웃</button>
+                </div>
+                <div class="log-filter-box">
+                    <div style="font-size:0.85rem; font-weight:900; color:var(--primary); margin-bottom:6px; display:flex; justify-content:space-between; align-items:center;">
+                        <span>🔍 근무 기록 기간·키워드 검색</span>
+                        <button type="button" onclick="resetWorkLogFilter()" style="background:transparent; border:1px solid var(--border); border-radius:6px; padding:2px 8px; font-size:0.75rem; font-weight:800; color:var(--text-sub); cursor:pointer;">초기화</button>
+                    </div>
+                    <div style="display:flex; gap:6px; align-items:center; margin-bottom:6px;">
+                        <input type="date" id="logFilterStartDate" class="input-field" style="flex:1; height:36px; font-size:0.82rem; padding:0 6px; text-align:center;" onchange="applyWorkLogFilter()">
+                        <span style="font-weight:900; color:var(--text-sub);">~</span>
+                        <input type="date" id="logFilterEndDate" class="input-field" style="flex:1; height:36px; font-size:0.82rem; padding:0 6px; text-align:center;" onchange="applyWorkLogFilter()">
+                    </div>
+                    <div style="display:flex; gap:6px;">
+                        <input type="text" id="logFilterKeyword" class="input-field" placeholder="배이름, 근무자, 메모 검색..." style="flex:1; height:38px; font-size:0.88rem; text-align:left; padding:0 10px;" oninput="applyWorkLogFilter()" onkeydown="if(event.key==='Enter'){event.preventDefault();searchWorkLogsRange();}">
+                        <button type="button" class="action-btn" style="width:auto; margin:0; padding:0 14px; height:38px; font-size:0.85rem;" onclick="searchWorkLogsRange()">기간조회</button>
+                    </div>
+                    <div id="logFilterResults" class="log-filter-results hidden"></div>
                 </div>
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
                     <button class="mini-btn-old" style="padding:6px 12px; font-size:1rem; background:var(--primary);" onclick="changeMonth(-1)">◀</button>
@@ -1295,7 +1340,146 @@ async function uploadHjncMealImage(input) {
 }
 async function deleteTickerMsg(type, index){ if(!confirm("삭제?")) return; if(type === 'admin') { delete globalTickerData.adminMessage; await db.collection('settings').doc('banner').update({ adminMessage: firebase.firestore.FieldValue.delete() }); } else { globalTickerData.userMessages.splice(index, 1); await db.collection('settings').doc('banner').update({ userMessages: globalTickerData.userMessages }); } renderTickerList(); showToast("삭제됨"); }
 function downloadWorkLogsExcel() { if (!currentWorkerId || Object.keys(adminWorkLogs).length === 0) { return alert("다운로드할 근무 기록 데이터가 없습니다."); } let csvContent = "\uFEFF날짜,배이름,임금1,임금2,총임금,근무자,메모\n"; const sortedDates = Object.keys(adminWorkLogs).sort(); sortedDates.forEach(date => { const d = adminWorkLogs[date]; const ship = d.shipName || ""; const w1 = d.wage1 || 0; const w2 = d.wage2 || 0; const total = d.totalPay || 0; const workers = (d.coworkers || "").replace(/,/g, " "); const memo = (d.memo || "").replace(/\n/g, " ").replace(/,/g, " "); csvContent += `${date},${ship},${w1},${w2},${total},${workers},${memo}\n`; }); const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' }); const url = URL.createObjectURL(blob); const link = document.createElement("a"); const monthTitle = document.getElementById('calMonthYear').innerText; link.href = url; link.download = `${currentWorkerId}_${monthTitle}_근무기록.csv`; document.body.appendChild(link); link.click(); document.body.removeChild(link); showToast("📊 엑셀 파일이 다운로드 폴더에 저장되었습니다!"); }
-function renderCalendar(y, m){ const g = document.getElementById('calendarGrid'); g.innerHTML = ""; document.getElementById('calMonthYear').innerText = `${y}년 ${m+1}월`; const fD = new Date(y, m, 1).getDay(), lD = new Date(y, m+1, 0).getDate(); for(let i=0; i<fD; i++) g.innerHTML += `<div></div>`; for(let d=1; d<=lD; d++){ const dStr = `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`; let dayColor = "var(--text-main)"; let currentDayObj = new Date(y, m, d).getDay(); if (currentDayObj === 0) dayColor = "#ef4444"; if (currentDayObj === 6) dayColor = "#3b82f6"; g.innerHTML += `<div id="cal-day-${d}" class="cal-day tap-effect" onclick="clickDate('${dStr}')" style="color: ${dayColor};">${d}<div class="cal-dot"></div></div>`; } if(currentWorkerId) { const sDate = `${y}-${String(m+1).padStart(2,'0')}-01`, eDate = `${y}-${String(m+1).padStart(2,'0')}-${lD}`; db.collection('work_logs').where('date', '>=', sDate).where('date', '<=', eDate).get().then(s => { adminWorkLogs = {}; let total = 0; s.forEach(doc => { const data = doc.data(); if(data.workerId === currentWorkerId) { adminWorkLogs[data.date] = data; const day = parseInt(data.date.split('-')[2]); const el = document.getElementById(`cal-day-${day}`); if(el) { el.classList.add('has-data'); if (data.coworkers) { if (!el.querySelector('.coworker-badge')) { el.innerHTML += `<div class="coworker-badge">${data.coworkers}</div>`; } else { el.querySelector('.coworker-badge').innerText = data.coworkers; } } } total += (data.totalPay || 0); } }); document.getElementById('monthlyTotalDisplay').innerText = `이번달 총액: ${total.toLocaleString()}원`; }); } }
+function renderCalendar(y, m){ const g = document.getElementById('calendarGrid'); g.innerHTML = ""; document.getElementById('calMonthYear').innerText = `${y}년 ${m+1}월`; const fD = new Date(y, m, 1).getDay(), lD = new Date(y, m+1, 0).getDate(); for(let i=0; i<fD; i++) g.innerHTML += `<div></div>`; for(let d=1; d<=lD; d++){ const dStr = `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`; let dayColor = "var(--text-main)"; let currentDayObj = new Date(y, m, d).getDay(); if (currentDayObj === 0) dayColor = "#ef4444"; if (currentDayObj === 6) dayColor = "#3b82f6"; g.innerHTML += `<div id="cal-day-${d}" data-date="${dStr}" class="cal-day tap-effect" onclick="clickDate('${dStr}')" style="color: ${dayColor};">${d}<div class="cal-dot"></div></div>`; } if(currentWorkerId) { const sDate = `${y}-${String(m+1).padStart(2,'0')}-01`, eDate = `${y}-${String(m+1).padStart(2,'0')}-${lD}`; db.collection('work_logs').where('date', '>=', sDate).where('date', '<=', eDate).get().then(s => { adminWorkLogs = {}; let total = 0; s.forEach(doc => { const data = doc.data(); if(data.workerId === currentWorkerId) { adminWorkLogs[data.date] = data; const day = parseInt(data.date.split('-')[2]); const el = document.getElementById(`cal-day-${day}`); if(el) { el.classList.add('has-data'); if (data.coworkers) { if (!el.querySelector('.coworker-badge')) { el.innerHTML += `<div class="coworker-badge">${data.coworkers}</div>`; } else { el.querySelector('.coworker-badge').innerText = data.coworkers; } } } total += (data.totalPay || 0); } }); document.getElementById('monthlyTotalDisplay').innerText = `이번달 총액: ${total.toLocaleString()}원`; applyWorkLogFilter(); }); } }
+let rangeFetchedLogs = null;
+function matchesLogFilter(log, startDate, endDate, keyword) {
+    if (!log) return false;
+    if (startDate && log.date < startDate) return false;
+    if (endDate && log.date > endDate) return false;
+    if (keyword) {
+        const hay = `${log.date || ''} ${log.shipName || ''} ${log.coworkers || ''} ${log.memo || ''} ${log.totalPay || ''}`.toLowerCase();
+        if (!hay.includes(keyword)) return false;
+    }
+    return true;
+}
+function applyWorkLogFilter(externalLogs) {
+    const startDate = (document.getElementById('logFilterStartDate')?.value || '').trim();
+    const endDate = (document.getElementById('logFilterEndDate')?.value || '').trim();
+    const keyword = (document.getElementById('logFilterKeyword')?.value || '').trim().toLowerCase();
+    const resultsBox = document.getElementById('logFilterResults');
+    const isFiltering = Boolean(startDate || endDate || keyword);
+
+    document.querySelectorAll('#calendarGrid .cal-day').forEach(cell => {
+        cell.classList.remove('filter-match', 'filter-dim');
+        if (!isFiltering) return;
+        const dStr = cell.getAttribute('data-date');
+        const log = adminWorkLogs[dStr];
+        if (matchesLogFilter(log, startDate, endDate, keyword)) {
+            cell.classList.add('filter-match');
+        } else {
+            cell.classList.add('filter-dim');
+        }
+    });
+
+    if (!resultsBox) return;
+    if (!isFiltering) {
+        resultsBox.classList.add('hidden');
+        resultsBox.innerHTML = '';
+        rangeFetchedLogs = null;
+        return;
+    }
+
+    const sourceMap = externalLogs || rangeFetchedLogs || adminWorkLogs;
+    const matched = Object.values(sourceMap)
+        .filter(log => matchesLogFilter(log, startDate, endDate, keyword))
+        .sort((a, b) => b.date.localeCompare(a.date));
+
+    resultsBox.classList.remove('hidden');
+    if (matched.length === 0) {
+        resultsBox.innerHTML = `<div style="text-align:center; padding:10px; font-size:0.82rem; color:var(--text-sub); font-weight:700;">조건에 맞는 근무 기록이 없습니다.${!externalLogs && !rangeFetchedLogs && (startDate || endDate) ? ' 다른 달 기록을 찾으시려면 [기간조회]를 눌러주세요.' : ''}</div>`;
+        return;
+    }
+
+    let sumPay = 0;
+    const itemsHtml = matched.map(log => {
+        const pay = Number(log.totalPay) || 0;
+        sumPay += pay;
+        const ship = escapeShipCommentHtml(log.shipName || '선박명 미입력');
+        const workers = escapeShipCommentHtml(log.coworkers || '');
+        const memo = escapeShipCommentHtml(log.memo || '');
+        return `<div class="log-filter-item" onclick="jumpToLogDate('${log.date}')">
+            <div style="flex:1; min-width:0;">
+                <div style="font-weight:900; color:var(--primary);">${log.date} · 🚢 ${ship}</div>
+                <div style="font-size:0.78rem; color:var(--text-sub); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${workers ? `👥 ${workers} ` : ''}${memo ? `📝 ${memo}` : ''}</div>
+            </div>
+            <div style="font-weight:900; color:#c2410c; white-space:nowrap;">${pay.toLocaleString()}원</div>
+        </div>`;
+    }).join('');
+
+    resultsBox.innerHTML = `<div style="display:flex; justify-content:space-between; align-items:center; font-size:0.8rem; font-weight:900; color:var(--primary); margin-bottom:6px; padding:0 4px;">
+        <span>검색 결과: ${matched.length}건</span>
+        <span>합계: ${sumPay.toLocaleString()}원</span>
+    </div>${itemsHtml}`;
+}
+async function searchWorkLogsRange() {
+    if (!currentWorkerId) {
+        document.getElementById('loginModal').style.display = 'flex';
+        return;
+    }
+    const startDate = (document.getElementById('logFilterStartDate')?.value || '').trim();
+    const endDate = (document.getElementById('logFilterEndDate')?.value || '').trim();
+    if (startDate && endDate && startDate > endDate) {
+        alert("시작일이 종료일보다 늦을 수 없습니다.");
+        return;
+    }
+    const resultsBox = document.getElementById('logFilterResults');
+    if (resultsBox) {
+        resultsBox.classList.remove('hidden');
+        resultsBox.innerHTML = `<div style="text-align:center; padding:10px; font-size:0.82rem; color:var(--text-sub); font-weight:700;">기록을 조회하는 중...</div>`;
+    }
+    try {
+        let query = db.collection('work_logs');
+        if (startDate) query = query.where('date', '>=', startDate);
+        if (endDate) query = query.where('date', '<=', endDate);
+        const snap = await query.get();
+        const fetched = {};
+        snap.forEach(doc => {
+            const data = doc.data();
+            if (data.workerId === currentWorkerId) {
+                fetched[data.date] = data;
+            }
+        });
+        rangeFetchedLogs = fetched;
+        if (startDate) {
+            const parts = startDate.split('-');
+            if (parts.length === 3) {
+                currentDate = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, 1);
+                renderCalendar(currentDate.getFullYear(), currentDate.getMonth());
+            }
+        }
+        applyWorkLogFilter(fetched);
+    } catch (e) {
+        console.error("기간 조회 오류:", e);
+        applyWorkLogFilter();
+    }
+}
+function resetWorkLogFilter() {
+    const s = document.getElementById('logFilterStartDate');
+    const e = document.getElementById('logFilterEndDate');
+    const k = document.getElementById('logFilterKeyword');
+    if (s) s.value = '';
+    if (e) e.value = '';
+    if (k) k.value = '';
+    rangeFetchedLogs = null;
+    applyWorkLogFilter();
+}
+function jumpToLogDate(dStr) {
+    if (!dStr) return;
+    const parts = dStr.split('-');
+    if (parts.length !== 3) return;
+    const y = parseInt(parts[0], 10);
+    const m = parseInt(parts[1], 10) - 1;
+    if (rangeFetchedLogs && rangeFetchedLogs[dStr]) {
+        adminWorkLogs[dStr] = rangeFetchedLogs[dStr];
+    }
+    if (currentDate.getFullYear() !== y || currentDate.getMonth() !== m) {
+        currentDate = new Date(y, m, 1);
+        renderCalendar(y, m);
+    }
+    clickDate(dStr);
+    const formEl = document.getElementById('dailyLogForm');
+    if (formEl) formEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
 function clickDate(dStr){ document.getElementById('selectedDateText').innerText = dStr; document.getElementById('dailyLogForm').classList.remove('hidden'); document.getElementById('dailyLogForm').setAttribute('data-date', dStr); const d = adminWorkLogs[dStr]; document.getElementById('logShipName').value = d ? (d.shipName || '') : ''; document.getElementById('logWage1').value = d ? (d.wage1 || '') : ''; document.getElementById('logWage2').value = d ? (d.wage2 || '') : ''; document.getElementById('logCoworkers').value = d ? (d.coworkers || '') : ''; document.getElementById('logMemo').value = d ? d.memo : ''; const img = document.getElementById('logImagePreview'); if(d && d.imageUrl){ img.src = d.imageUrl; img.style.display = 'block'; } else { img.style.display = 'none'; img.src = ""; } document.getElementById('logImageInput').value = ''; }
 function trySaveWorkLog(){ if(currentWorkerId) saveWorkLog(); else document.getElementById('loginModal').style.display = 'flex'; }
 async function confirmLoginAndSave() {
