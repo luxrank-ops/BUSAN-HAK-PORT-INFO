@@ -2457,11 +2457,53 @@ if ("serviceWorker" in navigator) {
     }).catch(() => {});
 }
 
+async function ensureTodayUpdateNotice() {
+    const noticeDocId = "update_2026_10_04_v2027";
+    const noticeTitle = "🚀 [업데이트 안내] v2027 스마트 기능 대폭 업그레이드 (단골터미널·임금연동·근무일지 정산보고서)";
+    const noticeContent = [
+        "부산항(신항·북항) 현장 근로자 여러분, 안녕하십니까! 운영관리자 이춘학입니다.",
+        "현장 작업 효율성과 정산 편의를 높이기 위해 오늘 아래와 같이 주요 기능이 대폭 업그레이드되었습니다.",
+        "",
+        "⭐ 1. [내 단골 터미널 빠른 실행 바] 상단 고정 기능",
+        "• 1·2·3항업 9개 터미널 이름 왼쪽의 별표(⭐)를 터치하면 앱 최상단에 [내 단골 터미널 빠른 실행 바]가 생성됩니다.",
+        "• 폴더를 열지 않고도 상단에서 스케줄·차트·현황·베이플랜·셔틀·식단을 1초 만에 바로 실행할 수 있습니다.",
+        "",
+        "🧮 2. 2027년형 정밀 임금계산기 & 근무일지 원클릭 전송",
+        "• 2026~2027년 법정 공휴일/대체공휴일 자동 반영 및 기본 시급 자유 수정 지원",
+        "• 계산 완료 후 반짝이는 [✨ 📅 이 계산 결과를 근무일지로 보내기 ✨] 버튼을 누르면 해당 날짜의 근무일지에 실수령액과 근무시간 요약이 자동 입력됩니다.",
+        "",
+        "📅 3. 근무일지 기간·키워드 검색 & D3.js 그래프·연간 요약 보고서 (보안 잠금)",
+        "• 달력 상단에서 날짜 범위(시작일~종료일) 및 배이름·근무자·메모 키워드로 특정 기간의 기록을 빠르게 검색할 수 있습니다.",
+        "• 달력 하단에 월별 총수입·근로일수 D3.js 막대그래프와 [연간 종합 정산 요약 보고서](연간 누적 수입/근로일수, 분기별 실적, 주요 선박·동료 TOP 3, 월별 정산표 및 보고서 복사)가 추가되었습니다.",
+        "• 개인 프라이버시 보호를 위해 검색·상세 통계·그래프 보고서 기능은 전용 보안 비밀번호 해제 시에만 열람됩니다.",
+        "",
+        "🎨 4. 터미널 시인성 개선 및 v2027 사용 설명서 개편",
+        "• 3항업(한진·고려·동원·BCT) 약칭 대형 표기 및 터미널별 맞춤 테마 테두리 적용, 활성화된 블럭 고대비 강조",
+        "",
+        "언제나 안전 작업하시길 바라며, 이용 문의나 건의사항은 운영관리자(이춘학 / 010-2846-8906)에게 연락 주시기 바랍니다. 오늘도 무사고 안전 작업하십시오!"
+    ].join("\n");
+    try {
+        const docRef = db.collection("notices").doc(noticeDocId);
+        const snap = await docRef.get();
+        if (!snap.exists) {
+            await docRef.set({
+                title: noticeTitle,
+                content: noticeContent,
+                imageUrl: null,
+                timestamp: firebase.firestore.FieldValue.serverTimestamp()
+            });
+        }
+    } catch (e) {
+        console.warn("업데이트 공지 자동 등록 확인 중 오류:", e);
+    }
+}
+
 window.onload = () => { 
     applyOfficialTerminalNames();
     appendTerminalMealBlocks();
     ["t1", "t2", "t3"].forEach(loadSectionTicker);
     trackVisitorSession();
+    ensureTodayUpdateNotice();
     try { const now = new Date(); now.setMinutes(now.getMinutes() - now.getTimezoneOffset()); const todayStr = now.toISOString().split('T')[0]; const sDate = document.getElementById('wageStartDate'); const eDate = document.getElementById('wageEndDate'); if(sDate) sDate.value = todayStr; if(eDate) eDate.value = todayStr; } catch(e) { console.error("날짜 초기화 오류", e); } 
     loadBanner(); 
     try { 
