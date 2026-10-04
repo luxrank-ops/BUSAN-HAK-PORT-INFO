@@ -546,7 +546,11 @@
                     <div style="background:rgba(16,185,129,0.08); padding:8px 4px; border-radius:8px; border:1px solid var(--border);"><div style="font-size:0.72rem; color:var(--text-sub); font-weight:800;">임금1 / 임금2</div><div id="monthlySplitPay" style="font-size:0.78rem; font-weight:900; color:#047857; margin-top:4px;">0 / 0</div></div>
                 </div>
                 <div id="monthlyTotalDisplay" style="text-align:center; margin-top:10px; font-weight:900; color:var(--primary); font-size:1.25rem; background:rgba(10,27,63,0.03); padding:12px; border-radius:10px; border:1.5px solid var(--primary);">이번달 총액: 0원</div>
-                <div class="goal-gauge-box">
+                <div id="monthlyGoalLockBanner" onclick="openWorkLogPinModal()" style="cursor:pointer; margin-top:10px; background:linear-gradient(135deg, #eff6ff, #e0f2fe); border:1.5px solid #7dd3fc; border-radius:10px; padding:10px 12px; display:flex; justify-content:space-between; align-items:center;">
+                    <span style="font-size:0.84rem; font-weight:900; color:#0369a1;">🔒 🎯 이번 달 목표 수입 달성률 게이지 (잠김)</span>
+                    <span style="background:#0284c7; color:white; font-size:0.74rem; font-weight:800; padding:4px 10px; border-radius:6px;">비번 해제</span>
+                </div>
+                <div id="monthlyGoalGaugeBox" class="goal-gauge-box hidden">
                     <div style="display:flex; justify-content:space-between; align-items:center; gap:6px; flex-wrap:wrap;">
                         <span style="font-size:0.84rem; font-weight:900; color:var(--primary);">🎯 이번 달 목표 수입 달성률</span>
                         <div style="display:flex; align-items:center; gap:6px;">
@@ -1425,6 +1429,8 @@ function syncWorkLogExtraUnlockUI() {
     const wageReceiptShareActions = document.getElementById("wageReceiptShareActions");
     const monthlyReceiptLockBanner = document.getElementById("monthlyReceiptLockBanner");
     const monthlyReceiptShareSection = document.getElementById("monthlyReceiptShareSection");
+    const monthlyGoalLockBanner = document.getElementById("monthlyGoalLockBanner");
+    const monthlyGoalGaugeBox = document.getElementById("monthlyGoalGaugeBox");
     if (isWorkLogUnlocked) {
         if (lockBanner) lockBanner.style.display = "none";
         if (filterContent) filterContent.classList.remove("hidden");
@@ -1439,6 +1445,8 @@ function syncWorkLogExtraUnlockUI() {
         if (wageReceiptShareActions) wageReceiptShareActions.classList.remove("hidden");
         if (monthlyReceiptLockBanner) monthlyReceiptLockBanner.style.display = "none";
         if (monthlyReceiptShareSection) monthlyReceiptShareSection.classList.remove("hidden");
+        if (monthlyGoalLockBanner) monthlyGoalLockBanner.style.display = "none";
+        if (monthlyGoalGaugeBox) monthlyGoalGaugeBox.classList.remove("hidden");
         loadAndRenderYearlyD3Chart(currentDate.getFullYear());
         if (typeof loadAndSearchAllShips === "function") {
             loadAndSearchAllShips(document.getElementById('shipSearch')?.value || '');
@@ -1457,6 +1465,8 @@ function syncWorkLogExtraUnlockUI() {
         if (wageReceiptShareActions) wageReceiptShareActions.classList.add("hidden");
         if (monthlyReceiptLockBanner) monthlyReceiptLockBanner.style.display = "flex";
         if (monthlyReceiptShareSection) monthlyReceiptShareSection.classList.add("hidden");
+        if (monthlyGoalLockBanner) monthlyGoalLockBanner.style.display = "flex";
+        if (monthlyGoalGaugeBox) monthlyGoalGaugeBox.classList.add("hidden");
     }
 }
 function openWorkLogPinModal(onUnlock) {
@@ -1899,6 +1909,10 @@ function updateMonthlyGoalGaugeUI(currentTotal = 0, currentDays = 0) {
     }
 }
 function changeMonthlyGoalAmount() {
+    if (!isWorkLogUnlocked) {
+        openWorkLogPinModal(() => changeMonthlyGoalAmount());
+        return;
+    }
     const currentMan = Math.round((Number(monthlyGoalAmount) || 4500000) / 10000);
     const input = prompt("이번 달 목표 수입 금액을 '만원' 단위로 입력해주세요 (예: 450):", String(currentMan));
     if (input === null) return;
