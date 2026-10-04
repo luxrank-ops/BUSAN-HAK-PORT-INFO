@@ -290,6 +290,15 @@
         .comment-submit { width: 100%; background: var(--primary); color: white; border: none; border-radius: 20px; padding: 10px; font-weight: 900; cursor: pointer; font-size: 0.95rem; transition: background 0.2s; margin-top: 4px; }
         
         .mini-btn-old { padding: 8px 12px; font-size: clamp(0.8rem, 2.5vw, 0.9rem); font-weight: 800; border-radius: 6px; border: none; cursor: pointer; color: white; margin-left: 4px; touch-action: manipulation; }
+        .ship-star-picker { display: flex; gap: 6px; align-items: center; }
+        .ship-star-btn { background: #f8fafc; border: 1.5px solid #cbd5e1; border-radius: 8px; padding: 6px 10px; font-size: 1.1rem; cursor: pointer; color: #94a3b8; transition: all 0.15s; line-height: 1; font-weight: 900; }
+        .ship-star-btn.active { background: #fef3c7; border-color: #f59e0b; color: #d97706; transform: scale(1.05); }
+        .ship-tag-chip { background: #f8fafc; border: 1.5px solid #cbd5e1; color: #475569; border-radius: 20px; padding: 5px 11px; font-size: 0.78rem; font-weight: 800; cursor: pointer; transition: all 0.15s; user-select: none; display: inline-flex; align-items: center; gap: 3px; }
+        .ship-tag-chip.active { background: var(--primary); border-color: var(--primary); color: #ffffff; box-shadow: 0 2px 5px rgba(10,27,63,0.2); }
+        .ship-filter-bar { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 10px; padding: 8px; background: rgba(10,27,63,0.03); border-radius: 10px; border: 1px solid var(--border); }
+        .ship-badge-star { display: inline-flex; align-items: center; background: #fef3c7; color: #b45309; border: 1px solid #fcd34d; border-radius: 5px; padding: 1px 6px; font-size: 0.72rem; font-weight: 900; margin-left: 4px; vertical-align: middle; }
+        .ship-badge-tag { display: inline-block; background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; border-radius: 5px; padding: 1px 6px; font-size: 0.7rem; font-weight: 800; margin-right: 4px; margin-top: 3px; }
+        .ship-badge-tag.warn { background: #fef2f2; color: #dc2626; border-color: #fecaca; }
     </style>
     <link rel="apple-touch-icon" href="./icon-192.png">
 </head>
@@ -682,24 +691,83 @@
                 <span class="dash-title" style="color: var(--primary); font-size: 0.95rem !important; font-weight: 900; margin: 0; text-align: left; line-height: 1.3; word-break: keep-all;">선박정보</span>
             </div>
             <div class="dash-content">
-                <div style="display:flex; gap:5px; margin-bottom:10px;">
-                    <input type="text" id="shipSearch" class="input-field" placeholder="검색 (예: MAERSK)" onkeyup="filterShips()" style="margin-bottom:0;">
+                <div style="display:flex; gap:5px; margin-bottom:8px;">
+                    <input type="text" id="shipSearch" class="input-field" placeholder="선박명 또는 #태그 검색 (예: MAERSK, #오토콘)" onkeyup="filterShips()" style="margin-bottom:0;">
                     <button class="action-btn" style="width:auto; padding: 0 15px; margin-top:0;" onclick="filterShips()">🔍</button>
+                </div>
+                <div id="shipExtraLockBanner" onclick="openWorkLogPinModal()" style="cursor:pointer; margin-bottom:10px; background:linear-gradient(135deg, #eff6ff, #dbeafe); border:1.5px solid #93c5fd; border-radius:10px; padding:10px 12px; display:flex; justify-content:space-between; align-items:center;">
+                    <span style="font-size:0.84rem; font-weight:900; color:var(--primary);">🔒 장비태그·난이도 필터 및 전체 선박 도감 뷰 (잠김)</span>
+                    <span style="background:var(--primary); color:white; font-size:0.75rem; font-weight:800; padding:4px 10px; border-radius:6px;">비번 해제</span>
+                </div>
+                <div id="shipFilterBarArea" class="ship-filter-bar hidden">
+                    <div style="width:100%; display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                        <span style="font-size:0.76rem; font-weight:900; color:var(--primary);">🏷️ 장비·특징 태그 & 난이도 빠른 필터</span>
+                        <button type="button" onclick="resetShipFilters()" style="background:transparent; border:1px solid var(--border); border-radius:6px; padding:2px 7px; font-size:0.7rem; font-weight:800; color:var(--text-sub); cursor:pointer;">필터 초기화</button>
+                    </div>
+                    <button type="button" class="ship-tag-chip" data-filter-tag="#오토콘" onclick="toggleShipFilterTag('#오토콘')">#오토콘</button>
+                    <button type="button" class="ship-tag-chip" data-filter-tag="#수동콘" onclick="toggleShipFilterTag('#수동콘')">#수동콘</button>
+                    <button type="button" class="ship-tag-chip" data-filter-tag="#브릿지주의" onclick="toggleShipFilterTag('#브릿지주의')">#브릿지주의</button>
+                    <button type="button" class="ship-tag-chip" data-filter-tag="#라싱바무거움" onclick="toggleShipFilterTag('#라싱바무거움')">#라싱바무거움</button>
+                    <button type="button" class="ship-tag-chip" data-filter-tag="#턴버클뻑뻑함" onclick="toggleShipFilterTag('#턴버클뻑뻑함')">#턴버클뻑뻑함</button>
+                    <button type="button" class="ship-tag-chip" data-filter-tag="#통로협소" onclick="toggleShipFilterTag('#통로협소')">#통로협소</button>
+                    <select id="shipDifficultyFilter" onchange="filterShips()" style="margin-left:auto; border:1.5px solid #cbd5e1; border-radius:16px; padding:3px 8px; font-size:0.75rem; font-weight:800; color:var(--primary); background:#fff; outline:none;">
+                        <option value="0">★ 난이도 전체</option>
+                        <option value="5">★★★★★ (5점·극상)</option>
+                        <option value="4">★★★★☆ 이상 (4점+)</option>
+                        <option value="3">★★★☆☆ 이상 (3점+)</option>
+                        <option value="2">★★☆☆☆ 이하 (수월)</option>
+                    </select>
                 </div>
                 <a href="https://www.marinetraffic.com/" target="_blank" class="action-btn" style="background:#0284c7; text-align:center; display:block; text-decoration:none; margin-bottom:10px; padding:12px;">🌍 실시간 위치</a>
                 <button class="action-btn" style="background:var(--accent); margin-bottom:10px;" onclick="toggleHidden('shipForm')">📝 신규 등록</button>
-                <div id="shipForm" class="hidden">
+                <div id="shipForm" class="hidden" style="background:rgba(10,27,63,0.03); padding:12px; border-radius:10px; border:1px solid var(--border); margin-bottom:12px;">
                     <input type="password" id="shipPw" class="input-field" placeholder="비밀번호" style="text-align:left; margin-bottom:8px;">
-                    <input type="text" id="shipName" class="input-field" placeholder="선박명" style="text-align:left;">
-                    <textarea id="shipOnboard" class="input-field textarea-field" placeholder="작업내용"></textarea>
+                    <input type="text" id="shipName" class="input-field" placeholder="선박명" style="text-align:left; margin-bottom:8px;">
+                    <div style="margin-bottom:10px; background:#fff; padding:10px; border-radius:8px; border:1px solid var(--border);">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; flex-wrap:wrap; gap:6px;">
+                            <span style="font-size:0.84rem; font-weight:900; color:var(--primary);">⭐ 작업 난이도 선택 (★1~5)</span>
+                            <span id="shipDifficultyLabel" style="font-size:0.8rem; font-weight:900; color:#d97706;">★★★☆☆ (보통·3점)</span>
+                        </div>
+                        <input type="hidden" id="shipDifficultyInput" value="3">
+                        <div class="ship-star-picker" id="shipStarPicker">
+                            <button type="button" class="ship-star-btn active" onclick="setShipDifficulty(1)">★1</button>
+                            <button type="button" class="ship-star-btn active" onclick="setShipDifficulty(2)">★2</button>
+                            <button type="button" class="ship-star-btn active" onclick="setShipDifficulty(3)">★3</button>
+                            <button type="button" class="ship-star-btn" onclick="setShipDifficulty(4)">★4</button>
+                            <button type="button" class="ship-star-btn" onclick="setShipDifficulty(5)">★5</button>
+                        </div>
+                    </div>
+                    <div style="margin-bottom:10px; background:#fff; padding:10px; border-radius:8px; border:1px solid var(--border);">
+                        <div style="font-size:0.84rem; font-weight:900; color:var(--primary); margin-bottom:6px;">🏷️ 필수 장비 · 선박 특징 태그 (중복 선택 가능)</div>
+                        <div id="shipFormTagList" style="display:flex; flex-wrap:wrap; gap:6px;">
+                            <button type="button" class="ship-tag-chip" data-form-tag="#오토콘" onclick="toggleShipFormTag('#오토콘')">#오토콘</button>
+                            <button type="button" class="ship-tag-chip" data-form-tag="#수동콘" onclick="toggleShipFormTag('#수동콘')">#수동콘</button>
+                            <button type="button" class="ship-tag-chip" data-form-tag="#브릿지주의" onclick="toggleShipFormTag('#브릿지주의')">#브릿지주의</button>
+                            <button type="button" class="ship-tag-chip" data-form-tag="#라싱바무거움" onclick="toggleShipFormTag('#라싱바무거움')">#라싱바무거움</button>
+                            <button type="button" class="ship-tag-chip" data-form-tag="#턴버클뻑뻑함" onclick="toggleShipFormTag('#턴버클뻑뻑함')">#턴버클뻑뻑함</button>
+                            <button type="button" class="ship-tag-chip" data-form-tag="#통로협소" onclick="toggleShipFormTag('#통로협소')">#통로협소</button>
+                        </div>
+                    </div>
+                    <textarea id="shipOnboard" class="input-field textarea-field" placeholder="작업내용 및 준비 장비 상세 메모"></textarea>
                     <input type="file" id="shipFileInput" class="input-field">
                     <button id="shipSubmitBtn" class="action-btn bg-submit" onclick="addShipInfo()">등록/수정</button>
                 </div>
                 <table class="board-table" style="margin-top:0;">
-                    <thead><tr><th style="width:10%">No.</th><th style="width:55%">선박명</th><th style="width:35%">등록일</th></tr></thead>
+                    <thead><tr><th style="width:10%">No.</th><th style="width:62%">선박명 · 난이도 · 장비태그</th><th style="width:28%">등록일</th></tr></thead>
                     <tbody id="shipList"></tbody>
                 </table>
                 <div id="shipPagination" style="display:flex; justify-content:flex-start; gap:5px; margin-top:10px; margin-bottom:15px; overflow-x:auto; overflow-y:hidden; white-space:nowrap; -webkit-overflow-scrolling:touch; overscroll-behavior-x:contain;"></div>
+                <div id="shipFullListLockBanner" onclick="openWorkLogPinModal()" style="cursor:pointer; margin-top:14px; background:linear-gradient(135deg, #f0fdf4, #dcfce7); border:1.5px solid #86efac; border-radius:10px; padding:11px 12px; display:flex; justify-content:space-between; align-items:center;">
+                    <span style="font-size:0.85rem; font-weight:900; color:#166534;">📋 전체 선박 도감 한눈에 보기 · 전체 목록 뷰 (잠김)</span>
+                    <span style="background:#15803d; color:white; font-size:0.75rem; font-weight:800; padding:4px 10px; border-radius:6px;">비번 해제</span>
+                </div>
+                <div id="shipFullListSection" class="hidden" style="margin-top:16px; padding-top:14px; border-top:2px dashed var(--border);">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; flex-wrap:wrap; gap:6px;">
+                        <span style="font-size:0.92rem; font-weight:900; color:var(--primary);">📋 전체 선박 도감 한눈에 보기 (전체 목록 뷰)</span>
+                        <button type="button" onclick="loadAndSearchAllShips(document.getElementById('shipSearch')?.value || '')" style="background:var(--primary); color:white; border:none; border-radius:6px; padding:5px 10px; font-size:0.76rem; font-weight:800; cursor:pointer;">🔄 전체 새로고침</button>
+                    </div>
+                    <div id="vessel-result-container"></div>
+                </div>
             </div>
         </div>
 
@@ -1170,19 +1238,34 @@ function syncWorkLogExtraUnlockUI() {
     const statsSummary = document.getElementById("monthlyStatsSummary");
     const d3LockBanner = document.getElementById("d3ChartLockBanner");
     const d3ChartSection = document.getElementById("monthlyD3ChartSection");
+    const shipLockBanner = document.getElementById("shipExtraLockBanner");
+    const shipFilterBarArea = document.getElementById("shipFilterBarArea");
+    const shipFullListLockBanner = document.getElementById("shipFullListLockBanner");
+    const shipFullListSection = document.getElementById("shipFullListSection");
     if (isWorkLogUnlocked) {
         if (lockBanner) lockBanner.style.display = "none";
         if (filterContent) filterContent.classList.remove("hidden");
         if (statsSummary) statsSummary.classList.remove("hidden");
         if (d3LockBanner) d3LockBanner.style.display = "none";
         if (d3ChartSection) d3ChartSection.classList.remove("hidden");
+        if (shipLockBanner) shipLockBanner.style.display = "none";
+        if (shipFilterBarArea) shipFilterBarArea.classList.remove("hidden");
+        if (shipFullListLockBanner) shipFullListLockBanner.style.display = "none";
+        if (shipFullListSection) shipFullListSection.classList.remove("hidden");
         loadAndRenderYearlyD3Chart(currentDate.getFullYear());
+        if (typeof loadAndSearchAllShips === "function") {
+            loadAndSearchAllShips(document.getElementById('shipSearch')?.value || '');
+        }
     } else {
         if (lockBanner) lockBanner.style.display = "flex";
         if (filterContent) filterContent.classList.add("hidden");
         if (statsSummary) statsSummary.classList.add("hidden");
         if (d3LockBanner) d3LockBanner.style.display = "flex";
         if (d3ChartSection) d3ChartSection.classList.add("hidden");
+        if (shipLockBanner) shipLockBanner.style.display = "flex";
+        if (shipFilterBarArea) shipFilterBarArea.classList.add("hidden");
+        if (shipFullListLockBanner) shipFullListLockBanner.style.display = "flex";
+        if (shipFullListSection) shipFullListSection.classList.add("hidden");
     }
 }
 function openWorkLogPinModal(onUnlock) {
@@ -1235,6 +1318,8 @@ function toggleDashItem(id){
         if(id === 'log-card') {
             syncWorkLogExtraUnlockUI();
             renderCalendar(currentDate.getFullYear(), currentDate.getMonth());
+        } else if(id === 'ship-card') {
+            syncWorkLogExtraUnlockUI();
         }
     }
 }
@@ -2309,7 +2394,168 @@ function deletePost(id,pw,e){ e.stopPropagation(); if(prompt("비번")===pw) db.
 function addComment(pid){const n=document.getElementById(`cmt-name-${pid}`).value, p=document.getElementById(`cmt-pw-${pid}`).value, t=document.getElementById(`cmt-txt-${pid}`).value; if(n&&p&&t){db.collection('posts').doc(pid).collection('comments').add({name:n, password:p, text:t, timestamp:firebase.firestore.FieldValue.serverTimestamp()}).then(()=>{document.getElementById(`cmt-txt-${pid}`).value=""; showToast("댓글이 등록되었습니다.");});}} 
 async function deleteComment(pid,cid,pw){if(prompt("비번")===pw||await verifyAdmin()) db.collection('posts').doc(pid).collection('comments').doc(cid).delete();}
 
-let currentEditShipId = null; function addShipInfo() { const n = document.getElementById('shipName').value.trim(); const c = document.getElementById('shipOnboard').value.trim(); const p = document.getElementById('shipPw').value.trim(); const f = document.getElementById('shipFileInput').files[0]; const btn = document.getElementById('shipSubmitBtn'); if (!n || !p) return alert("선박명과 비밀번호는 필수입니다!"); btn.innerText = "서버 기록 중..."; btn.disabled = true; const finalizeSave = (url) => { const shipData = { shipName: n, onboardFeat: c, password: p, timestamp: firebase.firestore.FieldValue.serverTimestamp() }; if (url) shipData.imageUrl = url; let task = currentEditShipId ? db.collection("ships").doc(currentEditShipId).update(shipData) : db.collection("ships").add(shipData); task.then(() => { showToast("성공적으로 기록되었습니다."); resetShipForm(); btn.innerText = "등록/수정"; btn.disabled = false; }).catch(err => { alert("실패: " + err.message); btn.disabled = false; }); }; if (f) { const storageRef = storage.ref(`ships/${Date.now()}_${f.name}`); const uploadTask = storageRef.put(f); uploadTask.on('state_changed', null, null, () => { uploadTask.snapshot.ref.getDownloadURL().then(url => finalizeSave(url)); }); } else { finalizeSave(); } } async function tryEditShip(id, name, feat, savedPw) { const inputPw = prompt("비밀번호를 입력하세요 (작성자 또는 관리자):"); if (!inputPw) return; const adminDoc = await db.collection('settings').doc('admin').get(); const isAdmin = adminDoc.exists && adminDoc.data().password === inputPw; if (inputPw === savedPw || isAdmin) { startEditShip(id, name, feat); } else { alert("⚠️ 권한이 없습니다. 비밀번호를 확인하세요."); } } function startEditShip(id, name, feat) { currentEditShipId = id; document.getElementById('shipName').value = name; document.getElementById('shipOnboard').value = feat; const form = document.getElementById('shipForm'); if (form.classList.contains('hidden')) form.classList.remove('hidden'); form.scrollIntoView({behavior: 'smooth', block: 'center'}); showToast("수정 모드로 전환되었습니다."); } function resetShipForm() { document.getElementById('shipName').value = ''; document.getElementById('shipOnboard').value = ''; document.getElementById('shipFileInput').value = ''; document.getElementById('shipForm').classList.add('hidden'); currentEditShipId = null; } function filterShips() { const searchTerm = document.getElementById('shipSearch').value.trim().toUpperCase(); if (searchTerm === "") { filteredShips = allShipsData; } else { filteredShips = allShipsData.filter(ship => (ship.shipName && ship.shipName.toUpperCase().includes(searchTerm)) ); } renderShipPage(1); } function renderShipPage(p) { const l = document.getElementById("shipList"); l.innerHTML = ""; const pageData = filteredShips.slice((p-1)*postsPerPage, p*postsPerPage); pageData.forEach(x => { const safeName = (x.shipName || "").replace(/'/g, "\\'"); const safeFeat = (x.onboardFeat || "").replace(/'/g, "\\'").replace(/\n/g, "\\n"); const savedPw = x.password || ""; l.innerHTML += `<li class="post-item"><div class="post-header-row" onclick="toggleContent('s-${x.id}')"><div class="post-title-text">🚢 ${x.shipName}</div><span>▼</span></div><div id="s-${x.id}" class="post-body-content" style="display:none; padding:15px;"><div style="white-space:pre-wrap;">${x.onboardFeat}</div><div style="text-align:right; margin-top:15px;"><button class="mini-btn" style="background:var(--primary-light);" onclick="tryEditShip('${x.id}', '${safeName}', '${safeFeat}', '${savedPw}')">✏️ 수정</button><button class="mini-btn btn-del" onclick="deleteShip('${x.id}',event)">🗑️ 삭제</button></div></div></li>`; }); } function addArchive() { const t = document.getElementById('archiveTitle').value.trim(); const f = document.getElementById('archiveFile').files[0]; const btn = document.getElementById('archiveSubmitBtn'); if(!t || !f) return alert("파일 설명과 파일을 모두 선택해주세요."); btn.innerText = "서버 연결 중..."; btn.disabled = true; const ref = storage.ref(`archives/${Date.now()}_${f.name}`); const task = ref.put(f); task.on('state_changed', (s) => { const p = Math.round((s.bytesTransferred / s.totalBytes) * 100); btn.innerText = `업로드 중... ${p}%`; }, (e) => { alert("업로드 실패: " + e.message); btn.disabled = false; btn.innerText = "업로드 완료"; }, () => { task.snapshot.ref.getDownloadURL().then(url => { db.collection("archives").add({ title: t, url: url, timestamp: firebase.firestore.FieldValue.serverTimestamp() }).then(() => { document.getElementById('archiveTitle').value = ""; document.getElementById('archiveFile').value = ""; toggleHidden('archiveForm'); btn.innerText = "업로드 실행"; btn.disabled = false; showToast("파일이 성공적으로 등록되었습니다!"); }); }); } ); } async function deleteShip(id,e){e.stopPropagation(); if(await verifyAdmin()) db.collection("ships").doc(id).delete();} function delArchive(id,e){ e.stopPropagation(); verifyAdmin().then(r=>{ if(r) db.collection("archives").doc(id).delete(); }); } 
+let currentEditShipId = null;
+let selectedShipFormTags = [];
+let activeShipFilterTags = [];
+const shipDifficultyDescriptions = {
+    1: "★☆☆☆☆ (매우 수월·1점)",
+    2: "★★☆☆☆ (수월함·2점)",
+    3: "★★★☆☆ (보통·3점)",
+    4: "★★★★☆ (까다로움·4점)",
+    5: "★★★★★ (극상/주의·5점)"
+};
+function setShipDifficulty(level) {
+    const num = Math.min(5, Math.max(1, parseInt(level, 10) || 3));
+    const input = document.getElementById("shipDifficultyInput");
+    const label = document.getElementById("shipDifficultyLabel");
+    if (input) input.value = String(num);
+    if (label) label.innerText = shipDifficultyDescriptions[num] || `★${num}`;
+    document.querySelectorAll("#shipStarPicker .ship-star-btn").forEach((btn, idx) => {
+        btn.classList.toggle("active", idx < num);
+    });
+}
+function toggleShipFormTag(tag) {
+    const idx = selectedShipFormTags.indexOf(tag);
+    if (idx >= 0) selectedShipFormTags.splice(idx, 1);
+    else selectedShipFormTags.push(tag);
+    syncShipFormTagUI();
+}
+function syncShipFormTagUI() {
+    document.querySelectorAll("#shipFormTagList [data-form-tag]").forEach(btn => {
+        const tag = btn.getAttribute("data-form-tag");
+        btn.classList.toggle("active", selectedShipFormTags.includes(tag));
+    });
+}
+function toggleShipFilterTag(tag) {
+    const idx = activeShipFilterTags.indexOf(tag);
+    if (idx >= 0) activeShipFilterTags.splice(idx, 1);
+    else activeShipFilterTags.push(tag);
+    document.querySelectorAll(".ship-filter-bar [data-filter-tag]").forEach(btn => {
+        const t = btn.getAttribute("data-filter-tag");
+        btn.classList.toggle("active", activeShipFilterTags.includes(t));
+    });
+    filterShips();
+}
+function resetShipFilters() {
+    activeShipFilterTags = [];
+    const searchEl = document.getElementById("shipSearch");
+    const diffEl = document.getElementById("shipDifficultyFilter");
+    if (searchEl) searchEl.value = "";
+    if (diffEl) diffEl.value = "0";
+    document.querySelectorAll(".ship-filter-bar [data-filter-tag]").forEach(btn => btn.classList.remove("active"));
+    filterShips();
+}
+function extractShipTags(ship) {
+    if (Array.isArray(ship.tags) && ship.tags.length > 0) return ship.tags;
+    const text = `${ship.shipName || ""} ${ship.onboardFeat || ""}`;
+    const known = ["#오토콘", "#수동콘", "#브릿지주의", "#라싱바무거움", "#턴버클뻑뻑함", "#통로협소"];
+    return known.filter(t => text.includes(t) || text.includes(t.slice(1)));
+}
+function addShipInfo() {
+    const n = document.getElementById('shipName').value.trim();
+    const c = document.getElementById('shipOnboard').value.trim();
+    const p = document.getElementById('shipPw').value.trim();
+    const diff = parseInt(document.getElementById('shipDifficultyInput')?.value || '3', 10) || 3;
+    const tags = [...selectedShipFormTags];
+    const f = document.getElementById('shipFileInput').files[0];
+    const btn = document.getElementById('shipSubmitBtn');
+    if (!n || !p) return alert("선박명과 비밀번호는 필수입니다!");
+    btn.innerText = "서버 기록 중...";
+    btn.disabled = true;
+    const finalizeSave = (url) => {
+        const shipData = {
+            shipName: n,
+            onboardFeat: c,
+            password: p,
+            difficulty: diff,
+            tags: tags,
+            timestamp: firebase.firestore.FieldValue.serverTimestamp()
+        };
+        if (url) shipData.imageUrl = url;
+        let task = currentEditShipId ? db.collection("ships").doc(currentEditShipId).update(shipData) : db.collection("ships").add(shipData);
+        task.then(() => {
+            showToast("성공적으로 기록되었습니다.");
+            resetShipForm();
+            btn.innerText = "등록/수정";
+            btn.disabled = false;
+        }).catch(err => {
+            alert("실패: " + err.message);
+            btn.disabled = false;
+        });
+    };
+    if (f) {
+        const storageRef = storage.ref(`ships/${Date.now()}_${f.name}`);
+        const uploadTask = storageRef.put(f);
+        uploadTask.on('state_changed', null, null, () => {
+            uploadTask.snapshot.ref.getDownloadURL().then(url => finalizeSave(url));
+        });
+    } else {
+        finalizeSave();
+    }
+}
+async function tryEditShip(id, name, feat, savedPw) {
+    const inputPw = prompt("비밀번호를 입력하세요 (작성자 또는 관리자):");
+    if (!inputPw) return;
+    const adminDoc = await db.collection('settings').doc('admin').get();
+    const isAdmin = adminDoc.exists && adminDoc.data().password === inputPw;
+    if (inputPw === savedPw || isAdmin) {
+        startEditShip(id, name, feat);
+    } else {
+        alert("⚠️ 권한이 없습니다. 비밀번호를 확인하세요.");
+    }
+}
+function startEditShip(id, name, feat) {
+    currentEditShipId = id;
+    const shipObj = allShipsData.find(s => s.id === id) || {};
+    document.getElementById('shipName').value = name;
+    document.getElementById('shipOnboard').value = feat;
+    setShipDifficulty(shipObj.difficulty || 3);
+    selectedShipFormTags = Array.isArray(shipObj.tags) ? [...shipObj.tags] : extractShipTags(shipObj);
+    syncShipFormTagUI();
+    const form = document.getElementById('shipForm');
+    if (form.classList.contains('hidden')) form.classList.remove('hidden');
+    form.scrollIntoView({behavior: 'smooth', block: 'center'});
+    showToast("수정 모드로 전환되었습니다.");
+}
+function resetShipForm() {
+    document.getElementById('shipName').value = '';
+    document.getElementById('shipOnboard').value = '';
+    document.getElementById('shipFileInput').value = '';
+    setShipDifficulty(3);
+    selectedShipFormTags = [];
+    syncShipFormTagUI();
+    document.getElementById('shipForm').classList.add('hidden');
+    currentEditShipId = null;
+}
+function filterShips() {
+    const searchTerm = (document.getElementById('shipSearch')?.value || '').trim().toUpperCase();
+    const diffFilter = parseInt(document.getElementById('shipDifficultyFilter')?.value || '0', 10) || 0;
+    filteredShips = allShipsData.filter(ship => {
+        const sTags = extractShipTags(ship);
+        const sDiff = Number(ship.difficulty) || 0;
+        if (searchTerm !== "") {
+            const hay = `${ship.shipName || ""} ${ship.onboardFeat || ""} ${sTags.join(" ")}`.toUpperCase();
+            if (!hay.includes(searchTerm)) return false;
+        }
+        if (activeShipFilterTags.length > 0) {
+            const hasAllTags = activeShipFilterTags.every(t => sTags.includes(t));
+            if (!hasAllTags) return false;
+        }
+        if (diffFilter > 0) {
+            if (diffFilter === 2) {
+                if (!sDiff || sDiff > 2) return false;
+            } else {
+                if (sDiff < diffFilter) return false;
+            }
+        }
+        return true;
+    });
+    renderShipPage(1);
+    if (typeof loadAndSearchAllShips === "function") {
+        loadAndSearchAllShips(document.getElementById('shipSearch')?.value || '');
+    }
+}
+function renderShipPage(p) { const l = document.getElementById("shipList"); l.innerHTML = ""; const pageData = filteredShips.slice((p-1)*postsPerPage, p*postsPerPage); pageData.forEach(x => { const safeName = (x.shipName || "").replace(/'/g, "\\'"); const safeFeat = (x.onboardFeat || "").replace(/'/g, "\\'").replace(/\n/g, "\\n"); const savedPw = x.password || ""; l.innerHTML += `<li class="post-item"><div class="post-header-row" onclick="toggleContent('s-${x.id}')"><div class="post-title-text">🚢 ${x.shipName}</div><span>▼</span></div><div id="s-${x.id}" class="post-body-content" style="display:none; padding:15px;"><div style="white-space:pre-wrap;">${x.onboardFeat}</div><div style="text-align:right; margin-top:15px;"><button class="mini-btn" style="background:var(--primary-light);" onclick="tryEditShip('${x.id}', '${safeName}', '${safeFeat}', '${savedPw}')">✏️ 수정</button><button class="mini-btn btn-del" onclick="deleteShip('${x.id}',event)">🗑️ 삭제</button></div></div></li>`; }); } function addArchive() { const t = document.getElementById('archiveTitle').value.trim(); const f = document.getElementById('archiveFile').files[0]; const btn = document.getElementById('archiveSubmitBtn'); if(!t || !f) return alert("파일 설명과 파일을 모두 선택해주세요."); btn.innerText = "서버 연결 중..."; btn.disabled = true; const ref = storage.ref(`archives/${Date.now()}_${f.name}`); const task = ref.put(f); task.on('state_changed', (s) => { const p = Math.round((s.bytesTransferred / s.totalBytes) * 100); btn.innerText = `업로드 중... ${p}%`; }, (e) => { alert("업로드 실패: " + e.message); btn.disabled = false; btn.innerText = "업로드 완료"; }, () => { task.snapshot.ref.getDownloadURL().then(url => { db.collection("archives").add({ title: t, url: url, timestamp: firebase.firestore.FieldValue.serverTimestamp() }).then(() => { document.getElementById('archiveTitle').value = ""; document.getElementById('archiveFile').value = ""; toggleHidden('archiveForm'); btn.innerText = "업로드 실행"; btn.disabled = false; showToast("파일이 성공적으로 등록되었습니다!"); }); }); } ); } async function deleteShip(id,e){e.stopPropagation(); if(await verifyAdmin()) db.collection("ships").doc(id).delete();} function delArchive(id,e){ e.stopPropagation(); verifyAdmin().then(r=>{ if(r) db.collection("archives").doc(id).delete(); }); } 
 
 function renderBoardPage(p){ currentBoardPage = p; const l = document.getElementById("boardList"); l.innerHTML = ""; const start = (p-1) * postsPerPage; const end = start + postsPerPage; const pageData = allPostsData.slice(start, end); if(pageData.length === 0) { l.innerHTML = "<tr><td colspan='4' style='text-align:center; padding:20px; color:var(--text-sub); font-weight:700;'>게시글이 없습니다.</td></tr>"; document.getElementById("pagination").innerHTML = ""; return; } pageData.forEach((x, i) => { let dateStr = ""; if(x.timestamp) { const d = x.timestamp.toDate(); const year = d.getFullYear(); const month = String(d.getMonth() + 1).padStart(2, '0'); const day = String(d.getDate()).padStart(2, '0'); const hour = String(d.getHours()).padStart(2, '0'); const min = String(d.getMinutes()).padStart(2, '0'); dateStr = `${year}/${month}/${day} ${hour}:${min}`; } const rowId = `p-${x.id}`; const authorName = x.nick || '익명'; const postNum = allPostsData.length - ((currentBoardPage - 1) * postsPerPage) - i; const safeTitle = (x.title || '').replace(/'/g, "\\'").replace(/"/g, "&quot;"); const safeContent = (x.content || '').replace(/'/g, "\\'").replace(/"/g, "&quot;").replace(/\n/g, "\\n"); l.innerHTML += `<tr onclick="toggleBoardRow('${rowId}')" style="cursor:pointer;"> <td class="board-no">${postNum}</td> <td class="board-title">${x.title} <span style="font-size:0.75rem; color:var(--primary); margin-left:4px;">▼</span></td> <td class="board-date">${dateStr}</td> <td class="board-nick">${authorName}</td> </tr> <tr id="${rowId}" class="board-content-row"> <td colspan="4" class="board-content-box"> <div style="margin-bottom:15px; font-weight:600;">${x.content}</div> <div style="text-align:right; border-bottom:1px dashed var(--border); padding-bottom:10px; margin-bottom:10px;"> <button class="mini-btn" style="background:var(--primary-light) !important; color:white !important;" onclick="tryEditPost('${x.id}', '${x.password}', '${authorName}', '${safeTitle}', '${safeContent}', event)">✏️ 수정</button> <button class="mini-btn btn-del" onclick="deletePost('${x.id}','${x.password}',event)">🗑️ 삭제</button> </div> <div id="cmt-list-${x.id}" class="comment-section"></div> <div class="comment-form"> <input id="cmt-name-${x.id}" class="comment-input-sm" placeholder="닉네임"> <input id="cmt-pw-${x.id}" class="comment-input-sm" type="password" placeholder="비밀번호"> <input id="cmt-txt-${x.id}" class="comment-input-lg" placeholder="따뜻한 댓글을 남겨주세요..."> <button class="comment-submit" onclick="addComment('${x.id}')">댓글 등록</button> </div> </td> </tr>`; loadComments(x.id); }); renderPagination(p); } 
 renderShipPage = function(p) {
@@ -2324,7 +2570,7 @@ renderShipPage = function(p) {
     if (p === 1) pagination.scrollLeft = 0;
     const pageData = filteredShips.slice((p - 1) * postsPerPage, p * postsPerPage);
     if (pageData.length === 0) {
-        list.innerHTML = "<tr><td colspan='3' style='text-align:center; padding:20px; color:var(--text-sub); font-weight:700;'>등록된 선박정보가 없습니다.</td></tr>";
+        list.innerHTML = "<tr><td colspan='3' style='text-align:center; padding:20px; color:var(--text-sub); font-weight:700;'>조건에 맞는 선박정보가 없습니다.</td></tr>";
         return;
     }
     pageData.forEach((ship, index) => {
@@ -2336,9 +2582,25 @@ renderShipPage = function(p) {
             const date = ship.timestamp.toDate();
             dateStr = `${date.getFullYear()}/${String(date.getMonth() + 1).padStart(2, '0')}/${String(date.getDate()).padStart(2, '0')}`;
         }
+        const diff = Number(ship.difficulty) || 0;
+        const starBadge = diff > 0 ? `<span class="ship-badge-star" title="작업 난이도 ${diff}점">${"★".repeat(diff)}${"☆".repeat(5 - diff)}</span>` : "";
+        const sTags = extractShipTags(ship);
+        const warnTags = ["#브릿지주의", "#라싱바무거움", "#턴버클뻑뻑함", "#통로협소"];
+        const tagsInlineHtml = sTags.length > 0
+            ? `<div style="margin-top:3px; white-space:normal;">${sTags.map(t => `<span class="ship-badge-tag ${warnTags.includes(t) ? 'warn' : ''}">${escapeShipCommentHtml(t)}</span>`).join("")}</div>`
+            : "";
+        const detailMetaHtml = (diff > 0 || sTags.length > 0)
+            ? `<div style="background:rgba(10,27,63,0.04); border:1px solid var(--border); border-radius:8px; padding:8px 10px; margin-bottom:10px; font-size:0.82rem;">
+                ${diff > 0 ? `<div style="font-weight:900; color:#b45309; margin-bottom:${sTags.length ? '4px' : '0'};">⭐ 작업 난이도: ${"★".repeat(diff)}${"☆".repeat(5 - diff)} (${diff}점)</div>` : ""}
+                ${sTags.length > 0 ? `<div><strong style="color:var(--primary);">🏷️ 준비 장비·특징:</strong> ${sTags.map(t => `<span class="ship-badge-tag ${warnTags.includes(t) ? 'warn' : ''}">${escapeShipCommentHtml(t)}</span>`).join("")}</div>` : ""}
+            </div>`
+            : "";
+        const imageHtml = ship.imageUrl
+            ? `<img src="${ship.imageUrl}" style="max-width:100%; border-radius:8px; margin-top:8px; margin-bottom:10px; border:1px solid var(--border); cursor:pointer;" onclick="document.getElementById('imageModal').style.display='flex'; document.getElementById('modalImage').src=this.src;">`
+            : "";
         const rowId = `s-${ship.id}`;
         const postNum = filteredShips.length - ((p - 1) * postsPerPage) - index;
-        list.innerHTML += `<tr onclick="toggleBoardRow('${rowId}')" style="cursor:pointer;"><td class="board-no">${postNum}</td><td class="board-title">🚢 ${ship.shipName || "선박명 없음"}<span style="font-size:0.75rem; color:var(--primary); margin-left:4px;">▼</span></td><td class="board-date">${dateStr}</td></tr><tr id="${rowId}" class="board-content-row"><td colspan="3" class="board-content-box"><div style="margin-bottom:15px; white-space:pre-wrap;">${ship.onboardFeat || ""}</div><div style="text-align:right; border-bottom:1px dashed var(--border); padding-bottom:10px; margin-bottom:10px;"><button class="mini-btn" style="background:var(--primary-light) !important; color:white !important;" onclick="tryEditShip('${ship.id}', '${safeName}', '${safeFeat}', '${savedPw}')">✏️ 수정</button><button class="mini-btn btn-del" onclick="deleteShip('${ship.id}',event)">🗑️ 삭제</button></div></td></tr>`;
+        list.innerHTML += `<tr onclick="toggleBoardRow('${rowId}')" style="cursor:pointer;"><td class="board-no">${postNum}</td><td class="board-title" style="white-space:normal; line-height:1.35;"><div>🚢 ${ship.shipName || "선박명 없음"} ${starBadge} <span style="font-size:0.75rem; color:var(--primary); margin-left:4px;">▼</span></div>${tagsInlineHtml}</td><td class="board-date">${dateStr}</td></tr><tr id="${rowId}" class="board-content-row"><td colspan="3" class="board-content-box">${detailMetaHtml}<div style="margin-bottom:12px; white-space:pre-wrap;">${ship.onboardFeat || ""}</div>${imageHtml}<div style="text-align:right; border-bottom:1px dashed var(--border); padding-bottom:10px; margin-bottom:10px;"><button class="mini-btn" style="background:var(--primary-light) !important; color:white !important;" onclick="tryEditShip('${ship.id}', '${safeName}', '${safeFeat}', '${savedPw}')">✏️ 수정</button><button class="mini-btn btn-del" onclick="deleteShip('${ship.id}',event)">🗑️ 삭제</button></div></td></tr>`;
         document.getElementById(rowId).querySelector("td").insertAdjacentHTML("beforeend", renderShipCommentMarkup(ship.id));
     });
     const totalPages = Math.ceil(filteredShips.length / postsPerPage);
@@ -2509,7 +2771,7 @@ window.onload = () => {
     try { 
         db.collection("notices").orderBy("timestamp","desc").onSnapshot(s => { const l = document.getElementById("noticeList"); l.innerHTML = ""; const badge = document.getElementById("noticeBadge"); if (s.empty) { l.innerHTML = "<tr><td colspan='3' style='text-align:center; padding:20px; color:var(--text-sub); font-weight:700;'>등록된 공지가 없습니다.</td></tr>"; if(badge) badge.classList.add("hidden"); return; } let isNew = false; const now = new Date(); let index = 0; s.forEach(d => { const x = d.data(); let dateStr = ""; if(x.timestamp) { const dt = x.timestamp.toDate(); dateStr = `${dt.getFullYear()}/${String(dt.getMonth()+1).padStart(2,'0')}/${String(dt.getDate()).padStart(2,'0')}`; if (index === 0) { const diffTime = now.getTime() - dt.getTime(); if (diffTime < 24 * 60 * 60 * 1000) isNew = true; } } const linkedContent = autoLink(x.content); const imageHtml = x.imageUrl ? `<img src="${x.imageUrl}" style="max-width:100%; border-radius:8px; margin-top:10px; border:1px solid rgba(0,0,0,0.1);" onclick="document.getElementById('imageModal').style.display='flex'; document.getElementById('modalImage').src=this.src;">` : ''; const safeTitle = (x.title || '').replace(/'/g, "\\'").replace(/"/g, "&quot;"); const safeContent = (x.content || '').replace(/'/g, "\\'").replace(/"/g, "&quot;").replace(/\n/g, "\\n"); const imgParam = x.imageUrl ? `'${x.imageUrl}'` : `null`; const rowId = `n-${d.id}`; l.innerHTML += `<tr onclick="toggleBoardRow('${rowId}')" style="cursor:pointer; background:rgba(239,68,68,0.03);"> <td class="board-no" style="color:var(--danger); font-weight:900;">공지</td> <td class="board-title">📢 ${x.title} <span style="font-size:0.75rem; color:var(--primary); margin-left:4px;">▼</span></td> <td class="board-date">${dateStr}</td> </tr> <tr id="${rowId}" class="board-content-row"> <td colspan="3" class="board-content-box" style="border-left: 3px solid var(--danger);"> <div style="margin-bottom:15px; white-space:pre-wrap; font-weight:600;">${linkedContent}</div> ${imageHtml} <div style="text-align:right; margin-top:10px;"> <button class="mini-btn" style="background:var(--primary) !important; margin-right:5px; color:white !important;" onclick="startEditNotice('${d.id}', '${safeTitle}', '${safeContent}', ${imgParam}, event)">✏️ 수정(Admin)</button> <button class="mini-btn btn-del" onclick="delNotice('${d.id}',event)">🗑️ 삭제(Admin)</button> </div> </td> </tr>`; index++; }); if(badge) { if(isNew) badge.classList.remove("hidden"); else badge.classList.add("hidden"); } }); 
         db.collection("posts").orderBy("timestamp","desc").onSnapshot(s => { allPostsData = []; s.forEach(d => { allPostsData.push({...d.data(), id:d.id}) }); const badge = document.getElementById("boardBadge"); if (badge) { if (allPostsData.length > 0 && allPostsData[0].timestamp) { const now = new Date(); const dt = allPostsData[0].timestamp.toDate(); const diffTime = now.getTime() - dt.getTime(); if (diffTime < 24 * 60 * 60 * 1000) badge.classList.remove("hidden"); else badge.classList.add("hidden"); } else badge.classList.add("hidden"); } renderBoardPage(1); }); 
-        db.collection("ships").orderBy("timestamp","desc").onSnapshot(s=>{allShipsData=[]; s.forEach(d=>{allShipsData.push({...d.data(), id:d.id})}); filteredShips=allShipsData; renderShipPage(1);}); 
+        db.collection("ships").orderBy("timestamp","desc").onSnapshot(s=>{allShipsData=[]; s.forEach(d=>{allShipsData.push({...d.data(), id:d.id})}); filteredShips=allShipsData; renderShipPage(1); if(typeof loadAndSearchAllShips==="function") loadAndSearchAllShips(document.getElementById('shipSearch')?.value || '');}); 
         db.collection("archives").orderBy("timestamp","desc").onSnapshot(s=>{const l=document.getElementById("fileList"); l.innerHTML=""; s.forEach(d=>{const x=d.data(); l.innerHTML+=`<tr><td class="board-title" style="width: 75%; padding-left: 10px;"><a href="${x.url}" target="_blank" style="text-decoration:none; color:var(--primary); font-weight:800;">💾 ${x.title}</a></td><td style="width: 25%; text-align:center;"><button class="mini-btn btn-del" onclick="delArchive('${d.id}',event)">삭제</button></td></tr>`;})}); 
     } catch(err) { console.warn("실시간 연결 오류:", err); } 
     if(localStorage.getItem('myWorkerId')) { currentWorkerId = localStorage.getItem('myWorkerId'); updateUserBar(); } 
@@ -2572,82 +2834,119 @@ function verifyLeaderAccess(event) {
  * @param {string} searchKeyword - 검색어 (선택 사항)
  */
 async function loadAndSearchAllShips(searchKeyword = "") {
-    const containerId = "vessel-result-container"; // 결과를 출력할 HTML 컨테이너 ID
+    if (!isWorkLogUnlocked) return;
+    const containerId = "vessel-result-container";
     const resultContainer = document.getElementById(containerId);
 
     try {
-        // 1. DOM 예외 처리 (Fail-Safe)
         if (!resultContainer) {
             console.error(`[Error] '${containerId}' 요소를 페이지에서 찾을 수 없습니다.`);
             return;
         }
 
-        resultContainer.innerHTML = "<p style='text-align:center; padding:20px; color:var(--text-sub);'>전체 선박 데이터를 불러오는 중입니다...</p>";
+        resultContainer.innerHTML = "<p style='text-align:center; padding:20px; color:var(--text-sub); font-weight:700;'>전체 선박 데이터를 불러오는 중입니다...</p>";
 
-        // 2. Firebase Firestore 인스턴스 검증 (8버전 네임스페이스 기준)
         if (typeof firebase === "undefined" || !firebase.firestore) {
             throw new Error("Firebase Firestore가 초기화되지 않았습니다.");
         }
 
         const db = firebase.firestore();
-        
-        // ★ 중요: 컬렉션 이름을 'ships'로 정확히 지정하고, .limit() 제한을 완전히 배제하여 전체 문서(.get())를 조회합니다.
         const querySnapshot = await db.collection("ships").get();
 
         if (querySnapshot.empty) {
-            resultContainer.innerHTML = "<p style='text-align:center; padding:20px; color:var(--text-sub);'>등록된 선박 데이터가 없습니다.</p>";
+            resultContainer.innerHTML = "<p style='text-align:center; padding:20px; color:var(--text-sub); font-weight:700;'>등록된 선박 데이터가 없습니다.</p>";
             return;
         }
 
         let shipList = [];
         querySnapshot.forEach(doc => {
             let data = doc.data();
-            data.id = doc.id; // 문서 고유 ID 매핑
+            data.id = doc.id;
             shipList.push(data);
         });
 
-        // 3. 검색어 필터링 처리 (대소문자 무시, 공백 정제)
-        const keyword = searchKeyword ? searchKeyword.trim().toLowerCase() : "";
-        if (keyword !== "") {
-            shipList = shipList.filter(item => {
-                const shipName = (item.name || item.vesselName || item.title || "").toLowerCase();
-                const shipCode = (item.code || item.number || "").toLowerCase();
-                const shipMemo = (item.memo || item.info || "").toLowerCase();
-                return shipName.includes(keyword) || shipCode.includes(keyword) || shipMemo.includes(keyword);
-            });
-        }
+        shipList.sort((a, b) => {
+            const tA = a.timestamp && a.timestamp.toMillis ? a.timestamp.toMillis() : 0;
+            const tB = b.timestamp && b.timestamp.toMillis ? b.timestamp.toMillis() : 0;
+            return tB - tA;
+        });
 
-        // 4. 검색 결과가 없을 경우 예외 처리
+        const keyword = searchKeyword ? searchKeyword.trim().toLowerCase() : "";
+        const diffFilter = parseInt(document.getElementById('shipDifficultyFilter')?.value || '0', 10) || 0;
+        const warnTags = ["#브릿지주의", "#라싱바무거움", "#턴버클뻑뻑함", "#통로협소"];
+
+        shipList = shipList.filter(item => {
+            const sTags = typeof extractShipTags === "function" ? extractShipTags(item) : (Array.isArray(item.tags) ? item.tags : []);
+            const sDiff = Number(item.difficulty) || 0;
+            if (keyword !== "") {
+                const shipName = (item.shipName || item.name || item.vesselName || item.title || "").toLowerCase();
+                const shipCode = (item.code || item.number || "").toLowerCase();
+                const shipMemo = (item.onboardFeat || item.memo || item.info || "").toLowerCase();
+                const tagStr = sTags.join(" ").toLowerCase();
+                if (!shipName.includes(keyword) && !shipCode.includes(keyword) && !shipMemo.includes(keyword) && !tagStr.includes(keyword)) {
+                    return false;
+                }
+            }
+            if (typeof activeShipFilterTags !== "undefined" && activeShipFilterTags.length > 0) {
+                if (!activeShipFilterTags.every(t => sTags.includes(t))) return false;
+            }
+            if (diffFilter > 0) {
+                if (diffFilter === 2) {
+                    if (!sDiff || sDiff > 2) return false;
+                } else if (sDiff < diffFilter) {
+                    return false;
+                }
+            }
+            return true;
+        });
+
         if (shipList.length === 0) {
-            resultContainer.innerHTML = `<p style='text-align:center; padding:20px; color:var(--text-sub);'>'${escapeHtml(searchKeyword)}'에 대한 검색 결과가 없습니다.</p>`;
+            resultContainer.innerHTML = `<p style='text-align:center; padding:20px; color:var(--text-sub); font-weight:700;'>조건에 맞는 선박 검색 결과가 없습니다.</p>`;
             return;
         }
 
-        // 5. 게시판(테이블) 형태로 전체 데이터 동적 생성 (XSS 방어 적용)
         let boardHTML = `
-            <div style="width:100%; overflow-x:auto; margin-top: 10px;">
-                <table style="width:100%; border-collapse: collapse; font-size:0.95rem; text-align:left;">
-                    <thead>
+            <div style="width:100%; overflow-x:auto; max-height:460px; overflow-y:auto; border:1px solid var(--border); border-radius:10px; background:var(--card-bg);">
+                <table style="width:100%; border-collapse: collapse; font-size:0.88rem; text-align:left;">
+                    <thead style="position:sticky; top:0; z-index:5;">
                         <tr style="background:var(--primary); color:white; border-bottom:2px solid var(--border);">
-                            <th style="padding:12px; font-weight:800;">선박명 / 주요 정보</th>
-                            <th style="padding:12px; font-weight:800; width:90px; text-align:center;">상세보기</th>
+                            <th style="padding:10px 8px; font-weight:800; width:44px; text-align:center;">No.</th>
+                            <th style="padding:10px 8px; font-weight:800;">선박명 · 난이도 · 주요 작업 정보</th>
+                            <th style="padding:10px 8px; font-weight:800; width:76px; text-align:center;">상세보기</th>
                         </tr>
                     </thead>
                     <tbody>
         `;
 
         shipList.forEach((item, index) => {
-            const title = escapeHtml(item.name || item.vesselName || item.title || `선박 정보 #${index + 1}`);
-            const subInfo = escapeHtml(item.memo || item.schedule || item.info || "클릭하여 상세 내용을 확인하세요.");
+            const title = escapeHtml(item.shipName || item.name || item.vesselName || item.title || `선박 정보 #${index + 1}`);
+            const subInfo = escapeHtml(item.onboardFeat || item.memo || item.schedule || item.info || "클릭하여 상세 내용을 확인하세요.");
+            const diff = Number(item.difficulty) || 0;
+            const starHtml = diff > 0 ? `<span class="ship-badge-star">${"★".repeat(diff)}${"☆".repeat(5 - diff)}</span>` : "";
+            const sTags = typeof extractShipTags === "function" ? extractShipTags(item) : (Array.isArray(item.tags) ? item.tags : []);
+            const tagsHtml = sTags.length > 0
+                ? `<div style="margin-top:4px;">${sTags.map(t => `<span class="ship-badge-tag ${warnTags.includes(t) ? 'warn' : ''}">${escapeHtml(t)}</span>`).join("")}</div>`
+                : "";
+            let dateStr = "";
+            if (item.timestamp && item.timestamp.toDate) {
+                const dt = item.timestamp.toDate();
+                dateStr = `${dt.getFullYear()}/${String(dt.getMonth() + 1).padStart(2, '0')}/${String(dt.getDate()).padStart(2, '0')}`;
+            }
 
             boardHTML += `
-                <tr style="border-bottom:1px solid var(--border); cursor:pointer; transition: background 0.2s;" onclick="openShipDetailView('${item.id}')" onmouseover="this.style.background='rgba(0,0,0,0.02)'" onmouseout="this.style.background='transparent'">
-                    <td style="padding:12px;">
-                        <div style="font-weight:800; color:var(--text-main);">${title}</div>
-                        <div style="font-size:0.85rem; color:var(--text-sub); margin-top:4px;">${subInfo}</div>
+                <tr style="border-bottom:1px solid var(--border); cursor:pointer; transition: background 0.2s;" onclick="openShipDetailView('${item.id}')" onmouseover="this.style.background='rgba(59,130,246,0.04)'" onmouseout="this.style.background='transparent'">
+                    <td style="padding:10px 6px; text-align:center; font-weight:800; color:var(--text-sub); font-size:0.8rem;">${shipList.length - index}</td>
+                    <td style="padding:10px 8px;">
+                        <div style="font-weight:900; color:var(--text-main); display:flex; align-items:center; flex-wrap:wrap; gap:4px;">
+                            <span>🚢 ${title}</span>
+                            ${starHtml}
+                            ${dateStr ? `<span style="font-size:0.72rem; color:var(--text-sub); font-weight:700; margin-left:auto;">${dateStr}</span>` : ""}
+                        </div>
+                        ${tagsHtml}
+                        <div style="font-size:0.82rem; color:var(--text-sub); margin-top:4px; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; white-space:pre-wrap; line-height:1.4;">${subInfo}</div>
                     </td>
-                    <td style="padding:12px; text-align:center;">
-                        <button type="button" style="padding:6px 10px; background:var(--primary-light); color:white; border:none; border-radius:6px; font-size:0.8rem; font-weight:700; cursor:pointer;">열기</button>
+                    <td style="padding:10px 6px; text-align:center;">
+                        <button type="button" style="padding:6px 10px; background:var(--primary-light); color:white; border:none; border-radius:6px; font-size:0.78rem; font-weight:800; cursor:pointer;">열기</button>
                     </td>
                 </tr>
             `;
@@ -2656,26 +2955,22 @@ async function loadAndSearchAllShips(searchKeyword = "") {
         boardHTML += `
                     </tbody>
                 </table>
-                <div style="padding:10px 4px; text-align:right; font-size:0.85rem; color:var(--text-sub);">
-                    총 조회된 데이터: <strong>${shipList.length}개</strong>
-                </div>
+            </div>
+            <div style="padding:8px 4px 2px; text-align:right; font-size:0.82rem; color:var(--primary); font-weight:800;">
+                총 조회된 선박 데이터: <strong>${shipList.length}척</strong>
             </div>
         `;
 
         resultContainer.innerHTML = boardHTML;
 
     } catch (error) {
-        // 6. 런타임 에러 핸들링 (Fail-Safe)
         console.error("[Fatal Error] 선박 정보 전체 조회 실패:", error);
         if (resultContainer) {
-            resultContainer.innerHTML = "<p style='text-align:center; padding:20px; color:var(--danger);'>데이터를 불러오는 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.</p>";
+            resultContainer.innerHTML = "<p style='text-align:center; padding:20px; color:var(--danger); font-weight:700;'>데이터를 불러오는 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.</p>";
         }
     }
 }
 
-/**
- * XSS 방어를 위한 HTML 특수문자 이스케이프 처리 함수
- */
 function escapeHtml(str) {
     if (!str) return "";
     return String(str)
@@ -2686,10 +2981,6 @@ function escapeHtml(str) {
         .replace(/'/g, '&#039;');
 }
 
-/**
- * 게시판 항목 클릭 시 'ships' 컬렉션에서 상세 내용을 안전하게 불러오는 모듈
- * @param {string} docId - Firestore 문서 ID
- */
 async function openShipDetailView(docId) {
     try {
         const db = firebase.firestore();
@@ -2701,11 +2992,12 @@ async function openShipDetailView(docId) {
         }
 
         const data = docSnap.data();
-        let detailText = "📌 [선박 상세 정보]\n\n";
-        for (const [key, val] of Object.entries(data)) {
-            detailText += `${key}: ${val}\n`;
-        }
-        
+        const name = data.shipName || data.name || "선박명 없음";
+        const diff = Number(data.difficulty) || 0;
+        const diffText = diff > 0 ? `${"★".repeat(diff)}${"☆".repeat(5 - diff)} (${diff}점)` : "미지정";
+        const sTags = typeof extractShipTags === "function" ? extractShipTags(data) : (Array.isArray(data.tags) ? data.tags : []);
+        const feat = data.onboardFeat || data.memo || "내용 없음";
+        let detailText = `🚢 [선박 상세 정보]\n\n• 선박명: ${name}\n• 작업 난이도: ${diffText}\n• 장비/특징 태그: ${sTags.length ? sTags.join(" ") : "없음"}\n\n📝 [작업 내용 및 특이사항]\n${feat}`;
         alert(detailText);
 
     } catch (error) {
