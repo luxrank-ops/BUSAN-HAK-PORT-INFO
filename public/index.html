@@ -167,9 +167,22 @@
         .terminal-block.term-theme-bnct.active-block { border-color: #2563eb; box-shadow: 0 3px 8px rgba(37, 99, 235, 0.15); }
         .terminal-block.term-theme-dgt.active-block { border-color: #0d9488; box-shadow: 0 3px 8px rgba(13, 148, 136, 0.15); }
         .terminal-block.term-theme-bct.active-block { border-color: #16a34a; box-shadow: 0 3px 8px rgba(22, 163, 74, 0.15); }
-        .terminal-header { padding: 14px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; font-weight: 900; font-size: clamp(0.95rem, 3.5vw, 1.1rem); touch-action: manipulation; color: var(--text-main); line-height: 1.2; }
+        .terminal-header { padding: 14px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; font-weight: 900; font-size: clamp(0.95rem, 3.5vw, 1.1rem); touch-action: manipulation; color: var(--text-main); line-height: 1.2; gap: 6px; }
         .term-short-name { font-size: clamp(1.1rem, 4vw, 1.25rem); font-weight: 900; line-height: 1; flex-shrink: 0; }
         .term-full-name { margin-left: auto; text-align: right; font-size: clamp(0.95rem, 3.5vw, 1.1rem); font-weight: 900; line-height: 1.2; }
+        .fav-star-btn { background: transparent; border: none; padding: 0 4px 0 0; margin: 0; font-size: 1.25rem; line-height: 1; cursor: pointer; flex-shrink: 0; filter: grayscale(1) opacity(0.35); transition: transform 0.2s, filter 0.2s; }
+        .fav-star-btn.is-fav { filter: none; transform: scale(1.12); }
+        .fav-quick-bar { background: linear-gradient(135deg, #fffbeb, #fef3c7); border: 2px solid #f59e0b; border-radius: 12px; padding: 10px 12px; margin-bottom: 12px; box-shadow: 0 3px 10px rgba(245, 158, 11, 0.15); }
+        body.dark-mode .fav-quick-bar { background: rgba(30, 41, 59, 0.95); border-color: #fbbf24; }
+        .fav-quick-header { display: flex; justify-content: space-between; align-items: center; font-size: 0.88rem; font-weight: 900; color: #b45309; margin-bottom: 8px; }
+        body.dark-mode .fav-quick-header { color: #fbbf24; }
+        .fav-quick-item { background: var(--card-bg); border: 1.5px solid #fcd34d; border-radius: 10px; padding: 8px 10px; margin-bottom: 6px; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px; }
+        .fav-quick-item:last-child { margin-bottom: 0; }
+        .fav-quick-name { font-weight: 900; font-size: 0.95rem; color: var(--primary); display: flex; align-items: center; gap: 4px; min-width: max-content; }
+        .fav-quick-actions { display: flex; flex-wrap: wrap; gap: 4px; flex: 1; justify-content: flex-end; }
+        .fav-quick-btn { padding: 6px 9px; border-radius: 6px; border: 1.5px solid var(--primary); background: var(--card-bg); color: var(--text-main); font-size: 0.78rem; font-weight: 800; text-decoration: none; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; line-height: 1.1; }
+        .fav-quick-btn.meal { background: linear-gradient(135deg, #fff7ed, #fed7aa); border-color: #ea580c; color: #9a3412; }
+        .fav-quick-btn.extra { background: #eff6ff; border-color: #0284c7; color: #0369a1; }
         .terminal-block.active-block .terminal-header { color: var(--primary); background: rgba(10, 27, 63, 0.04); }
         .terminal-body { display: none; padding: 12px; border-top: 1px dashed var(--border); }
         .terminal-block.active-block .terminal-body { border-top: 2px solid var(--primary); }
@@ -181,7 +194,9 @@
         .hjnc-meal-button { width: 100%; margin: 0; font-size: clamp(1.275rem, 4.5vw, 1.425rem) !important; line-height: 1.2; background: linear-gradient(135deg, #fff7ed, #fed7aa); border: 1px solid #fb923c; color: #9a3412; font-weight: 900; animation: hjncMealSparkle 1.4s ease-in-out infinite; }
         .terminal-block.active-block .hjnc-meal-button { border: 2px solid #ea580c !important; }
         @keyframes hjncMealSparkle { 0%, 100% { filter: brightness(1); box-shadow: 0 1px 3px rgba(234,88,12,0.2); } 50% { filter: brightness(1.12); box-shadow: 0 0 14px rgba(249,115,22,0.7); } }
-        @media (prefers-reduced-motion: reduce) { .hjnc-meal-button { animation: none; } }
+        .send-log-sparkle-btn { background: linear-gradient(135deg, #10b981, #059669) !important; border: 2px solid #a7f3d0 !important; color: #ffffff !important; box-shadow: 0 2px 6px rgba(16, 185, 129, 0.35); animation: sendLogSparkle 1.3s ease-in-out infinite; }
+        @keyframes sendLogSparkle { 0%, 100% { filter: brightness(1); box-shadow: 0 2px 6px rgba(16, 185, 129, 0.35); transform: scale(1); } 50% { filter: brightness(1.18); box-shadow: 0 0 18px rgba(16, 185, 129, 0.9), 0 0 8px rgba(255, 255, 255, 0.8); transform: scale(1.015); } }
+        @media (prefers-reduced-motion: reduce) { .hjnc-meal-button, .send-log-sparkle-btn { animation: none; } }
         @media screen and (max-width: 480px) and (orientation: portrait) { .terminal-btn.hjnc-meal-button { font-size: 1.08rem !important; white-space: normal !important; letter-spacing: 0 !important; } }
 
         .board-table { width: 100%; border-collapse: collapse; font-size: clamp(0.85rem, 3vw, 1rem); margin-top: 10px; table-layout: fixed; }
@@ -296,6 +311,7 @@
 </div>
 
 <div class="container">
+    <div id="favoriteQuickBar" class="fav-quick-bar hidden"></div>
     
     <div id="main-manual-card" class="dash-card" style="margin-bottom: 12px; border: none; box-shadow: none; background: transparent;">
         <div class="dash-header tap-effect" onclick="toggleDashItem('main-manual-card')" style="background: var(--primary); color: white; padding: 15px; border-radius: 8px; display: flex; align-items: center; justify-content: space-between;">
@@ -376,7 +392,7 @@
                     <div class="calc-left">
                         <div class="wage-row" style="flex-direction: row !important; align-items: center !important; flex-wrap: nowrap !important;">
                             <label style="min-width: 80px; margin-bottom: 0 !important; font-weight: 900;">시급(기본)</label>
-                            <input type="number" id="wageHourly" class="input-field" value="10320" style="flex: 1; min-width: 0; text-align:right; font-weight:900; color:#ef4444; font-size:1.15rem; border: 2px solid #cbd5e1;" readonly>
+                            <input type="number" id="wageHourly" class="input-field" value="10320" style="flex: 1; min-width: 0; text-align:right; font-weight:900; color:#ef4444; font-size:1.15rem; border: 2px solid #cbd5e1;">
                         </div>
                         <div style="background: rgba(59, 130, 246, 0.05); border: 2px solid var(--primary-light); padding: 10px; border-radius: 10px; margin-bottom: 10px;">
                             <div class="wage-row" style="margin-bottom: 5px;">
@@ -437,6 +453,7 @@
                     <h4 style="margin:0; text-align:center; color:var(--primary); font-size:1.15rem; font-weight:900;">📋 임금 산정 내역서</h4>
                     <table class="spec-table"><tbody id="wageSpecBody"></tbody></table>
                     <div id="wageTotal" class="wage-total" style="border-top: 2px solid var(--primary);">0원</div>
+                    <button type="button" class="action-btn bg-submit send-log-sparkle-btn" style="margin-top:12px; padding:12px; font-size:0.95rem;" onclick="sendCalculatedWageToLog()">✨ 📅 이 계산 결과를 근무일지로 보내기 ✨</button>
                 </div>
             </div>
         </div>
@@ -454,21 +471,27 @@
                     <div class="user-info"><span id="currentUserDisplay" class="user-name"></span><span class="user-status">🔒 내 저장소</span></div>
                     <button class="action-btn bg-cancel" style="padding: 5px 10px; width:auto; font-size:0.85rem;" onclick="logoutWorker()">로그아웃</button>
                 </div>
-                <div class="log-filter-box">
-                    <div style="font-size:0.85rem; font-weight:900; color:var(--primary); margin-bottom:6px; display:flex; justify-content:space-between; align-items:center;">
-                        <span>🔍 근무 기록 기간·키워드 검색</span>
-                        <button type="button" onclick="resetWorkLogFilter()" style="background:transparent; border:1px solid var(--border); border-radius:6px; padding:2px 8px; font-size:0.75rem; font-weight:800; color:var(--text-sub); cursor:pointer;">초기화</button>
+                <div class="log-filter-box" style="position:relative;">
+                    <div id="logExtraLockBanner" onclick="openWorkLogPinModal()" style="cursor:pointer; background:linear-gradient(135deg, #eff6ff, #dbeafe); border:1.5px solid #93c5fd; border-radius:8px; padding:10px 12px; display:flex; justify-content:space-between; align-items:center;">
+                        <span style="font-size:0.85rem; font-weight:900; color:var(--primary);">🔒 기간·키워드 검색 및 상세 정산 통계 (잠김)</span>
+                        <span style="background:var(--primary); color:white; font-size:0.75rem; font-weight:800; padding:4px 10px; border-radius:6px;">비번 해제</span>
                     </div>
-                    <div style="display:flex; gap:6px; align-items:center; margin-bottom:6px;">
-                        <input type="date" id="logFilterStartDate" class="input-field" style="flex:1; height:36px; font-size:0.82rem; padding:0 6px; text-align:center;" onchange="applyWorkLogFilter()">
-                        <span style="font-weight:900; color:var(--text-sub);">~</span>
-                        <input type="date" id="logFilterEndDate" class="input-field" style="flex:1; height:36px; font-size:0.82rem; padding:0 6px; text-align:center;" onchange="applyWorkLogFilter()">
+                    <div id="logExtraFilterContent" class="hidden">
+                        <div style="font-size:0.85rem; font-weight:900; color:var(--primary); margin-bottom:6px; display:flex; justify-content:space-between; align-items:center;">
+                            <span>🔍 근무 기록 기간·키워드 검색</span>
+                            <button type="button" onclick="resetWorkLogFilter()" style="background:transparent; border:1px solid var(--border); border-radius:6px; padding:2px 8px; font-size:0.75rem; font-weight:800; color:var(--text-sub); cursor:pointer;">초기화</button>
+                        </div>
+                        <div style="display:flex; gap:6px; align-items:center; margin-bottom:6px;">
+                            <input type="date" id="logFilterStartDate" class="input-field" style="flex:1; height:36px; font-size:0.82rem; padding:0 6px; text-align:center;" onchange="applyWorkLogFilter()">
+                            <span style="font-weight:900; color:var(--text-sub);">~</span>
+                            <input type="date" id="logFilterEndDate" class="input-field" style="flex:1; height:36px; font-size:0.82rem; padding:0 6px; text-align:center;" onchange="applyWorkLogFilter()">
+                        </div>
+                        <div style="display:flex; gap:6px;">
+                            <input type="text" id="logFilterKeyword" class="input-field" placeholder="배이름, 근무자, 메모 검색..." style="flex:1; height:38px; font-size:0.88rem; text-align:left; padding:0 10px;" oninput="applyWorkLogFilter()" onkeydown="if(event.key==='Enter'){event.preventDefault();searchWorkLogsRange();}">
+                            <button type="button" class="action-btn" style="width:auto; margin:0; padding:0 14px; height:38px; font-size:0.85rem;" onclick="searchWorkLogsRange()">기간조회</button>
+                        </div>
+                        <div id="logFilterResults" class="log-filter-results hidden"></div>
                     </div>
-                    <div style="display:flex; gap:6px;">
-                        <input type="text" id="logFilterKeyword" class="input-field" placeholder="배이름, 근무자, 메모 검색..." style="flex:1; height:38px; font-size:0.88rem; text-align:left; padding:0 10px;" oninput="applyWorkLogFilter()" onkeydown="if(event.key==='Enter'){event.preventDefault();searchWorkLogsRange();}">
-                        <button type="button" class="action-btn" style="width:auto; margin:0; padding:0 14px; height:38px; font-size:0.85rem;" onclick="searchWorkLogsRange()">기간조회</button>
-                    </div>
-                    <div id="logFilterResults" class="log-filter-results hidden"></div>
                 </div>
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
                     <button class="mini-btn-old" style="padding:6px 12px; font-size:1rem; background:var(--primary);" onclick="changeMonth(-1)">◀</button>
@@ -497,7 +520,12 @@
                         <button class="action-btn bg-cancel" style="background:var(--danger);" onclick="deleteWorkLog()">삭제</button>
                     </div>
                 </div>
-                <div id="monthlyTotalDisplay" style="text-align:center; margin-top:20px; font-weight:900; color:var(--primary); font-size:1.25rem; border-top:1px dashed var(--border); padding-top:15px;">이번달 총액: 0원</div>
+                <div id="monthlyStatsSummary" class="hidden" style="display:grid; grid-template-columns: repeat(3, 1fr); gap:6px; margin-top:20px; border-top:1px dashed var(--border); padding-top:15px; text-align:center;">
+                    <div style="background:rgba(10,27,63,0.04); padding:8px 4px; border-radius:8px; border:1px solid var(--border);"><div style="font-size:0.72rem; color:var(--text-sub); font-weight:800;">출근일수</div><div id="monthlyWorkDays" style="font-size:1rem; font-weight:900; color:var(--primary); margin-top:2px;">0일</div></div>
+                    <div style="background:rgba(59,130,246,0.06); padding:8px 4px; border-radius:8px; border:1px solid var(--border);"><div style="font-size:0.72rem; color:var(--text-sub); font-weight:800;">일평균 수입</div><div id="monthlyAvgPay" style="font-size:1rem; font-weight:900; color:#2563eb; margin-top:2px;">0원</div></div>
+                    <div style="background:rgba(16,185,129,0.08); padding:8px 4px; border-radius:8px; border:1px solid var(--border);"><div style="font-size:0.72rem; color:var(--text-sub); font-weight:800;">임금1 / 임금2</div><div id="monthlySplitPay" style="font-size:0.78rem; font-weight:900; color:#047857; margin-top:4px;">0 / 0</div></div>
+                </div>
+                <div id="monthlyTotalDisplay" style="text-align:center; margin-top:10px; font-weight:900; color:var(--primary); font-size:1.25rem; background:rgba(10,27,63,0.03); padding:12px; border-radius:10px; border:1.5px solid var(--primary);">이번달 총액: 0원</div>
             </div>
         </div>
     </div> 
@@ -1048,6 +1076,7 @@
 <div id="privacyModal" class="modal-overlay" onclick="document.getElementById('privacyModal').style.display='none'"><div class="modal-content"><h3 style="font-weight:900;">🛡️ 개인정보처리방침</h3><p style="font-weight:600;">본 사이트는 구글 애드센스 광고를 게재하며 쿠키를 사용합니다.</p><button class="action-btn" onclick="document.getElementById('privacyModal').style.display='none'">닫기</button></div></div>
 <div id="tickerManageModal" class="modal-overlay" onclick="document.getElementById('tickerManageModal').style.display='none'"><div class="modal-content" onclick="event.stopPropagation()"><h3 style="margin-top:0; font-weight:900;">⚙️ 알림글 삭제</h3><div id="tickerListContainer"></div><button class="action-btn bg-cancel" onclick="document.getElementById('tickerManageModal').style.display='none'" style="margin-top:10px;">닫기</button></div></div>
 <div id="loginModal" class="modal-overlay" style="display:none;" onclick="closeLoginModal()"><div class="modal-content" onclick="event.stopPropagation()"><h3 style="font-weight:900;">🔐 근무일지 로그인/가입</h3><p style="font-weight:600;">닉네임과 비밀번호를 입력하세요.</p><input type="text" id="loginNick" class="input-field" placeholder="닉네임 (ID)"><input type="password" id="loginPw" class="input-field" placeholder="비밀번호"><button class="action-btn" onclick="confirmLoginAndSave()">확인 및 저장</button><button class="action-btn bg-cancel" onclick="closeLoginModal()">취소</button></div></div>
+<div id="workLogPinModal" class="modal-overlay" style="display:none;" onclick="closeWorkLogPinModal()"><div class="modal-content" onclick="event.stopPropagation()" style="max-width:380px;"><h3 style="margin-top:0; text-align:center; color:var(--primary); font-weight:900;">🔒 근무일지 보안 잠금</h3><p style="text-align:center; font-size:0.9rem; color:var(--text-sub); font-weight:700; margin-bottom:12px;">근무일지 열람 및 기록을 위해<br>보안 비밀번호(4자리)를 입력해주세요.</p><input type="password" id="workLogPinInput" class="input-field" placeholder="비밀번호 입력" inputmode="numeric" maxlength="8" style="text-align:center; font-size:1.3rem; letter-spacing:6px; height:48px; border:2px solid var(--primary); margin-bottom:10px;" onkeydown="if(event.key==='Enter'){event.preventDefault();submitWorkLogPin();}"><div style="display:flex; gap:8px;"><button type="button" class="action-btn bg-submit" style="flex:2; margin-top:0;" onclick="submitWorkLogPin()">잠금 해제</button><button type="button" class="action-btn bg-cancel" style="flex:1; margin-top:0;" onclick="closeWorkLogPinModal()">취소</button></div></div></div>
 <div id="visitorStatsModal" class="modal-overlay" style="display:none;" onclick="closeVisitorStats()"><div class="modal-content" onclick="event.stopPropagation()" style="max-width:420px;"><h3 style="margin:0 0 16px; text-align:center; color:var(--primary); font-weight:900;">📊 방문자 통계</h3><div style="display:flex; justify-content:space-between; align-items:center; padding:14px 12px; margin-bottom:8px; background:var(--bg-color); border-radius:8px;"><span style="font-weight:800;">당일 방문자 수</span><strong id="todayVisitorCount" style="font-size:1.25rem; color:var(--primary);">-</strong></div><div style="display:flex; justify-content:space-between; align-items:center; padding:14px 12px; background:var(--bg-color); border-radius:8px;"><span style="font-weight:800;">총 방문자 수</span><strong id="totalVisitorCount" style="font-size:1.25rem; color:var(--primary);">-</strong></div><p style="font-size:0.78rem; color:var(--text-sub); text-align:center; margin:12px 0;">브라우저 탭 세션 기준 · 새로고침 중복 제외</p><button class="action-btn bg-cancel" onclick="closeVisitorStats()">닫기</button></div></div>
 
 <script>
@@ -1117,7 +1146,75 @@ async function openVisitorStats() {
 }
 function closeVisitorStats() { document.getElementById("visitorStatsModal").style.display = "none"; }
 
-function toggleDashItem(id){ const c = document.getElementById(id); if(!c) return; const e = c.classList.contains('expanded'); document.querySelectorAll('.dash-card').forEach(x=>{ x.classList.remove('expanded'); const content = x.querySelector('.dash-content'); if(content) content.style.display='none'; }); if(!e){ c.classList.add('expanded'); const content = c.querySelector('.dash-content'); if(content) content.style.display='block'; if(id === 'log-card') renderCalendar(currentDate.getFullYear(), currentDate.getMonth()); } }
+let isWorkLogUnlocked = sessionStorage.getItem("workLogPinUnlocked") === "1";
+let pendingWorkLogAction = null;
+function syncWorkLogExtraUnlockUI() {
+    const lockBanner = document.getElementById("logExtraLockBanner");
+    const filterContent = document.getElementById("logExtraFilterContent");
+    const statsSummary = document.getElementById("monthlyStatsSummary");
+    if (isWorkLogUnlocked) {
+        if (lockBanner) lockBanner.style.display = "none";
+        if (filterContent) filterContent.classList.remove("hidden");
+        if (statsSummary) statsSummary.classList.remove("hidden");
+    } else {
+        if (lockBanner) lockBanner.style.display = "flex";
+        if (filterContent) filterContent.classList.add("hidden");
+        if (statsSummary) statsSummary.classList.add("hidden");
+    }
+}
+function openWorkLogPinModal(onUnlock) {
+    pendingWorkLogAction = onUnlock || null;
+    const modal = document.getElementById("workLogPinModal");
+    const input = document.getElementById("workLogPinInput");
+    if (input) input.value = "";
+    if (modal) {
+        modal.style.display = "flex";
+        setTimeout(() => input && input.focus(), 50);
+    }
+}
+function closeWorkLogPinModal() {
+    const modal = document.getElementById("workLogPinModal");
+    if (modal) modal.style.display = "none";
+    pendingWorkLogAction = null;
+}
+function submitWorkLogPin() {
+    const input = document.getElementById("workLogPinInput");
+    const val = (input ? input.value : "").trim();
+    if (val === "9445") {
+        isWorkLogUnlocked = true;
+        try { sessionStorage.setItem("workLogPinUnlocked", "1"); } catch (e) {}
+        syncWorkLogExtraUnlockUI();
+        const callback = pendingWorkLogAction;
+        closeWorkLogPinModal();
+        showToast("🔓 추가 기능(검색·상세통계) 잠금이 해제되었습니다.");
+        if (typeof callback === "function") callback();
+    } else {
+        showToast("⚠️ 비밀번호가 일치하지 않습니다.");
+        if (input) {
+            input.value = "";
+            input.focus();
+        }
+    }
+}
+function toggleDashItem(id){
+    const c = document.getElementById(id);
+    if(!c) return;
+    const e = c.classList.contains('expanded');
+    document.querySelectorAll('.dash-card').forEach(x=>{
+        x.classList.remove('expanded');
+        const content = x.querySelector('.dash-content');
+        if(content) content.style.display='none';
+    });
+    if(!e){
+        c.classList.add('expanded');
+        const content = c.querySelector('.dash-content');
+        if(content) content.style.display='block';
+        if(id === 'log-card') {
+            syncWorkLogExtraUnlockUI();
+            renderCalendar(currentDate.getFullYear(), currentDate.getMonth());
+        }
+    }
+}
 function toggleSection(id){
     const el = document.getElementById(id);
     if (!el) return;
@@ -1248,19 +1345,153 @@ const officialTerminalShortNames = {
     dgt: "동원",
     bct: "BCT"
 };
+const terminalQuickConfig = {
+    hjnc: {
+        short: "한진(HJNC)",
+        schedule: "https://www.hjnc.co.kr/esvc/vessel/berthScheduleT",
+        chart: "https://www.hjnc.co.kr/esvc/vessel/berthScheduleG",
+        status: "https://www.hjnc.co.kr/esvc/vessel/vesselStatus",
+        mealLabel: "한진식단",
+        bayplan: "http://bayplan.hjnc.co.kr"
+    },
+    bnct: {
+        short: "고려(BNCT)",
+        schedule: "https://info.bnctkorea.com/esvc/vessel/berthScheduleT",
+        chart: "https://info.bnctkorea.com/esvc/vessel/berthScheduleG",
+        status: "https://info.bnctkorea.com/esvc/vessel/vesselStatus",
+        mealLabel: "부산신항컨테이너터미널(BNCT) 식단"
+    },
+    dgt: {
+        short: "동원(DGT)",
+        schedule: "https://www.dgtbusan.com/DGT/esvc/vessel/berthScheduleT",
+        chart: "https://www.dgtbusan.com/DGT/esvc/vessel/berthScheduleG",
+        status: "https://www.dgtbusan.com/DGT/esvc/vessel/vesselStatus",
+        mealLabel: "동원글로벌터미널부산(DGT) 식단"
+    },
+    bct: {
+        short: "BCT",
+        schedule: "https://info.bct2-4.com/infoservice/index.html",
+        chart: "https://info.bct2-4.com/infoservice/index.html",
+        status: "https://info.bct2-4.com/infoservice/index.html",
+        mealLabel: "부산컨테이너터미널(BCT) 식단"
+    },
+    pnc: {
+        short: "PNC(부산신항만)",
+        schedule: "https://svc.pncport.com/info/CMS/Ship/Info.pnc?mCode=MN014",
+        chart: "https://svc.pncport.com/info/CMS/Ship/ShipBerthC.pnc?mCode=MN019",
+        status: "https://svc.pncport.com/info/CMS/Ship/ShipVslStatus.pnc?mCode=MN020",
+        mealLabel: "부산신항만(PNC) 식단",
+        bus: true
+    },
+    hpnt: {
+        short: "HMM(HPNT)",
+        schedule: "https://www.hpnt.co.kr/infoservice/vessel/vslScheduleList.jsp",
+        chart: "https://www.hpnt.co.kr/infoservice/vessel/vslScheduleChart.jsp",
+        status: "https://www.hpnt.co.kr/infoservice/vessel/vslWorkStatus.jsp",
+        mealLabel: "HMM PSA 신항만(HPNT) 식단"
+    },
+    pnit: {
+        short: "신항국제(PNIT)",
+        schedule: "https://www.pnitl.com/infoservice/vessel/vslScheduleList.jsp",
+        chart: "https://www.pnitl.com/infoservice/vessel/vslScheduleChart.jsp",
+        status: "https://www.pnitl.com/infoservice/vessel/vslWorkStatus.jsp",
+        mealLabel: "부산신항국제터미널(PNIT) 식단"
+    },
+    bptc: {
+        short: "신선대감만(BPTC)",
+        schedule: "http://info.bptc.co.kr:9084/content/sw/frame/berth_status_text_frame_sw_kr.jsp?p_id=BETX_SH_KR&snb_num=2&snb_div=service",
+        chart: "http://info.bptc.co.kr:9084/content/sw/frame/berth_status_text_frame_sw_kr.jsp?p_id=BETX_SH_KR&snb_num=2&snb_div=service",
+        status: "http://info.bptc.co.kr:9084/content/index.jsp#03",
+        mealLabel: "신선대감만터미널(BPTC) 식단"
+    },
+    hbct: {
+        short: "허치슨(HBCT)",
+        schedule: "https://custom.hktl.com/jsp/T01/sunsuk.jsp",
+        chart: "https://custom.hktl.com/jsp/T01/sunsuk.jsp",
+        status: "https://custom.hktl.com/jsp/T03/bonsun.jsp",
+        mealLabel: "허치슨포트부산(HBCT) 식단"
+    }
+};
+let favoriteTerminals = [];
+try {
+    const savedFavs = JSON.parse(localStorage.getItem("busanPortFavTerminals") || "[]");
+    if (Array.isArray(savedFavs)) favoriteTerminals = savedFavs.filter(id => terminalQuickConfig[id]);
+} catch (e) {
+    favoriteTerminals = [];
+}
+function toggleFavoriteTerminal(id, event) {
+    if (event) {
+        event.preventDefault();
+        event.stopPropagation();
+    }
+    const idx = favoriteTerminals.indexOf(id);
+    if (idx >= 0) {
+        favoriteTerminals.splice(idx, 1);
+        showToast(`☆ ${terminalQuickConfig[id]?.short || id} 단골 터미널 해제`);
+    } else {
+        favoriteTerminals.push(id);
+        showToast(`⭐ ${terminalQuickConfig[id]?.short || id} 상단 단골 터미널로 고정됨!`);
+    }
+    try {
+        localStorage.setItem("busanPortFavTerminals", JSON.stringify(favoriteTerminals));
+    } catch (e) {}
+    applyOfficialTerminalNames();
+    renderFavoriteQuickBar();
+}
+function renderFavoriteQuickBar() {
+    const bar = document.getElementById("favoriteQuickBar");
+    if (!bar) return;
+    if (!favoriteTerminals.length) {
+        bar.classList.add("hidden");
+        bar.innerHTML = "";
+        return;
+    }
+    bar.classList.remove("hidden");
+    const itemsHtml = favoriteTerminals.map(id => {
+        const cfg = terminalQuickConfig[id];
+        if (!cfg) return "";
+        const extraBtns = [];
+        if (cfg.bayplan) {
+            extraBtns.push(`<a href="${cfg.bayplan}" target="_blank" class="fav-quick-btn extra">🧩베이</a>`);
+        }
+        if (cfg.bus) {
+            extraBtns.push(`<button type="button" class="fav-quick-btn extra" onclick="openBusSchedule()">🚌셔틀</button>`);
+        }
+        return `<div class="fav-quick-item">
+            <div class="fav-quick-name">
+                <button type="button" class="fav-star-btn is-fav" title="즐겨찾기 해제" onclick="toggleFavoriteTerminal('${id}', event)">⭐</button>
+                <span>${cfg.short}</span>
+            </div>
+            <div class="fav-quick-actions">
+                <a href="${cfg.schedule}" target="_blank" class="fav-quick-btn">스케줄</a>
+                <a href="${cfg.chart}" target="_blank" class="fav-quick-btn">차트</a>
+                <a href="${cfg.status}" target="_blank" class="fav-quick-btn">현황</a>
+                ${extraBtns.join("")}
+                <button type="button" class="fav-quick-btn meal" onclick="openHjncMealModal('${id}', '${cfg.mealLabel}')">🍱식단</button>
+            </div>
+        </div>`;
+    }).join("");
+    bar.innerHTML = `<div class="fav-quick-header">
+        <span>⭐ 내 단골 터미널 빠른 실행 바</span>
+        <span style="font-size:0.72rem; color:var(--text-sub); font-weight:700;">별표(⭐) 터치 시 해제</span>
+    </div>${itemsHtml}`;
+}
 function applyOfficialTerminalNames() {
     Object.entries(officialTerminalNames).forEach(([id, name]) => {
         const terminal = document.getElementById(`term-${id}`);
         const header = terminal && terminal.previousElementSibling;
         if (header) {
+            const isFav = favoriteTerminals.includes(id);
+            const starBtn = `<button type="button" class="fav-star-btn ${isFav ? 'is-fav' : ''}" title="단골 터미널 즐겨찾기" onclick="toggleFavoriteTerminal('${id}', event)">⭐</button>`;
             const shortName = officialTerminalShortNames[id];
             if (shortName) {
-                header.innerHTML = `<span class="term-short-name">${shortName}</span><span class="term-full-name">${name} ▼</span>`;
+                header.innerHTML = `<span style="display:flex; align-items:center; gap:4px;">${starBtn}<span class="term-short-name">${shortName}</span></span><span class="term-full-name">${name} ▼</span>`;
             } else {
-                header.innerText = `${name} ▼`;
+                header.innerHTML = `<span style="display:flex; align-items:center; gap:6px;">${starBtn}<span>${name}</span></span><span>▼</span>`;
             }
         }
     });
+    renderFavoriteQuickBar();
 }
 function appendTerminalMealBlocks() {
     terminalMealTargets.forEach(({ id, label }) => {
@@ -1340,7 +1571,29 @@ async function uploadHjncMealImage(input) {
 }
 async function deleteTickerMsg(type, index){ if(!confirm("삭제?")) return; if(type === 'admin') { delete globalTickerData.adminMessage; await db.collection('settings').doc('banner').update({ adminMessage: firebase.firestore.FieldValue.delete() }); } else { globalTickerData.userMessages.splice(index, 1); await db.collection('settings').doc('banner').update({ userMessages: globalTickerData.userMessages }); } renderTickerList(); showToast("삭제됨"); }
 function downloadWorkLogsExcel() { if (!currentWorkerId || Object.keys(adminWorkLogs).length === 0) { return alert("다운로드할 근무 기록 데이터가 없습니다."); } let csvContent = "\uFEFF날짜,배이름,임금1,임금2,총임금,근무자,메모\n"; const sortedDates = Object.keys(adminWorkLogs).sort(); sortedDates.forEach(date => { const d = adminWorkLogs[date]; const ship = d.shipName || ""; const w1 = d.wage1 || 0; const w2 = d.wage2 || 0; const total = d.totalPay || 0; const workers = (d.coworkers || "").replace(/,/g, " "); const memo = (d.memo || "").replace(/\n/g, " ").replace(/,/g, " "); csvContent += `${date},${ship},${w1},${w2},${total},${workers},${memo}\n`; }); const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' }); const url = URL.createObjectURL(blob); const link = document.createElement("a"); const monthTitle = document.getElementById('calMonthYear').innerText; link.href = url; link.download = `${currentWorkerId}_${monthTitle}_근무기록.csv`; document.body.appendChild(link); link.click(); document.body.removeChild(link); showToast("📊 엑셀 파일이 다운로드 폴더에 저장되었습니다!"); }
-function renderCalendar(y, m){ const g = document.getElementById('calendarGrid'); g.innerHTML = ""; document.getElementById('calMonthYear').innerText = `${y}년 ${m+1}월`; const fD = new Date(y, m, 1).getDay(), lD = new Date(y, m+1, 0).getDate(); for(let i=0; i<fD; i++) g.innerHTML += `<div></div>`; for(let d=1; d<=lD; d++){ const dStr = `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`; let dayColor = "var(--text-main)"; let currentDayObj = new Date(y, m, d).getDay(); if (currentDayObj === 0) dayColor = "#ef4444"; if (currentDayObj === 6) dayColor = "#3b82f6"; g.innerHTML += `<div id="cal-day-${d}" data-date="${dStr}" class="cal-day tap-effect" onclick="clickDate('${dStr}')" style="color: ${dayColor};">${d}<div class="cal-dot"></div></div>`; } if(currentWorkerId) { const sDate = `${y}-${String(m+1).padStart(2,'0')}-01`, eDate = `${y}-${String(m+1).padStart(2,'0')}-${lD}`; db.collection('work_logs').where('date', '>=', sDate).where('date', '<=', eDate).get().then(s => { adminWorkLogs = {}; let total = 0; s.forEach(doc => { const data = doc.data(); if(data.workerId === currentWorkerId) { adminWorkLogs[data.date] = data; const day = parseInt(data.date.split('-')[2]); const el = document.getElementById(`cal-day-${day}`); if(el) { el.classList.add('has-data'); if (data.coworkers) { if (!el.querySelector('.coworker-badge')) { el.innerHTML += `<div class="coworker-badge">${data.coworkers}</div>`; } else { el.querySelector('.coworker-badge').innerText = data.coworkers; } } } total += (data.totalPay || 0); } }); document.getElementById('monthlyTotalDisplay').innerText = `이번달 총액: ${total.toLocaleString()}원`; applyWorkLogFilter(); }); } }
+function updateMonthlyStatsUI(logsMap) {
+    let total = 0, w1Sum = 0, w2Sum = 0, days = 0;
+    Object.values(logsMap || {}).forEach(d => {
+        if (!d) return;
+        const p = Number(d.totalPay) || 0;
+        const w1 = Number(d.wage1) || 0;
+        const w2 = Number(d.wage2) || 0;
+        if (p > 0 || d.shipName || d.memo || d.coworkers) days++;
+        total += p;
+        w1Sum += w1;
+        w2Sum += w2;
+    });
+    const avg = days > 0 ? Math.round(total / days) : 0;
+    const totalEl = document.getElementById('monthlyTotalDisplay');
+    const daysEl = document.getElementById('monthlyWorkDays');
+    const avgEl = document.getElementById('monthlyAvgPay');
+    const splitEl = document.getElementById('monthlySplitPay');
+    if (totalEl) totalEl.innerText = `이번달 총액: ${total.toLocaleString()}원`;
+    if (daysEl) daysEl.innerText = `${days}일`;
+    if (avgEl) avgEl.innerText = `${avg.toLocaleString()}원`;
+    if (splitEl) splitEl.innerText = `${(w1Sum/10000).toFixed(0)}만 / ${(w2Sum/10000).toFixed(0)}만`;
+}
+function renderCalendar(y, m){ const g = document.getElementById('calendarGrid'); g.innerHTML = ""; document.getElementById('calMonthYear').innerText = `${y}년 ${m+1}월`; const fD = new Date(y, m, 1).getDay(), lD = new Date(y, m+1, 0).getDate(); for(let i=0; i<fD; i++) g.innerHTML += `<div></div>`; for(let d=1; d<=lD; d++){ const dStr = `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`; let dayColor = "var(--text-main)"; let currentDayObj = new Date(y, m, d).getDay(); if (currentDayObj === 0) dayColor = "#ef4444"; if (currentDayObj === 6) dayColor = "#3b82f6"; g.innerHTML += `<div id="cal-day-${d}" data-date="${dStr}" class="cal-day tap-effect" onclick="clickDate('${dStr}')" style="color: ${dayColor};">${d}<div class="cal-dot"></div></div>`; } if(currentWorkerId) { const sDate = `${y}-${String(m+1).padStart(2,'0')}-01`, eDate = `${y}-${String(m+1).padStart(2,'0')}-${lD}`; db.collection('work_logs').where('date', '>=', sDate).where('date', '<=', eDate).get().then(s => { adminWorkLogs = {}; s.forEach(doc => { const data = doc.data(); if(data.workerId === currentWorkerId) { adminWorkLogs[data.date] = data; const day = parseInt(data.date.split('-')[2]); const el = document.getElementById(`cal-day-${day}`); if(el) { el.classList.add('has-data'); if (data.coworkers) { if (!el.querySelector('.coworker-badge')) { el.innerHTML += `<div class="coworker-badge">${data.coworkers}</div>`; } else { el.querySelector('.coworker-badge').innerText = data.coworkers; } } } } }); updateMonthlyStatsUI(adminWorkLogs); applyWorkLogFilter(); }); } else { updateMonthlyStatsUI({}); } }
 let rangeFetchedLogs = null;
 function matchesLogFilter(log, startDate, endDate, keyword) {
     if (!log) return false;
@@ -1639,10 +1892,39 @@ function deleteWorkLog(){ if(!currentWorkerId) return; if(!confirm("정말 삭�
 function changeMonth(s){ currentDate.setMonth(currentDate.getMonth()+s); renderCalendar(currentDate.getFullYear(), currentDate.getMonth()); }
 function previewLogImage(input){ if(input.files&&input.files[0]){ const r=new FileReader(); r.onload=e=>{const i=document.getElementById('logImagePreview'); i.src=e.target.result; i.style.display='block';}; r.readAsDataURL(input.files[0]); } }
 function renderRow(label, amt, color = "inherit") { return `<tr><td style="padding: 8px 0; color: var(--text-sub); font-weight:700;">${label}</td><td style="text-align: right; font-weight: 900; color: ${color};">${amt.toLocaleString()}원</td></tr>`; }
-const publicHolidays = [ '2026-01-01', '2026-02-16', '2026-02-17', '2026-02-18', '2026-03-01', '2026-03-02', '2026-05-05', '2026-05-24', '2026-05-25', '2026-06-06', '2026-08-15', '2026-09-24', '2026-09-25', '2026-09-26', '2026-09-28', '2026-10-03', '2026-10-09', '2026-12-25' ];
-function calcTimeAndFill() { try { const sd = document.getElementById('wageStartDate').value; const sh = parseInt(document.getElementById('wageStartHour').value) || 0; const ed = document.getElementById('wageEndDate').value; const eh = parseInt(document.getElementById('wageEndHour').value) || 0; if(sd && ed) { const startD = new Date(`${sd}T${String(sh).padStart(2,'0')}:00:00`); const endD = new Date(`${ed}T${String(eh).padStart(2,'0')}:00:00`); const diffMs = endD.getTime() - startD.getTime(); if(diffMs > 0) { const hours = Math.floor(diffMs / (1000 * 60 * 60)); document.getElementById('wageTotalHours').value = hours; } else { document.getElementById('wageTotalHours').value = ''; if(sd !== ed || sh !== eh) alert("종료 시간이 시작 시간보다 빠를 수 없습니다."); } } autoFillWeekendHoliday(); } catch(e) { console.error(e); } }
+const publicHolidays = [
+    '2026-01-01', '2026-02-16', '2026-02-17', '2026-02-18', '2026-03-01', '2026-03-02', '2026-05-05', '2026-05-24', '2026-05-25', '2026-06-06', '2026-08-15', '2026-09-24', '2026-09-25', '2026-09-26', '2026-09-28', '2026-10-03', '2026-10-09', '2026-12-25',
+    '2027-01-01', '2027-02-06', '2027-02-07', '2027-02-08', '2027-02-09', '2027-03-01', '2027-05-05', '2027-05-13', '2027-06-06', '2027-08-15', '2027-08-16', '2027-09-14', '2027-09-15', '2027-09-16', '2027-10-03', '2027-10-04', '2027-10-09', '2027-10-11', '2027-12-25'
+];
+let lastCalculatedWageData = null;
+function highlightSeasonRow(month) {
+    ['row-jan', 'row-apr', 'row-oct'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.style.background = '';
+    });
+    const activeId = (month >= 4 && month <= 9) ? 'row-apr' : (month >= 10 ? 'row-oct' : 'row-jan');
+    const activeEl = document.getElementById(activeId);
+    if (activeEl) activeEl.style.background = 'rgba(59, 130, 246, 0.15)';
+}
+function calcTimeAndFill() { try { const sd = document.getElementById('wageStartDate').value; const sh = parseInt(document.getElementById('wageStartHour').value) || 0; const ed = document.getElementById('wageEndDate').value; const eh = parseInt(document.getElementById('wageEndHour').value) || 0; if(sd) highlightSeasonRow(new Date(sd).getMonth() + 1); if(sd && ed) { const startD = new Date(`${sd}T${String(sh).padStart(2,'0')}:00:00`); const endD = new Date(`${ed}T${String(eh).padStart(2,'0')}:00:00`); const diffMs = endD.getTime() - startD.getTime(); if(diffMs > 0) { const hours = Math.floor(diffMs / (1000 * 60 * 60)); document.getElementById('wageTotalHours').value = hours; } else { document.getElementById('wageTotalHours').value = ''; if(sd !== ed || sh !== eh) alert("종료 시간이 시작 시간보다 빠를 수 없습니다."); } } autoFillWeekendHoliday(); } catch(e) { console.error(e); } }
 function autoFillWeekendHoliday() { try { const sd = document.getElementById('wageStartDate').value; const sh = parseInt(document.getElementById('wageStartHour').value) || 0; const hoursStr = document.getElementById('wageTotalHours').value; if(!sd || !hoursStr) { document.getElementById('wageHoliday').value = ''; document.getElementById('wageWeekend').value = ''; return; } const totalHours = parseInt(hoursStr) || 0; let currentDateTime = new Date(`${sd}T${String(sh).padStart(2,'0')}:00:00`); let holidayCount = 0; let weekendCount = 0; for(let i = 0; i < totalHours; i++) { const curY = currentDateTime.getFullYear(); const curM = String(currentDateTime.getMonth() + 1).padStart(2, '0'); const curD = String(currentDateTime.getDate()).padStart(2, '0'); const curDateString = `${curY}-${curM}-${curD}`; const curDayOfWeek = currentDateTime.getDay(); const isHoliday = publicHolidays.includes(curDateString); const isWeekend = (curDayOfWeek === 0 || curDayOfWeek === 6); if (isHoliday) { holidayCount++; } else if (isWeekend) { weekendCount++; } currentDateTime.setHours(currentDateTime.getHours() + 1); } document.getElementById('wageHoliday').value = holidayCount > 0 ? holidayCount : ''; document.getElementById('wageWeekend').value = weekendCount > 0 ? weekendCount : ''; } catch(e) { console.error(e); } }
-function calculateWage() { try { const totalHours = parseFloat(document.getElementById('wageTotalHours').value) || 0; const sd = document.getElementById('wageStartDate').value; const sh = parseInt(document.getElementById('wageStartHour').value) || 0; if (!sd || !document.getElementById('wageEndDate').value) { alert("근무 날짜를 선택해주세요."); return; } if (totalHours <= 0) { alert("총 근무 시간이 0시간입니다. 시간을 다시 설정해주세요."); return; } const startTime = sh; const isSkilled = document.getElementById('role-skilled').checked; const holidayH = parseFloat(document.getElementById('wageHoliday').value) || 0; const weekendH = parseFloat(document.getElementById('wageWeekend').value) || 0; const rainH = parseFloat(document.getElementById('wageRain').value) || 0; const hotH = parseFloat(document.getElementById('wageHotTime').value) || 0; const taxRate = parseFloat(document.getElementById('wageTaxType').value) || 0; const BASE_RATE = 10320; const SKILLED_DAY_ADD = 2557; const SKILLED_NIGHT_ADD = 3836; const month = new Date(sd).getMonth() + 1; let dayStart = 8, dayEnd = 18; if (month >= 4 && month <= 9) { dayStart = 6; dayEnd = 19; } else if (month >= 10) { dayStart = 7; dayEnd = 17; } let dayHours = 0, nightHours = 0; for (let i = 0; i < totalHours; i++) { let currentHour = (startTime + i) % 24; if (currentHour >= dayStart && currentHour < dayEnd) dayHours++; else nightHours++; } const dayAmt = dayHours * BASE_RATE; const nightAmt = nightHours * (BASE_RATE * 1.5); const holidayAmt = holidayH * (BASE_RATE * 0.5); const weekendAmt = weekendH * (BASE_RATE * 0.5); const otherAmt = rainH * (BASE_RATE * 0.5) + hotH * (BASE_RATE * 0.3); let skilledAmt = isSkilled ? (dayHours * SKILLED_DAY_ADD) + (nightHours * SKILLED_NIGHT_ADD) : 0; const subTotal = dayAmt + nightAmt + skilledAmt + holidayAmt + weekendAmt + otherAmt; const taxAmt = Math.floor(subTotal * taxRate); const finalTotal = subTotal - taxAmt; let extraHtml = ""; if (holidayAmt > 0) extraHtml += renderRow("🎉 공휴일 수당 (" + holidayH + "H)", holidayAmt, "#ea580c"); if (weekendAmt > 0) extraHtml += renderRow("🎈 주말 수당 (" + weekendH + "H)", weekendAmt, "#3b82f6"); if (otherAmt > 0) extraHtml += renderRow("☔ 우천/혹서기(30%) 등 (" + (rainH + hotH) + "H)", otherAmt); if (holidayAmt === 0 && weekendAmt === 0 && otherAmt === 0) extraHtml += renderRow("➕ 추가 가산 수당", 0); const specBody = document.getElementById('wageSpecBody'); specBody.innerHTML = ` ${renderRow("☀️ 주간 기본 ("+dayHours+"H)", dayAmt)} ${renderRow("🌙 야간 할증 ("+nightHours+"H)", nightAmt)} ${renderRow("🔧 기능공 수당 추가", skilledAmt, "var(--primary)")} ${extraHtml} ${taxAmt > 0 ? renderRow("💸 공제액 (세금/보험)", -taxAmt, "var(--danger)") : ""} `; document.getElementById('wageTotal').innerText = finalTotal.toLocaleString() + "원"; document.getElementById('wageResultBox').classList.remove('hidden'); showToast("상세 계산서가 생성되었습니다!"); } catch (e) { console.error(e); alert("계산 오류: 입력창 값을 확인해주세요."); } }
+function calculateWage() { try { const totalHours = parseFloat(document.getElementById('wageTotalHours').value) || 0; const sd = document.getElementById('wageStartDate').value; const sh = parseInt(document.getElementById('wageStartHour').value) || 0; if (!sd || !document.getElementById('wageEndDate').value) { alert("근무 날짜를 선택해주세요."); return; } if (totalHours <= 0) { alert("총 근무 시간이 0시간입니다. 시간을 다시 설정해주세요."); return; } const startTime = sh; const isSkilled = document.getElementById('role-skilled').checked; const roleLabel = isSkilled ? '기능공' : (document.getElementById('role-onshore').checked ? '육상' : '본선'); const holidayH = parseFloat(document.getElementById('wageHoliday').value) || 0; const weekendH = parseFloat(document.getElementById('wageWeekend').value) || 0; const rainH = parseFloat(document.getElementById('wageRain').value) || 0; const hotH = parseFloat(document.getElementById('wageHotTime').value) || 0; const taxRate = parseFloat(document.getElementById('wageTaxType').value) || 0; const BASE_RATE = parseFloat(document.getElementById('wageHourly').value) || 10320; const SKILLED_DAY_ADD = 2557; const SKILLED_NIGHT_ADD = 3836; const month = new Date(sd).getMonth() + 1; highlightSeasonRow(month); let dayStart = 8, dayEnd = 18; if (month >= 4 && month <= 9) { dayStart = 6; dayEnd = 19; } else if (month >= 10) { dayStart = 7; dayEnd = 17; } let dayHours = 0, nightHours = 0; for (let i = 0; i < totalHours; i++) { let currentHour = (startTime + i) % 24; if (currentHour >= dayStart && currentHour < dayEnd) dayHours++; else nightHours++; } const dayAmt = dayHours * BASE_RATE; const nightAmt = nightHours * (BASE_RATE * 1.5); const holidayAmt = holidayH * (BASE_RATE * 0.5); const weekendAmt = weekendH * (BASE_RATE * 0.5); const otherAmt = rainH * (BASE_RATE * 0.5) + hotH * (BASE_RATE * 0.3); let skilledAmt = isSkilled ? (dayHours * SKILLED_DAY_ADD) + (nightHours * SKILLED_NIGHT_ADD) : 0; const subTotal = dayAmt + nightAmt + skilledAmt + holidayAmt + weekendAmt + otherAmt; const taxAmt = Math.floor(subTotal * taxRate); const finalTotal = Math.round(subTotal - taxAmt); lastCalculatedWageData = { date: sd, totalPay: finalTotal, summary: `[${roleLabel}] 총 ${totalHours}H (주간 ${dayHours}H / 야간 ${nightHours}H)` }; let extraHtml = ""; if (holidayAmt > 0) extraHtml += renderRow("🎉 지게차/공휴일 수당 (" + holidayH + "H)", holidayAmt, "#ea580c"); if (weekendAmt > 0) extraHtml += renderRow("🎈 특별/주말 수당 (" + weekendH + "H)", weekendAmt, "#3b82f6"); if (otherAmt > 0) extraHtml += renderRow("☔ 우천/혹서기(30%) 등 (" + (rainH + hotH) + "H)", otherAmt); if (holidayAmt === 0 && weekendAmt === 0 && otherAmt === 0) extraHtml += renderRow("➕ 추가 가산 수당", 0); const specBody = document.getElementById('wageSpecBody'); specBody.innerHTML = ` ${renderRow("☀️ 주간 기본 ("+dayHours+"H)", dayAmt)} ${renderRow("🌙 야간 할증 ("+nightHours+"H)", nightAmt)} ${renderRow("🔧 기능공 수당 추가", skilledAmt, "var(--primary)")} ${extraHtml} ${taxAmt > 0 ? renderRow("💸 공제액 (세금/보험)", -taxAmt, "var(--danger)") : ""} `; document.getElementById('wageTotal').innerText = finalTotal.toLocaleString() + "원"; document.getElementById('wageResultBox').classList.remove('hidden'); showToast("상세 계산서가 생성되었습니다!"); } catch (e) { console.error(e); alert("계산 오류: 입력창 값을 확인해주세요."); } }
+function sendCalculatedWageToLog() {
+    if (!lastCalculatedWageData) return;
+    const { date, totalPay, summary } = lastCalculatedWageData;
+    const logCard = document.getElementById('log-card');
+    if (logCard && !logCard.classList.contains('expanded')) {
+        toggleDashItem('log-card');
+    }
+    jumpToLogDate(date);
+    const wage1Input = document.getElementById('logWage1');
+    const memoInput = document.getElementById('logMemo');
+    if (wage1Input) wage1Input.value = totalPay;
+    if (memoInput && !memoInput.value.includes(summary)) {
+        memoInput.value = memoInput.value ? `${memoInput.value}\n${summary}` : summary;
+    }
+    showToast("📅 근무일지 입력창에 계산된 임금이 자동 입력되었습니다!");
+}
 function resetWageForm(){ document.querySelectorAll('#wage-card input').forEach(i=> { if(i.type !== 'radio' && i.id !== 'wageHourly') i.value=''; }); document.getElementById('wageResultBox').classList.add('hidden'); }
 let currentEditNoticeId = null; let currentEditNoticeImg = null; function autoLink(text) { if (!text) return ""; const urlRegex = /(https?:\/\/[^\s]+)/g; return text.replace(urlRegex, function(url) { return `<a href="${url}" target="_blank" style="color:#2563eb; text-decoration:underline; font-weight:bold;">${url}</a>`; }); } async function startEditNotice(id, title, content, imgUrl, e) { e.stopPropagation(); if (!(await verifyAdmin())) return; currentEditNoticeId = id; currentEditNoticeImg = imgUrl; document.getElementById('noticeTitle').value = title; document.getElementById('noticeContent').value = content.replace(/\\n/g, '\n'); document.getElementById('noticeFileInput').value = ''; document.getElementById('noticeForm').classList.remove('hidden'); document.getElementById('noticeSubmitBtn').innerText = "수정 완료"; document.getElementById('noticeSubmitBtn').style.background = "var(--primary)"; document.getElementById('noticeCancelBtn').style.display = "block"; document.getElementById('noticeForm').scrollIntoView({behavior: 'smooth', block: 'center'}); } function cancelEditNotice() { currentEditNoticeId = null; currentEditNoticeImg = null; document.getElementById('noticeTitle').value = ''; document.getElementById('noticeContent').value = ''; document.getElementById('noticeFileInput').value = ''; document.getElementById('noticeSubmitBtn').innerText = "등록 완료"; document.getElementById('noticeSubmitBtn').style.background = "var(--success)"; document.getElementById('noticeCancelBtn').style.display = "none"; document.getElementById('noticeForm').classList.add('hidden'); } async function saveNotice() { if (!(await verifyAdmin())) return; const t = document.getElementById('noticeTitle').value.trim(); const c = document.getElementById('noticeContent').value.trim(); const f = document.getElementById('noticeFileInput').files[0]; const btn = document.getElementById('noticeSubmitBtn'); if (!t || !c) { alert("공지 제목과 내용을 입력해주세요."); return; } btn.innerText = "서버 기록 중..."; btn.disabled = true; const finalize = (url) => { const data = { title: t, content: c, timestamp: firebase.firestore.FieldValue.serverTimestamp() }; if (url) { data.imageUrl = url; } else if (currentEditNoticeId && currentEditNoticeImg) { data.imageUrl = currentEditNoticeImg; } else { data.imageUrl = null; } let req; if (currentEditNoticeId) { req = db.collection("notices").doc(currentEditNoticeId).update(data); } else { req = db.collection("notices").add(data); } req.then(() => { const isEdit = !!currentEditNoticeId; cancelEditNotice(); showToast(isEdit ? "공지가 수정되었습니다." : "공지가 등록되었습니다."); }).catch(err => { alert("저장 실패: " + err.message); btn.innerText = currentEditNoticeId ? "수정 완료" : "등록 완료"; btn.disabled = false; }); }; if (f) { const storageRef = storage.ref(`notices/${Date.now()}_${f.name}`); const uploadTask = storageRef.put(f); uploadTask.on('state_changed', (snap) => { const percent = Math.round((snap.bytesTransferred / snap.totalBytes) * 100); btn.innerText = `사진 업로드 중... ${percent}%`; }, (err) => { alert("사진 업로드 실패: " + err.message); btn.disabled = false; btn.innerText = currentEditNoticeId ? "수정 완료" : "등록 완료"; }, () => { uploadTask.snapshot.ref.getDownloadURL().then(url => finalize(url)); }); } else { finalize(null); } } function delNotice(id,e){ e.stopPropagation(); verifyAdmin().then(r=>{ if(r) db.collection("notices").doc(id).delete(); }); }
 
