@@ -161,7 +161,9 @@
         .terminal-block.term-theme-bnct.active-block { border-color: #2563eb; box-shadow: 0 3px 8px rgba(37, 99, 235, 0.15); }
         .terminal-block.term-theme-dgt.active-block { border-color: #0d9488; box-shadow: 0 3px 8px rgba(13, 148, 136, 0.15); }
         .terminal-block.term-theme-bct.active-block { border-color: #16a34a; box-shadow: 0 3px 8px rgba(22, 163, 74, 0.15); }
-        .terminal-header { padding: 14px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; font-weight: 900; font-size: clamp(0.95rem, 3.5vw, 1.1rem); touch-action: manipulation; color: var(--text-main); }
+        .terminal-header { padding: 14px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; font-weight: 900; font-size: clamp(0.95rem, 3.5vw, 1.1rem); touch-action: manipulation; color: var(--text-main); line-height: 1.2; }
+        .term-short-name { font-size: clamp(1.1rem, 4vw, 1.25rem); font-weight: 900; line-height: 1; flex-shrink: 0; }
+        .term-full-name { margin-left: auto; text-align: right; font-size: clamp(0.95rem, 3.5vw, 1.1rem); font-weight: 900; line-height: 1.2; }
         .terminal-block.active-block .terminal-header { color: var(--primary); background: rgba(10, 27, 63, 0.04); }
         .terminal-body { display: none; padding: 12px; border-top: 1px dashed var(--border); }
         .terminal-block.active-block .terminal-body { border-top: 2px solid var(--primary); }
@@ -1195,11 +1197,24 @@ const officialTerminalNames = {
     bptc: "신선대감만터미널(BPTC)",
     hbct: "허치슨포트부산(HBCT)"
 };
+const officialTerminalShortNames = {
+    hjnc: "한진",
+    bnct: "고려",
+    dgt: "동원",
+    bct: "BCT"
+};
 function applyOfficialTerminalNames() {
     Object.entries(officialTerminalNames).forEach(([id, name]) => {
         const terminal = document.getElementById(`term-${id}`);
         const header = terminal && terminal.previousElementSibling;
-        if (header) header.innerText = `${name} ▼`;
+        if (header) {
+            const shortName = officialTerminalShortNames[id];
+            if (shortName) {
+                header.innerHTML = `<span class="term-short-name">${shortName}</span><span class="term-full-name">${name} ▼</span>`;
+            } else {
+                header.innerText = `${name} ▼`;
+            }
+        }
     });
 }
 function appendTerminalMealBlocks() {
