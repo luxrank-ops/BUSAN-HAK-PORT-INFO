@@ -1234,11 +1234,38 @@
         <div class="dash-header tap-effect" onclick="toggleDashItem('main-manual-card')" style="background: linear-gradient(135deg, #0a1b3f 0%, #1e3a8a 100%) !important; padding: 15px 16px; border-radius: 10px; display: flex; align-items: center; justify-content: space-between;">
             <div style="display: flex; align-items: center; gap: 8px;">
                 <span style="font-size: 1.25rem;">🔅</span>
-                <span class="dash-title" style="font-size: 1.12rem; font-weight: 900; color: #fde047 !important; letter-spacing: 0.2px;">앱 사용 설명서 (v2027)</span>
+                <span class="dash-title" style="font-size: 1.05rem; font-weight: 900; color: #fde047 !important; letter-spacing: 0px;">앱 공유 방법 / 앱 사용 설명서 (v2027)</span>
             </div>
             <span class="toggle-icon" style="color: #fde047; font-weight: 900;">▼</span>
         </div>
         <div class="dash-content" style="padding: 20px; font-size: 0.98rem; line-height: 1.8; font-weight: 600; color: #1e293b; background: var(--card-bg); border-radius: 8px; border-top: 1px solid var(--border);">
+            <div style="margin-bottom: 22px; background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%); border: 2px solid #f59e0b; border-radius: 12px; padding: 15px; box-shadow: 0 2px 8px rgba(245, 158, 11, 0.12);">
+                <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:10px; border-bottom:1.5px dashed #f59e0b; padding-bottom:8px;">
+                    <span style="font-size:1.05rem; font-weight:900; color:#b45309;">📲 동료에게 앱 공유하기 & 휴대폰 아이콘 생성 방법</span>
+                    <button type="button" onclick="shareOrCopyAppPromo()" style="background:#d97706; color:#ffffff; border:none; border-radius:8px; padding:6px 12px; font-size:0.82rem; font-weight:900; cursor:pointer; box-shadow:0 2px 4px rgba(217,119,6,0.3);">📤 홍보글 · 주소 원클릭 복사/공유</button>
+                </div>
+                <div style="background:#ffffff; border:1px solid #fcd34d; border-radius:8px; padding:12px; font-size:0.88rem; color:#1e293b; line-height:1.6; margin-bottom:10px;">
+                    <div style="font-weight:900; color:#0a1b3f; font-size:0.95rem; margin-bottom:4px;">🚢 [부산항 항만 근로자 필수 앱 - BUSAN HAK PORT]</div>
+                    <div>• <b>임금계산기:</b> 주·야간/기능공/수당 자동 분리 및 근무일지 1초 연동</div>
+                    <div>• <b>근무일지:</b> 달력 기록 · 월간 정산 · 목표 수입 달성률 · 엑셀 저장</div>
+                    <div>• <b>1·2·3항업 통합:</b> 전 터미널 스케줄·차트·베이플랜·식단표·셔틀시간표</div>
+                    <div>• <b>선박정보 & 기상:</b> 작업 난이도(★1~5)·장비태그 도감 및 신항·북항 실시간 풍속</div>
+                    <div style="margin-top:6px; font-weight:900; color:#1d4ed8;">👉 접속 주소: <a href="https://busan-hak-port.web.app" target="_blank" style="color:#2563eb; text-decoration:underline;">https://busan-hak-port.web.app</a></div>
+                </div>
+                <div style="display:grid; grid-template-columns:1fr; gap:8px; font-size:0.86rem;">
+                    <div style="background:#eff6ff; border:1px solid #93c5fd; border-radius:8px; padding:10px 12px; color:#1e3a8a;">
+                        <b style="color:#1d4ed8; font-size:0.9rem;">🤖 [갤럭시 / 안드로이드폰] 바탕화면 아이콘 만들기</b><br>
+                        1. 카톡에서 열렸다면 우측 하단 <b>[ ⋮ ]</b> → <b>[다른 브라우저로 열기]</b> 선택<br>
+                        2. 크롬/삼성인터넷 우측 메뉴 <b>[ ⋮ ]</b> 또는 <b>[ ≡ ]</b> 터치 → <b>[홈 화면에 추가]</b> 클릭!
+                    </div>
+                    <div style="background:#f0fdf4; border:1px solid #86efac; border-radius:8px; padding:10px 12px; color:#065f46;">
+                        <b style="color:#047857; font-size:0.9rem;">🍎 [아이폰 (iPhone)] 바탕화면 아이콘 만들기</b><br>
+                        1. <b>사파리(Safari)</b> 앱에서 주소 접속 후 하단 중앙 <b>[공유 버튼 📤]</b> 터치<br>
+                        2. 메뉴에서 <b>[홈 화면에 추가 ➕]</b> 선택 후 우측 상단 <b>[추가]</b> 클릭!
+                    </div>
+                </div>
+            </div>
+
             <p style="margin-bottom: 20px; font-size: 1.02rem; color: #0c4a6e; background: #f0f9ff; padding: 15px; border-radius: 10px; border-left: 5px solid #0284c7;">
                 <b style="color: #0369a1;">본 플랫폼은 2027년 차세대 스마트 항만 시대에 발맞추어, 부산항(신항·북항) 현장 근로자분들의 작업 효율성과 권익 보호, 무재해 안전 환경을 위해 전면 업그레이드되었습니다.</b><br>
                 정밀한 임금 정산과 근무일지 클라우드 백업부터 전 터미널 실시간 선석·식단·베이플랜 통합 조회까지 현장에 꼭 필요한 모든 기능을 한곳에서 제공합니다.
@@ -2171,6 +2198,48 @@ function toggleWageLayoutMode() {
     if (btn) {
         btn.innerText = isWide ? '📐 5:5 단가표 나란히 보기' : '📐 입력창 넓게 보기';
         btn.style.background = isWide ? '#dbeafe' : '#eff6ff';
+    }
+}
+async function shareOrCopyAppPromo() {
+    const promoText = [
+        "🚢 [부산항 항만 근로자 필수 앱 - BUSAN HAK PORT] 🚢",
+        "",
+        "✅ 주·야간/기능공/수당 자동 [임금계산기]",
+        "✅ 달력에 적고 한 달 총액 자동 정산되는 [근무일지]",
+        "✅ 1·2·3항업 전 터미널 [스케줄·차트·베이플랜·식단표·셔틀시간표]",
+        "✅ 배마다 어떤 콘/장비 쓰는지 미리 보는 [선박정보 도감]",
+        "✅ 신항·북항 실시간 풍속·날씨 및 도선 현황까지!",
+        "",
+        "👇 아래 주소 누르셔서 바로 써보세요!",
+        "https://busan-hak-port.web.app",
+        "",
+        "💡 [휴대폰 바탕화면에 아이콘 만드는 법]",
+        "• 갤럭시: 주소 접속 후 우측 메뉴(⋮ 또는 ≡) → [홈 화면에 추가]",
+        "• 아이폰: 사파리(Safari)로 접속 후 하단 공유 버튼(📤) → [홈 화면에 추가]",
+        "",
+        "(운영관리자: 이춘학 / 문의: 010-2846-8906)"
+    ].join("\n");
+    try {
+        if (navigator.share) {
+            await navigator.share({
+                title: "부산항 스마트 작업 가이드 (BUSAN HAK PORT)",
+                text: promoText,
+                url: "https://busan-hak-port.web.app"
+            });
+            return;
+        }
+    } catch (e) {}
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(promoText);
+        showToast("📋 앱 홍보글과 접속 주소가 복사되었습니다! 카톡이나 문자에 붙여넣기 하세요.");
+    } else {
+        const ta = document.createElement("textarea");
+        ta.value = promoText;
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand("copy");
+        document.body.removeChild(ta);
+        showToast("📋 앱 홍보글과 접속 주소가 복사되었습니다!");
     }
 }
 function updateMonthlyStatsUI(logsMap) {
