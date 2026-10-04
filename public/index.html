@@ -299,6 +299,13 @@
         .ship-badge-star { display: inline-flex; align-items: center; background: #fef3c7; color: #b45309; border: 1px solid #fcd34d; border-radius: 5px; padding: 1px 6px; font-size: 0.72rem; font-weight: 900; margin-left: 4px; vertical-align: middle; }
         .ship-badge-tag { display: inline-block; background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; border-radius: 5px; padding: 1px 6px; font-size: 0.7rem; font-weight: 800; margin-right: 4px; margin-top: 3px; }
         .ship-badge-tag.warn { background: #fef2f2; color: #dc2626; border-color: #fecaca; }
+        .quick-chip-row { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 4px; margin-bottom: 8px; }
+        .quick-chip-btn { background: #f1f5f9; border: 1px solid #cbd5e1; color: var(--primary); border-radius: 14px; padding: 3px 9px; font-size: 0.74rem; font-weight: 800; cursor: pointer; transition: all 0.15s; }
+        .quick-chip-btn:active { transform: scale(0.95); background: #dbeafe; border-color: #3b82f6; }
+        .goal-gauge-box { margin-top: 10px; background: linear-gradient(135deg, #f8fafc, #eff6ff); border: 1.5px solid #93c5fd; border-radius: 10px; padding: 11px 12px; }
+        .goal-progress-track { width: 100%; height: 14px; background: #e2e8f0; border-radius: 10px; overflow: hidden; margin: 7px 0 5px; box-shadow: inset 0 1px 2px rgba(0,0,0,0.08); }
+        .goal-progress-fill { height: 100%; width: 0%; background: linear-gradient(90deg, #2563eb, #10b981); border-radius: 10px; transition: width 0.35s ease; }
+        .weather-live-board { background: linear-gradient(135deg, #0f172a, #1e3a8a); color: #ffffff; border-radius: 10px; padding: 12px; margin-bottom: 10px; border: 1.5px solid #3b82f6; box-shadow: 0 3px 8px rgba(15,23,42,0.18); }
     </style>
     <link rel="apple-touch-icon" href="./icon-192.png">
 </head>
@@ -464,6 +471,14 @@
                     <table class="spec-table"><tbody id="wageSpecBody"></tbody></table>
                     <div id="wageTotal" class="wage-total" style="border-top: 2px solid var(--primary);">0원</div>
                     <button type="button" class="action-btn bg-submit send-log-sparkle-btn" style="margin-top:12px; padding:12px; font-size:0.95rem;" onclick="sendCalculatedWageToLog()">✨ 📅 이 계산 결과를 근무일지로 보내기 ✨</button>
+                    <div id="wageReceiptLockBanner" onclick="openWorkLogPinModal()" style="cursor:pointer; margin-top:8px; background:linear-gradient(135deg, #f5f3ff, #ede9fe); border:1.5px solid #c4b5fd; border-radius:8px; padding:9px 11px; display:flex; justify-content:space-between; align-items:center;">
+                        <span style="font-size:0.8rem; font-weight:900; color:#5b21b6;">🔒 🧾 임금 산정 내역서 이미지 저장 · 공유 (잠김)</span>
+                        <span style="background:#6d28d9; color:white; font-size:0.72rem; font-weight:800; padding:3px 9px; border-radius:6px;">비번 해제</span>
+                    </div>
+                    <div id="wageReceiptShareActions" class="hidden" style="display:flex; gap:6px; margin-top:8px;">
+                        <button type="button" class="action-btn" style="flex:1; margin:0; padding:10px 6px; font-size:0.84rem; background:#4f46e5;" onclick="saveReceiptImage('wage')">📸 내역서 이미지 저장</button>
+                        <button type="button" class="action-btn" style="flex:1; margin:0; padding:10px 6px; font-size:0.84rem; background:#0284c7;" onclick="shareReceiptCard('wage')">📤 내역서 카톡·공유</button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -515,12 +530,14 @@
                 <button class="action-btn" style="background:#10b981; margin-top:20px; margin-bottom:10px;" onclick="downloadWorkLogsExcel()">📊 한달 기록 엑셀 저장 (CSV)</button>
                 <div id="dailyLogForm" class="hidden" style="margin-top:20px; padding:15px; background:rgba(0,0,0,0.03); border-radius:12px; border:1px solid var(--border);">
                     <h4 id="selectedDateText" style="margin:0 0 10px 0; color:var(--primary); text-align:center; font-size:1.15rem; font-weight:900;"></h4>
-                    <div class="wage-row"><label>배이름</label><input type="text" id="logShipName" class="input-field" placeholder="작업 선박명"></div>
+                    <div class="wage-row" style="margin-bottom:4px;"><label>배이름</label><input type="text" id="logShipName" class="input-field" placeholder="작업 선박명"></div>
+                    <div id="quickShipChipRow" class="quick-chip-row"></div>
                     <div style="display:flex; gap:10px; margin-bottom:8px; width:100%;">
                         <div class="wage-row" style="flex:1; margin-bottom:0;"><label>임금1</label><input type="number" id="logWage1" class="input-field" placeholder="원"></div>
                         <div class="wage-row" style="flex:1; margin-bottom:0;"><label>임금2</label><input type="number" id="logWage2" class="input-field" placeholder="원"></div>
                     </div>
-                    <div class="wage-row"><label>근무자</label><input type="text" id="logCoworkers" class="input-field" placeholder="예: 재경, 성철 (2~4명)"></div>
+                    <div class="wage-row" style="margin-bottom:4px;"><label>근무자</label><input type="text" id="logCoworkers" class="input-field" placeholder="예: 재경, 성철 (2~4명)"></div>
+                    <div id="quickCoworkerChipRow" class="quick-chip-row"></div>
                     <textarea id="logMemo" class="input-field textarea-field" placeholder="작업 내용..."></textarea>
                     <label style="font-size:0.9rem; font-weight:800; display:block; margin-top:10px; margin-bottom:4px;">📷 현장 사진</label>
                     <input type="file" id="logImageInput" class="input-field" accept="image/*" onchange="previewLogImage(this)">
@@ -536,6 +553,30 @@
                     <div style="background:rgba(16,185,129,0.08); padding:8px 4px; border-radius:8px; border:1px solid var(--border);"><div style="font-size:0.72rem; color:var(--text-sub); font-weight:800;">임금1 / 임금2</div><div id="monthlySplitPay" style="font-size:0.78rem; font-weight:900; color:#047857; margin-top:4px;">0 / 0</div></div>
                 </div>
                 <div id="monthlyTotalDisplay" style="text-align:center; margin-top:10px; font-weight:900; color:var(--primary); font-size:1.25rem; background:rgba(10,27,63,0.03); padding:12px; border-radius:10px; border:1.5px solid var(--primary);">이번달 총액: 0원</div>
+                <div class="goal-gauge-box">
+                    <div style="display:flex; justify-content:space-between; align-items:center; gap:6px; flex-wrap:wrap;">
+                        <span style="font-size:0.84rem; font-weight:900; color:var(--primary);">🎯 이번 달 목표 수입 달성률</span>
+                        <div style="display:flex; align-items:center; gap:6px;">
+                            <span id="monthlyGoalAmountText" style="font-size:0.8rem; font-weight:900; color:#1d4ed8;">목표: 4,500,000원</span>
+                            <button type="button" onclick="changeMonthlyGoalAmount()" style="background:var(--primary); color:#fff; border:none; border-radius:6px; padding:3px 8px; font-size:0.72rem; font-weight:800; cursor:pointer;">목표 설정</button>
+                        </div>
+                    </div>
+                    <div class="goal-progress-track">
+                        <div id="monthlyGoalProgressFill" class="goal-progress-fill"></div>
+                    </div>
+                    <div style="display:flex; justify-content:space-between; align-items:center; font-size:0.76rem; font-weight:800; color:var(--text-sub);">
+                        <span id="monthlyGoalPercentText" style="color:#047857; font-weight:900;">달성률 0%</span>
+                        <span id="monthlyGoalRemainText">목표까지 4,500,000원 남음</span>
+                    </div>
+                </div>
+                <div id="monthlyReceiptLockBanner" onclick="openWorkLogPinModal()" style="cursor:pointer; margin-top:10px; background:linear-gradient(135deg, #f5f3ff, #ede9fe); border:1.5px solid #c4b5fd; border-radius:10px; padding:10px 12px; display:flex; justify-content:space-between; align-items:center;">
+                    <span style="font-size:0.84rem; font-weight:900; color:#5b21b6;">🔒 🧾 이번 달 정산 요약표 이미지 캡처 · 공유 (잠김)</span>
+                    <span style="background:#6d28d9; color:white; font-size:0.74rem; font-weight:800; padding:4px 10px; border-radius:6px;">비번 해제</span>
+                </div>
+                <div id="monthlyReceiptShareSection" class="hidden" style="display:flex; gap:6px; margin-top:10px;">
+                    <button type="button" class="action-btn" style="flex:1; margin:0; padding:10px 6px; font-size:0.84rem; background:#4f46e5;" onclick="saveReceiptImage('monthly')">📸 월간 정산표 이미지 저장</button>
+                    <button type="button" class="action-btn" style="flex:1; margin:0; padding:10px 6px; font-size:0.84rem; background:#0284c7;" onclick="shareReceiptCard('monthly')">📤 월간 정산표 카톡·공유</button>
+                </div>
                 <div id="d3ChartLockBanner" onclick="openWorkLogPinModal()" style="cursor:pointer; margin-top:12px; background:linear-gradient(135deg, #f0fdf4, #dcfce7); border:1.5px solid #86efac; border-radius:10px; padding:11px 12px; display:flex; justify-content:space-between; align-items:center;">
                     <span style="font-size:0.85rem; font-weight:900; color:#166534;">📊 월별 총수입 · 근로일수 D3.js 그래프 (잠김)</span>
                     <span style="background:#15803d; color:white; font-size:0.75rem; font-weight:800; padding:4px 10px; border-radius:6px;">비번 해제</span>
@@ -777,6 +818,27 @@
                 <span class="dash-title" style="color: var(--primary); font-size: 0.95rem !important; font-weight: 900; margin: 0; text-align: left; line-height: 1.3; word-break: keep-all;">날씨 및 도선상황</span>
             </div>
             <div class="dash-content">
+                <div class="weather-live-board">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; gap:6px; flex-wrap:wrap;">
+                        <span style="font-size:0.86rem; font-weight:900; color:#93c5fd;">🌬️ 부산항 실시간 기상 · 작업 안전 전광판</span>
+                        <button type="button" onclick="fetchBusanPortLiveWeather(true)" style="background:rgba(255,255,255,0.15); color:#fff; border:1px solid rgba(255,255,255,0.3); border-radius:6px; padding:3px 8px; font-size:0.72rem; font-weight:800; cursor:pointer;">🔄 기상 갱신</button>
+                    </div>
+                    <div id="busanLiveWeatherGrid" style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:8px;">
+                        <div style="background:rgba(255,255,255,0.08); border-radius:8px; padding:8px; border:1px solid rgba(255,255,255,0.15);">
+                            <div style="font-size:0.76rem; color:#bfdbfe; font-weight:800;">🚢 부산항 신항 (2·3항업)</div>
+                            <div id="weatherNewPortTemp" style="font-size:1.05rem; font-weight:900; margin-top:3px;">불러오는 중...</div>
+                            <div id="weatherNewPortWind" style="font-size:0.75rem; color:#e2e8f0; margin-top:2px;">풍속 - m/s · 강수 - mm</div>
+                            <div id="weatherNewPortBadge" style="margin-top:5px; font-size:0.72rem; font-weight:900; display:inline-block; padding:2px 7px; border-radius:12px; background:rgba(16,185,129,0.25); color:#6ee7b7;">확인 중</div>
+                        </div>
+                        <div style="background:rgba(255,255,255,0.08); border-radius:8px; padding:8px; border:1px solid rgba(255,255,255,0.15);">
+                            <div style="font-size:0.76rem; color:#bfdbfe; font-weight:800;">⚓ 부산항 북항 (1항업)</div>
+                            <div id="weatherNorthPortTemp" style="font-size:1.05rem; font-weight:900; margin-top:3px;">불러오는 중...</div>
+                            <div id="weatherNorthPortWind" style="font-size:0.75rem; color:#e2e8f0; margin-top:2px;">풍속 - m/s · 강수 - mm</div>
+                            <div id="weatherNorthPortBadge" style="margin-top:5px; font-size:0.72rem; font-weight:900; display:inline-block; padding:2px 7px; border-radius:12px; background:rgba(16,185,129,0.25); color:#6ee7b7;">확인 중</div>
+                        </div>
+                    </div>
+                    <div id="weatherUpdatedTimeText" style="font-size:0.7rem; color:#cbd5e1; text-align:right; font-weight:700;">※ 항만안전기준: 순간풍속 10m/s 강풍주의 · 15m/s 고소작업 통제</div>
+                </div>
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
                     <a href="http://www.busanpilot.co.kr/popup/monitoring" class="terminal-btn" target="_blank">🛥️ 모니터</a>
                     <a href="http://www.busanpilot.co.kr/boards/lists/weather" class="terminal-btn" target="_blank">📋 도선상황</a>
@@ -1242,6 +1304,10 @@ function syncWorkLogExtraUnlockUI() {
     const shipFilterBarArea = document.getElementById("shipFilterBarArea");
     const shipFullListLockBanner = document.getElementById("shipFullListLockBanner");
     const shipFullListSection = document.getElementById("shipFullListSection");
+    const wageReceiptLockBanner = document.getElementById("wageReceiptLockBanner");
+    const wageReceiptShareActions = document.getElementById("wageReceiptShareActions");
+    const monthlyReceiptLockBanner = document.getElementById("monthlyReceiptLockBanner");
+    const monthlyReceiptShareSection = document.getElementById("monthlyReceiptShareSection");
     if (isWorkLogUnlocked) {
         if (lockBanner) lockBanner.style.display = "none";
         if (filterContent) filterContent.classList.remove("hidden");
@@ -1252,6 +1318,10 @@ function syncWorkLogExtraUnlockUI() {
         if (shipFilterBarArea) shipFilterBarArea.classList.remove("hidden");
         if (shipFullListLockBanner) shipFullListLockBanner.style.display = "none";
         if (shipFullListSection) shipFullListSection.classList.remove("hidden");
+        if (wageReceiptLockBanner) wageReceiptLockBanner.style.display = "none";
+        if (wageReceiptShareActions) wageReceiptShareActions.classList.remove("hidden");
+        if (monthlyReceiptLockBanner) monthlyReceiptLockBanner.style.display = "none";
+        if (monthlyReceiptShareSection) monthlyReceiptShareSection.classList.remove("hidden");
         loadAndRenderYearlyD3Chart(currentDate.getFullYear());
         if (typeof loadAndSearchAllShips === "function") {
             loadAndSearchAllShips(document.getElementById('shipSearch')?.value || '');
@@ -1266,6 +1336,10 @@ function syncWorkLogExtraUnlockUI() {
         if (shipFilterBarArea) shipFilterBarArea.classList.add("hidden");
         if (shipFullListLockBanner) shipFullListLockBanner.style.display = "flex";
         if (shipFullListSection) shipFullListSection.classList.add("hidden");
+        if (wageReceiptLockBanner) wageReceiptLockBanner.style.display = "flex";
+        if (wageReceiptShareActions) wageReceiptShareActions.classList.add("hidden");
+        if (monthlyReceiptLockBanner) monthlyReceiptLockBanner.style.display = "flex";
+        if (monthlyReceiptShareSection) monthlyReceiptShareSection.classList.add("hidden");
     }
 }
 function openWorkLogPinModal(onUnlock) {
@@ -1318,8 +1392,10 @@ function toggleDashItem(id){
         if(id === 'log-card') {
             syncWorkLogExtraUnlockUI();
             renderCalendar(currentDate.getFullYear(), currentDate.getMonth());
-        } else if(id === 'ship-card') {
+        } else if(id === 'ship-card' || id === 'wage-card') {
             syncWorkLogExtraUnlockUI();
+        } else if(id === 'weather-card') {
+            fetchBusanPortLiveWeather(false);
         }
     }
 }
@@ -1679,6 +1755,324 @@ async function uploadHjncMealImage(input) {
 }
 async function deleteTickerMsg(type, index){ if(!confirm("삭제?")) return; if(type === 'admin') { delete globalTickerData.adminMessage; await db.collection('settings').doc('banner').update({ adminMessage: firebase.firestore.FieldValue.delete() }); } else { globalTickerData.userMessages.splice(index, 1); await db.collection('settings').doc('banner').update({ userMessages: globalTickerData.userMessages }); } renderTickerList(); showToast("삭제됨"); }
 function downloadWorkLogsExcel() { if (!currentWorkerId || Object.keys(adminWorkLogs).length === 0) { return alert("다운로드할 근무 기록 데이터가 없습니다."); } let csvContent = "\uFEFF날짜,배이름,임금1,임금2,총임금,근무자,메모\n"; const sortedDates = Object.keys(adminWorkLogs).sort(); sortedDates.forEach(date => { const d = adminWorkLogs[date]; const ship = d.shipName || ""; const w1 = d.wage1 || 0; const w2 = d.wage2 || 0; const total = d.totalPay || 0; const workers = (d.coworkers || "").replace(/,/g, " "); const memo = (d.memo || "").replace(/\n/g, " ").replace(/,/g, " "); csvContent += `${date},${ship},${w1},${w2},${total},${workers},${memo}\n`; }); const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' }); const url = URL.createObjectURL(blob); const link = document.createElement("a"); const monthTitle = document.getElementById('calMonthYear').innerText; link.href = url; link.download = `${currentWorkerId}_${monthTitle}_근무기록.csv`; document.body.appendChild(link); link.click(); document.body.removeChild(link); showToast("📊 엑셀 파일이 다운로드 폴더에 저장되었습니다!"); }
+let latestMonthlyStatsCache = { total: 0, w1Sum: 0, w2Sum: 0, days: 0, avg: 0 };
+let monthlyGoalAmount = Number(localStorage.getItem("busanPortMonthlyGoal")) || 4500000;
+function updateMonthlyGoalGaugeUI(currentTotal = 0, currentDays = 0) {
+    const goalTextEl = document.getElementById("monthlyGoalAmountText");
+    const fillEl = document.getElementById("monthlyGoalProgressFill");
+    const pctEl = document.getElementById("monthlyGoalPercentText");
+    const remainEl = document.getElementById("monthlyGoalRemainText");
+    if (!goalTextEl || !fillEl || !pctEl || !remainEl) return;
+    const goal = Math.max(100000, Number(monthlyGoalAmount) || 4500000);
+    goalTextEl.innerText = `목표: ${goal.toLocaleString()}원`;
+    const pct = Math.min(100, Math.round((currentTotal / goal) * 100));
+    const rawPct = Math.round((currentTotal / goal) * 100);
+    fillEl.style.width = `${pct}%`;
+    pctEl.innerText = `달성률 ${rawPct}% (${currentDays}일 출근)`;
+    if (currentTotal >= goal) {
+        const over = currentTotal - goal;
+        remainEl.innerText = `🎉 목표 달성 완료! (+${over.toLocaleString()}원 초과 달성)`;
+        remainEl.style.color = "#047857";
+    } else {
+        const remain = goal - currentTotal;
+        const avgPerDay = currentDays > 0 ? Math.round(currentTotal / currentDays) : 220000;
+        const estDays = Math.max(1, Math.ceil(remain / Math.max(avgPerDay, 100000)));
+        remainEl.innerText = `${remain.toLocaleString()}원 남음 (약 ${estDays}일 출근 필요)`;
+        remainEl.style.color = "var(--text-sub)";
+    }
+}
+function changeMonthlyGoalAmount() {
+    const currentMan = Math.round((Number(monthlyGoalAmount) || 4500000) / 10000);
+    const input = prompt("이번 달 목표 수입 금액을 '만원' 단위로 입력해주세요 (예: 450):", String(currentMan));
+    if (input === null) return;
+    const parsedMan = parseFloat(input.replace(/,/g, "").trim());
+    if (isNaN(parsedMan) || parsedMan <= 0) {
+        alert("올바른 숫자를 입력해주세요.");
+        return;
+    }
+    monthlyGoalAmount = Math.round(parsedMan * 10000);
+    try { localStorage.setItem("busanPortMonthlyGoal", String(monthlyGoalAmount)); } catch (e) {}
+    updateMonthlyGoalGaugeUI(latestMonthlyStatsCache.total, latestMonthlyStatsCache.days);
+    showToast(`🎯 이번 달 목표 수입이 ${monthlyGoalAmount.toLocaleString()}원으로 설정되었습니다!`);
+}
+function renderWorkLogQuickChips() {
+    const shipRow = document.getElementById("quickShipChipRow");
+    const cwRow = document.getElementById("quickCoworkerChipRow");
+    if (!shipRow || !cwRow) return;
+
+    const shipFreq = {};
+    const cwFreq = {};
+    Object.values(adminWorkLogs || {}).forEach(log => {
+        if (!log) return;
+        const s = (log.shipName || "").trim();
+        if (s) shipFreq[s] = (shipFreq[s] || 0) + 2;
+        const cw = (log.coworkers || "").trim();
+        if (cw) {
+            cw.split(/[,/\s]+/).map(x => x.trim()).filter(Boolean).forEach(name => {
+                cwFreq[name] = (cwFreq[name] || 0) + 2;
+            });
+        }
+    });
+    (allShipsData || []).slice(0, 8).forEach(s => {
+        const name = (s.shipName || "").trim();
+        if (name && !shipFreq[name]) shipFreq[name] = 1;
+    });
+    ["재경", "성철", "개굴"].forEach(name => {
+        if (!cwFreq[name]) cwFreq[name] = 1;
+    });
+
+    const topShips = Object.entries(shipFreq).sort((a, b) => b[1] - a[1]).slice(0, 6).map(x => x[0]);
+    const topCws = Object.entries(cwFreq).sort((a, b) => b[1] - a[1]).slice(0, 7).map(x => x[0]);
+
+    shipRow.innerHTML = topShips.length
+        ? `<span style="font-size:0.72rem; color:var(--text-sub); font-weight:800; align-self:center; margin-right:2px;">🚢 빠른입력:</span>` +
+          topShips.map(name => {
+              const safe = escapeShipCommentHtml(name);
+              const jsSafe = name.replace(/\\/g, "\\\\").replace(/'/g, "\\'");
+              return `<button type="button" class="quick-chip-btn" onclick="applyQuickShipChip('${jsSafe}')">+ ${safe}</button>`;
+          }).join("")
+        : "";
+
+    cwRow.innerHTML = topCws.length
+        ? `<span style="font-size:0.72rem; color:var(--text-sub); font-weight:800; align-self:center; margin-right:2px;">👥 동료추가:</span>` +
+          topCws.map(name => {
+              const safe = escapeShipCommentHtml(name);
+              const jsSafe = name.replace(/\\/g, "\\\\").replace(/'/g, "\\'");
+              return `<button type="button" class="quick-chip-btn" onclick="applyQuickCoworkerChip('${jsSafe}')">+ ${safe}</button>`;
+          }).join("")
+        : "";
+}
+function applyQuickShipChip(shipName) {
+    const input = document.getElementById("logShipName");
+    if (!input) return;
+    input.value = shipName;
+    showToast(`🚢 '${shipName}' 선박명이 입력되었습니다.`);
+}
+function applyQuickCoworkerChip(workerName) {
+    const input = document.getElementById("logCoworkers");
+    if (!input) return;
+    const current = input.value.trim();
+    if (!current) {
+        input.value = workerName;
+    } else {
+        const list = current.split(/[,]+/).map(s => s.trim()).filter(Boolean);
+        if (!list.includes(workerName)) {
+            list.push(workerName);
+            input.value = list.join(", ");
+        }
+    }
+}
+let lastWeatherFetchedAt = 0;
+async function fetchBusanPortLiveWeather(force = false) {
+    if (!force && Date.now() - lastWeatherFetchedAt < 5 * 60 * 1000) return;
+    const ports = [
+        { key: "NewPort", lat: 35.077, lon: 128.828 },
+        { key: "NorthPort", lat: 35.104, lon: 129.042 }
+    ];
+    try {
+        await Promise.all(ports.map(async p => {
+            const url = `https://api.open-meteo.com/v1/forecast?latitude=${p.lat}&longitude=${p.lon}&current=temperature_2m,precipitation,wind_speed_10m,wind_gusts_10m&wind_speed_unit=ms&timezone=Asia%2FSeoul`;
+            const res = await fetch(url);
+            if (!res.ok) throw new Error("기상 응답 오류");
+            const json = await res.json();
+            const cur = json.current || {};
+            const temp = typeof cur.temperature_2m === "number" ? `${cur.temperature_2m.toFixed(1)}℃` : "-";
+            const wind = typeof cur.wind_speed_10m === "number" ? cur.wind_speed_10m.toFixed(1) : "0.0";
+            const gust = typeof cur.wind_gusts_10m === "number" ? cur.wind_gusts_10m.toFixed(1) : wind;
+            const rain = typeof cur.precipitation === "number" ? cur.precipitation.toFixed(1) : "0.0";
+            const maxW = Math.max(parseFloat(wind) || 0, parseFloat(gust) || 0);
+
+            const tempEl = document.getElementById(`weather${p.key}Temp`);
+            const windEl = document.getElementById(`weather${p.key}Wind`);
+            const badgeEl = document.getElementById(`weather${p.key}Badge`);
+            if (tempEl) tempEl.innerText = `🌡️ ${temp}`;
+            if (windEl) windEl.innerText = `💨 풍속 ${wind}m/s (순간 ${gust}) · ☔ ${rain}mm`;
+            if (badgeEl) {
+                if (maxW >= 15) {
+                    badgeEl.innerText = "🔴 고소작업 통제 기준 (15m/s↑)";
+                    badgeEl.style.background = "rgba(239,68,68,0.3)";
+                    badgeEl.style.color = "#fca5a5";
+                } else if (maxW >= 10 || parseFloat(rain) >= 5) {
+                    badgeEl.innerText = "🟠 강풍·우천 주의 작업";
+                    badgeEl.style.background = "rgba(245,158,11,0.3)";
+                    badgeEl.style.color = "#fde68a";
+                } else {
+                    badgeEl.innerText = "🟢 정상 작업 가능 (양호)";
+                    badgeEl.style.background = "rgba(16,185,129,0.25)";
+                    badgeEl.style.color = "#6ee7b7";
+                }
+            }
+        }));
+        lastWeatherFetchedAt = Date.now();
+        const now = new Date();
+        const timeEl = document.getElementById("weatherUpdatedTimeText");
+        if (timeEl) {
+            timeEl.innerText = `실시간 관측 갱신: ${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")} · 기준: 10m/s 강풍주의 / 15m/s 고소작업 통제`;
+        }
+        if (force) showToast("🌬️ 부산항 신항·북항 실시간 기상 정보가 갱신되었습니다.");
+    } catch (e) {
+        console.warn("실시간 기상 조회 오류:", e);
+    }
+}
+function generateReceiptCanvas(mode) {
+    const canvas = document.createElement("canvas");
+    const width = 680;
+    let lines = [];
+    let title = "";
+    let subTitle = "";
+    let highlightTotal = "";
+
+    if (mode === "wage") {
+        title = "🧾 부산항 임금 산정 명세서";
+        const sd = document.getElementById("wageStartDate")?.value || "-";
+        const ed = document.getElementById("wageEndDate")?.value || "-";
+        subTitle = `근무일자: ${sd} ~ ${ed}`;
+        document.querySelectorAll("#wageSpecBody tr").forEach(tr => {
+            const tds = tr.querySelectorAll("td");
+            if (tds.length === 2) {
+                lines.push({ label: tds[0].innerText.trim(), value: tds[1].innerText.trim() });
+            }
+        });
+        highlightTotal = `예상 실수령액: ${document.getElementById("wageTotal")?.innerText || "0원"}`;
+    } else {
+        const monthTitle = document.getElementById("calMonthYear")?.innerText || "이번 달";
+        title = `🧾 ${monthTitle} 근무일지 정산 요약표`;
+        subTitle = `근로자: ${currentWorkerId || "내 저장소"} · 발급일: ${new Date().toISOString().split("T")[0]}`;
+        lines.push({ label: "🗓️ 총 출근일수", value: `${latestMonthlyStatsCache.days}일` });
+        lines.push({ label: "📈 일평균 수입", value: `${latestMonthlyStatsCache.avg.toLocaleString()}원` });
+        lines.push({ label: "💵 임금1 합계", value: `${latestMonthlyStatsCache.w1Sum.toLocaleString()}원` });
+        lines.push({ label: "💴 임금2 합계", value: `${latestMonthlyStatsCache.w2Sum.toLocaleString()}원` });
+        const goal = Math.max(100000, Number(monthlyGoalAmount) || 4500000);
+        const pct = Math.round((latestMonthlyStatsCache.total / goal) * 100);
+        lines.push({ label: "🎯 월 목표 달성률", value: `${pct}% (목표 ${(goal/10000).toFixed(0)}만원)` });
+        const sortedDates = Object.keys(adminWorkLogs || {}).sort().slice(-6);
+        if (sortedDates.length > 0) {
+            lines.push({ label: "── 최근 근무 내역 (최대 6건) ──", value: "" });
+            sortedDates.forEach(dStr => {
+                const d = adminWorkLogs[dStr];
+                if (d) {
+                    lines.push({
+                        label: `${dStr.slice(5)} · ${d.shipName || "선박 미입력"}`,
+                        value: `${(Number(d.totalPay) || 0).toLocaleString()}원`
+                    });
+                }
+            });
+        }
+        highlightTotal = `이번 달 총수입: ${latestMonthlyStatsCache.total.toLocaleString()}원`;
+    }
+
+    const height = 250 + lines.length * 42;
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext("2d");
+
+    ctx.fillStyle = "#f8fafc";
+    ctx.fillRect(0, 0, width, height);
+
+    ctx.fillStyle = "#0a1b3f";
+    ctx.fillRect(20, 20, width - 40, 86);
+
+    ctx.fillStyle = "#ffffff";
+    ctx.font = "900 26px sans-serif";
+    ctx.fillText(title, 44, 62);
+    ctx.fillStyle = "#93c5fd";
+    ctx.font = "700 16px sans-serif";
+    ctx.fillText(subTitle, 44, 90);
+
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(20, 106, width - 40, height - 126);
+    ctx.strokeStyle = "#0a1b3f";
+    ctx.lineWidth = 3;
+    ctx.strokeRect(20, 20, width - 40, height - 40);
+
+    let y = 148;
+    lines.forEach(item => {
+        ctx.fillStyle = "#334155";
+        ctx.font = "700 18px sans-serif";
+        ctx.fillText(item.label, 44, y);
+
+        ctx.fillStyle = "#0f172a";
+        ctx.font = "900 18px sans-serif";
+        const valWidth = ctx.measureText(item.value).width;
+        ctx.fillText(item.value, width - 44 - valWidth, y);
+
+        ctx.strokeStyle = "#e2e8f0";
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(44, y + 14);
+        ctx.lineTo(width - 44, y + 14);
+        ctx.stroke();
+        y += 42;
+    });
+
+    ctx.fillStyle = "#eff6ff";
+    ctx.fillRect(36, height - 96, width - 72, 54);
+    ctx.strokeStyle = "#2563eb";
+    ctx.lineWidth = 2;
+    ctx.strokeRect(36, height - 96, width - 72, 54);
+
+    ctx.fillStyle = "#1d4ed8";
+    ctx.font = "900 22px sans-serif";
+    ctx.fillText(highlightTotal, 54, height - 61);
+
+    ctx.fillStyle = "#64748b";
+    ctx.font = "700 13px sans-serif";
+    ctx.fillText("BUSAN HAK PORT INFO · 스마트 정산 명세서", 44, height - 26);
+
+    return { canvas, title, subTitle, lines, highlightTotal };
+}
+function saveReceiptImage(mode) {
+    if (!isWorkLogUnlocked) {
+        openWorkLogPinModal(() => saveReceiptImage(mode));
+        return;
+    }
+    const { canvas, title } = generateReceiptCanvas(mode);
+    const dataUrl = canvas.toDataURL("image/png");
+    const link = document.createElement("a");
+    link.href = dataUrl;
+    link.download = `${title.replace(/[^\w가-힣]/g, "_")}.png`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    showToast("📸 명세서 이미지가 내 기기에 저장되었습니다!");
+}
+async function shareReceiptCard(mode) {
+    if (!isWorkLogUnlocked) {
+        openWorkLogPinModal(() => shareReceiptCard(mode));
+        return;
+    }
+    const { canvas, title, subTitle, lines, highlightTotal } = generateReceiptCanvas(mode);
+    const textSummary = [
+        `[${title}]`,
+        subTitle,
+        ...lines.map(l => l.value ? `• ${l.label}: ${l.value}` : l.label),
+        `▶ ${highlightTotal}`
+    ].join("\n");
+
+    try {
+        if (navigator.canShare && canvas.toBlob) {
+            const blob = await new Promise(resolve => canvas.toBlob(resolve, "image/png"));
+            if (blob) {
+                const file = new File([blob], "busan_port_receipt.png", { type: "image/png" });
+                if (navigator.canShare({ files: [file] })) {
+                    await navigator.share({ title, text: textSummary, files: [file] });
+                    return;
+                }
+            }
+        }
+        if (navigator.share) {
+            await navigator.share({ title, text: textSummary });
+            return;
+        }
+    } catch (e) {}
+
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(textSummary);
+        showToast("📋 정산 명세서 내용이 복사되었습니다! 카카오톡 등에 붙여넣기 하세요.");
+    } else {
+        saveReceiptImage(mode);
+    }
+}
 function updateMonthlyStatsUI(logsMap) {
     let total = 0, w1Sum = 0, w2Sum = 0, days = 0;
     Object.values(logsMap || {}).forEach(d => {
@@ -1692,6 +2086,7 @@ function updateMonthlyStatsUI(logsMap) {
         w2Sum += w2;
     });
     const avg = days > 0 ? Math.round(total / days) : 0;
+    latestMonthlyStatsCache = { total, w1Sum, w2Sum, days, avg };
     const totalEl = document.getElementById('monthlyTotalDisplay');
     const daysEl = document.getElementById('monthlyWorkDays');
     const avgEl = document.getElementById('monthlyAvgPay');
@@ -1700,6 +2095,8 @@ function updateMonthlyStatsUI(logsMap) {
     if (daysEl) daysEl.innerText = `${days}일`;
     if (avgEl) avgEl.innerText = `${avg.toLocaleString()}원`;
     if (splitEl) splitEl.innerText = `${(w1Sum/10000).toFixed(0)}만 / ${(w2Sum/10000).toFixed(0)}만`;
+    updateMonthlyGoalGaugeUI(total, days);
+    renderWorkLogQuickChips();
 }
 function renderCalendar(y, m){ const g = document.getElementById('calendarGrid'); g.innerHTML = ""; document.getElementById('calMonthYear').innerText = `${y}년 ${m+1}월`; const fD = new Date(y, m, 1).getDay(), lD = new Date(y, m+1, 0).getDate(); for(let i=0; i<fD; i++) g.innerHTML += `<div></div>`; for(let d=1; d<=lD; d++){ const dStr = `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`; let dayColor = "var(--text-main)"; let currentDayObj = new Date(y, m, d).getDay(); if (currentDayObj === 0) dayColor = "#ef4444"; if (currentDayObj === 6) dayColor = "#3b82f6"; g.innerHTML += `<div id="cal-day-${d}" data-date="${dStr}" class="cal-day tap-effect" onclick="clickDate('${dStr}')" style="color: ${dayColor};">${d}<div class="cal-dot"></div></div>`; } if(currentWorkerId) { const sDate = `${y}-${String(m+1).padStart(2,'0')}-01`, eDate = `${y}-${String(m+1).padStart(2,'0')}-${lD}`; db.collection('work_logs').where('date', '>=', sDate).where('date', '<=', eDate).get().then(s => { adminWorkLogs = {}; s.forEach(doc => { const data = doc.data(); if(data.workerId === currentWorkerId) { adminWorkLogs[data.date] = data; const day = parseInt(data.date.split('-')[2]); const el = document.getElementById(`cal-day-${day}`); if(el) { el.classList.add('has-data'); if (data.coworkers) { if (!el.querySelector('.coworker-badge')) { el.innerHTML += `<div class="coworker-badge">${data.coworkers}</div>`; } else { el.querySelector('.coworker-badge').innerText = data.coworkers; } } } } }); updateMonthlyStatsUI(adminWorkLogs); applyWorkLogFilter(); if (isWorkLogUnlocked) loadAndRenderYearlyD3Chart(y); }); } else { updateMonthlyStatsUI({}); if (isWorkLogUnlocked) loadAndRenderYearlyD3Chart(y); } }
 async function loadAndRenderYearlyD3Chart(year) {
@@ -2192,7 +2589,7 @@ function jumpToLogDate(dStr) {
     const formEl = document.getElementById('dailyLogForm');
     if (formEl) formEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
-function clickDate(dStr){ document.getElementById('selectedDateText').innerText = dStr; document.getElementById('dailyLogForm').classList.remove('hidden'); document.getElementById('dailyLogForm').setAttribute('data-date', dStr); const d = adminWorkLogs[dStr]; document.getElementById('logShipName').value = d ? (d.shipName || '') : ''; document.getElementById('logWage1').value = d ? (d.wage1 || '') : ''; document.getElementById('logWage2').value = d ? (d.wage2 || '') : ''; document.getElementById('logCoworkers').value = d ? (d.coworkers || '') : ''; document.getElementById('logMemo').value = d ? d.memo : ''; const img = document.getElementById('logImagePreview'); if(d && d.imageUrl){ img.src = d.imageUrl; img.style.display = 'block'; } else { img.style.display = 'none'; img.src = ""; } document.getElementById('logImageInput').value = ''; }
+function clickDate(dStr){ document.getElementById('selectedDateText').innerText = dStr; document.getElementById('dailyLogForm').classList.remove('hidden'); document.getElementById('dailyLogForm').setAttribute('data-date', dStr); const d = adminWorkLogs[dStr]; document.getElementById('logShipName').value = d ? (d.shipName || '') : ''; document.getElementById('logWage1').value = d ? (d.wage1 || '') : ''; document.getElementById('logWage2').value = d ? (d.wage2 || '') : ''; document.getElementById('logCoworkers').value = d ? (d.coworkers || '') : ''; document.getElementById('logMemo').value = d ? d.memo : ''; const img = document.getElementById('logImagePreview'); if(d && d.imageUrl){ img.src = d.imageUrl; img.style.display = 'block'; } else { img.style.display = 'none'; img.src = ""; } document.getElementById('logImageInput').value = ''; renderWorkLogQuickChips(); }
 function trySaveWorkLog(){ if(currentWorkerId) saveWorkLog(); else document.getElementById('loginModal').style.display = 'flex'; }
 async function confirmLoginAndSave() {
     const nick = document.getElementById('loginNick').value.trim();
