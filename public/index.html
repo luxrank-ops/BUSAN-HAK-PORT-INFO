@@ -118,6 +118,14 @@
 
         .input-field { width: 100%; padding: 0 12px; margin-bottom: 0; border: 1.5px solid var(--border); border-radius: 8px; background: var(--card-bg); color: var(--text-main); font-size: clamp(0.95rem, 3.4vw, 1.05rem); height: 44px; text-align: right; font-weight: 800; font-variant-numeric: tabular-nums; display: flex; align-items: center; box-sizing: border-box; appearance: none; transition: border-color 0.15s ease, box-shadow 0.15s ease; }
         .input-field:focus { outline: none; border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15); }
+        input[type="date"].input-field { position: relative; cursor: pointer; text-align: center !important; display: inline-flex; justify-content: center; -webkit-appearance: none; appearance: none; }
+        input[type="date"].input-field::-webkit-calendar-picker-indicator { position: absolute; top: 0; left: 0; right: 0; bottom: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; margin: 0; padding: 0; z-index: 2; }
+        .date-touch-block { cursor: pointer; padding: 6px 8px; border-radius: 8px; background: rgba(255, 255, 255, 0.65); border: 1.5px solid rgba(59, 130, 246, 0.28); transition: background 0.15s ease, border-color 0.15s ease, transform 0.1s ease; user-select: none; }
+        body.dark-mode .date-touch-block { background: rgba(15, 23, 42, 0.55); border-color: rgba(96, 165, 250, 0.35); }
+        .date-touch-block:hover, .date-touch-block:active { background: rgba(59, 130, 246, 0.12); border-color: #2563eb; }
+        .calc-left .wage-row > div { display: flex; flex-direction: row; gap: 6px; flex: 1; width: 100%; align-items: center; }
+        .calc-left input[type="date"] { flex: 6.5; min-width: 0; }
+        .calc-left select { flex: 3.5; min-width: 0; cursor: pointer; }
         .textarea-field { height: 90px; resize: none; text-align: left; font-weight: 600; padding: 12px; line-height: 1.5; font-size: 0.95rem; }
         .action-btn { width: 100%; padding: 14px; border: none; border-radius: 10px; font-weight: 900; color: white; cursor: pointer; background: var(--primary); font-size: clamp(0.98rem, 3.4vw, 1.1rem); margin-top: 8px; touch-action: manipulation; transition: transform 0.12s ease, filter 0.15s ease; }
         .action-btn:active { transform: scale(0.985); }
@@ -363,9 +371,9 @@
 
 <div id="safetyTicker" class="ticker-container">
     <div class="ticker-wrap"><div id="tickerText" class="ticker-item">🚨 안전 제일! 오늘도 무사고!</div></div>
-    <div class="ticker-setting-area">
+    <div class="ticker-setting-area" onclick="toggleTickerMenu(event)">
         <div class="setting-icon">➕</div>
-        <div class="hover-menu-box">
+        <div id="tickerHoverMenu" class="hover-menu-box" onclick="event.stopPropagation()">
             <button class="menu-btn" onclick="writeUserTicker()">🖊️ 일반 등록</button>
             <button class="menu-btn" onclick="setAdminTicker()">📢 관리자 등록</button>
             <button class="menu-btn btn-del-menu" onclick="openTickerManager()">⚙️ 등록 삭제</button>
@@ -387,7 +395,7 @@
             </div>
             <div class="dash-content" style="display:none; border-top: 2px dashed var(--primary);">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; gap:6px; flex-wrap:wrap;">
-                    <span style="font-size:0.78rem; font-weight:800; color:var(--text-sub);">💡 직종 선택 후 시작·종료 시간을 설정하세요</span>
+                    <span style="font-size:0.78rem; font-weight:800; color:var(--text-sub);">💡 직종 선택 후 시작·종료 블록을 터치해 날짜·시간을 설정하세요</span>
                     <button type="button" id="wageLayoutToggleBtn" onclick="toggleWageLayoutMode()" style="background:#eff6ff; color:#1d4ed8; border:1.5px solid #93c5fd; border-radius:8px; padding:4px 10px; font-size:0.75rem; font-weight:900; cursor:pointer;">📐 입력창 넓게 보기</button>
                 </div>
                 <div class="role-selector" style="border: 2px solid #cbd5e1; padding: 6px; background: rgba(10,27,63,0.03); border-radius: 12px; margin-bottom: 15px;">
@@ -405,29 +413,33 @@
                             <input type="number" id="wageHourly" class="input-field" value="10320" style="flex: 1; min-width: 0; text-align:right; font-weight:900; color:#ef4444; font-size:1.15rem; border: 2px solid #cbd5e1;">
                         </div>
                         <div style="background: rgba(59, 130, 246, 0.05); border: 2px solid var(--primary-light); padding: 10px; border-radius: 10px; margin-bottom: 10px;">
-                            <div class="wage-row" style="margin-bottom: 5px;">
-                                <label style="min-width: 50px; color:var(--primary); font-size:0.95rem; font-weight: 900;">🟢 시작</label>
-                                <div>
-                                    <input type="date" id="wageStartDate" class="input-field" style="font-size:0.85rem; padding:0 4px; border: 2px solid #cbd5e1;">
-                                    <select id="wageStartHour" class="input-field" style="font-size:0.95rem; padding:0 4px; margin-left:4px; text-align:center; border: 2px solid #cbd5e1;">
+                            <div class="wage-row date-touch-block" style="margin-bottom: 6px;" onclick="openDatePicker('wageStartDate', event)" title="터치하여 시작 날짜 달력 열기">
+                                <label for="wageStartDate" style="min-width: 50px; color:var(--primary); font-size:0.95rem; font-weight: 900; cursor:pointer; display:flex; align-items:center; justify-content:space-between; width:100%;">
+                                    <span>🟢 시작 날짜·시간 (터치 시 달력)</span>
+                                </label>
+                                <div style="width:100%;">
+                                    <input type="date" id="wageStartDate" class="input-field" style="font-size:0.85rem; padding:0 4px; border: 2px solid #cbd5e1; cursor:pointer;" onclick="openDatePicker('wageStartDate', event)" onchange="onWageDateChange('start')">
+                                    <select id="wageStartHour" class="input-field" style="font-size:0.95rem; padding:0 4px; margin-left:4px; text-align:center; border: 2px solid #cbd5e1;" onclick="event.stopPropagation()">
                                         <option value="0">00시</option><option value="1">01시</option><option value="2">02시</option><option value="3">03시</option><option value="4">04시</option><option value="5">05시</option><option value="6">06시</option><option value="7">07시</option><option value="8" selected>08시</option><option value="9">09시</option><option value="10">10시</option><option value="11">11시</option><option value="12">12시</option><option value="13">13시</option><option value="14">14시</option><option value="15">15시</option><option value="16">16시</option><option value="17">17시</option><option value="18">18시</option><option value="19">19시</option><option value="20">20시</option><option value="21">21시</option><option value="22">22시</option><option value="23">23시</option>
                                     </select>
                                 </div>
                             </div>
-                            <div class="wage-row" style="margin-bottom: 8px;">
-                                <label style="min-width: 50px; color:var(--danger); font-size:0.95rem; font-weight: 900;">🔴 종료</label>
-                                <div>
-                                    <input type="date" id="wageEndDate" class="input-field" style="font-size:0.85rem; padding:0 4px; border: 2px solid #cbd5e1;">
-                                    <select id="wageEndHour" class="input-field" style="font-size:0.95rem; padding:0 4px; margin-left:4px; text-align:center; border: 2px solid #cbd5e1;">
+                            <div class="wage-row date-touch-block" style="margin-bottom: 8px;" onclick="openDatePicker('wageEndDate', event)" title="터치하여 종료 날짜 달력 열기">
+                                <label for="wageEndDate" style="min-width: 50px; color:var(--danger); font-size:0.95rem; font-weight: 900; cursor:pointer; display:flex; align-items:center; justify-content:space-between; width:100%;">
+                                    <span>🔴 종료 날짜·시간 (터치 시 달력)</span>
+                                </label>
+                                <div style="width:100%;">
+                                    <input type="date" id="wageEndDate" class="input-field" style="font-size:0.85rem; padding:0 4px; border: 2px solid #cbd5e1; cursor:pointer;" onclick="openDatePicker('wageEndDate', event)" onchange="onWageDateChange('end')">
+                                    <select id="wageEndHour" class="input-field" style="font-size:0.95rem; padding:0 4px; margin-left:4px; text-align:center; border: 2px solid #cbd5e1;" onclick="event.stopPropagation()">
                                         <option value="0">00시</option><option value="1">01시</option><option value="2">02시</option><option value="3">03시</option><option value="4">04시</option><option value="5">05시</option><option value="6">06시</option><option value="7">07시</option><option value="8">08시</option><option value="9">09시</option><option value="10">10시</option><option value="11">11시</option><option value="12">12시</option><option value="13">13시</option><option value="14">14시</option><option value="15">15시</option><option value="16">16시</option><option value="17" selected>17시</option><option value="18">18시</option><option value="19">19시</option><option value="20">20시</option><option value="21">21시</option><option value="22">22시</option><option value="23">23시</option>
                                     </select>
                                 </div>
                             </div>
-                            <button class="action-btn" style="background:var(--primary); padding:10px; margin:0; font-size:1rem; border: 2px solid #1e3a8a;" onclick="calcTimeAndFill()">⏱️ 시간 설정 완료</button>
+                            <button type="button" class="action-btn" style="background:var(--primary); padding:10px; margin:0; font-size:1rem; border: 2px solid #1e3a8a;" onclick="calcTimeAndFill()">⏱️ 시간 설정 완료</button>
                         </div>
                         <div class="wage-row" style="flex-direction: row !important; align-items: center !important; flex-wrap: nowrap !important;">
                             <label style="min-width: 70px; font-weight:900; margin-bottom: 0 !important;">⏳ 총근무</label>
-                            <input type="number" id="wageTotalHours" class="input-field" placeholder="자동계산됨" style="flex: 1; min-width: 0; text-align:right; font-weight:900; color:var(--primary); border: 2px solid #cbd5e1;" oninput="autoFillWeekendHoliday()">
+                            <input type="number" id="wageTotalHours" class="input-field" placeholder="자동계산됨" style="flex: 1; min-width: 0; text-align:right; font-weight:900; color:var(--primary); border: 2px solid #cbd5e1;">
                         </div>
                     </div>
                     <div class="calc-right">
@@ -500,9 +512,9 @@
                             <button type="button" onclick="resetWorkLogFilter()" style="background:transparent; border:1px solid var(--border); border-radius:6px; padding:2px 8px; font-size:0.75rem; font-weight:800; color:var(--text-sub); cursor:pointer;">초기화</button>
                         </div>
                         <div style="display:flex; gap:6px; align-items:center; margin-bottom:6px;">
-                            <input type="date" id="logFilterStartDate" class="input-field" style="flex:1; height:36px; font-size:0.82rem; padding:0 6px; text-align:center;" onchange="applyWorkLogFilter()">
+                            <input type="date" id="logFilterStartDate" class="input-field" style="flex:1; height:36px; font-size:0.82rem; padding:0 6px; text-align:center;" onclick="openDatePicker('logFilterStartDate', event)" onchange="applyWorkLogFilter()">
                             <span style="font-weight:900; color:var(--text-sub);">~</span>
-                            <input type="date" id="logFilterEndDate" class="input-field" style="flex:1; height:36px; font-size:0.82rem; padding:0 6px; text-align:center;" onchange="applyWorkLogFilter()">
+                            <input type="date" id="logFilterEndDate" class="input-field" style="flex:1; height:36px; font-size:0.82rem; padding:0 6px; text-align:center;" onclick="openDatePicker('logFilterEndDate', event)" onchange="applyWorkLogFilter()">
                         </div>
                         <div style="display:flex; gap:6px;">
                             <input type="text" id="logFilterKeyword" class="input-field" placeholder="배이름, 근무자, 메모 검색..." style="flex:1; height:38px; font-size:0.88rem; text-align:left; padding:0 10px;" oninput="applyWorkLogFilter()" onkeydown="if(event.key==='Enter'){event.preventDefault();searchWorkLogsRange();}">
@@ -991,10 +1003,11 @@
                 </div>
                 
                 <div style="display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px;">
-                    <span style="background:#e0f2fe; color:#0369a1; padding:4px 8px; border-radius:6px; font-size:0.75rem; font-weight:800;">#작업·도구</span>
-                    <span style="background:#f3e8ff; color:#6b21a8; padding:4px 8px; border-radius:6px; font-size:0.75rem; font-weight:800;">#중장비</span>
-                    <span style="background:#dcfce7; color:#15803d; padding:4px 8px; border-radius:6px; font-size:0.75rem; font-weight:800;">#선박구조</span>
-                    <span style="background:#ffedd5; color:#c2410c; padding:4px 8px; border-radius:6px; font-size:0.75rem; font-weight:800;">#현장실무</span>
+                    <span onclick="filterGuideByCategory('')" style="cursor:pointer; background:var(--primary); color:#ffffff; padding:4px 8px; border-radius:6px; font-size:0.75rem; font-weight:800;">전체보기</span>
+                    <span onclick="filterGuideByCategory('작업·도구')" style="cursor:pointer; background:#e0f2fe; color:#0369a1; padding:4px 8px; border-radius:6px; font-size:0.75rem; font-weight:800;">#작업·도구</span>
+                    <span onclick="filterGuideByCategory('중장비')" style="cursor:pointer; background:#f3e8ff; color:#6b21a8; padding:4px 8px; border-radius:6px; font-size:0.75rem; font-weight:800;">#중장비</span>
+                    <span onclick="filterGuideByCategory('선박구조')" style="cursor:pointer; background:#dcfce7; color:#15803d; padding:4px 8px; border-radius:6px; font-size:0.75rem; font-weight:800;">#선박구조</span>
+                    <span onclick="filterGuideByCategory('현장실무')" style="cursor:pointer; background:#ffedd5; color:#c2410c; padding:4px 8px; border-radius:6px; font-size:0.75rem; font-weight:800;">#현장실무</span>
                 </div>
 
                 <div class="guide-container" style="max-height: 550px; overflow-y: auto; background: #fff; border-radius: 8px; border: 1px solid var(--border); box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);">
@@ -1330,10 +1343,10 @@
 </footer>
 
 <nav class="bottom-nav">
-    <div class="nav-item active tap-effect" onclick="scrollToTop()">🏠 홈</div>
-    <div class="nav-item tap-effect" onclick="toggleDashItem('board-card')">💬 톡톡</div>
-    <div class="nav-item tap-effect" onclick="toggleDashItem('ship-card')">🚢 선박</div>
-    <div class="nav-item tap-effect" onclick="toggleDashItem('archive-card')">📂 자료</div>
+    <div id="nav-home" class="nav-item active tap-effect" onclick="scrollToTop()">🏠 홈</div>
+    <div id="nav-board" class="nav-item tap-effect" onclick="toggleDashItem('board-card')">💬 톡톡</div>
+    <div id="nav-ship" class="nav-item tap-effect" onclick="toggleDashItem('ship-card')">🚢 선박</div>
+    <div id="nav-archive" class="nav-item tap-effect" onclick="toggleDashItem('archive-card')">📂 자료</div>
 </nav>
 <div id="toast">알림</div>
 
@@ -1342,7 +1355,7 @@
 <div id="hjncMealModal" class="modal-overlay" style="display:none;" onclick="closeHjncMealModal()"><div class="modal-content" onclick="event.stopPropagation()" style="max-width:560px;"><h3 id="hjncMealTitle" style="margin:0 0 14px; text-align:center; color:var(--primary); font-weight:900;">🍱 한진식단</h3><p id="hjncMealStatus" style="text-align:center; color:var(--text-sub); font-weight:700;">식단 이미지를 불러오는 중...</p><img id="hjncMealImage" alt="터미널 식단표" style="display:none; width:100%; max-height:65vh; object-fit:contain; border-radius:8px; background:#f1f5f9;"><input id="hjncMealFileInput" type="file" accept="image/*" style="display:none;" onchange="uploadHjncMealImage(this)"><button class="action-btn" style="margin-top:12px;" onclick="requestHjncMealUpload()">🔒 관리자 이미지 등록/변경</button><button class="action-btn bg-cancel" style="margin-top:8px;" onclick="closeHjncMealModal()">닫기</button></div></div>
 <div id="privacyModal" class="modal-overlay" onclick="document.getElementById('privacyModal').style.display='none'"><div class="modal-content"><h3 style="font-weight:900;">🛡️ 개인정보처리방침</h3><p style="font-weight:600;">본 사이트는 구글 애드센스 광고를 게재하며 쿠키를 사용합니다.</p><button class="action-btn" onclick="document.getElementById('privacyModal').style.display='none'">닫기</button></div></div>
 <div id="tickerManageModal" class="modal-overlay" onclick="document.getElementById('tickerManageModal').style.display='none'"><div class="modal-content" onclick="event.stopPropagation()"><h3 style="margin-top:0; font-weight:900;">⚙️ 알림글 삭제</h3><div id="tickerListContainer"></div><button class="action-btn bg-cancel" onclick="document.getElementById('tickerManageModal').style.display='none'" style="margin-top:10px;">닫기</button></div></div>
-<div id="loginModal" class="modal-overlay" style="display:none;" onclick="closeLoginModal()"><div class="modal-content" onclick="event.stopPropagation()"><h3 style="font-weight:900;">🔐 근무일지 로그인/가입</h3><p style="font-weight:600;">닉네임과 비밀번호를 입력하세요.</p><input type="text" id="loginNick" class="input-field" placeholder="닉네임 (ID)"><input type="password" id="loginPw" class="input-field" placeholder="비밀번호"><button class="action-btn" onclick="confirmLoginAndSave()">확인 및 저장</button><button class="action-btn bg-cancel" onclick="closeLoginModal()">취소</button></div></div>
+<div id="loginModal" class="modal-overlay" style="display:none;" onclick="closeLoginModal()"><div class="modal-content" onclick="event.stopPropagation()"><h3 style="font-weight:900;">🔐 근무일지 로그인/가입</h3><p style="font-weight:600;">닉네임과 비밀번호를 입력하세요.</p><input type="text" id="loginNick" class="input-field" placeholder="닉네임 (ID)"><input type="password" id="loginPw" class="input-field" placeholder="비밀번호"><button id="confirmLoginBtn" class="action-btn" onclick="confirmLoginAndSave(event)">확인 및 저장</button><button class="action-btn bg-cancel" onclick="closeLoginModal()">취소</button></div></div>
 <div id="workLogPinModal" class="modal-overlay" style="display:none;" onclick="closeWorkLogPinModal()"><div class="modal-content" onclick="event.stopPropagation()" style="max-width:380px;"><h3 style="margin-top:0; text-align:center; color:var(--primary); font-weight:900;">🔒 근무일지 보안 잠금</h3><p style="text-align:center; font-size:0.9rem; color:var(--text-sub); font-weight:700; margin-bottom:12px;">근무일지 열람 및 기록을 위해<br>보안 비밀번호(4자리)를 입력해주세요.</p><input type="password" id="workLogPinInput" class="input-field" placeholder="비밀번호 입력" inputmode="numeric" maxlength="8" style="text-align:center; font-size:1.3rem; letter-spacing:6px; height:48px; border:2px solid var(--primary); margin-bottom:10px;" onkeydown="if(event.key==='Enter'){event.preventDefault();submitWorkLogPin();}"><div style="display:flex; gap:8px;"><button type="button" class="action-btn bg-submit" style="flex:2; margin-top:0;" onclick="submitWorkLogPin()">잠금 해제</button><button type="button" class="action-btn bg-cancel" style="flex:1; margin-top:0;" onclick="closeWorkLogPinModal()">취소</button></div></div></div>
 <div id="visitorStatsModal" class="modal-overlay" style="display:none;" onclick="closeVisitorStats()"><div class="modal-content" onclick="event.stopPropagation()" style="max-width:420px;"><h3 style="margin:0 0 16px; text-align:center; color:var(--primary); font-weight:900;">📊 방문자 통계</h3><div style="display:flex; justify-content:space-between; align-items:center; padding:14px 12px; margin-bottom:8px; background:var(--bg-color); border-radius:8px;"><span style="font-weight:800;">당일 방문자 수</span><strong id="todayVisitorCount" style="font-size:1.25rem; color:var(--primary);">-</strong></div><div style="display:flex; justify-content:space-between; align-items:center; padding:14px 12px; background:var(--bg-color); border-radius:8px;"><span style="font-weight:800;">총 방문자 수</span><strong id="totalVisitorCount" style="font-size:1.25rem; color:var(--primary);">-</strong></div><p style="font-size:0.78rem; color:var(--text-sub); text-align:center; margin:12px 0;">브라우저 탭 세션 기준 · 새로고침 중복 제외</p><button class="action-btn bg-cancel" onclick="closeVisitorStats()">닫기</button></div></div>
 
@@ -1503,6 +1516,75 @@ function submitWorkLogPin() {
         }
     }
 }
+function syncBottomNavActive(activeCardId) {
+    const map = {
+        'board-card': 'nav-board',
+        'ship-card': 'nav-ship',
+        'archive-card': 'nav-archive'
+    };
+    const targetNavId = map[activeCardId] || 'nav-home';
+    document.querySelectorAll('.bottom-nav .nav-item').forEach(el => {
+        el.classList.toggle('active', el.id === targetNavId);
+    });
+}
+function openDatePicker(inputId, event) {
+    if (event) {
+        const tgt = event.target;
+        if (tgt && (tgt.tagName === 'SELECT' || tgt.tagName === 'OPTION' || tgt.closest('select'))) {
+            return;
+        }
+    }
+    const input = document.getElementById(inputId);
+    if (!input) return;
+    try {
+        if (typeof input.showPicker === 'function') {
+            input.showPicker();
+            return;
+        }
+    } catch (e) {}
+    input.focus();
+    try { input.click(); } catch (e) {}
+}
+function onWageDateChange(which) {
+    const sdEl = document.getElementById('wageStartDate');
+    const edEl = document.getElementById('wageEndDate');
+    if (!sdEl || !edEl) return;
+    if (sdEl.value) {
+        const m = parseInt(sdEl.value.split('-')[1], 10);
+        if (m >= 1 && m <= 12) highlightSeasonRow(m);
+        if (which === 'start' && (!edEl.value || edEl.value < sdEl.value)) {
+            edEl.value = sdEl.value;
+        }
+    }
+}
+function filterGuide() {
+    const q = (document.getElementById('guideSearch')?.value || '').trim().toLowerCase();
+    const rows = document.querySelectorAll('#guideBody tr');
+    rows.forEach(row => {
+        const text = (row.innerText || '').toLowerCase();
+        row.style.display = (!q || text.includes(q)) ? '' : 'none';
+    });
+}
+function filterGuideByCategory(cat) {
+    const searchInput = document.getElementById('guideSearch');
+    if (searchInput) {
+        searchInput.value = cat;
+        filterGuide();
+    }
+}
+function toggleTickerMenu(event) {
+    if (event) event.stopPropagation();
+    const menu = document.getElementById('tickerHoverMenu');
+    if (!menu) return;
+    const isShown = menu.style.display === 'flex';
+    menu.style.display = isShown ? 'none' : 'flex';
+}
+document.addEventListener('click', () => {
+    const menu = document.getElementById('tickerHoverMenu');
+    if (menu && menu.style.display === 'flex') {
+        menu.style.display = '';
+    }
+});
 function toggleDashItem(id){
     const c = document.getElementById(id);
     if(!c) return;
@@ -1516,6 +1598,7 @@ function toggleDashItem(id){
         c.classList.add('expanded');
         const content = c.querySelector('.dash-content');
         if(content) content.style.display='block';
+        syncBottomNavActive(id);
         if(id === 'log-card') {
             syncWorkLogExtraUnlockUI();
             renderCalendar(currentDate.getFullYear(), currentDate.getMonth());
@@ -1524,6 +1607,11 @@ function toggleDashItem(id){
         } else if(id === 'weather-card') {
             fetchBusanPortLiveWeather(false);
         }
+        if (['board-card', 'ship-card', 'archive-card'].includes(id)) {
+            setTimeout(() => c.scrollIntoView({ behavior: 'smooth', block: 'start' }), 60);
+        }
+    } else {
+        syncBottomNavActive('nav-home');
     }
 }
 function toggleSection(id){
@@ -1545,7 +1633,7 @@ function toggleContent(id){
 }
 function toggleHidden(id){ document.getElementById(id).classList.toggle('hidden'); }
 function toggleDarkMode(){ document.body.classList.toggle('dark-mode'); }
-function scrollToTop(){ window.scrollTo({top:0, behavior:'smooth'}); }
+function scrollToTop(){ syncBottomNavActive('nav-home'); window.scrollTo({top:0, behavior:'smooth'}); }
 function showToast(m){const t=document.getElementById("toast"); t.innerText=m; t.classList.add("show"); setTimeout(()=>t.classList.remove("show"),3000);}
 
 function renderMainTickerText(message) {
@@ -2830,10 +2918,10 @@ function jumpToLogDate(dStr) {
 }
 function clickDate(dStr){ document.getElementById('selectedDateText').innerText = dStr; document.getElementById('dailyLogForm').classList.remove('hidden'); document.getElementById('dailyLogForm').setAttribute('data-date', dStr); const d = adminWorkLogs[dStr]; document.getElementById('logShipName').value = d ? (d.shipName || '') : ''; document.getElementById('logWage1').value = d ? (d.wage1 || '') : ''; document.getElementById('logWage2').value = d ? (d.wage2 || '') : ''; document.getElementById('logCoworkers').value = d ? (d.coworkers || '') : ''; document.getElementById('logMemo').value = d ? d.memo : ''; const img = document.getElementById('logImagePreview'); if(d && d.imageUrl){ img.src = d.imageUrl; img.style.display = 'block'; } else { img.style.display = 'none'; img.src = ""; } document.getElementById('logImageInput').value = ''; renderWorkLogQuickChips(); }
 function trySaveWorkLog(){ if(currentWorkerId) saveWorkLog(); else document.getElementById('loginModal').style.display = 'flex'; }
-async function confirmLoginAndSave() {
+async function confirmLoginAndSave(evt) {
     const nick = document.getElementById('loginNick').value.trim();
     const pw = document.getElementById('loginPw').value.trim();
-    const btn = event.target; // 클릭된 버튼
+    const btn = (evt && evt.currentTarget) || document.getElementById('confirmLoginBtn') || (typeof event !== 'undefined' && event ? event.target : null);
 
     if (!nick || !pw) {
         alert("닉네임과 비밀번호를 입력해주세요.");
@@ -3001,9 +3089,103 @@ function highlightSeasonRow(month) {
     const activeEl = document.getElementById(activeId);
     if (activeEl) activeEl.style.background = 'rgba(59, 130, 246, 0.15)';
 }
-function calcTimeAndFill() { try { const sd = document.getElementById('wageStartDate').value; const sh = parseInt(document.getElementById('wageStartHour').value) || 0; const ed = document.getElementById('wageEndDate').value; const eh = parseInt(document.getElementById('wageEndHour').value) || 0; if(sd) highlightSeasonRow(new Date(sd).getMonth() + 1); if(sd && ed) { const startD = new Date(`${sd}T${String(sh).padStart(2,'0')}:00:00`); const endD = new Date(`${ed}T${String(eh).padStart(2,'0')}:00:00`); const diffMs = endD.getTime() - startD.getTime(); if(diffMs > 0) { const hours = Math.floor(diffMs / (1000 * 60 * 60)); document.getElementById('wageTotalHours').value = hours; } else { document.getElementById('wageTotalHours').value = ''; if(sd !== ed || sh !== eh) alert("종료 시간이 시작 시간보다 빠를 수 없습니다."); } } autoFillWeekendHoliday(); } catch(e) { console.error(e); } }
-function autoFillWeekendHoliday() { try { const sd = document.getElementById('wageStartDate').value; const sh = parseInt(document.getElementById('wageStartHour').value) || 0; const hoursStr = document.getElementById('wageTotalHours').value; if(!sd || !hoursStr) { document.getElementById('wageHoliday').value = ''; document.getElementById('wageWeekend').value = ''; return; } const totalHours = parseInt(hoursStr) || 0; let currentDateTime = new Date(`${sd}T${String(sh).padStart(2,'0')}:00:00`); let holidayCount = 0; let weekendCount = 0; for(let i = 0; i < totalHours; i++) { const curY = currentDateTime.getFullYear(); const curM = String(currentDateTime.getMonth() + 1).padStart(2, '0'); const curD = String(currentDateTime.getDate()).padStart(2, '0'); const curDateString = `${curY}-${curM}-${curD}`; const curDayOfWeek = currentDateTime.getDay(); const isHoliday = publicHolidays.includes(curDateString); const isWeekend = (curDayOfWeek === 0 || curDayOfWeek === 6); if (isHoliday) { holidayCount++; } else if (isWeekend) { weekendCount++; } currentDateTime.setHours(currentDateTime.getHours() + 1); } document.getElementById('wageHoliday').value = holidayCount > 0 ? holidayCount : ''; document.getElementById('wageWeekend').value = weekendCount > 0 ? weekendCount : ''; } catch(e) { console.error(e); } }
-function calculateWage() { try { const totalHours = parseFloat(document.getElementById('wageTotalHours').value) || 0; const sd = document.getElementById('wageStartDate').value; const sh = parseInt(document.getElementById('wageStartHour').value) || 0; if (!sd || !document.getElementById('wageEndDate').value) { alert("근무 날짜를 선택해주세요."); return; } if (totalHours <= 0) { alert("총 근무 시간이 0시간입니다. 시간을 다시 설정해주세요."); return; } const startTime = sh; const isSkilled = document.getElementById('role-skilled').checked; const roleLabel = isSkilled ? '기능공' : (document.getElementById('role-onshore').checked ? '육상' : '본선'); const holidayH = parseFloat(document.getElementById('wageHoliday').value) || 0; const weekendH = parseFloat(document.getElementById('wageWeekend').value) || 0; const rainH = parseFloat(document.getElementById('wageRain').value) || 0; const hotH = parseFloat(document.getElementById('wageHotTime').value) || 0; const taxRate = parseFloat(document.getElementById('wageTaxType').value) || 0; const BASE_RATE = parseFloat(document.getElementById('wageHourly').value) || 10320; const SKILLED_DAY_ADD = 2557; const SKILLED_NIGHT_ADD = 3836; const month = new Date(sd).getMonth() + 1; highlightSeasonRow(month); let dayStart = 8, dayEnd = 18; if (month >= 4 && month <= 9) { dayStart = 6; dayEnd = 19; } else if (month >= 10) { dayStart = 7; dayEnd = 17; } let dayHours = 0, nightHours = 0; for (let i = 0; i < totalHours; i++) { let currentHour = (startTime + i) % 24; if (currentHour >= dayStart && currentHour < dayEnd) dayHours++; else nightHours++; } const dayAmt = dayHours * BASE_RATE; const nightAmt = nightHours * (BASE_RATE * 1.5); const holidayAmt = holidayH * (BASE_RATE * 0.5); const weekendAmt = weekendH * (BASE_RATE * 0.5); const otherAmt = rainH * (BASE_RATE * 0.5) + hotH * (BASE_RATE * 0.3); let skilledAmt = isSkilled ? (dayHours * SKILLED_DAY_ADD) + (nightHours * SKILLED_NIGHT_ADD) : 0; const subTotal = dayAmt + nightAmt + skilledAmt + holidayAmt + weekendAmt + otherAmt; const taxAmt = Math.floor(subTotal * taxRate); const finalTotal = Math.round(subTotal - taxAmt); lastCalculatedWageData = { date: sd, totalPay: finalTotal, summary: `[${roleLabel}] 총 ${totalHours}H (주간 ${dayHours}H / 야간 ${nightHours}H)` }; let extraHtml = ""; if (holidayAmt > 0) extraHtml += renderRow("🎉 지게차/공휴일 수당 (" + holidayH + "H)", holidayAmt, "#ea580c"); if (weekendAmt > 0) extraHtml += renderRow("🎈 특별/주말 수당 (" + weekendH + "H)", weekendAmt, "#3b82f6"); if (otherAmt > 0) extraHtml += renderRow("☔ 우천/혹서기(30%) 등 (" + (rainH + hotH) + "H)", otherAmt); if (holidayAmt === 0 && weekendAmt === 0 && otherAmt === 0) extraHtml += renderRow("➕ 추가 가산 수당", 0); const specBody = document.getElementById('wageSpecBody'); specBody.innerHTML = ` ${renderRow("☀️ 주간 기본 ("+dayHours+"H)", dayAmt)} ${renderRow("🌙 야간 할증 ("+nightHours+"H)", nightAmt)} ${renderRow("🔧 기능공 수당 추가", skilledAmt, "var(--primary)")} ${extraHtml} ${taxAmt > 0 ? renderRow("💸 공제액 (세금/보험)", -taxAmt, "var(--danger)") : ""} `; document.getElementById('wageTotal').innerText = finalTotal.toLocaleString() + "원"; document.getElementById('wageResultBox').classList.remove('hidden'); showToast("상세 계산서가 생성되었습니다!"); } catch (e) { console.error(e); alert("계산 오류: 입력창 값을 확인해주세요."); } }
+function calcTimeAndFill() {
+    try {
+        const sd = document.getElementById('wageStartDate').value;
+        const sh = parseInt(document.getElementById('wageStartHour').value, 10) || 0;
+        const ed = document.getElementById('wageEndDate').value;
+        const eh = parseInt(document.getElementById('wageEndHour').value, 10) || 0;
+        if (!sd || !ed) {
+            alert("시작 날짜와 종료 날짜를 선택해주세요.");
+            return;
+        }
+        const month = parseInt(sd.split('-')[1], 10) || (new Date(sd).getMonth() + 1);
+        highlightSeasonRow(month);
+        const startD = new Date(`${sd}T${String(sh).padStart(2,'0')}:00:00`);
+        const endD = new Date(`${ed}T${String(eh).padStart(2,'0')}:00:00`);
+        const diffMs = endD.getTime() - startD.getTime();
+        if (diffMs > 0) {
+            const hours = Math.floor(diffMs / (1000 * 60 * 60));
+            document.getElementById('wageTotalHours').value = hours;
+            showToast(`⏱️ 총 근무시간 ${hours}시간이 설정되었습니다.`);
+        } else {
+            document.getElementById('wageTotalHours').value = '';
+            if (sd !== ed || sh !== eh) {
+                alert("종료 시간이 시작 시간보다 빠를 수 없습니다.");
+            } else {
+                alert("시작 시간과 종료 시간이 같습니다. 근무 시간을 확인해주세요.");
+            }
+        }
+    } catch (e) {
+        console.error(e);
+    }
+}
+function autoFillWeekendHoliday() {
+    // 추가 수당 시간 입력(지게차, 특별수당, 우천, 혹서기)은 사용자가 직접 입력할 때만 반영되도록 자동 입력 비활성화
+}
+function calculateWage() {
+    try {
+        const totalHours = parseFloat(document.getElementById('wageTotalHours').value) || 0;
+        const sd = document.getElementById('wageStartDate').value;
+        const sh = parseInt(document.getElementById('wageStartHour').value, 10) || 0;
+        if (!sd || !document.getElementById('wageEndDate').value) {
+            alert("근무 날짜를 선택해주세요.");
+            return;
+        }
+        if (totalHours <= 0) {
+            alert("총 근무 시간이 0시간입니다. [⏱️ 시간 설정 완료] 버튼을 누르거나 총근무 시간을 입력해주세요.");
+            return;
+        }
+        const startTime = sh;
+        const isSkilled = document.getElementById('role-skilled').checked;
+        const roleLabel = isSkilled ? '기능공' : (document.getElementById('role-onshore').checked ? '육상' : '본선');
+        const holidayH = parseFloat(document.getElementById('wageHoliday').value) || 0;
+        const weekendH = parseFloat(document.getElementById('wageWeekend').value) || 0;
+        const rainH = parseFloat(document.getElementById('wageRain').value) || 0;
+        const hotH = parseFloat(document.getElementById('wageHotTime').value) || 0;
+        const taxRate = parseFloat(document.getElementById('wageTaxType').value) || 0;
+        const BASE_RATE = parseFloat(document.getElementById('wageHourly').value) || 10320;
+        const SKILLED_DAY_ADD = 2557;
+        const SKILLED_NIGHT_ADD = 3836;
+        const month = parseInt(sd.split('-')[1], 10) || (new Date(sd).getMonth() + 1);
+        highlightSeasonRow(month);
+        let dayStart = 8, dayEnd = 18;
+        if (month >= 4 && month <= 9) { dayStart = 6; dayEnd = 19; }
+        else if (month >= 10) { dayStart = 7; dayEnd = 17; }
+        let dayHours = 0, nightHours = 0;
+        for (let i = 0; i < totalHours; i++) {
+            let currentHour = (startTime + i) % 24;
+            if (currentHour >= dayStart && currentHour < dayEnd) dayHours++;
+            else nightHours++;
+        }
+        const dayAmt = dayHours * BASE_RATE;
+        const nightAmt = nightHours * (BASE_RATE * 1.5);
+        const holidayAmt = holidayH * (BASE_RATE * 0.5);
+        const weekendAmt = weekendH * (BASE_RATE * 0.5);
+        const rainAmt = rainH * (BASE_RATE * 0.5);
+        const hotAmt = hotH * (BASE_RATE * 0.3);
+        const otherAmt = rainAmt + hotAmt;
+        let skilledAmt = isSkilled ? (dayHours * SKILLED_DAY_ADD) + (nightHours * SKILLED_NIGHT_ADD) : 0;
+        const subTotal = dayAmt + nightAmt + skilledAmt + holidayAmt + weekendAmt + otherAmt;
+        const taxAmt = Math.floor(subTotal * taxRate);
+        const finalTotal = Math.round(subTotal - taxAmt);
+        lastCalculatedWageData = { date: sd, totalPay: finalTotal, summary: `[${roleLabel}] 총 ${totalHours}H (주간 ${dayHours}H / 야간 ${nightHours}H)` };
+        let extraHtml = "";
+        if (holidayAmt > 0) extraHtml += renderRow("🚜 지게차 수당 (" + holidayH + "H)", holidayAmt, "#ea580c");
+        if (weekendAmt > 0) extraHtml += renderRow("🎈 특별수당 (" + weekendH + "H)", weekendAmt, "#3b82f6");
+        if (rainAmt > 0) extraHtml += renderRow("☔ 우천 수당 (" + rainH + "H)", rainAmt, "#0284c7");
+        if (hotAmt > 0) extraHtml += renderRow("☀️ 혹서기(30%) 수당 (" + hotH + "H)", hotAmt, "#d97706");
+        if (holidayAmt === 0 && weekendAmt === 0 && otherAmt === 0) extraHtml += renderRow("➕ 추가 가산 수당", 0);
+        const specBody = document.getElementById('wageSpecBody');
+        specBody.innerHTML = ` ${renderRow("☀️ 주간 기본 ("+dayHours+"H)", dayAmt)} ${renderRow("🌙 야간 할증 ("+nightHours+"H)", nightAmt)} ${renderRow("🔧 기능공 수당 추가", skilledAmt, "var(--primary)")} ${extraHtml} ${taxAmt > 0 ? renderRow("💸 공제액 (세금/보험)", -taxAmt, "var(--danger)") : ""} `;
+        document.getElementById('wageTotal').innerText = finalTotal.toLocaleString() + "원";
+        document.getElementById('wageResultBox').classList.remove('hidden');
+        showToast("상세 계산서가 생성되었습니다!");
+    } catch (e) {
+        console.error(e);
+        alert("계산 오류: 입력창 값을 확인해주세요.");
+    }
+}
 function sendCalculatedWageToLog() {
     if (!lastCalculatedWageData) return;
     const { date, totalPay, summary } = lastCalculatedWageData;
@@ -3020,7 +3202,31 @@ function sendCalculatedWageToLog() {
     }
     showToast("📅 근무일지 입력창에 계산된 임금이 자동 입력되었습니다!");
 }
-function resetWageForm(){ document.querySelectorAll('#wage-card input').forEach(i=> { if(i.type !== 'radio' && i.id !== 'wageHourly') i.value=''; }); document.getElementById('wageResultBox').classList.add('hidden'); }
+function resetWageForm() {
+    try {
+        const now = new Date();
+        now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+        const todayStr = now.toISOString().split('T')[0];
+        ['wageTotalHours', 'wageHoliday', 'wageWeekend', 'wageRain', 'wageHotTime'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.value = '';
+        });
+        const sDate = document.getElementById('wageStartDate');
+        const eDate = document.getElementById('wageEndDate');
+        const sHour = document.getElementById('wageStartHour');
+        const eHour = document.getElementById('wageEndHour');
+        const taxType = document.getElementById('wageTaxType');
+        if (sDate) sDate.value = todayStr;
+        if (eDate) eDate.value = todayStr;
+        if (sHour) sHour.value = '8';
+        if (eHour) eHour.value = '17';
+        if (taxType) taxType.value = '0';
+        document.getElementById('wageResultBox').classList.add('hidden');
+        showToast("🔄 임금계산기 입력값이 초기화되었습니다.");
+    } catch (e) {
+        console.error(e);
+    }
+}
 let currentEditNoticeId = null; let currentEditNoticeImg = null; function autoLink(text) { if (!text) return ""; const urlRegex = /(https?:\/\/[^\s]+)/g; return text.replace(urlRegex, function(url) { return `<a href="${url}" target="_blank" style="color:#2563eb; text-decoration:underline; font-weight:bold;">${url}</a>`; }); } async function startEditNotice(id, title, content, imgUrl, e) { e.stopPropagation(); if (!(await verifyAdmin())) return; currentEditNoticeId = id; currentEditNoticeImg = imgUrl; document.getElementById('noticeTitle').value = title; document.getElementById('noticeContent').value = content.replace(/\\n/g, '\n'); document.getElementById('noticeFileInput').value = ''; document.getElementById('noticeForm').classList.remove('hidden'); document.getElementById('noticeSubmitBtn').innerText = "수정 완료"; document.getElementById('noticeSubmitBtn').style.background = "var(--primary)"; document.getElementById('noticeCancelBtn').style.display = "block"; document.getElementById('noticeForm').scrollIntoView({behavior: 'smooth', block: 'center'}); } function cancelEditNotice() { currentEditNoticeId = null; currentEditNoticeImg = null; document.getElementById('noticeTitle').value = ''; document.getElementById('noticeContent').value = ''; document.getElementById('noticeFileInput').value = ''; document.getElementById('noticeSubmitBtn').innerText = "등록 완료"; document.getElementById('noticeSubmitBtn').style.background = "var(--success)"; document.getElementById('noticeCancelBtn').style.display = "none"; document.getElementById('noticeForm').classList.add('hidden'); } async function saveNotice() { if (!(await verifyAdmin())) return; const t = document.getElementById('noticeTitle').value.trim(); const c = document.getElementById('noticeContent').value.trim(); const f = document.getElementById('noticeFileInput').files[0]; const btn = document.getElementById('noticeSubmitBtn'); if (!t || !c) { alert("공지 제목과 내용을 입력해주세요."); return; } btn.innerText = "서버 기록 중..."; btn.disabled = true; const finalize = (url) => { const data = { title: t, content: c, timestamp: firebase.firestore.FieldValue.serverTimestamp() }; if (url) { data.imageUrl = url; } else if (currentEditNoticeId && currentEditNoticeImg) { data.imageUrl = currentEditNoticeImg; } else { data.imageUrl = null; } let req; if (currentEditNoticeId) { req = db.collection("notices").doc(currentEditNoticeId).update(data); } else { req = db.collection("notices").add(data); } req.then(() => { const isEdit = !!currentEditNoticeId; cancelEditNotice(); showToast(isEdit ? "공지가 수정되었습니다." : "공지가 등록되었습니다."); }).catch(err => { alert("저장 실패: " + err.message); btn.innerText = currentEditNoticeId ? "수정 완료" : "등록 완료"; btn.disabled = false; }); }; if (f) { const storageRef = storage.ref(`notices/${Date.now()}_${f.name}`); const uploadTask = storageRef.put(f); uploadTask.on('state_changed', (snap) => { const percent = Math.round((snap.bytesTransferred / snap.totalBytes) * 100); btn.innerText = `사진 업로드 중... ${percent}%`; }, (err) => { alert("사진 업로드 실패: " + err.message); btn.disabled = false; btn.innerText = currentEditNoticeId ? "수정 완료" : "등록 완료"; }, () => { uploadTask.snapshot.ref.getDownloadURL().then(url => finalize(url)); }); } else { finalize(null); } } function delNotice(id,e){ e.stopPropagation(); verifyAdmin().then(r=>{ if(r) db.collection("notices").doc(id).delete(); }); }
 
 function addPost() { const nickVal = document.getElementById('inputNick').value.trim(); const titleVal = document.getElementById('inputTitle').value.trim(); const pwVal = document.getElementById('inputPw').value.trim(); const contentVal = document.getElementById('inputContent').value.trim(); const btnEl = document.querySelector('#boardForm .bg-submit'); if (nickVal && titleVal && pwVal && contentVal) { btnEl.innerText = "처리 중..."; btnEl.disabled = true; const postData = { nick: nickVal, title: titleVal, password: pwVal, content: contentVal, timestamp: firebase.firestore.FieldValue.serverTimestamp() }; if (currentEditPostId) { db.collection("posts").doc(currentEditPostId).update(postData).then(() => { resetBoardForm(); showToast("게시글이 수정되었습니다."); }).catch((e) => { alert("수정 실패"); btnEl.innerText = "수정 완료"; btnEl.disabled = false; }); } else { db.collection("posts").add(postData).then(() => { resetBoardForm(); showToast("게시글이 등록되었습니다."); }).catch((e) => { alert("등록 실패"); btnEl.innerText = "등록"; btnEl.disabled = false; }); } } else alert("모든 항목을 입력해주세요."); }
@@ -3191,10 +3397,10 @@ function filterShips() {
         loadAndSearchAllShips(document.getElementById('shipSearch')?.value || '');
     }
 }
-function renderShipPage(p) { const l = document.getElementById("shipList"); l.innerHTML = ""; const pageData = filteredShips.slice((p-1)*postsPerPage, p*postsPerPage); pageData.forEach(x => { const safeName = (x.shipName || "").replace(/'/g, "\\'"); const safeFeat = (x.onboardFeat || "").replace(/'/g, "\\'").replace(/\n/g, "\\n"); const savedPw = x.password || ""; l.innerHTML += `<li class="post-item"><div class="post-header-row" onclick="toggleContent('s-${x.id}')"><div class="post-title-text">🚢 ${x.shipName}</div><span>▼</span></div><div id="s-${x.id}" class="post-body-content" style="display:none; padding:15px;"><div style="white-space:pre-wrap;">${x.onboardFeat}</div><div style="text-align:right; margin-top:15px;"><button class="mini-btn" style="background:var(--primary-light);" onclick="tryEditShip('${x.id}', '${safeName}', '${safeFeat}', '${savedPw}')">✏️ 수정</button><button class="mini-btn btn-del" onclick="deleteShip('${x.id}',event)">🗑️ 삭제</button></div></div></li>`; }); } function addArchive() { const t = document.getElementById('archiveTitle').value.trim(); const f = document.getElementById('archiveFile').files[0]; const btn = document.getElementById('archiveSubmitBtn'); if(!t || !f) return alert("파일 설명과 파일을 모두 선택해주세요."); btn.innerText = "서버 연결 중..."; btn.disabled = true; const ref = storage.ref(`archives/${Date.now()}_${f.name}`); const task = ref.put(f); task.on('state_changed', (s) => { const p = Math.round((s.bytesTransferred / s.totalBytes) * 100); btn.innerText = `업로드 중... ${p}%`; }, (e) => { alert("업로드 실패: " + e.message); btn.disabled = false; btn.innerText = "업로드 완료"; }, () => { task.snapshot.ref.getDownloadURL().then(url => { db.collection("archives").add({ title: t, url: url, timestamp: firebase.firestore.FieldValue.serverTimestamp() }).then(() => { document.getElementById('archiveTitle').value = ""; document.getElementById('archiveFile').value = ""; toggleHidden('archiveForm'); btn.innerText = "업로드 실행"; btn.disabled = false; showToast("파일이 성공적으로 등록되었습니다!"); }); }); } ); } async function deleteShip(id,e){e.stopPropagation(); if(await verifyAdmin()) db.collection("ships").doc(id).delete();} function delArchive(id,e){ e.stopPropagation(); verifyAdmin().then(r=>{ if(r) db.collection("archives").doc(id).delete(); }); } 
+function addArchive() { const t = document.getElementById('archiveTitle').value.trim(); const f = document.getElementById('archiveFile').files[0]; const btn = document.getElementById('archiveSubmitBtn'); if(!t || !f) return alert("파일 설명과 파일을 모두 선택해주세요."); btn.innerText = "서버 연결 중..."; btn.disabled = true; const ref = storage.ref(`archives/${Date.now()}_${f.name}`); const task = ref.put(f); task.on('state_changed', (s) => { const p = Math.round((s.bytesTransferred / s.totalBytes) * 100); btn.innerText = `업로드 중... ${p}%`; }, (e) => { alert("업로드 실패: " + e.message); btn.disabled = false; btn.innerText = "업로드 완료"; }, () => { task.snapshot.ref.getDownloadURL().then(url => { db.collection("archives").add({ title: t, url: url, timestamp: firebase.firestore.FieldValue.serverTimestamp() }).then(() => { document.getElementById('archiveTitle').value = ""; document.getElementById('archiveFile').value = ""; toggleHidden('archiveForm'); btn.innerText = "업로드 완료"; btn.disabled = false; showToast("파일이 성공적으로 등록되었습니다!"); }); }); } ); } async function deleteShip(id,e){e.stopPropagation(); if(await verifyAdmin()) db.collection("ships").doc(id).delete();} function delArchive(id,e){ e.stopPropagation(); verifyAdmin().then(r=>{ if(r) db.collection("archives").doc(id).delete(); }); } 
 
 function renderBoardPage(p){ currentBoardPage = p; const l = document.getElementById("boardList"); l.innerHTML = ""; const start = (p-1) * postsPerPage; const end = start + postsPerPage; const pageData = allPostsData.slice(start, end); if(pageData.length === 0) { l.innerHTML = "<tr><td colspan='4' style='text-align:center; padding:20px; color:var(--text-sub); font-weight:700;'>게시글이 없습니다.</td></tr>"; document.getElementById("pagination").innerHTML = ""; return; } pageData.forEach((x, i) => { let dateStr = ""; if(x.timestamp) { const d = x.timestamp.toDate(); const month = String(d.getMonth() + 1).padStart(2, '0'); const day = String(d.getDate()).padStart(2, '0'); const hour = String(d.getHours()).padStart(2, '0'); const min = String(d.getMinutes()).padStart(2, '0'); dateStr = `${month}/${day} ${hour}:${min}`; } const rowId = `p-${x.id}`; const authorName = x.nick || '익명'; const postNum = allPostsData.length - ((currentBoardPage - 1) * postsPerPage) - i; const safeTitle = (x.title || '').replace(/'/g, "\\'").replace(/"/g, "&quot;"); const safeContent = (x.content || '').replace(/'/g, "\\'").replace(/"/g, "&quot;").replace(/\n/g, "\\n"); l.innerHTML += `<tr onclick="toggleBoardRow('${rowId}')" style="cursor:pointer;"> <td class="board-no">${postNum}</td> <td class="board-title">${x.title} <span id="cmt-badge-${x.id}" class="cmt-count-pill hidden"></span> <span style="font-size:0.75rem; color:var(--primary); margin-left:4px;">▼</span></td> <td class="board-date">${dateStr}</td> <td class="board-nick">${authorName}</td> </tr> <tr id="${rowId}" class="board-content-row"> <td colspan="4" class="board-content-box"> <div style="margin-bottom:15px; font-weight:600; background:var(--card-bg); padding:12px; border-radius:8px; border:1px solid var(--border);">${x.content}</div> <div style="text-align:right; border-bottom:1px dashed var(--border); padding-bottom:10px; margin-bottom:10px;"> <button class="mini-btn" style="background:var(--primary-light) !important; color:white !important;" onclick="tryEditPost('${x.id}', '${x.password}', '${authorName}', '${safeTitle}', '${safeContent}', event)">✏️ 수정</button> <button class="mini-btn btn-del" onclick="deletePost('${x.id}','${x.password}',event)">🗑️ 삭제</button> </div> <div id="cmt-list-${x.id}" class="comment-section"></div> <div class="comment-form"> <input id="cmt-name-${x.id}" class="comment-input-sm" placeholder="닉네임"> <input id="cmt-pw-${x.id}" class="comment-input-sm" type="password" placeholder="비밀번호"> <input id="cmt-txt-${x.id}" class="comment-input-lg" placeholder="따뜻한 댓글을 남겨주세요..."> <button class="comment-submit" onclick="addComment('${x.id}')">댓글 등록</button> </div> </td> </tr>`; loadComments(x.id); }); renderPagination(p); } 
-renderShipPage = function(p) {
+function renderShipPage(p) {
     const list = document.getElementById("shipList");
     const pagination = document.getElementById("shipPagination");
     Object.values(shipCommentUnsubscribes).forEach(unsubscribe => unsubscribe());
