@@ -151,14 +151,27 @@
         .leader-sungchul { background-color: #fbbf24; color: #000; } 
         .leader-gaegool { background-color: #3b82f6; } 
 
-        .terminal-block { background: rgba(0,0,0,0.03); border-radius: 8px; margin-bottom: 8px; border: 1px solid var(--border); overflow: hidden; width: 100%; }
+        .terminal-block { background: rgba(0,0,0,0.03); border-radius: 8px; margin-bottom: 8px; border: 1.5px solid var(--border); overflow: hidden; width: 100%; transition: border-color 0.2s, box-shadow 0.2s; }
+        .terminal-block.term-theme-hjnc { border-color: #fdba74; background: rgba(255, 247, 237, 0.5); }
+        .terminal-block.term-theme-bnct { border-color: #93c5fd; background: rgba(239, 246, 255, 0.5); }
+        .terminal-block.term-theme-dgt { border-color: #5eead4; background: rgba(240, 253, 250, 0.5); }
+        .terminal-block.term-theme-bct { border-color: #86efac; background: rgba(240, 253, 244, 0.5); }
+        .terminal-block.active-block { border: 2px solid var(--primary); box-shadow: 0 3px 8px rgba(10, 27, 63, 0.12); background: var(--card-bg); }
+        .terminal-block.term-theme-hjnc.active-block { border-color: #f97316; box-shadow: 0 3px 8px rgba(249, 115, 22, 0.15); }
+        .terminal-block.term-theme-bnct.active-block { border-color: #2563eb; box-shadow: 0 3px 8px rgba(37, 99, 235, 0.15); }
+        .terminal-block.term-theme-dgt.active-block { border-color: #0d9488; box-shadow: 0 3px 8px rgba(13, 148, 136, 0.15); }
+        .terminal-block.term-theme-bct.active-block { border-color: #16a34a; box-shadow: 0 3px 8px rgba(22, 163, 74, 0.15); }
         .terminal-header { padding: 14px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; font-weight: 900; font-size: clamp(0.95rem, 3.5vw, 1.1rem); touch-action: manipulation; color: var(--text-main); }
+        .terminal-block.active-block .terminal-header { color: var(--primary); background: rgba(10, 27, 63, 0.04); }
         .terminal-body { display: none; padding: 12px; border-top: 1px dashed var(--border); }
+        .terminal-block.active-block .terminal-body { border-top: 2px solid var(--primary); }
         .terminal-actions { display: grid; grid-template-columns: repeat(auto-fit, minmax(80px, 1fr)); gap: 6px; }
         .terminal-btn { background: var(--card-bg); border: 1px solid var(--border); color: var(--text-main); padding: 12px 4px; border-radius: 6px; text-decoration: none; font-size: clamp(0.85rem, 3vw, 0.95rem); text-align: center; font-weight: 800; display:flex; align-items:center; justify-content:center; word-break: keep-all; min-height: 44px; touch-action: manipulation; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
+        .terminal-block.active-block .terminal-btn { border: 2px solid var(--primary); box-shadow: 0 1px 3px rgba(10, 27, 63, 0.1); }
         .terminal-body .terminal-btn:not(.hjnc-meal-button) { font-size: clamp(1.275rem, 4.5vw, 1.425rem) !important; }
         #term-pnc > .action-btn { font-size: clamp(1.5rem, 5.25vw, 1.725rem) !important; }
         .hjnc-meal-button { width: 100%; margin: 0; font-size: clamp(1.275rem, 4.5vw, 1.425rem) !important; line-height: 1.2; background: linear-gradient(135deg, #fff7ed, #fed7aa); border: 1px solid #fb923c; color: #9a3412; font-weight: 900; animation: hjncMealSparkle 1.4s ease-in-out infinite; }
+        .terminal-block.active-block .hjnc-meal-button { border: 2px solid #ea580c !important; }
         @keyframes hjncMealSparkle { 0%, 100% { filter: brightness(1); box-shadow: 0 1px 3px rgba(234,88,12,0.2); } 50% { filter: brightness(1.12); box-shadow: 0 0 14px rgba(249,115,22,0.7); } }
         @media (prefers-reduced-motion: reduce) { .hjnc-meal-button { animation: none; } }
         @media screen and (max-width: 480px) and (orientation: portrait) { .terminal-btn.hjnc-meal-button { font-size: 1.08rem !important; white-space: normal !important; letter-spacing: 0 !important; } }
@@ -448,7 +461,7 @@
         </div>
         <div id="t3-content" class="collapsible-content collapsed" style="background: white; border: 1px solid var(--border); border-radius: 8px; margin-top: 4px;">
             <div class="terminal-ticker"><div class="terminal-ticker-wrap"><div id="t3TickerText" class="terminal-ticker-item">3항업 티커를 불러오는 중...</div></div><button class="terminal-ticker-admin" type="button" title="3항업 티커 관리" onclick="openSectionTickerManager('t3')">관리</button></div>
-            <div class="terminal-block">
+            <div class="terminal-block term-theme-hjnc">
                 <div class="terminal-header tap-effect" onclick="toggleContent('term-hjnc')">한진신항만 (HJNC) ▼</div>
                 <div id="term-hjnc" class="terminal-body">
                     <div class="terminal-actions">
@@ -456,12 +469,12 @@
                         <a href="https://www.hjnc.co.kr/esvc/vessel/berthScheduleG" target="_blank" class="terminal-btn">차트</a>
                         <a href="https://www.hjnc.co.kr/esvc/vessel/vesselStatus" target="_blank" class="terminal-btn">현황</a>
                         <div style="grid-column: 1 / -1; display: flex; gap: 5px; margin-top: 4px;">
-                            <a href="http://bayplan.hjnc.co.kr" target="_blank" class="terminal-btn" style="flex: 1; margin: 0; background: linear-gradient(135deg, #fffbeb, #fef3c7); border: 1px solid #fcd34d; color: #92400e;">🧩 BAY PLAN</a>
+                            <a href="http://bayplan.hjnc.co.kr" target="_blank" class="terminal-btn" style="flex: 1; margin: 0; background: linear-gradient(135deg, #fffbeb, #fef3c7); border: 2px solid #d97706; color: #92400e;">🧩 BAY PLAN</a>
                             <!-- [교체할 버튼 코드] -->
-<button onclick="verifyLeaderAccess(event)" class="terminal-btn" style="flex: 1; margin: 0; background: linear-gradient(135deg, #e0f2fe, #bae6fd); border: 1px solid #7dd3fc; color: #0369a1;">📅 조장 근무일</button>
+<button onclick="verifyLeaderAccess(event)" class="terminal-btn" style="flex: 1; margin: 0; background: linear-gradient(135deg, #e0f2fe, #bae6fd); border: 2px solid #0284c7; color: #0369a1;">📅 조장 근무일</button>
                         </div>
                         <div style="grid-column: 1 / -1; margin-top: 5px;">
-                            <button onclick="openAllBayPlan()" class="terminal-btn" style="width: 100%; margin: 0; background: linear-gradient(135deg, #fdf2f8, #fbcfe8); border: 1px solid #f9a8d4; color: #be185d; font-weight: bold;">🌸 ALL BAY PLAN </button>
+                            <button onclick="openAllBayPlan()" class="terminal-btn" style="width: 100%; margin: 0; background: linear-gradient(135deg, #fdf2f8, #fbcfe8); border: 2px solid #db2777; color: #be185d; font-weight: bold;">🌸 ALL BAY PLAN </button>
                         </div>
                         <div style="grid-column: 1 / -1; margin-top: 5px;">
                             <button onclick="openHjncMealModal()" class="terminal-btn hjnc-meal-button">✨ 한진식단 ✨</button>
@@ -469,9 +482,9 @@
                     </div>
                 </div>
             </div>                 
-            <div class="terminal-block"><div class="terminal-header tap-effect" onclick="toggleContent('term-bnct')">부산신항컨테이너 고려 (BNCT) ▼</div><div id="term-bnct" class="terminal-body"><div class="terminal-actions"><a href="https://info.bnctkorea.com/esvc/vessel/berthScheduleT" target="_blank" class="terminal-btn">스케줄</a><a href="https://info.bnctkorea.com/esvc/vessel/berthScheduleG" target="_blank" class="terminal-btn">차트</a><a href="https://info.bnctkorea.com/esvc/vessel/vesselStatus" target="_blank" class="terminal-btn">현황</a></div></div></div>
-            <div class="terminal-block"><div class="terminal-header tap-effect" onclick="toggleContent('term-dgt')">동원로엑스 (DGT) ▼</div><div id="term-dgt" class="terminal-body"><div class="terminal-actions"><a href="https://www.dgtbusan.com/DGT/esvc/vessel/berthScheduleT" target="_blank" class="terminal-btn">스케줄</a><a href="https://www.dgtbusan.com/DGT/esvc/vessel/berthScheduleG" target="_blank" class="terminal-btn">차트</a><a href="https://www.dgtbusan.com/DGT/esvc/vessel/vesselStatus" target="_blank" class="terminal-btn">현황</a></div></div></div>
-            <div class="terminal-block"><div class="terminal-header tap-effect" onclick="toggleContent('term-bct')">부산컨테이너 터미널 (BCT) ▼</div><div id="term-bct" class="terminal-body"><div class="terminal-actions"><a href="https://info.bct2-4.com/infoservice/index.html" target="_blank" class="terminal-btn">스케줄</a><a href="https://info.bct2-4.com/infoservice/index.html" target="_blank" class="terminal-btn">차트</a><a href="https://info.bct2-4.com/infoservice/index.html" target="_blank" class="terminal-btn">현황</a></div></div></div>
+            <div class="terminal-block term-theme-bnct"><div class="terminal-header tap-effect" onclick="toggleContent('term-bnct')">부산신항컨테이너 고려 (BNCT) ▼</div><div id="term-bnct" class="terminal-body"><div class="terminal-actions"><a href="https://info.bnctkorea.com/esvc/vessel/berthScheduleT" target="_blank" class="terminal-btn">스케줄</a><a href="https://info.bnctkorea.com/esvc/vessel/berthScheduleG" target="_blank" class="terminal-btn">차트</a><a href="https://info.bnctkorea.com/esvc/vessel/vesselStatus" target="_blank" class="terminal-btn">현황</a></div></div></div>
+            <div class="terminal-block term-theme-dgt"><div class="terminal-header tap-effect" onclick="toggleContent('term-dgt')">동원로엑스 (DGT) ▼</div><div id="term-dgt" class="terminal-body"><div class="terminal-actions"><a href="https://www.dgtbusan.com/DGT/esvc/vessel/berthScheduleT" target="_blank" class="terminal-btn">스케줄</a><a href="https://www.dgtbusan.com/DGT/esvc/vessel/berthScheduleG" target="_blank" class="terminal-btn">차트</a><a href="https://www.dgtbusan.com/DGT/esvc/vessel/vesselStatus" target="_blank" class="terminal-btn">현황</a></div></div></div>
+            <div class="terminal-block term-theme-bct"><div class="terminal-header tap-effect" onclick="toggleContent('term-bct')">부산컨테이너 터미널 (BCT) ▼</div><div id="term-bct" class="terminal-body"><div class="terminal-actions"><a href="https://info.bct2-4.com/infoservice/index.html" target="_blank" class="terminal-btn">스케줄</a><a href="https://info.bct2-4.com/infoservice/index.html" target="_blank" class="terminal-btn">차트</a><a href="https://info.bct2-4.com/infoservice/index.html" target="_blank" class="terminal-btn">현황</a></div></div></div>
         </div> 
     </div>
 
@@ -1058,8 +1071,23 @@ async function openVisitorStats() {
 function closeVisitorStats() { document.getElementById("visitorStatsModal").style.display = "none"; }
 
 function toggleDashItem(id){ const c = document.getElementById(id); if(!c) return; const e = c.classList.contains('expanded'); document.querySelectorAll('.dash-card').forEach(x=>{ x.classList.remove('expanded'); const content = x.querySelector('.dash-content'); if(content) content.style.display='none'; }); if(!e){ c.classList.add('expanded'); const content = c.querySelector('.dash-content'); if(content) content.style.display='block'; if(id === 'log-card') renderCalendar(currentDate.getFullYear(), currentDate.getMonth()); } }
-function toggleSection(id){ document.getElementById(id).classList.toggle('collapsed'); }
-function toggleContent(id){ const e=document.getElementById(id); e.style.display=(e.style.display==='block'?'none':'block'); }
+function toggleSection(id){
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.classList.toggle('collapsed');
+    const isExpanded = !el.classList.contains('collapsed');
+    el.style.border = isExpanded ? '2px solid var(--primary)' : '1px solid var(--border)';
+}
+function toggleContent(id){
+    const e = document.getElementById(id);
+    if (!e) return;
+    const isOpening = e.style.display !== 'block';
+    e.style.display = isOpening ? 'block' : 'none';
+    const parentBlock = e.closest('.terminal-block');
+    if (parentBlock) {
+        parentBlock.classList.toggle('active-block', isOpening);
+    }
+}
 function toggleHidden(id){ document.getElementById(id).classList.toggle('hidden'); }
 function toggleDarkMode(){ document.body.classList.toggle('dark-mode'); }
 function scrollToTop(){ window.scrollTo({top:0, behavior:'smooth'}); }
@@ -1567,9 +1595,11 @@ function loadComments(pid){if(commentUnsubscribes[pid]) commentUnsubscribes[pid]
 function openBusSchedule(){ const m=document.getElementById('imageModal'); document.getElementById('modalImage').src='https://firebasestorage.googleapis.com/v0/b/busan-hak-port.firebasestorage.app/o/KakaoTalk_20260129_001114789.jpg?alt=media'; m.style.display='flex'; } function closeImageModal(){ document.getElementById('imageModal').style.display='none'; } function openPrivacy() { toggleDashItem('privacy-center-card'); document.getElementById('privacy-center-card').scrollIntoView({behavior: 'smooth', block: 'center'}); }
 
 if ("serviceWorker" in navigator) {
-    window.addEventListener("load", () => {
-        navigator.serviceWorker.register(new URL("./service-worker.js", window.location.href).href).catch(error => console.warn("서비스 워커 등록 실패:", error));
-    });
+    navigator.serviceWorker.getRegistrations().then(registrations => {
+        for (let registration of registrations) {
+            registration.unregister();
+        }
+    }).catch(() => {});
 }
 
 window.onload = () => { 
