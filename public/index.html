@@ -4085,31 +4085,48 @@ function shipNameKey(raw) {
 }
 function collectShipNameSources() {
     const map = new Map();
-    const put = (rawName, extra) => {
+    const ensure = (rawName) => {
         const name = normalizeShipName(rawName);
         const key = shipNameKey(name);
-        if (!key) return;
-        const prev = map.get(key);
-        if (prev) {
-            prev.count = (prev.count || 1) + (extra.count || 1);
-            if (prev.source !== "book" && extra.source === "book") Object.assign(prev, extra, { count: prev.count });
-            return;
+        if (!key) return null;
+        let it = map.get(key);
+        if (!it) {
+            it = {
+                name: name, source: "", count: 0, mineCount: 0,
+                inBook: false, inLive: false, inMine: false,
+                difficulty: 0, tags: [], note: "", id: undefined,
+                berth: "", ptnr: "", liveDate: ""
+            };
+            map.set(key, it);
         }
-        map.set(key, Object.assign({ name: name, source: extra.source, count: extra.count || 1 }, extra));
+        return it;
     };
-    // ① 도감(Firestore ships)에 등록된 선박 — 난이도·태그·메모까지 함께 채울 수 있음
+    // ① 도감(Firestore ships)에 등록된 선박 — 난이도·태그·메모를 함께 채울 수 있음
     (Array.isArray(allShipsData) ? allShipsData : []).forEach(s => {
-        put(s.shipName, {
-            source: "book",
-            difficulty: Number(s.difficulty) || 0,
-            tags: (Array.isArray(s.tags) && s.tags.length) ? s.tags : (typeof extractShipTags === "function" ? extractShipTags(s) : []),
-            note: s.onboardFeat || "",
-            id: s.id
-        });
+        const it = ensure(s.shipName);
+        if (!it) return;
+        it.inBook = true;
+        it.count += 1;
+        if (!it.source) it.source = "book";
+        it.difficulty = Number(s.difficulty) || 0;
+        it.tags = (Array.isArray(s.tags) && s.tags.length) ? s.tags : (typeof extractShipTags === "function" ? extractShipTags(s) : []);
+        it.note = s.onboardFeat || "";
+        it.id = s.id;
     });
     // ② 실시간 터미널(HJNC) 스케줄 캐시 — 오늘·이번 달 입항선
     Object.keys(hjncScheduleMonthCache || {}).forEach(ym => {
-        (hjncScheduleMonthCache[ym] || []).forEach(v => put(v.VSL_NM, { source: "live", berth: v.BERTH_NO || "", ptnr: v.PTNR_CODE || "" }));
+        (hjncScheduleMonthCache[ym] || []).forEach(v => {
+            const it = ensure(v.VSL_NM);
+            if (!it) return;
+            it.inLive = true;
+            it.count += 1;
+            if (!it.source) it.source = "live";
+            if (!it.berth) it.berth = v.BERTH_NO || "";
+            if (!it.ptnr) it.ptnr = v.PTNR_CODE || "";
+            if (!it.liveDate && typeof extractDatePrefix === "function") {
+                it.liveDate = extractDatePrefix(v.ATA || v.ETB || v.ATD) || "";
+            }
+        });
     });
     // ③ 내 근무일지에 기록한 선박명 — 자주 쓴 순
     const freq = {};
@@ -4117,7 +4134,14 @@ function collectShipNameSources() {
         const n = normalizeShipName(adminWorkLogs[k] && adminWorkLogs[k].shipName);
         if (n) freq[n] = (freq[n] || 0) + 1;
     });
-    Object.keys(freq).forEach(n => put(n, { source: "mine", count: freq[n] }));
+    Object.keys(freq).forEach(n => {
+        const it = ensure(n);
+        if (!it) return;
+        it.inMine = true;
+        it.mineCount = (it.mineCount || 0) + freq[n];
+        it.count += freq[n];
+        if (!it.source) it.source = "mine";
+    });
     return Array.from(map.values());
 }
 function searchShipNames(term, limit) {
@@ -4207,10 +4231,19 @@ function renderShipFormQuickChips() {
     const area = document.getElementById("shipQuickPickArea");
     if (!area) return;
     const all = collectShipNameSources();
-    const book = all.filter(x => x.source === "book").slice(0, 5);
-    const live = all.filter(x => x.source === "live").slice(0, 4);
-    const mine = all.filter(x => x.source === "mine").sort((a, b) => (b.count || 0) - (a.count || 0)).slice(0, 4);
-    shipQuickPickItems = book.concat(live, mine);
+    const now = new Date();
+    const todayStr = now.getFullYear() + "-" + String(now.getMonth() + 1).padStart(2, "0") + "-" + String(now.getDate()).padStart(2, "0");
+    const dayGap = (dateStr) => {
+        if (!dateStr) return 9999;
+        const t = Date.parse(dateStr + "T00:00:00");
+        const b = Date.parse(todayStr + "T00:00:00");
+        return isNaN(t) ? 9999 : Math.abs(Math.round((t - b) / 86400000));
+    };
+    const live = all.filter(x => x.inLive).sort((a, b) => dayGap(a.liveDate) - dayGap(b.liveDate)).slice(0, 4);
+    const liveKeys = new Set(live.map(x => shipNameKey(x.name)));
+    const mine = all.filter(x => x.inMine && !liveKeys.has(shipNameKey(x.name)))
+        .sort((a, b) => (b.mineCount || 0) - (a.mineCount || 0)).slice(0, 4);
+    shipQuickPickItems = live.concat(mine);
     if (!shipQuickPickItems.length) {
         area.innerHTML = '<div style="font-size:0.74rem; color:var(--text-sub); font-weight:700; margin-bottom:6px;">💡 선박명을 2자 이상 입력하면 등록 선박·입항선이 자동완성됩니다.</div>';
         return;
@@ -4223,9 +4256,8 @@ function renderShipFormQuickChips() {
             + "</div>";
     };
     area.innerHTML = '<div style="font-size:0.72rem; color:var(--text-sub); font-weight:800; margin-bottom:5px;">⚡ 원클릭 입력 (터치하면 선박명이 자동 입력됩니다)</div>'
-        + row("📚 도감:", book, 0, "background:#eff6ff; border-color:#bfdbfe; color:#1d4ed8;")
-        + row("⚓ 입항:", live, book.length, "background:#fff7ed; border-color:#fdba74; color:#c2410c;")
-        + row("🕘 내 기록:", mine, book.length + live.length, "background:#f0fdf4; border-color:#86efac; color:#15803d;");
+        + row("⚓ 입항:", live, 0, "background:#fff7ed; border-color:#fdba74; color:#c2410c;")
+        + row("🕘 내 기록:", mine, live.length, "background:#f0fdf4; border-color:#86efac; color:#15803d;");
 }
 function findDuplicateShip(name) {
     const key = shipNameKey(name);
