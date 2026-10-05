@@ -315,6 +315,18 @@
         .ship-badge-star { display: inline-flex; align-items: center; background: #fef3c7; color: #b45309; border: 1px solid #fcd34d; border-radius: 5px; padding: 1px 6px; font-size: 0.72rem; font-weight: 900; margin-left: 4px; vertical-align: middle; }
         .ship-badge-tag { display: inline-block; background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; border-radius: 5px; padding: 1px 6px; font-size: 0.7rem; font-weight: 800; margin-right: 4px; margin-top: 3px; }
         .ship-badge-tag.warn { background: #fef2f2; color: #dc2626; border-color: #fecaca; }
+        .ship-suggest-wrap { display: flex; gap: 6px; align-items: stretch; }
+        .ship-suggest-list { position: absolute; left: 0; right: 0; top: calc(100% + 3px); z-index: 80; background: var(--card-bg, #ffffff); border: 1.5px solid #93c5fd; border-radius: 10px; box-shadow: 0 10px 24px rgba(10,27,63,0.20); max-height: 264px; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+        .ship-suggest-item { display: flex; align-items: center; gap: 7px; width: 100%; text-align: left; background: transparent; border: none; border-bottom: 1px solid var(--border); padding: 9px 10px; cursor: pointer; font-size: 0.81rem; font-weight: 800; color: var(--text); }
+        .ship-suggest-item:last-child { border-bottom: none; }
+        .ship-suggest-item:hover, .ship-suggest-item.active { background: rgba(37, 99, 235, 0.14); }
+        .ship-suggest-src { font-size: 0.65rem; font-weight: 900; border-radius: 5px; padding: 1px 5px; white-space: nowrap; }
+        .ship-suggest-src.src-book { background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; }
+        .ship-suggest-src.src-live { background: #fff7ed; color: #c2410c; border: 1px solid #fdba74; }
+        .ship-suggest-src.src-mine { background: #f0fdf4; color: #15803d; border: 1px solid #86efac; }
+        .ship-suggest-meta { margin-left: auto; font-size: 0.7rem; font-weight: 800; color: var(--text-sub); white-space: nowrap; }
+        body.dark-mode .ship-suggest-list { background: #1e293b; border-color: #3b82f6; }
+        body.dark-mode .ship-suggest-item { color: #e2e8f0; }
         .quick-chip-row { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 4px; margin-bottom: 8px; }
         .quick-chip-btn { background: #f1f5f9; border: 1px solid #cbd5e1; color: var(--primary); border-radius: 14px; padding: 3px 9px; font-size: 0.74rem; font-weight: 800; cursor: pointer; transition: all 0.15s; }
         .quick-chip-btn:active { transform: scale(0.95); background: #dbeafe; border-color: #3b82f6; }
@@ -844,10 +856,17 @@
                     </select>
                 </div>
                 <a href="https://www.marinetraffic.com/" target="_blank" class="action-btn" style="background:#0284c7; text-align:center; display:block; text-decoration:none; margin-bottom:10px; padding:12px;">🌍 실시간 위치</a>
-                <button class="action-btn" style="background:var(--accent); margin-bottom:10px;" onclick="toggleHidden('shipForm')">📝 신규 등록</button>
+                <button class="action-btn" style="background:var(--accent); margin-bottom:10px;" onclick="openShipForm()">📝 신규 등록</button>
                 <div id="shipForm" class="hidden" style="background:rgba(10,27,63,0.03); padding:12px; border-radius:10px; border:1px solid var(--border); margin-bottom:12px;">
                     <input type="password" id="shipPw" class="input-field" placeholder="비밀번호" style="text-align:left; margin-bottom:8px;">
-                    <input type="text" id="shipName" class="input-field" placeholder="선박명" style="text-align:left; margin-bottom:8px;">
+                    <div id="shipQuickPickArea" style="margin-bottom:2px;"></div>
+                    <div class="ship-suggest-wrap" style="margin-bottom:8px;">
+                        <div style="position:relative; flex:1; min-width:0;">
+                            <input type="text" id="shipName" class="input-field" placeholder="선박명 (2자 이상 입력 시 자동완성)" autocomplete="off" spellcheck="false" style="text-align:left; margin-bottom:0;" oninput="onShipNameInput()" onfocus="onShipNameInput()" onkeydown="onShipNameKeydown(event)" onblur="setTimeout(hideShipNameSuggestions, 200)">
+                            <div id="shipNameSuggest" class="ship-suggest-list hidden"></div>
+                        </div>
+                        <button type="button" class="action-btn" style="width:auto; padding:0 12px; margin:0; background:#0284c7;" onclick="startShipNameVoiceInput()" title="음성으로 선박명 입력">🎤</button>
+                    </div>
                     <div style="margin-bottom:10px; background:#fff; padding:10px; border-radius:8px; border:1px solid var(--border);">
                         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; flex-wrap:wrap; gap:6px;">
                             <span style="font-size:0.84rem; font-weight:900; color:var(--primary);">⭐ 작업 난이도 선택 (★1~5)</span>
@@ -1504,6 +1523,7 @@ const db = firebase.firestore(); const storage = firebase.storage();
 db.enablePersistence({ synchronizeTabs: true }).catch(err => { console.warn("Persistence Error:", err.code); });
 
 let allPostsData=[], allShipsData=[], filteredShips=[], adminWorkLogs={};
+let shipSuggestItems = [], shipSuggestIndex = -1, shipSuggestTimer = null, shipQuickPickItems = [];
 let currentDate = new Date(); let currentWorkerId = localStorage.getItem('myWorkerId'); 
 let commentUnsubscribes = {}; let shipCommentUnsubscribes = {}; let shipCommentsById = {}; let editingShipComment = null; let visitorCountPromise = null; const postsPerPage = 5; let globalTickerData = { adminMessage: "", userMessages: [] };
 let currentEditPostId = null;
@@ -4144,8 +4164,230 @@ function extractShipTags(ship) {
     const known = ["#오토콘", "#수동콘", "#브릿지주의", "#라싱바무거움", "#턴버클뻑뻑함", "#통로협소"];
     return known.filter(t => text.includes(t) || text.includes(t.slice(1)));
 }
-function addShipInfo() {
-    const n = document.getElementById('shipName').value.trim();
+
+// ───────── 선박명 효율 입력 지원 (자동완성 · 원클릭 칩 · 중복 방지 · 음성 입력) ─────────
+function normalizeShipName(raw) {
+    return String(raw || "").replace(/\s+/g, " ").trim();
+}
+function shipNameKey(raw) {
+    return normalizeShipName(raw).toUpperCase().replace(/[\s\-_.]/g, "");
+}
+function collectShipNameSources() {
+    const map = new Map();
+    const ensure = (rawName) => {
+        const name = normalizeShipName(rawName);
+        const key = shipNameKey(name);
+        if (!key) return null;
+        let it = map.get(key);
+        if (!it) {
+            it = {
+                name: name, source: "", count: 0, mineCount: 0,
+                inBook: false, inLive: false, inMine: false,
+                difficulty: 0, tags: [], note: "", id: undefined,
+                berth: "", ptnr: "", liveDate: ""
+            };
+            map.set(key, it);
+        }
+        return it;
+    };
+    // ① 도감(Firestore ships)에 등록된 선박 — 난이도·태그·메모를 함께 채울 수 있음
+    (Array.isArray(allShipsData) ? allShipsData : []).forEach(s => {
+        const it = ensure(s.shipName);
+        if (!it) return;
+        it.inBook = true;
+        it.count += 1;
+        if (!it.source) it.source = "book";
+        it.difficulty = Number(s.difficulty) || 0;
+        it.tags = (Array.isArray(s.tags) && s.tags.length) ? s.tags : (typeof extractShipTags === "function" ? extractShipTags(s) : []);
+        it.note = s.onboardFeat || "";
+        it.id = s.id;
+    });
+    // ② 실시간 터미널(HJNC) 스케줄 캐시 — 오늘·이번 달 입항선
+    Object.keys(hjncScheduleMonthCache || {}).forEach(ym => {
+        (hjncScheduleMonthCache[ym] || []).forEach(v => {
+            const it = ensure(v.VSL_NM);
+            if (!it) return;
+            it.inLive = true;
+            it.count += 1;
+            if (!it.source) it.source = "live";
+            if (!it.berth) it.berth = v.BERTH_NO || "";
+            if (!it.ptnr) it.ptnr = v.PTNR_CODE || "";
+            if (!it.liveDate && typeof extractDatePrefix === "function") {
+                it.liveDate = extractDatePrefix(v.ATA || v.ETB || v.ATD) || "";
+            }
+        });
+    });
+    // ③ 내 근무일지에 기록한 선박명 — 자주 쓴 순
+    const freq = {};
+    Object.keys(adminWorkLogs || {}).forEach(k => {
+        const n = normalizeShipName(adminWorkLogs[k] && adminWorkLogs[k].shipName);
+        if (n) freq[n] = (freq[n] || 0) + 1;
+    });
+    Object.keys(freq).forEach(n => {
+        const it = ensure(n);
+        if (!it) return;
+        it.inMine = true;
+        it.mineCount = (it.mineCount || 0) + freq[n];
+        it.count += freq[n];
+        if (!it.source) it.source = "mine";
+    });
+    return Array.from(map.values());
+}
+function searchShipNames(term, limit) {
+    const max = limit || 8;
+    const q = shipNameKey(term);
+    const all = collectShipNameSources();
+    if (!q) return all.slice().sort((a, b) => (b.count || 0) - (a.count || 0)).slice(0, max);
+    const rank = { book: 0, live: 1, mine: 2 };
+    return all.filter(it => shipNameKey(it.name).indexOf(q) >= 0).sort((a, b) => {
+        const aStart = shipNameKey(a.name).indexOf(q) === 0 ? 0 : 1;
+        const bStart = shipNameKey(b.name).indexOf(q) === 0 ? 0 : 1;
+        if (aStart !== bStart) return aStart - bStart;
+        if (rank[a.source] !== rank[b.source]) return rank[a.source] - rank[b.source];
+        return a.name.localeCompare(b.name);
+    }).slice(0, max);
+}
+function renderShipNameSuggestions() {
+    const input = document.getElementById("shipName");
+    const box = document.getElementById("shipNameSuggest");
+    if (!input || !box) return;
+    const term = input.value.trim();
+    const items = (term.length === 0 || term.length >= 2) ? searchShipNames(term, term ? 8 : 6) : [];
+    shipSuggestItems = items;
+    shipSuggestIndex = -1;
+    if (!items.length) { box.classList.add("hidden"); box.innerHTML = ""; return; }
+    const label = { book: "도감", live: "입항", mine: "내기록" };
+    const cls = { book: "src-book", live: "src-live", mine: "src-mine" };
+    box.innerHTML = items.map((it, idx) => {
+        const extra = it.source === "live"
+            ? [it.berth, it.ptnr].filter(Boolean).join(" ")
+            : (it.difficulty ? "★" + it.difficulty : "");
+        return '<button type="button" class="ship-suggest-item" onmousedown="event.preventDefault()" onclick="applyShipNameSuggestion(' + idx + ')">'
+            + '<span class="ship-suggest-src ' + cls[it.source] + '">' + label[it.source] + "</span>"
+            + '<span style="flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">🚢 ' + escapeShipCommentHtml(it.name) + "</span>"
+            + (extra ? '<span class="ship-suggest-meta">' + escapeShipCommentHtml(extra) + "</span>" : "")
+            + "</button>";
+    }).join("");
+    box.classList.remove("hidden");
+}
+function onShipNameInput() {
+    clearTimeout(shipSuggestTimer);
+    shipSuggestTimer = setTimeout(renderShipNameSuggestions, 90);
+}
+function onShipNameKeydown(e) {
+    const box = document.getElementById("shipNameSuggest");
+    if (!box || box.classList.contains("hidden") || !shipSuggestItems.length) return;
+    if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+        e.preventDefault();
+        shipSuggestIndex = e.key === "ArrowDown"
+            ? (shipSuggestIndex + 1) % shipSuggestItems.length
+            : (shipSuggestIndex - 1 + shipSuggestItems.length) % shipSuggestItems.length;
+        box.querySelectorAll(".ship-suggest-item").forEach((el, i) => el.classList.toggle("active", i === shipSuggestIndex));
+    } else if (e.key === "Enter") {
+        if (shipSuggestIndex >= 0) { e.preventDefault(); applyShipNameSuggestion(shipSuggestIndex); }
+    } else if (e.key === "Escape") {
+        hideShipNameSuggestions();
+    }
+}
+function hideShipNameSuggestions() {
+    const box = document.getElementById("shipNameSuggest");
+    if (box) { box.classList.add("hidden"); box.innerHTML = ""; }
+    shipSuggestItems = [];
+    shipSuggestIndex = -1;
+}
+function applyShipNameItem(it) {
+    if (!it) return;
+    const input = document.getElementById("shipName");
+    if (input) input.value = it.name;
+    hideShipNameSuggestions();
+    const details = [];
+    if (it.source === "book" && !currentEditShipId) {
+        if (it.difficulty) setShipDifficulty(it.difficulty);
+        if (Array.isArray(it.tags) && it.tags.length) { selectedShipFormTags = it.tags.slice(); syncShipFormTagUI(); }
+        const noteEl = document.getElementById("shipOnboard");
+        if (noteEl && !noteEl.value.trim() && it.note) noteEl.value = it.note;
+        details.push("★" + (it.difficulty || 3) + " · 태그 " + ((it.tags || []).length) + "개 자동 입력");
+    } else if (it.source === "live") {
+        details.push((it.berth || "-") + "선석" + (it.ptnr ? " · " + it.ptnr : ""));
+    } else if (it.source === "mine") {
+        details.push("내 근무일지 기록");
+    }
+    showToast("🚢 '" + it.name + "' 입력 완료" + (details.length ? " (" + details.join(", ") + ")" : ""));
+}
+function applyShipNameSuggestion(index) { applyShipNameItem(shipSuggestItems[index]); }
+function quickPickShipNameAt(index) { applyShipNameItem(shipQuickPickItems[index]); }
+function renderShipFormQuickChips() {
+    const area = document.getElementById("shipQuickPickArea");
+    if (!area) return;
+    const all = collectShipNameSources();
+    const now = new Date();
+    const todayStr = now.getFullYear() + "-" + String(now.getMonth() + 1).padStart(2, "0") + "-" + String(now.getDate()).padStart(2, "0");
+    const dayGap = (dateStr) => {
+        if (!dateStr) return 9999;
+        const t = Date.parse(dateStr + "T00:00:00");
+        const b = Date.parse(todayStr + "T00:00:00");
+        return isNaN(t) ? 9999 : Math.abs(Math.round((t - b) / 86400000));
+    };
+    const live = all.filter(x => x.inLive).sort((a, b) => dayGap(a.liveDate) - dayGap(b.liveDate)).slice(0, 4);
+    const liveKeys = new Set(live.map(x => shipNameKey(x.name)));
+    const mine = all.filter(x => x.inMine && !liveKeys.has(shipNameKey(x.name)))
+        .sort((a, b) => (b.mineCount || 0) - (a.mineCount || 0)).slice(0, 4);
+    shipQuickPickItems = live.concat(mine);
+    if (!shipQuickPickItems.length) {
+        area.innerHTML = '<div style="font-size:0.74rem; color:var(--text-sub); font-weight:700; margin-bottom:6px;">💡 선박명을 2자 이상 입력하면 등록 선박·입항선이 자동완성됩니다.</div>';
+        return;
+    }
+    const row = (label, items, offset, color) => {
+        if (!items.length) return "";
+        return '<div class="quick-chip-row" style="margin-bottom:6px; align-items:center;">'
+            + '<span style="font-size:0.72rem; color:var(--text-sub); font-weight:800; align-self:center; margin-right:2px;">' + label + "</span>"
+            + items.map((it, i) => '<button type="button" class="quick-chip-btn" style="' + color + '" onclick="quickPickShipNameAt(' + (offset + i) + ')">+ ' + escapeShipCommentHtml(it.name) + "</button>").join("")
+            + "</div>";
+    };
+    area.innerHTML = '<div style="font-size:0.72rem; color:var(--text-sub); font-weight:800; margin-bottom:5px;">⚡ 원클릭 입력 (터치하면 선박명이 자동 입력됩니다)</div>'
+        + row("⚓ 입항:", live, 0, "background:#fff7ed; border-color:#fdba74; color:#c2410c;")
+        + row("🕘 내 기록:", mine, live.length, "background:#f0fdf4; border-color:#86efac; color:#15803d;");
+}
+function findDuplicateShip(name) {
+    const key = shipNameKey(name);
+    if (!key) return null;
+    return (Array.isArray(allShipsData) ? allShipsData : []).find(s => shipNameKey(s.shipName) === key) || null;
+}
+function openShipForm() {
+    const form = document.getElementById("shipForm");
+    if (!form) return;
+    const willOpen = form.classList.contains("hidden");
+    toggleHidden("shipForm");
+    if (!willOpen) return;
+    renderShipFormQuickChips();
+    form.scrollIntoView({ behavior: "smooth", block: "center" });
+    const now = new Date();
+    const ym = now.getFullYear() + "-" + String(now.getMonth() + 1).padStart(2, "0");
+    if ((!(hjncScheduleMonthCache[ym] || []).length) && typeof fetchHjncScheduleForMonth === "function") {
+        fetchHjncScheduleForMonth(ym).then(() => renderShipFormQuickChips()).catch(() => {});
+    }
+}
+function startShipNameVoiceInput() {
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SR) { alert("이 브라우저는 음성 입력을 지원하지 않습니다.\n(Chrome · 삼성 인터넷 권장)"); return; }
+    try {
+        const rec = new SR();
+        rec.lang = "en-US";
+        rec.interimResults = false;
+        rec.maxAlternatives = 1;
+        rec.onresult = (ev) => {
+            const said = (ev.results[0][0].transcript || "").toUpperCase().replace(/[^A-Z0-9\s\-]/g, "").replace(/\s+/g, " ").trim();
+            const input = document.getElementById("shipName");
+            if (input && said) { input.value = said; renderShipNameSuggestions(); }
+            showToast(said ? "🎤 '" + said + "' 인식 — 후보를 확인하세요" : "🎤 음성을 인식하지 못했습니다");
+        };
+        rec.onerror = () => alert("음성 인식에 실패했습니다. 다시 시도해 주세요.");
+        rec.start();
+        showToast("🎤 선박명을 말씀해 주세요 (영문)");
+    } catch (e) { alert("음성 입력을 시작할 수 없습니다."); }
+}
+async function addShipInfo() {
+    const n = normalizeShipName(document.getElementById('shipName').value);
     const c = document.getElementById('shipOnboard').value.trim();
     const p = document.getElementById('shipPw').value.trim();
     const diff = parseInt(document.getElementById('shipDifficultyInput')?.value || '3', 10) || 3;
@@ -4153,6 +4395,15 @@ function addShipInfo() {
     const f = document.getElementById('shipFileInput').files[0];
     const btn = document.getElementById('shipSubmitBtn');
     if (!n || !p) return alert("선박명과 비밀번호는 필수입니다!");
+    const dup = findDuplicateShip(n);
+    if (dup && dup.id !== currentEditShipId) {
+        const goEdit = confirm("이미 등록된 선박입니다.\n\n· 입력: " + n + "\n· 등록: " + dup.shipName + "\n\n기존 정보를 수정하시겠습니까?\n(취소를 누르면 새 항목으로 등록을 계속합니다)");
+        if (goEdit) {
+            hideShipNameSuggestions();
+            tryEditShip(dup.id, dup.shipName, dup.onboardFeat || "", dup.password);
+            return;
+        }
+    }
     btn.innerText = "서버 기록 중...";
     btn.disabled = true;
     const finalizeSave = (url) => {
@@ -4199,6 +4450,8 @@ async function tryEditShip(id, name, feat, savedPw) {
 }
 function startEditShip(id, name, feat) {
     currentEditShipId = id;
+    hideShipNameSuggestions();
+    renderShipFormQuickChips();
     const shipObj = allShipsData.find(s => s.id === id) || {};
     document.getElementById('shipName').value = name;
     document.getElementById('shipOnboard').value = feat;
