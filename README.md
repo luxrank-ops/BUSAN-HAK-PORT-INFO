@@ -83,7 +83,7 @@ firebase deploy --only hosting --project busan-hak-port
 - 관리자 기능, 게시글, 근무일지, 자료실 업로드는 Firestore 기반으로 동작합니다.
 
 ## 연락처
-
+- 이름 : 이춘학
 - 이메일: luxrank@gmail.com
 - 문자: 010-2846-8906
 
