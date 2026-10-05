@@ -7,16 +7,25 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
-const PORT = 3000;
+const PORT = Number.parseInt(process.env.PORT || '3000', 10);
 
-const hjncAgent = new https.Agent({ rejectUnauthorized: false });
+// 외부 터미널 요청도 기본 TLS 인증서 검증을 사용합니다.
+const httpsAgent = new https.Agent({ rejectUnauthorized: true });
+
+app.disable('x-powered-by');
+app.use((_req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  next();
+});
 
 function httpsGetBuffer(url: string, headers: Record<string, string> = {}): Promise<{ statusCode: number; headers: Record<string, any>; body: string }> {
   return new Promise((resolve, reject) => {
     const req = https.get(
       url,
       {
-        agent: hjncAgent,
+        agent: httpsAgent,
         headers: {
           'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
           ...headers
@@ -89,15 +98,15 @@ function httpRequestText(
         urlStr,
         {
           method: options.method || 'GET',
-          agent: isHttps ? hjncAgent : undefined,
+          agent: isHttps ? httpsAgent : undefined,
           headers: {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
             ...(options.headers || {})
           }
         },
-        (res) => {
+        (res: import('http').IncomingMessage) => {
           const chunks: Buffer[] = [];
-          res.on('data', (c) => chunks.push(Buffer.from(c)));
+          res.on('data', (chunk: Buffer | string) => chunks.push(Buffer.from(chunk)));
           res.on('end', () => {
             const buf = Buffer.concat(chunks);
             let text = '';

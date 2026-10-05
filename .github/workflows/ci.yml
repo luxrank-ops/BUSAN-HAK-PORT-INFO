@@ -1,0 +1,40 @@
+name: 코드 품질 검사
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+      - "arena/**"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    name: 빌드 및 검증
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: 소스 코드 받기
+        uses: actions/checkout@v4
+
+      - name: Node.js 설정
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: 의존성 설치
+        run: npm ci
+
+      - name: 품질 검사
+        run: npm run check
+
+      - name: Firebase CLI 확인
+        run: npx --yes firebase-tools@15.3.1 --version

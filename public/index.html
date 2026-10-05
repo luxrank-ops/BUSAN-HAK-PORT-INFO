@@ -2836,7 +2836,8 @@ async function fetchHjncScheduleForMonth(yearMonth, forceRefresh = false, termin
                 signal: controller.signal
             });
             clearTimeout(timer);
-            if (res.ok) {
+            const contentType = res.headers.get("content-type") || "";
+            if (res.ok && contentType.includes("application/json")) {
                 const json = await res.json();
                 if (json && Array.isArray(json.vessels) && json.vessels.length > 0) {
                     const slim = json.vessels.map(v => ({
