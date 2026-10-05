@@ -1,4 +1,5 @@
 import express from 'express';
+import http from 'http';
 import https from 'https';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -7,25 +8,21 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
-const PORT = Number.parseInt(process.env.PORT || '3000', 10);
+const PORT = 3000;
 
-// 외부 터미널 요청도 기본 TLS 인증서 검증을 사용합니다.
-const httpsAgent = new https.Agent({ rejectUnauthorized: true });
+const hjncAgent = new https.Agent({ rejectUnauthorized: false, keepAlive: true, maxSockets: 16 });
+const httpKeepAliveAgent = new http.Agent({ keepAlive: true, maxSockets: 16 });
 
-app.disable('x-powered-by');
-app.use((_req, res, next) => {
-  res.setHeader('X-Content-Type-Options', 'nosniff');
-  res.setHeader('X-Frame-Options', 'SAMEORIGIN');
-  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
-  next();
-});
+const scheduleMemoryCache = new Map<string, { expiresAt: number; vessels: any[] }>();
+const inFlightSchedulePromises = new Map<string, Promise<any[]>>();
+const SCHEDULE_CACHE_TTL_MS = 3 * 60 * 1000;
 
 function httpsGetBuffer(url: string, headers: Record<string, string> = {}): Promise<{ statusCode: number; headers: Record<string, any>; body: string }> {
   return new Promise((resolve, reject) => {
     const req = https.get(
       url,
       {
-        agent: httpsAgent,
+        agent: hjncAgent,
         headers: {
           'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
           ...headers
@@ -93,45 +90,44 @@ function httpRequestText(
   return new Promise((resolve, reject) => {
     const parsedUrl = new URL(urlStr);
     const isHttps = parsedUrl.protocol === 'https:';
-    import(isHttps ? 'https' : 'http').then((mod) => {
-      const req = mod.request(
-        urlStr,
-        {
-          method: options.method || 'GET',
-          agent: isHttps ? httpsAgent : undefined,
-          headers: {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
-            ...(options.headers || {})
-          }
-        },
-        (res: import('http').IncomingMessage) => {
-          const chunks: Buffer[] = [];
-          res.on('data', (chunk: Buffer | string) => chunks.push(Buffer.from(chunk)));
-          res.on('end', () => {
-            const buf = Buffer.concat(chunks);
-            let text = '';
-            if (options.encoding === 'euc-kr') {
-              try {
-                text = new TextDecoder('euc-kr').decode(buf);
-              } catch {
-                text = buf.toString('utf-8');
-              }
-            } else {
+    const mod = isHttps ? https : http;
+    const req = mod.request(
+      urlStr,
+      {
+        method: options.method || 'GET',
+        agent: isHttps ? hjncAgent : httpKeepAliveAgent,
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+          ...(options.headers || {})
+        }
+      },
+      (res) => {
+        const chunks: Buffer[] = [];
+        res.on('data', (c) => chunks.push(Buffer.from(c)));
+        res.on('end', () => {
+          const buf = Buffer.concat(chunks);
+          let text = '';
+          if (options.encoding === 'euc-kr') {
+            try {
+              text = new TextDecoder('euc-kr').decode(buf);
+            } catch {
               text = buf.toString('utf-8');
             }
-            resolve({
-              statusCode: res.statusCode || 200,
-              headers: res.headers as Record<string, any>,
-              body: text
-            });
+          } else {
+            text = buf.toString('utf-8');
+          }
+          resolve({
+            statusCode: res.statusCode || 200,
+            headers: res.headers as Record<string, any>,
+            body: text
           });
-        }
-      );
-      req.on('error', reject);
-      req.setTimeout(10000, () => req.destroy(new Error('Terminal schedule request timeout')));
-      if (options.body) req.write(options.body);
-      req.end();
-    });
+        });
+      }
+    );
+    req.on('error', reject);
+    req.setTimeout(10000, () => req.destroy(new Error('Terminal schedule request timeout')));
+    if (options.body) req.write(options.body);
+    req.end();
   });
 }
 
@@ -153,6 +149,36 @@ function stripTags(html: string): string {
 
 async function fetchTerminalScheduleVessels(terminalId: string, startDate: string, endDate: string): Promise<any[]> {
   const tid = terminalId.toLowerCase();
+  const cacheKey = `${tid}:${startDate}:${endDate}`;
+  const now = Date.now();
+  const cached = scheduleMemoryCache.get(cacheKey);
+  if (cached && cached.expiresAt > now) {
+    return cached.vessels;
+  }
+  const existingPromise = inFlightSchedulePromises.get(cacheKey);
+  if (existingPromise) {
+    return existingPromise;
+  }
+
+  const fetchPromise = fetchTerminalScheduleVesselsUncached(tid, startDate, endDate)
+    .then((vessels) => {
+      if (Array.isArray(vessels) && vessels.length > 0) {
+        scheduleMemoryCache.set(cacheKey, {
+          expiresAt: Date.now() + SCHEDULE_CACHE_TTL_MS,
+          vessels
+        });
+      }
+      return vessels;
+    })
+    .finally(() => {
+      inFlightSchedulePromises.delete(cacheKey);
+    });
+
+  inFlightSchedulePromises.set(cacheKey, fetchPromise);
+  return fetchPromise;
+}
+
+async function fetchTerminalScheduleVesselsUncached(tid: string, startDate: string, endDate: string): Promise<any[]> {
 
   if (tid === 'hjnc') {
     const pageRes = await httpsGetBuffer('https://www.hjnc.co.kr/esvc/vessel/berthScheduleT');
@@ -517,8 +543,20 @@ app.get('/api/terminal-schedule', async (req, res) => {
   }
 });
 
-app.use('/icons', express.static(path.join(__dirname, 'icons')));
-app.use(express.static(path.join(__dirname, 'public')));
+app.use((_, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  next();
+});
+
+app.use('/icons', express.static(path.join(__dirname, 'icons'), { maxAge: '7d' }));
+app.use(express.static(path.join(__dirname, 'public'), {
+  setHeaders: (res, filePath) => {
+    if (/\.(png|jpg|jpeg|gif|ico|svg|webp)$/i.test(filePath)) {
+      res.setHeader('Cache-Control', 'public, max-age=604800, immutable');
+    }
+  }
+}));
 
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));

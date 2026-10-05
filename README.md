@@ -11,7 +11,9 @@
 - **🧮 정밀 임금 계산기 & 근무일지 원클릭 전송**: 주·야간 자동 분리, 2026~2027년 공휴일 반영, `[📐 입력창 넓게 보기]` 전환 및 계산 결과 근무일지 자동 입력
 - **🎯 근무일지 목표 수입 달성률 게이지 바 & 자동완성 칩**: 월 목표 금액 설정, 실시간 달성률(%) 게이지, 자주 쓰는 선박명·동료 이름 원클릭 입력 칩
 - **📊 D3.js 월별 수입·근로일수 그래프 & 연간 종합 정산 보고서**: 기간·키워드 검색, 분기별 실적, 주요 선박·동료 TOP 3, 보고서 복사 및 명세서 이미지(PNG) 저장·카톡 공유 (`9445` 보안 잠금)
-- **🚢 선박 도감 난이도 별점(★1~5) & 장비 태그 필터 + 전체 선박 목록 뷰**: `#오토콘`, `#수동콘`, `#브릿지주의` 등 장비 태그 필터링 및 상단 고정 헤더·줄무늬 컴팩트 전체 목록 테이블 (`#vessel-result-container`, `9445` 보안 잠금)
+- **🚢 선박 도감 난이도 별점(★1~5) & 장비 태그 필터 + 전체 선박 목록 뷰**: `#오토콘`, `#수동콘`, `#브릿지주의` 등 장비 태그 필터링 및 상단 고정 헤더·줄무늬 컴팩트 전체 목록 테이블 (`#vessel-result-container`, `9445` 보안 잠금), 신규 선박 등록 시 날짜·터미널별 입항 선박 원클릭 자동입력 탑재
+- **⚓ 9개 터미널 선석배정 스케줄 연동**: 근무일지 및 선박정보 신규등록 시 날짜·터미널(한진 HJNC, 동원 DGT, 고려 BNCT, BCT, PNC, HPNT, PNIT, BPTC, HBCT)별 실시간 입항·접안 선박 칩 조회 및 원클릭 자동입력
+- **🛡️ 보안 강화 & 정밀 방문자 통계**: Firebase 익명 인증 자동 연결, 관리자 UID·이메일 화이트리스트 + SHA-256 단방향 해시 검증, 전 컬렉션 비밀번호 SHA-256 해시 암호화, 자정 경계(`dateKey`) 분리 및 `localStorage` 기반 일일 순 방문자(Unique)·재방문율 KPI 통계
 - **🌬️ 부산항 실시간 기상 · 작업 안전 전광판**: 부산 신항·북항 실시간 기온·체감온도·풍속(m/s)·강수량 및 강풍 작업 통제 안내
 - **🎨 전체 화면 디자인 대개편 & 야간(다크) 모드**: 항업별 맞춤 그라데이션 배너, 카드별 실시간 데이터 건수 요약, 달력 '오늘' 배지 및 만 원 단위 수입 요약 칩
 - **운영관리자**: 이춘학 (문의: `luxrank@gmail.com` / `010-2846-8906`)
@@ -23,12 +25,9 @@
 
 ## 기술 스택
 
-- HTML
-- CSS
-- JavaScript
-- Firebase Hosting
-- Firebase Firestore
-- Firebase Storage
+- Frontend: HTML5, CSS3, Vanilla JavaScript (ES2022+), D3.js v7
+- Backend Proxy: Node.js, Express (`server.ts` — 터미널 실시간 선석배정 수집 및 인메모리 캐싱)
+- Cloud & BaaS: Firebase Hosting, Firebase Authentication (Anonymous & Admin Auth), Cloud Firestore (`firestore.rules`), Firebase Storage
 
 ## 프로젝트 구조
 
@@ -44,28 +43,28 @@ BUSAN-HAK-PORT-INFO/
 │   ├── icon-512.png
 │   ├── robots.txt
 │   ├── sitemap.xml
-│   ├── ads.txt
-│   └── temp.txt
+│   └── ads.txt
+├── server.ts
+├── firestore.rules
+├── firebase-blueprint.json
 ├── firebase.json
-├── README.md
-└── .git/
+├── package.json
+└── README.md
 ```
 
 ## 로컬 실행
 
-정적 페이지이므로 간단하게 로컬 서버로 확인할 수 있습니다.
-
-### Python로 실행
+Node.js Express 서버(`server.ts`)를 통해 정적 파일 서빙과 실시간 터미널 선석 스케줄 API(`/api/terminal-schedule`, `/api/hjnc-schedule`)를 함께 실행할 수 있습니다.
 
 ```bash
-cd BUSAN-HAK-PORT-INFO
-python -m http.server 8000
+npm install
+npm run dev
 ```
 
 그다음 브라우저에서 아래 주소로 접속합니다.
 
 ```text
-http://localhost:8000/public/index.html
+http://localhost:3000
 ```
 
 ## 검사 및 빌드

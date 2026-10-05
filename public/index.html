@@ -432,14 +432,14 @@
             </div>
             <div class="dash-content" style="display:none; border-top: 2px dashed var(--primary);">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; gap:6px; flex-wrap:wrap;">
-                    <span style="font-size:0.78rem; font-weight:800; color:var(--text-sub);">💡 직종 선택 후 시작·종료 블록을 터치해 날짜·시간을 설정하세요</span>
+                    <span style="font-size:0.78rem; font-weight:800; color:var(--text-sub);">💡 직종 선택 후 시작·종료 블록을 터치해 날짜·시간을 설정하세요.</span>
                     <button type="button" id="wageLayoutToggleBtn" onclick="toggleWageLayoutMode()" style="background:#eff6ff; color:#1d4ed8; border:1.5px solid #93c5fd; border-radius:8px; padding:4px 10px; font-size:0.75rem; font-weight:900; cursor:pointer;">📐 입력창 넓게 보기</button>
                 </div>
                 <div class="role-selector" style="border: 2px solid #cbd5e1; padding: 6px; background: rgba(10,27,63,0.03); border-radius: 12px; margin-bottom: 15px;">
                     <input type="radio" id="role-main" name="workRole" value="main" checked>
                     <label for="role-main" style="font-size: 1.15rem; font-weight: 900; padding: 14px 4px; border-radius: 8px;">🚢 본선</label>
                     <input type="radio" id="role-skilled" name="workRole" value="skilled">
-                    <label for="role-skilled" style="font-size: 1.15rem; font-weight: 900; padding: 14px 4px; border-radius: 8px;">🔧 기능공(수당자동적용)</label>
+                    <label for="role-skilled" style="font-size: 1.15rem; font-weight: 900; padding: 14px 4px; border-radius: 8px;">🔧 기능공 (수당 자동 적용)</label>
                     <input type="radio" id="role-onshore" name="workRole" value="onshore">
                     <label for="role-onshore" style="font-size: 1.15rem; font-weight: 900; padding: 14px 4px; border-radius: 8px;">🚛 육상</label>
                 </div>
@@ -475,8 +475,8 @@
                             <button type="button" class="action-btn" style="background:var(--primary); padding:10px; margin:0; font-size:1rem; border: 2px solid #1e3a8a;" onclick="calcTimeAndFill()">⏱️ 시간 설정 완료</button>
                         </div>
                         <div class="wage-row" style="flex-direction: row !important; align-items: center !important; flex-wrap: nowrap !important;">
-                            <label style="min-width: 70px; font-weight:900; margin-bottom: 0 !important;">⏳ 총근무</label>
-                            <input type="number" id="wageTotalHours" class="input-field" placeholder="자동계산됨" style="flex: 1; min-width: 0; text-align:right; font-weight:900; color:var(--primary); border: 2px solid #cbd5e1;">
+                            <label style="min-width: 70px; font-weight:900; margin-bottom: 0 !important;">⏳ 총 근무</label>
+                            <input type="number" id="wageTotalHours" class="input-field" placeholder="자동 계산됨" style="flex: 1; min-width: 0; text-align:right; font-weight:900; color:var(--primary); border: 2px solid #cbd5e1;">
                         </div>
                     </div>
                     <div class="calc-right">
@@ -494,7 +494,7 @@
                     <p style="font-size:0.95rem; color:var(--primary); font-weight:900; margin-bottom:10px;">✅ 추가 수당 시간 입력</p>
                     <div class="allowance-grid" style="display: grid !important; grid-template-columns: repeat(2, 1fr) !important; gap: 8px !important;">
                         <div class="wage-row" style="margin-bottom: 0 !important;"><label style="margin-bottom:2px;">지게차</label><input type="number" id="wageHoliday" class="input-field" placeholder="H" style="border: 2px solid #cbd5e1;"></div>
-                        <div class="wage-row" style="margin-bottom: 0 !important;"><label style="margin-bottom:2px;">특별수당</label><input type="number" id="wageWeekend" class="input-field" placeholder="H" style="border: 2px solid #cbd5e1;"></div>
+                        <div class="wage-row" style="margin-bottom: 0 !important;"><label style="margin-bottom:2px;">특별 수당</label><input type="number" id="wageWeekend" class="input-field" placeholder="H" style="border: 2px solid #cbd5e1;"></div>
                         <div class="wage-row" style="margin-bottom: 0 !important;"><label style="margin-bottom:2px;">우천</label><input type="number" id="wageRain" class="input-field" placeholder="H" style="border: 2px solid #cbd5e1;"></div>
                         <div class="wage-row" style="margin-bottom: 0 !important;"><label style="margin-bottom:2px;">혹서기(30%)</label><input type="number" id="wageHotTime" class="input-field" placeholder="H" style="border: 2px solid #cbd5e1;"></div>
                     </div>
@@ -502,7 +502,7 @@
                 <select id="wageTaxType" class="input-field" style="margin-top:8px; text-align:center; border: 2px solid #cbd5e1; font-weight: 900;">
                     <option value="0">공제 없음 (0%)</option>
                     <option value="0.033">프리랜서 (3.3%)</option>
-                    <option value="0.094">4대보험 (9.4%)</option>
+                    <option value="0.094">4대 보험 (9.4%)</option>
                 </select>
                 <div style="display:flex; gap:10px; margin-top:15px;">
                     <button class="action-btn bg-calc" style="flex:2; border: 2px solid var(--primary);" onclick="calculateWage()">내역서 생성 및 계산</button>
@@ -515,7 +515,7 @@
                     <button type="button" class="action-btn bg-submit send-log-sparkle-btn" style="margin-top:12px; padding:12px; font-size:0.95rem;" onclick="sendCalculatedWageToLog()">✨ 📅 이 계산 결과를 근무일지로 보내기 ✨</button>
                     <div id="wageReceiptLockBanner" onclick="openWorkLogPinModal()" style="cursor:pointer; margin-top:8px; background:linear-gradient(135deg, #f5f3ff, #ede9fe); border:1.5px solid #c4b5fd; border-radius:8px; padding:9px 11px; display:flex; justify-content:space-between; align-items:center;">
                         <span style="font-size:0.8rem; font-weight:900; color:#5b21b6;">🔒 🧾 임금 산정 내역서 이미지 저장 · 공유 (잠김)</span>
-                        <span style="background:#6d28d9; color:white; font-size:0.72rem; font-weight:800; padding:3px 9px; border-radius:6px;">비번 해제</span>
+                        <span style="background:#6d28d9; color:white; font-size:0.72rem; font-weight:800; padding:3px 9px; border-radius:6px;">비밀번호 해제</span>
                     </div>
                     <div id="wageReceiptShareActions" class="hidden" style="display:flex; gap:6px; margin-top:8px;">
                         <button type="button" class="action-btn" style="flex:1; margin:0; padding:10px 6px; font-size:0.84rem; background:#4f46e5;" onclick="saveReceiptImage('wage')">📸 내역서 이미지 저장</button>
@@ -541,7 +541,7 @@
                 <div class="log-filter-box" style="position:relative;">
                     <div id="logExtraLockBanner" onclick="openWorkLogPinModal()" style="cursor:pointer; background:linear-gradient(135deg, #eff6ff, #dbeafe); border:1.5px solid #93c5fd; border-radius:8px; padding:10px 12px; display:flex; justify-content:space-between; align-items:center;">
                         <span style="font-size:0.85rem; font-weight:900; color:var(--primary);">🔒 기간·키워드 검색 및 상세 정산 통계 (잠김)</span>
-                        <span style="background:var(--primary); color:white; font-size:0.75rem; font-weight:800; padding:4px 10px; border-radius:6px;">비번 해제</span>
+                        <span style="background:var(--primary); color:white; font-size:0.75rem; font-weight:800; padding:4px 10px; border-radius:6px;">비밀번호 해제</span>
                     </div>
                     <div id="logExtraFilterContent" class="hidden">
                         <div style="font-size:0.85rem; font-weight:900; color:var(--primary); margin-bottom:6px; display:flex; justify-content:space-between; align-items:center;">
@@ -554,8 +554,8 @@
                             <input type="date" id="logFilterEndDate" class="input-field" style="flex:1; height:36px; font-size:0.82rem; padding:0 6px; text-align:center;" onclick="openDatePicker('logFilterEndDate', event)" onchange="applyWorkLogFilter()">
                         </div>
                         <div style="display:flex; gap:6px;">
-                            <input type="text" id="logFilterKeyword" class="input-field" placeholder="배이름, 근무자, 메모 검색..." style="flex:1; height:38px; font-size:0.88rem; text-align:left; padding:0 10px;" oninput="applyWorkLogFilter()" onkeydown="if(event.key==='Enter'){event.preventDefault();searchWorkLogsRange();}">
-                            <button type="button" class="action-btn" style="width:auto; margin:0; padding:0 14px; height:38px; font-size:0.85rem;" onclick="searchWorkLogsRange()">기간조회</button>
+                            <input type="text" id="logFilterKeyword" class="input-field" placeholder="배 이름, 근무자, 메모 검색..." style="flex:1; height:38px; font-size:0.88rem; text-align:left; padding:0 10px;" oninput="applyWorkLogFilter()" onkeydown="if(event.key==='Enter'){event.preventDefault();searchWorkLogsRange();}">
+                            <button type="button" class="action-btn" style="width:auto; margin:0; padding:0 14px; height:38px; font-size:0.85rem;" onclick="searchWorkLogsRange()">기간 조회</button>
                         </div>
                         <div id="logFilterResults" class="log-filter-results hidden"></div>
                     </div>
@@ -569,10 +569,10 @@
                     <div style="color:#ef4444;">일</div><div>월</div><div>화</div><div>수</div><div>목</div><div>금</div><div style="color:#3b82f6;">토</div>
                 </div>
                 <div id="calendarGrid" class="calendar-grid"></div>
-                <button class="action-btn" style="background:#10b981; margin-top:20px; margin-bottom:10px;" onclick="downloadWorkLogsExcel()">📊 한달 기록 엑셀 저장 (CSV)</button>
+                <button class="action-btn" style="background:#10b981; margin-top:20px; margin-bottom:10px;" onclick="downloadWorkLogsExcel()">📊 한 달 기록 엑셀 저장 (CSV)</button>
                 <div id="dailyLogForm" class="hidden" style="margin-top:20px; padding:15px; background:rgba(0,0,0,0.03); border-radius:12px; border:1px solid var(--border);">
                     <h4 id="selectedDateText" style="margin:0 0 10px 0; color:var(--primary); text-align:center; font-size:1.15rem; font-weight:900;"></h4>
-                    <div class="wage-row" style="margin-bottom:4px;"><label>배이름</label><input type="text" id="logShipName" class="input-field" placeholder="작업 선박명"></div>
+                    <div class="wage-row" style="margin-bottom:4px;"><label>배 이름</label><input type="text" id="logShipName" class="input-field" placeholder="작업 선박명"></div>
                     <div id="hjncScheduledShipBox" class="hjnc-schedule-box">
                         <div class="hjnc-schedule-header">
                             <span id="hjncScheduleBoxTitle" style="font-size:0.76rem; font-weight:900; color:#c2410c;">⚓ 터미널별 당일 입항·접안 선박</span>
@@ -587,8 +587,8 @@
                     </div>
                     <div id="quickShipChipRow" class="quick-chip-row"></div>
                     <div style="display:flex; gap:10px; margin-bottom:8px; width:100%;">
-                        <div class="wage-row" style="flex:1; margin-bottom:0;"><label>임금1</label><input type="number" id="logWage1" class="input-field" placeholder="원"></div>
-                        <div class="wage-row" style="flex:1; margin-bottom:0;"><label>임금2</label><input type="number" id="logWage2" class="input-field" placeholder="원"></div>
+                        <div class="wage-row" style="flex:1; margin-bottom:0;"><label>임금 1</label><input type="number" id="logWage1" class="input-field" placeholder="원"></div>
+                        <div class="wage-row" style="flex:1; margin-bottom:0;"><label>임금 2</label><input type="number" id="logWage2" class="input-field" placeholder="원"></div>
                     </div>
                     <div class="wage-row" style="margin-bottom:4px;"><label>근무자</label><input type="text" id="logCoworkers" class="input-field" placeholder="예: 재경, 성철 (2~4명)"></div>
                     <div id="quickCoworkerChipRow" class="quick-chip-row"></div>
@@ -602,14 +602,14 @@
                     </div>
                 </div>
                 <div id="monthlyStatsSummary" class="hidden" style="display:grid; grid-template-columns: repeat(3, 1fr); gap:6px; margin-top:20px; border-top:1px dashed var(--border); padding-top:15px; text-align:center;">
-                    <div style="background:rgba(10,27,63,0.04); padding:8px 4px; border-radius:8px; border:1px solid var(--border);"><div style="font-size:0.72rem; color:var(--text-sub); font-weight:800;">출근일수</div><div id="monthlyWorkDays" style="font-size:1rem; font-weight:900; color:var(--primary); margin-top:2px;">0일</div></div>
+                    <div style="background:rgba(10,27,63,0.04); padding:8px 4px; border-radius:8px; border:1px solid var(--border);"><div style="font-size:0.72rem; color:var(--text-sub); font-weight:800;">출근 일수</div><div id="monthlyWorkDays" style="font-size:1rem; font-weight:900; color:var(--primary); margin-top:2px;">0일</div></div>
                     <div style="background:rgba(59,130,246,0.06); padding:8px 4px; border-radius:8px; border:1px solid var(--border);"><div style="font-size:0.72rem; color:var(--text-sub); font-weight:800;">일평균 수입</div><div id="monthlyAvgPay" style="font-size:1rem; font-weight:900; color:#2563eb; margin-top:2px;">0원</div></div>
-                    <div style="background:rgba(16,185,129,0.08); padding:8px 4px; border-radius:8px; border:1px solid var(--border);"><div style="font-size:0.72rem; color:var(--text-sub); font-weight:800;">임금1 / 임금2</div><div id="monthlySplitPay" style="font-size:0.78rem; font-weight:900; color:#047857; margin-top:4px;">0 / 0</div></div>
+                    <div style="background:rgba(16,185,129,0.08); padding:8px 4px; border-radius:8px; border:1px solid var(--border);"><div style="font-size:0.72rem; color:var(--text-sub); font-weight:800;">임금 1 / 임금 2</div><div id="monthlySplitPay" style="font-size:0.78rem; font-weight:900; color:#047857; margin-top:4px;">0 / 0</div></div>
                 </div>
-                <div id="monthlyTotalDisplay" style="text-align:center; margin-top:10px; font-weight:900; color:var(--primary); font-size:1.25rem; background:rgba(10,27,63,0.03); padding:12px; border-radius:10px; border:1.5px solid var(--primary);">이번달 총액: 0원</div>
+                <div id="monthlyTotalDisplay" style="text-align:center; margin-top:10px; font-weight:900; color:var(--primary); font-size:1.25rem; background:rgba(10,27,63,0.03); padding:12px; border-radius:10px; border:1.5px solid var(--primary);">이번 달 총액: 0원</div>
                 <div id="monthlyGoalLockBanner" onclick="openWorkLogPinModal()" style="cursor:pointer; margin-top:10px; background:linear-gradient(135deg, #eff6ff, #e0f2fe); border:1.5px solid #7dd3fc; border-radius:10px; padding:10px 12px; display:flex; justify-content:space-between; align-items:center;">
                     <span style="font-size:0.84rem; font-weight:900; color:#0369a1;">🔒 🎯 이번 달 목표 수입 달성률 게이지 (잠김)</span>
-                    <span style="background:#0284c7; color:white; font-size:0.74rem; font-weight:800; padding:4px 10px; border-radius:6px;">비번 해제</span>
+                    <span style="background:#0284c7; color:white; font-size:0.74rem; font-weight:800; padding:4px 10px; border-radius:6px;">비밀번호 해제</span>
                 </div>
                 <div id="monthlyGoalGaugeBox" class="goal-gauge-box hidden">
                     <div style="display:flex; justify-content:space-between; align-items:center; gap:6px; flex-wrap:wrap;">
@@ -629,7 +629,7 @@
                 </div>
                 <div id="monthlyReceiptLockBanner" onclick="openWorkLogPinModal()" style="cursor:pointer; margin-top:10px; background:linear-gradient(135deg, #f5f3ff, #ede9fe); border:1.5px solid #c4b5fd; border-radius:10px; padding:10px 12px; display:flex; justify-content:space-between; align-items:center;">
                     <span style="font-size:0.84rem; font-weight:900; color:#5b21b6;">🔒 🧾 이번 달 정산 요약표 이미지 캡처 · 공유 (잠김)</span>
-                    <span style="background:#6d28d9; color:white; font-size:0.74rem; font-weight:800; padding:4px 10px; border-radius:6px;">비번 해제</span>
+                    <span style="background:#6d28d9; color:white; font-size:0.74rem; font-weight:800; padding:4px 10px; border-radius:6px;">비밀번호 해제</span>
                 </div>
                 <div id="monthlyReceiptShareSection" class="hidden" style="display:flex; gap:6px; margin-top:10px;">
                     <button type="button" class="action-btn" style="flex:1; margin:0; padding:10px 6px; font-size:0.84rem; background:#4f46e5;" onclick="saveReceiptImage('monthly')">📸 월간 정산표 이미지 저장</button>
@@ -637,13 +637,13 @@
                 </div>
                 <div id="d3ChartLockBanner" onclick="openWorkLogPinModal()" style="cursor:pointer; margin-top:12px; background:linear-gradient(135deg, #f0fdf4, #dcfce7); border:1.5px solid #86efac; border-radius:10px; padding:11px 12px; display:flex; justify-content:space-between; align-items:center;">
                     <span style="font-size:0.85rem; font-weight:900; color:#166534;">📊 월별 총수입 · 근로일수 D3.js 그래프 (잠김)</span>
-                    <span style="background:#15803d; color:white; font-size:0.75rem; font-weight:800; padding:4px 10px; border-radius:6px;">비번 해제</span>
+                    <span style="background:#15803d; color:white; font-size:0.75rem; font-weight:800; padding:4px 10px; border-radius:6px;">비밀번호 해제</span>
                 </div>
                 <div id="monthlyD3ChartSection" class="hidden" style="margin-top:12px; background:var(--card-bg); border:1.5px solid var(--primary); border-radius:12px; padding:12px; box-shadow:0 2px 6px rgba(10,27,63,0.06);">
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; flex-wrap:wrap; gap:6px;">
                         <span id="d3ChartYearTitle" style="font-size:0.95rem; font-weight:900; color:var(--primary);">📊 월별 총수입 및 근로일수 추이</span>
                         <div style="display:flex; gap:10px; font-size:0.75rem; font-weight:800;">
-                            <span style="display:inline-flex; align-items:center; gap:4px; color:#1d4ed8;"><span style="width:10px; height:10px; background:#3b82f6; border-radius:2px; display:inline-block;"></span>총수입(만원)</span>
+                            <span style="display:inline-flex; align-items:center; gap:4px; color:#1d4ed8;"><span style="width:10px; height:10px; background:#3b82f6; border-radius:2px; display:inline-block;"></span>총수입(만 원)</span>
                             <span style="display:inline-flex; align-items:center; gap:4px; color:#047857;"><span style="width:10px; height:10px; background:#10b981; border-radius:2px; display:inline-block;"></span>근로일수(일)</span>
                         </div>
                     </div>
@@ -682,14 +682,14 @@
                             <button onclick="openAllBayPlan()" class="terminal-btn" style="width: 100%; margin: 0; background: linear-gradient(135deg, #fdf2f8, #fbcfe8); border: 2px solid #db2777; color: #be185d; font-weight: bold;">🌸 ALL BAY PLAN </button>
                         </div>
                         <div style="grid-column: 1 / -1; margin-top: 5px;">
-                            <button onclick="openHjncMealModal()" class="terminal-btn hjnc-meal-button">✨ 한진식단 ✨</button>
+                            <button onclick="openHjncMealModal()" class="terminal-btn hjnc-meal-button">✨ 한진 식단 ✨</button>
                         </div>
                     </div>
                 </div>
             </div>                 
-            <div class="terminal-block term-theme-bnct"><div class="terminal-header tap-effect" onclick="toggleContent('term-bnct')">부산신항컨테이너 고려 (BNCT) ▼</div><div id="term-bnct" class="terminal-body"><div class="terminal-actions"><a href="https://info.bnctkorea.com/esvc/vessel/berthScheduleT" target="_blank" class="terminal-btn">스케줄</a><a href="https://info.bnctkorea.com/esvc/vessel/berthScheduleG" target="_blank" class="terminal-btn">차트</a><a href="https://info.bnctkorea.com/esvc/vessel/vesselStatus" target="_blank" class="terminal-btn">현황</a></div></div></div>
-            <div class="terminal-block term-theme-dgt"><div class="terminal-header tap-effect" onclick="toggleContent('term-dgt')">동원로엑스 (DGT) ▼</div><div id="term-dgt" class="terminal-body"><div class="terminal-actions"><a href="https://www.dgtbusan.com/DGT/esvc/vessel/berthScheduleT" target="_blank" class="terminal-btn">스케줄</a><a href="https://www.dgtbusan.com/DGT/esvc/vessel/berthScheduleG" target="_blank" class="terminal-btn">차트</a><a href="https://www.dgtbusan.com/DGT/esvc/vessel/vesselStatus" target="_blank" class="terminal-btn">현황</a></div></div></div>
-            <div class="terminal-block term-theme-bct"><div class="terminal-header tap-effect" onclick="toggleContent('term-bct')">부산컨테이너 터미널 (BCT) ▼</div><div id="term-bct" class="terminal-body"><div class="terminal-actions"><a href="https://info.bct2-4.com/infoservice/index.html" target="_blank" class="terminal-btn">스케줄</a><a href="https://info.bct2-4.com/infoservice/index.html" target="_blank" class="terminal-btn">차트</a><a href="https://info.bct2-4.com/infoservice/index.html" target="_blank" class="terminal-btn">현황</a></div></div></div>
+            <div class="terminal-block term-theme-bnct"><div class="terminal-header tap-effect" onclick="toggleContent('term-bnct')">부산신항컨테이너터미널 (BNCT) ▼</div><div id="term-bnct" class="terminal-body"><div class="terminal-actions"><a href="https://info.bnctkorea.com/esvc/vessel/berthScheduleT" target="_blank" class="terminal-btn">스케줄</a><a href="https://info.bnctkorea.com/esvc/vessel/berthScheduleG" target="_blank" class="terminal-btn">차트</a><a href="https://info.bnctkorea.com/esvc/vessel/vesselStatus" target="_blank" class="terminal-btn">현황</a></div></div></div>
+            <div class="terminal-block term-theme-dgt"><div class="terminal-header tap-effect" onclick="toggleContent('term-dgt')">동원글로벌터미널부산 (DGT) ▼</div><div id="term-dgt" class="terminal-body"><div class="terminal-actions"><a href="https://www.dgtbusan.com/DGT/esvc/vessel/berthScheduleT" target="_blank" class="terminal-btn">스케줄</a><a href="https://www.dgtbusan.com/DGT/esvc/vessel/berthScheduleG" target="_blank" class="terminal-btn">차트</a><a href="https://www.dgtbusan.com/DGT/esvc/vessel/vesselStatus" target="_blank" class="terminal-btn">현황</a></div></div></div>
+            <div class="terminal-block term-theme-bct"><div class="terminal-header tap-effect" onclick="toggleContent('term-bct')">부산컨테이너터미널 (BCT) ▼</div><div id="term-bct" class="terminal-body"><div class="terminal-actions"><a href="https://info.bct2-4.com/infoservice/index.html" target="_blank" class="terminal-btn">스케줄</a><a href="https://info.bct2-4.com/infoservice/index.html" target="_blank" class="terminal-btn">차트</a><a href="https://info.bct2-4.com/infoservice/index.html" target="_blank" class="terminal-btn">현황</a></div></div></div>
         </div> 
     </div>
 
@@ -775,7 +775,7 @@
                 <div id="boardForm" class="hidden">
                     <div style="display:flex; gap:5px;">
                         <input type="text" id="inputNick" class="input-field" placeholder="닉네임" style="flex:1;">
-                        <input type="password" id="inputPw" class="input-field" placeholder="비번" style="flex:1;">
+                        <input type="password" id="inputPw" class="input-field" placeholder="비밀번호" style="flex:1;">
                     </div>
                     <input type="text" id="inputTitle" class="input-field" placeholder="제목">
                     <textarea id="inputContent" class="input-field textarea-field" placeholder="내용"></textarea>
@@ -788,8 +788,8 @@
             <div class="dash-header tap-effect" onclick="toggleDashItem('archive-card')" style="flex-direction: row !important; justify-content: flex-start !important; padding: 14px 12px; gap: 10px; min-height: auto;">
                 <span class="dash-icon-badge" style="background: #fefce8; border: 1px solid #fde047;">📂</span>
                 <div style="flex:1; min-width:0;">
-                    <div class="dash-title" style="color: var(--primary); font-size: 0.96rem !important; font-weight: 900; margin: 0; text-align: left; line-height: 1.25;">자료실(셔틀버스시간 등등)</div>
-                    <div id="archiveCardSubMeta" class="dash-sub-meta">터미널 셔틀시간표 · 서식</div>
+                    <div class="dash-title" style="color: var(--primary); font-size: 0.96rem !important; font-weight: 900; margin: 0; text-align: left; line-height: 1.25;">자료실 (셔틀버스 시간표 등)</div>
+                    <div id="archiveCardSubMeta" class="dash-sub-meta">터미널 셔틀 시간표 · 서식</div>
                 </div>
             </div>
             <div class="dash-content">
@@ -812,8 +812,8 @@
             <div class="dash-header tap-effect" onclick="toggleDashItem('ship-card')" style="flex-direction: row !important; justify-content: flex-start !important; padding: 14px 12px; gap: 10px; min-height: auto;">
                 <span class="dash-icon-badge" style="background: #f0f9ff; border: 1px solid #bae6fd;">🚢</span>
                 <div style="flex:1; min-width:0;">
-                    <div class="dash-title" style="color: var(--primary); font-size: 0.96rem !important; font-weight: 900; margin: 0; text-align: left; line-height: 1.25;">선박정보</div>
-                    <div id="shipCardSubMeta" class="dash-sub-meta">난이도 · 필수장비 도감</div>
+                    <div class="dash-title" style="color: var(--primary); font-size: 0.96rem !important; font-weight: 900; margin: 0; text-align: left; line-height: 1.25;">작업선박정보(등록및검색)</div>
+                    <div id="shipCardSubMeta" class="dash-sub-meta">난이도 · 필수 장비 도감</div>
                 </div>
             </div>
             <div class="dash-content">
@@ -822,8 +822,8 @@
                     <button class="action-btn" style="width:auto; padding: 0 15px; margin-top:0;" onclick="filterShips()">🔍</button>
                 </div>
                 <div id="shipExtraLockBanner" onclick="openWorkLogPinModal()" style="cursor:pointer; margin-bottom:10px; background:linear-gradient(135deg, #eff6ff, #dbeafe); border:1.5px solid #93c5fd; border-radius:10px; padding:10px 12px; display:flex; justify-content:space-between; align-items:center;">
-                    <span style="font-size:0.84rem; font-weight:900; color:var(--primary);">🔒 장비태그·난이도 필터 및 전체 선박 도감 뷰 (잠김)</span>
-                    <span style="background:var(--primary); color:white; font-size:0.75rem; font-weight:800; padding:4px 10px; border-radius:6px;">비번 해제</span>
+                    <span style="font-size:0.84rem; font-weight:900; color:var(--primary);">🔒 장비 태그·난이도 필터 및 전체 선박 도감 뷰 (잠김)</span>
+                    <span style="background:var(--primary); color:white; font-size:0.75rem; font-weight:800; padding:4px 10px; border-radius:6px;">비밀번호 해제</span>
                 </div>
                 <div id="shipFilterBarArea" class="ship-filter-bar hidden">
                     <div style="width:100%; display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
@@ -852,7 +852,7 @@
                     <div id="shipFormScheduledBox" class="hjnc-schedule-box" style="margin-bottom:10px;">
                         <div class="hjnc-schedule-header">
                             <div style="display:flex; align-items:center; gap:5px; flex-wrap:wrap;">
-                                <span id="shipFormScheduleTitle" style="font-size:0.75rem; font-weight:900; color:#c2410c;">⚓ 터미널별 입항·접안 선박 빠른선택</span>
+                                <span id="shipFormScheduleTitle" style="font-size:0.75rem; font-weight:900; color:#c2410c;">⚓ 터미널별 입항·접안 선박 빠른 선택</span>
                                 <input type="date" id="shipFormScheduleDate" onclick="openDatePicker('shipFormScheduleDate', event)" onchange="onShipFormScheduleDateChange(this.value)" style="border:1.2px solid #fb923c; border-radius:6px; padding:1px 5px; font-size:0.71rem; font-weight:800; color:#9a3412; background:#fff; cursor:pointer; height:24px;">
                             </div>
                             <div style="display:flex; align-items:center; gap:5px;">
@@ -889,18 +889,18 @@
                             <button type="button" class="ship-tag-chip" data-form-tag="#통로협소" onclick="toggleShipFormTag('#통로협소')">#통로협소</button>
                         </div>
                     </div>
-                    <textarea id="shipOnboard" class="input-field textarea-field" placeholder="작업내용 및 준비 장비 상세 메모"></textarea>
+                    <textarea id="shipOnboard" class="input-field textarea-field" placeholder="작업 내용 및 준비 장비 상세 메모"></textarea>
                     <input type="file" id="shipFileInput" class="input-field">
                     <button id="shipSubmitBtn" class="action-btn bg-submit" onclick="addShipInfo()">등록/수정</button>
                 </div>
                 <table class="board-table" style="margin-top:0;">
-                    <thead><tr><th style="width:10%">No.</th><th style="width:62%">선박명 · 난이도 · 장비태그</th><th style="width:28%">등록일</th></tr></thead>
+                    <thead><tr><th style="width:10%">No.</th><th style="width:62%">선박명 · 난이도 · 장비 태그</th><th style="width:28%">등록일</th></tr></thead>
                     <tbody id="shipList"></tbody>
                 </table>
                 <div id="shipPagination" style="display:flex; justify-content:flex-start; gap:5px; margin-top:10px; margin-bottom:15px; overflow-x:auto; overflow-y:hidden; white-space:nowrap; -webkit-overflow-scrolling:touch; overscroll-behavior-x:contain;"></div>
                 <div id="shipFullListLockBanner" onclick="openWorkLogPinModal()" style="cursor:pointer; margin-top:14px; background:linear-gradient(135deg, #f0fdf4, #dcfce7); border:1.5px solid #86efac; border-radius:10px; padding:11px 12px; display:flex; justify-content:space-between; align-items:center;">
                     <span style="font-size:0.85rem; font-weight:900; color:#166534;">📋 전체 선박 도감 한눈에 보기 · 전체 목록 뷰 (잠김)</span>
-                    <span style="background:#15803d; color:white; font-size:0.75rem; font-weight:800; padding:4px 10px; border-radius:6px;">비번 해제</span>
+                    <span style="background:#15803d; color:white; font-size:0.75rem; font-weight:800; padding:4px 10px; border-radius:6px;">비밀번호 해제</span>
                 </div>
                 <div id="shipFullListSection" class="hidden" style="margin-top:16px; padding-top:14px; border-top:2px dashed var(--border);">
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; flex-wrap:wrap; gap:6px;">
@@ -916,7 +916,7 @@
             <div class="dash-header tap-effect" onclick="toggleDashItem('weather-card')" style="flex-direction: row !important; justify-content: flex-start !important; padding: 14px 12px; gap: 10px; min-height: auto;">
                 <span class="dash-icon-badge" style="background: #ecfeff; border: 1px solid #a5f3fc;">📡</span>
                 <div style="flex:1; min-width:0;">
-                    <div class="dash-title" style="color: var(--primary); font-size: 0.96rem !important; font-weight: 900; margin: 0; text-align: left; line-height: 1.25;">날씨 및 도선상황</div>
+                    <div class="dash-title" style="color: var(--primary); font-size: 0.96rem !important; font-weight: 900; margin: 0; text-align: left; line-height: 1.25;">날씨 및 도선 상황</div>
                     <div id="weatherCardSubMeta" class="dash-sub-meta">신항·북항 풍속 및 도선 현황</div>
                 </div>
             </div>
@@ -940,11 +940,11 @@
                             <div id="weatherNorthPortBadge" style="margin-top:5px; font-size:0.72rem; font-weight:900; display:inline-block; padding:2px 7px; border-radius:12px; background:rgba(16,185,129,0.25); color:#6ee7b7;">확인 중</div>
                         </div>
                     </div>
-                    <div id="weatherUpdatedTimeText" style="font-size:0.7rem; color:#cbd5e1; text-align:right; font-weight:700;">※ 항만안전기준: 순간풍속 10m/s 강풍주의 · 15m/s 고소작업 통제</div>
+                    <div id="weatherUpdatedTimeText" style="font-size:0.7rem; color:#cbd5e1; text-align:right; font-weight:700;">※ 항만 안전 기준: 순간 풍속 10m/s 강풍 주의 · 15m/s 고소 작업 통제</div>
                 </div>
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
                     <a href="http://www.busanpilot.co.kr/popup/monitoring" class="terminal-btn" target="_blank">🛥️ 모니터</a>
-                    <a href="http://www.busanpilot.co.kr/boards/lists/weather" class="terminal-btn" target="_blank">📋 도선상황</a>
+                    <a href="http://www.busanpilot.co.kr/boards/lists/weather" class="terminal-btn" target="_blank">📋 도선 상황</a>
                     <a href="https://weather.naver.com/today/08440585" class="terminal-btn" target="_blank" style="grid-column: 1 / -1; color:var(--danger);">☀️ 실시간 날씨</a>
                 </div>
             </div>
@@ -1000,7 +1000,7 @@
                         <div style="padding: 12px; font-size: 0.85rem;">
                             <ul style="padding-left: 20px; margin: 0;">
                                 <li style="margin-bottom: 6px;"><b>추락 방지 (2m 룰):</b> 해치 커버 및 2단 이상 컨테이너 상부 등 2m 이상의 고소 구역 작업 시 <span style="color:var(--danger); font-weight:bold;">반드시 안전대(Safety Harness)의 죔줄을 튼튼한 구조물에 체결</span>해야 합니다.</li>
-                                <li style="margin-bottom: 6px;"><b>슬립(미끄러짐) 주의:</b> 우천, 결빙, 또는 기름때로 인해 데크(Deck)가 매우 미끄러울 수 있습니다. 라싱바를 들고 이동할 때는 뛰지 않고 보폭을 줄여 걷습니다.</li>
+                                <li style="margin-bottom: 6px;"><b>슬립(미끄러짐) 주의:</b> 우천, 결빙 또는 기름때로 인해 데크(Deck)가 매우 미끄러울 수 있습니다. 라싱바를 들고 이동할 때는 뛰지 않고 보폭을 줄여 걷습니다.</li>
                                 <li style="margin-bottom: 6px;"><b>도구 투척 금지:</b> 트위스트 콘(Twist Cone)이나 턴버클을 위아래로 던져서 주고받는 행위는 절대 금지합니다. (낙하물 타격 사고 예방)</li>
                                 <li><b>2인 1조 작업:</b> 라싱 텐션 조절 및 긴 라싱바 취급 시 근골격계 질환 예방과 시야 확보를 위해 2인 1조로 상호 확인하며 작업합니다.</li>
                             </ul>
@@ -1045,7 +1045,7 @@
                         </ul>
                         <div style="background: white; border: 1px dashed var(--danger); padding: 10px; border-radius: 8px; text-align: center;">
                             <p style="margin: 0; font-weight: 900; font-size: 1.05rem; color: #b91c1c;">☎️ 부산항 24시간 비상 핫라인: 119</p>
-                            <p style="margin: 4px 0 0 0; font-size: 0.8rem; color: var(--text-sub); font-weight: 700;">※ 앱 상단의 [선박정보] 탭에서 해당 터미널 통제실 연락처 확인 가능</p>
+                            <p style="margin: 4px 0 0 0; font-size: 0.8rem; color: var(--text-sub); font-weight: 700;">※ 앱 상단의 [작업선박정보(등록및검색)] 탭에서 해당 터미널 통제실 연락처 확인 가능</p>
                         </div>
                     </div>
                 </div>
@@ -1057,7 +1057,7 @@
                 <span class="dash-icon-badge" style="background: #f3e8ff; border: 1px solid #d8b4fe;">📖</span>
                 <div style="flex:1; min-width:0;">
                     <div class="dash-title" style="color: var(--primary); font-size: 0.96rem !important; font-weight: 900; margin: 0; text-align: left; line-height: 1.25;">현장 실무 용어 가이드</div>
-                    <div class="dash-sub-meta">라싱 · 중장비 · 선박 필수용어</div>
+                    <div class="dash-sub-meta">라싱 · 중장비 · 선박 필수 용어</div>
                 </div>
             </div>
             <div class="dash-content">
@@ -1067,11 +1067,11 @@
                 </div>
                 
                 <div style="display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px;">
-                    <span onclick="filterGuideByCategory('')" style="cursor:pointer; background:var(--primary); color:#ffffff; padding:4px 8px; border-radius:6px; font-size:0.75rem; font-weight:800;">전체보기</span>
+                    <span onclick="filterGuideByCategory('')" style="cursor:pointer; background:var(--primary); color:#ffffff; padding:4px 8px; border-radius:6px; font-size:0.75rem; font-weight:800;">전체 보기</span>
                     <span onclick="filterGuideByCategory('작업·도구')" style="cursor:pointer; background:#e0f2fe; color:#0369a1; padding:4px 8px; border-radius:6px; font-size:0.75rem; font-weight:800;">#작업·도구</span>
                     <span onclick="filterGuideByCategory('중장비')" style="cursor:pointer; background:#f3e8ff; color:#6b21a8; padding:4px 8px; border-radius:6px; font-size:0.75rem; font-weight:800;">#중장비</span>
-                    <span onclick="filterGuideByCategory('선박구조')" style="cursor:pointer; background:#dcfce7; color:#15803d; padding:4px 8px; border-radius:6px; font-size:0.75rem; font-weight:800;">#선박구조</span>
-                    <span onclick="filterGuideByCategory('현장실무')" style="cursor:pointer; background:#ffedd5; color:#c2410c; padding:4px 8px; border-radius:6px; font-size:0.75rem; font-weight:800;">#현장실무</span>
+                    <span onclick="filterGuideByCategory('선박 구조')" style="cursor:pointer; background:#dcfce7; color:#15803d; padding:4px 8px; border-radius:6px; font-size:0.75rem; font-weight:800;">#선박 구조</span>
+                    <span onclick="filterGuideByCategory('현장 실무')" style="cursor:pointer; background:#ffedd5; color:#c2410c; padding:4px 8px; border-radius:6px; font-size:0.75rem; font-weight:800;">#현장 실무</span>
                 </div>
 
                 <div class="guide-container" style="max-height: 550px; overflow-y: auto; background: #fff; border-radius: 8px; border: 1px solid var(--border); box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);">
@@ -1090,7 +1090,7 @@
                                 </td>
                                 <td class="board-title" style="white-space:normal; line-height:1.5; font-weight:600; font-size:0.85rem; padding:12px 8px; border-bottom:1px solid var(--border);">
                                     선박 운항 중 파도로 인한 흔들림을 막기 위해 컨테이너를 라싱바, 턴버클 등으로 단단히 고정하는 핵심 안전 작업.<br>
-                                    <span style="display:inline-block; margin-top:6px; color:#ea580c; font-size:0.75rem; font-weight:800; background:rgba(234,88,12,0.1); padding:4px 6px; border-radius:4px;">💡 실무: 장력이 풀리지 않게 턴버클을 끝까지 쪼아주는 것이 생명.</span>
+                                    <span style="display:inline-block; margin-top:6px; color:#ea580c; font-size:0.75rem; font-weight:800; background:rgba(234,88,12,0.1); padding:4px 6px; border-radius:4px;">💡 실무: 장력이 풀리지 않게 턴버클을 끝까지 조여 주는 것이 생명.</span>
                                 </td>
                             </tr>
                             <tr>
@@ -1099,7 +1099,7 @@
                                     언라싱<br><span style="font-size:0.75rem; color:var(--text-sub);">(Unlashing)</span>
                                 </td>
                                 <td class="board-title" style="white-space:normal; line-height:1.5; font-weight:600; font-size:0.85rem; padding:12px 8px; border-bottom:1px solid var(--border);">
-                                    양하(하역)를 위해 묶여있던 체인, 턴버클, 라싱 장비 등을 해체하는 작업.<br>
+                                    양하(하역)를 위해 묶여 있던 체인, 턴버클, 라싱 장비 등을 해체하는 작업.<br>
                                     <span style="display:inline-block; margin-top:6px; color:#ea580c; font-size:0.75rem; font-weight:800; background:rgba(234,88,12,0.1); padding:4px 6px; border-radius:4px;">💡 실무: 녹이 슨 턴버클은 해체 시 튕길 수 있으니 타격 주의.</span>
                                 </td>
                             </tr>
@@ -1119,7 +1119,7 @@
                                     콘<br><span style="font-size:0.75rem; color:var(--text-sub);">(Twist Cone)</span>
                                 </td>
                                 <td class="board-title" style="white-space:normal; line-height:1.5; font-weight:600; font-size:0.85rem; padding:12px 8px; border-bottom:1px solid var(--border);">
-                                    컨테이너를 상하로 쌓을 때 4모서리(캐스팅)에 끼워 맞물리게 하는 잠금장치.<br>
+                                    컨테이너를 상하로 쌓을 때 네 모서리(코너 캐스팅)에 끼워 맞물리게 하는 잠금장치.<br>
                                     <span style="display:inline-block; margin-top:6px; color:#ea580c; font-size:0.75rem; font-weight:800; background:rgba(234,88,12,0.1); padding:4px 6px; border-radius:4px;">💡 실무: 오토콘(Auto)과 수동콘(Manual) 구분 필수. 던지기 절대 금지.</span>
                                 </td>
                             </tr>
@@ -1130,7 +1130,7 @@
                                 </td>
                                 <td class="board-title" style="white-space:normal; line-height:1.5; font-weight:600; font-size:0.85rem; padding:12px 8px; border-bottom:1px solid var(--border);">
                                     라싱바와 연결하여 길이를 조이거나 늘리며 텐션을 가하는 조절 도구.<br>
-                                    <span style="display:inline-block; margin-top:6px; color:#ea580c; font-size:0.75rem; font-weight:800; background:rgba(234,88,12,0.1); padding:4px 6px; border-radius:4px;">💡 실무: 구리스 도포 불량 시 헛돌 수 있으므로 작업 전 상태 확인.</span>
+                                    <span style="display:inline-block; margin-top:6px; color:#ea580c; font-size:0.75rem; font-weight:800; background:rgba(234,88,12,0.1); padding:4px 6px; border-radius:4px;">💡 실무: 구리스(그리스) 도포 불량 시 헛돌 수 있으므로 작업 전 상태 확인.</span>
                                 </td>
                             </tr>
                             <tr>
@@ -1140,7 +1140,7 @@
                                 </td>
                                 <td class="board-title" style="white-space:normal; line-height:1.5; font-weight:600; font-size:0.85rem; padding:12px 8px; border-bottom:1px solid var(--border);">
                                     갑판 최상단에 적재된 좌우 컨테이너 사이를 가로로 연결해 벌어짐을 방지하는 고정쇠.<br>
-                                    <span style="display:inline-block; margin-top:6px; color:#ea580c; font-size:0.75rem; font-weight:800; background:rgba(234,88,12,0.1); padding:4px 6px; border-radius:4px;">💡 실무: 고소 구역 작업이므로 반드시 안전대(하네스) 체결 후 체결.</span>
+                                    <span style="display:inline-block; margin-top:6px; color:#ea580c; font-size:0.75rem; font-weight:800; background:rgba(234,88,12,0.1); padding:4px 6px; border-radius:4px;">💡 실무: 고소 구역 작업이므로 반드시 안전대(하네스) 체결 후 설치.</span>
                                 </td>
                             </tr>
                             <tr>
@@ -1175,7 +1175,7 @@
                             </tr>
                             <tr>
                                 <td class="board-no" style="font-weight:900; color:var(--text-main); font-size:0.85rem; vertical-align:top; padding-top:12px;">
-                                    <div style="margin-bottom:6px;"><span style="background:#dcfce7; color:#15803d; padding:3px 6px; border-radius:4px; font-size:0.7rem; font-weight:900;">선박구조</span></div>
+                                    <div style="margin-bottom:6px;"><span style="background:#dcfce7; color:#15803d; padding:3px 6px; border-radius:4px; font-size:0.7rem; font-weight:900;">선박 구조</span></div>
                                     베이 플랜<br><span style="font-size:0.75rem; color:var(--text-sub);">(Bay Plan)</span>
                                 </td>
                                 <td class="board-title" style="white-space:normal; line-height:1.5; font-weight:600; font-size:0.85rem; padding:12px 8px; border-bottom:1px solid var(--border);">
@@ -1185,7 +1185,7 @@
                             </tr>
                             <tr>
                                 <td class="board-no" style="font-weight:900; color:var(--text-main); font-size:0.85rem; vertical-align:top; padding-top:12px;">
-                                    <div style="margin-bottom:6px;"><span style="background:#dcfce7; color:#15803d; padding:3px 6px; border-radius:4px; font-size:0.7rem; font-weight:900;">선박구조</span></div>
+                                    <div style="margin-bottom:6px;"><span style="background:#dcfce7; color:#15803d; padding:3px 6px; border-radius:4px; font-size:0.7rem; font-weight:900;">선박 구조</span></div>
                                     티어 / 로우<br><span style="font-size:0.75rem; color:var(--text-sub);">(Tier / Row)</span>
                                 </td>
                                 <td class="board-title" style="white-space:normal; line-height:1.5; font-weight:600; font-size:0.85rem; padding:12px 8px; border-bottom:1px solid var(--border);">
@@ -1195,7 +1195,7 @@
                             </tr>
                             <tr>
                                 <td class="board-no" style="font-weight:900; color:var(--text-main); font-size:0.85rem; vertical-align:top; padding-top:12px;">
-                                    <div style="margin-bottom:6px;"><span style="background:#ffedd5; color:#c2410c; padding:3px 6px; border-radius:4px; font-size:0.7rem; font-weight:900;">현장실무</span></div>
+                                    <div style="margin-bottom:6px;"><span style="background:#ffedd5; color:#c2410c; padding:3px 6px; border-radius:4px; font-size:0.7rem; font-weight:900;">현장 실무</span></div>
                                     갱<br><span style="font-size:0.75rem; color:var(--text-sub);">(Gang)</span>
                                 </td>
                                 <td class="board-title" style="white-space:normal; line-height:1.5; font-weight:600; font-size:0.85rem; padding:12px 8px; border-bottom:1px solid var(--border);">
@@ -1205,7 +1205,7 @@
                             </tr>
                             <tr>
                                 <td class="board-no" style="font-weight:900; color:var(--text-main); font-size:0.85rem; vertical-align:top; padding-top:12px;">
-                                    <div style="margin-bottom:6px;"><span style="background:#ffedd5; color:#c2410c; padding:3px 6px; border-radius:4px; font-size:0.7rem; font-weight:900;">현장실무</span></div>
+                                    <div style="margin-bottom:6px;"><span style="background:#ffedd5; color:#c2410c; padding:3px 6px; border-radius:4px; font-size:0.7rem; font-weight:900;">현장 실무</span></div>
                                     시프팅<br><span style="font-size:0.75rem; color:var(--text-sub);">(Shifting)</span>
                                 </td>
                                 <td class="board-title" style="white-space:normal; line-height:1.5; font-weight:600; font-size:0.85rem; padding:12px 8px; border-bottom:1px solid var(--border);">
@@ -1215,7 +1215,7 @@
                             </tr>
                             <tr>
                                 <td class="board-no" style="font-weight:900; color:var(--text-main); font-size:0.85rem; vertical-align:top; padding-top:12px;">
-                                    <div style="margin-bottom:6px;"><span style="background:#ffedd5; color:#c2410c; padding:3px 6px; border-radius:4px; font-size:0.7rem; font-weight:900;">현장실무</span></div>
+                                    <div style="margin-bottom:6px;"><span style="background:#ffedd5; color:#c2410c; padding:3px 6px; border-radius:4px; font-size:0.7rem; font-weight:900;">현장 실무</span></div>
                                     더블 오더<br><span style="font-size:0.75rem; color:var(--text-sub);">(Double Order)</span>
                                 </td>
                                 <td class="board-title" style="white-space:normal; line-height:1.5; font-weight:600; font-size:0.85rem; padding:12px 8px; border-bottom:1px solid var(--border);">
@@ -1265,7 +1265,7 @@
                         <ul style="padding-left: 20px; margin: 0;">
                             <li style="margin-bottom: 6px;"><b>데이터 암호화:</b> 모든 근무일지 및 게시판 데이터는 구글 파이어베이스(Firebase)의 강력한 글로벌 보안망을 통해 암호화되어 전송 및 저장됩니다.</li>
                             <li style="margin-bottom: 6px;"><b>로컬 스토리지 보관:</b> 로그인 상태는 사용자의 스마트폰 기기 내부(Local Storage)에만 안전하게 암호화 보관됩니다.</li>
-                            <li><span style="color:var(--primary); font-weight:bold;">비밀번호 단방향 암호화(SHA-256):</span> 관리자·근무일지 계정·게시글·댓글·선박정보 비밀번호는 평문(원문)으로 저장되지 않고 <b>SHA-256 해시 알고리즘</b>으로 암호화되어 저장되며, 관리자는 Firebase Auth 인증 및 UID 화이트리스트 검증으로 이중 보호됩니다.</li>
+                            <li><span style="color:var(--primary); font-weight:bold;">비밀번호 단방향 암호화(SHA-256):</span> 관리자·근무일지 계정·게시글·댓글·작업선박정보 비밀번호는 평문(원문)으로 저장되지 않고 <b>SHA-256 해시 알고리즘</b>으로 암호화되어 저장되며, 관리자는 Firebase Auth 인증 및 UID 화이트리스트 검증으로 이중 보호됩니다.</li>
                         </ul>
                     </div>
                 </div>
@@ -1329,15 +1329,15 @@
                     <div style="font-weight:900; color:#0a1b3f; font-size:0.95rem; margin-bottom:4px;">🚢 [부산항 항만 근로자 필수 앱 - BUSAN HAK PORT]</div>
                     <div>• <b>임금계산기:</b> 주·야간/기능공/수당 자동 분리 및 근무일지 1초 연동</div>
                     <div>• <b>근무일지:</b> 달력 기록 · 월간 정산 · 목표 수입 달성률 · 엑셀 저장</div>
-                    <div>• <b>1·2·3항업 통합:</b> 전 터미널 스케줄·차트·베이플랜·식단표·셔틀시간표</div>
-                    <div>• <b>선박정보 & 기상:</b> 작업 난이도(★1~5)·장비태그 도감 및 신항·북항 실시간 풍속</div>
+                    <div>• <b>1·2·3항업 통합:</b> 전 터미널 스케줄·차트·베이 플랜·식단표·셔틀 시간표</div>
+                    <div>• <b>작업선박정보 & 기상:</b> 작업 난이도(★1~5)·장비 태그 도감 및 신항·북항 실시간 풍속</div>
                     <div style="margin-top:6px; font-weight:900; color:#1d4ed8;">👉 접속 주소: <a href="https://busan-hak-port.web.app" target="_blank" style="color:#2563eb; text-decoration:underline;">https://busan-hak-port.web.app</a></div>
                 </div>
                 <div style="display:grid; grid-template-columns:1fr; gap:8px; font-size:0.86rem;">
                     <div style="background:#eff6ff; border:1px solid #93c5fd; border-radius:8px; padding:10px 12px; color:#1e3a8a;">
                         <b style="color:#1d4ed8; font-size:0.9rem;">🤖 [갤럭시 / 안드로이드폰] 바탕화면 아이콘 만들기</b><br>
-                        1. 카톡에서 열렸다면 우측 하단 <b>[ ⋮ ]</b> → <b>[다른 브라우저로 열기]</b> 선택<br>
-                        2. 크롬/삼성인터넷 우측 메뉴 <b>[ ⋮ ]</b> 또는 <b>[ ≡ ]</b> 터치 → <b>[홈 화면에 추가]</b> 클릭!
+                        1. 카카오톡에서 열렸다면 우측 하단 <b>[ ⋮ ]</b> → <b>[다른 브라우저로 열기]</b> 선택<br>
+                        2. 크롬/삼성 인터넷 우측 메뉴 <b>[ ⋮ ]</b> 또는 <b>[ ≡ ]</b> 터치 → <b>[홈 화면에 추가]</b> 클릭!
                     </div>
                     <div style="background:#f0fdf4; border:1px solid #86efac; border-radius:8px; padding:10px 12px; color:#065f46;">
                         <b style="color:#047857; font-size:0.9rem;">🍎 [아이폰 (iPhone)] 바탕화면 아이콘 만들기</b><br>
@@ -1349,7 +1349,7 @@
 
             <p style="margin-bottom: 20px; font-size: 1.02rem; color: #0c4a6e; background: #f0f9ff; padding: 15px; border-radius: 10px; border-left: 5px solid #0284c7;">
                 <b style="color: #0369a1;">본 플랫폼은 2027년 차세대 스마트 항만 시대에 발맞추어, 부산항(신항·북항) 현장 근로자분들의 작업 효율성과 권익 보호, 무재해 안전 환경을 위해 전면 업그레이드되었습니다.</b><br>
-                정밀한 임금 정산과 근무일지 클라우드 백업부터 전 터미널 실시간 선석·식단·베이플랜 통합 조회까지 현장에 꼭 필요한 모든 기능을 한곳에서 제공합니다.
+                정밀한 임금 정산과 근무일지 클라우드 백업부터 전 터미널 실시간 선석·식단·베이 플랜 통합 조회까지 현장에 꼭 필요한 모든 기능을 한곳에서 제공합니다.
             </p>
 
             <h4 style="color: #1d4ed8; margin-top: 25px; border-left: 4px solid #2563eb; padding-left: 10px;">🧮 1. 2027년형 정밀 임금 산정 및 세무 시뮬레이션</h4>
@@ -1357,15 +1357,15 @@
             <ul style="background: #eff6ff; color: #1e3a8a; padding: 15px 15px 15px 35px; border-radius: 8px; border: 1px solid #bfdbfe;">
                 <li><b style="color: #1d4ed8;">직군별 맞춤 자동 반영:</b> 본선, 기능공(주·야간 기능공 수당 자동 합산), 육상 선택 시 각 직무에 맞는 할증과 기본급이 즉시 적용됩니다.</li>
                 <li><b style="color: #1d4ed8;">24시간 철야·연속 작업 자동 분리:</b> 시작·종료 일시만 선택하면 자정을 넘기는 철야 작업도 주간/야간/주말/공휴일 시간을 1시간 단위로 정확히 분해합니다.</li>
-                <li><b style="color: #1d4ed8;">특수 수당 & 실수령액 예측:</b> 지게차, 특별수당, 우천 할증(50%), 혹서기 수당(30%)은 물론 3.3% 원천징수 및 4대 보험(9.4%) 공제 후 실수령 명세표를 즉시 생성합니다.</li>
+                <li><b style="color: #1d4ed8;">특수 수당 & 실수령액 예측:</b> 지게차, 특별 수당, 우천 할증(50%), 혹서기 수당(30%)은 물론 3.3% 원천징수 및 4대 보험(9.4%) 공제 후 실수령 명세표를 즉시 생성합니다.</li>
             </ul>
 
             <h4 style="color: #047857; margin-top: 25px; border-left: 4px solid #10b981; padding-left: 10px;">📅 2. 스마트 근무일지 & 원클릭 엑셀(CSV) 정산</h4>
             <p style="color: #334155;">매일의 작업 이력을 달력에 기록하고 월별 총수입을 한눈에 관리할 수 있는 개인 전용 클라우드 저장소입니다.</p>
             <ul style="background: #ecfdf5; color: #065f46; padding: 15px 15px 15px 35px; border-radius: 8px; border: 1px solid #a7f3d0;">
                 <li><b style="color: #047857;">간편 보안 로그인:</b> 별도의 복잡한 가입 절차 없이 본인만의 닉네임과 비밀번호만으로 언제 어디서나 내 근무 기록을 불러옵니다.</li>
-                <li><b style="color: #047857;">현장 기록 통합 보관:</b> 작업 선박명, 임금1·임금2 분할 기록, 동반 근무자 배지 표시, 작업 메모, 현장 인증 사진까지 날짜별로 깔끔하게 저장됩니다.</li>
-                <li><b style="color: #047857;">한 달 기록 엑셀 다운로드:</b> 월말 정산 시 <b>[한달 기록 엑셀 저장(CSV)]</b> 버튼 하나로 전체 근무 내역을 파일로 내려받아 세무·정산 자료로 활용할 수 있습니다.</li>
+                <li><b style="color: #047857;">현장 기록 통합 보관:</b> 작업 선박명, 임금 1·임금 2 분할 기록, 동반 근무자 배지 표시, 작업 메모, 현장 인증 사진까지 날짜별로 깔끔하게 저장됩니다.</li>
+                <li><b style="color: #047857;">한 달 기록 엑셀 다운로드:</b> 월말 정산 시 <b>[한 달 기록 엑셀 저장(CSV)]</b> 버튼 하나로 전체 근무 내역을 파일로 내려받아 세무·정산 자료로 활용할 수 있습니다.</li>
             </ul>
 
             <h4 style="color: #b45309; margin-top: 25px; border-left: 4px solid #f59e0b; padding-left: 10px;">🚢 3. 1·2·3항업 전 터미널 통합 관제 & 편의 기능</h4>
@@ -1373,14 +1373,14 @@
             <ul style="background: #fffbeb; color: #92400e; padding: 15px 15px 15px 35px; border-radius: 8px; border: 1px solid #fde68a;">
                 <li><b style="color: #b45309;">실시간 선석 스케줄 & BAY PLAN:</b> 각 터미널의 선석 스케줄, 차트, 본선 작업 현황 및 한진/통합 BAY PLAN 도면을 즉시 열람할 수 있습니다.</li>
                 <li><b style="color: #b45309;">터미널별 오늘의 식단표 & 셔틀버스:</b> 전 터미널 구내식당 식단 이미지 확인과 PNC 셔틀버스 시간표, 조장 근무일 캘린더를 지원합니다.</li>
-                <li><b style="color: #b45309;">항업별 실시간 알림 티커:</b> 상단 안전 티커와 1·2·3항업 전용 공지 티커를 통해 현장 긴급 공지와 작업 유의사항을 실시간으로 공유합니다.</li>
+                <li><b style="color: #b45309;">항업별 실시간 알림 티커:</b> 상단 안전 티커와 1·2·3항업 전용 공지 티커를 통해 현장 긴급 공지와 작업 유의 사항을 실시간으로 공유합니다.</li>
             </ul>
 
             <h4 style="color: #6d28d9; margin-top: 25px; border-left: 4px solid #8b5cf6; padding-left: 10px;">🤝 4. 선박 도감 · 커뮤니티 · 실전 안전(HSE)</h4>
             <ul style="background: #f5f3ff; color: #4c1d95; padding: 15px 15px 15px 35px; border-radius: 8px; border: 1px solid #ddd6fe;">
-                <li><b style="color: #6d28d9;">선박 정보 & 댓글 공유:</b> 선박별 특이사항(라싱 브릿지 구조, 작업 난이도 등)을 검색·등록하고 동료 작업자들과 실시간 댓글로 노하우를 나눕니다.</li>
-                <li><b style="color: #6d28d9;">현장 소통 & 자료실:</b> 공지사항, 왁자지껄 게시판, 각 터미널 셔틀·작업 문서를 모아둔 자료실 및 실무 용어 가이드를 제공합니다.</li>
-                <li><b style="color: #6d28d9;">도선·기상 & HSE 안전 지침:</b> 부산항 도선사회 실시간 모니터링/도선상황, 기상청 날씨, 항만안전특별법 기반 6단계 필수 안전 매뉴얼을 수록했습니다.</li>
+                <li><b style="color: #6d28d9;">선박 정보 & 댓글 공유:</b> 선박별 특이 사항(라싱 브릿지 구조, 작업 난이도 등)을 검색·등록하고 동료 작업자들과 실시간 댓글로 노하우를 나눕니다.</li>
+                <li><b style="color: #6d28d9;">현장 소통 & 자료실:</b> 공지사항, 왁자지껄 게시판, 각 터미널 셔틀·작업 문서를 모아 둔 자료실 및 실무 용어 가이드를 제공합니다.</li>
+                <li><b style="color: #6d28d9;">도선·기상 & HSE 안전 지침:</b> 부산항 도선사회 실시간 모니터링/도선 상황, 기상청 날씨, 항만안전특별법 기반 6단계 필수 안전 매뉴얼을 수록했습니다.</li>
             </ul>
 
             <div style="margin-top: 20px; background: #fff7ed; padding: 15px; border-radius: 8px; border: 1.5px solid #fdba74;">
@@ -1416,11 +1416,11 @@
 
 <div id="leaderCalendarModal" class="modal-overlay" style="display:none;" onclick="closeLeaderCalendar()"><div class="modal-content" onclick="event.stopPropagation()" style="background:#f3f4f6;"><h3 style="margin-top:0; text-align:center; color:var(--primary); font-weight:900;">📅 조장 근무표</h3><div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; background:white; padding:10px; border-radius:10px; box-shadow:0 2px 5px rgba(0,0,0,0.05);"><button class="mini-btn-old" style="padding:8px 15px; font-size:1rem; background:var(--primary);" onclick="changeLeaderMonth(-1)">◀</button><span id="leaderCalMonthYear" style="font-weight:900; font-size:1.15rem; color:var(--text-main);"></span><button class="mini-btn-old" style="padding:8px 15px; font-size:1rem; background:var(--primary);" onclick="changeLeaderMonth(1)">▶</button></div><div class="calendar-grid" style="font-size: 0.9rem; font-weight: 900; margin-bottom: 5px;"><div style="color:#ef4444;">일</div><div>월</div><div>화</div><div>수</div><div>목</div><div>금</div><div style="color:#3b82f6;">토</div></div><div id="leaderCalendarGrid" class="calendar-grid"></div><p style="font-size:0.8rem; color:var(--text-sub); text-align:center; margin-top:10px; font-weight:600;">※ 날짜를 터치하면 근무자를 임의로 변경할 수 있습니다. (Admin 전용)</p><button class="action-btn bg-cancel" style="margin-top:10px;" onclick="closeLeaderCalendar()">닫기</button></div></div>  
 <div id="imageModal" class="modal-overlay" onclick="closeImageModal()"><div class="modal-content" onclick="event.stopPropagation()"><img id="modalImage" class="modal-img"><button class="action-btn bg-cancel" onclick="closeImageModal()">닫기</button></div></div>
-<div id="hjncMealModal" class="modal-overlay" style="display:none;" onclick="closeHjncMealModal()"><div class="modal-content" onclick="event.stopPropagation()" style="max-width:560px;"><h3 id="hjncMealTitle" style="margin:0 0 14px; text-align:center; color:var(--primary); font-weight:900;">🍱 한진식단</h3><p id="hjncMealStatus" style="text-align:center; color:var(--text-sub); font-weight:700;">식단 이미지를 불러오는 중...</p><img id="hjncMealImage" alt="터미널 식단표" style="display:none; width:100%; max-height:65vh; object-fit:contain; border-radius:8px; background:#f1f5f9;"><input id="hjncMealFileInput" type="file" accept="image/*" style="display:none;" onchange="uploadHjncMealImage(this)"><button class="action-btn" style="margin-top:12px;" onclick="requestHjncMealUpload()">🔒 관리자 이미지 등록/변경</button><button class="action-btn bg-cancel" style="margin-top:8px;" onclick="closeHjncMealModal()">닫기</button></div></div>
-<div id="privacyModal" class="modal-overlay" onclick="document.getElementById('privacyModal').style.display='none'"><div class="modal-content"><h3 style="font-weight:900;">🛡️ 개인정보처리방침</h3><p style="font-weight:600;">본 사이트는 구글 애드센스 광고를 게재하며 쿠키를 사용합니다.</p><button class="action-btn" onclick="document.getElementById('privacyModal').style.display='none'">닫기</button></div></div>
+<div id="hjncMealModal" class="modal-overlay" style="display:none;" onclick="closeHjncMealModal()"><div class="modal-content" onclick="event.stopPropagation()" style="max-width:560px;"><h3 id="hjncMealTitle" style="margin:0 0 14px; text-align:center; color:var(--primary); font-weight:900;">🍱 한진 식단</h3><p id="hjncMealStatus" style="text-align:center; color:var(--text-sub); font-weight:700;">식단 이미지를 불러오는 중...</p><img id="hjncMealImage" alt="터미널 식단표" style="display:none; width:100%; max-height:65vh; object-fit:contain; border-radius:8px; background:#f1f5f9;"><input id="hjncMealFileInput" type="file" accept="image/*" style="display:none;" onchange="uploadHjncMealImage(this)"><button class="action-btn" style="margin-top:12px;" onclick="requestHjncMealUpload()">🔒 관리자 이미지 등록/변경</button><button class="action-btn bg-cancel" style="margin-top:8px;" onclick="closeHjncMealModal()">닫기</button></div></div>
+<div id="privacyModal" class="modal-overlay" onclick="document.getElementById('privacyModal').style.display='none'"><div class="modal-content"><h3 style="font-weight:900;">🛡️ 개인정보 처리방침</h3><p style="font-weight:600;">본 사이트는 구글 애드센스 광고를 게재하며 쿠키를 사용합니다.</p><button class="action-btn" onclick="document.getElementById('privacyModal').style.display='none'">닫기</button></div></div>
 <div id="tickerManageModal" class="modal-overlay" onclick="document.getElementById('tickerManageModal').style.display='none'"><div class="modal-content" onclick="event.stopPropagation()"><h3 style="margin-top:0; font-weight:900;">⚙️ 알림글 삭제</h3><div id="tickerListContainer"></div><button class="action-btn bg-cancel" onclick="document.getElementById('tickerManageModal').style.display='none'" style="margin-top:10px;">닫기</button></div></div>
 <div id="loginModal" class="modal-overlay" style="display:none;" onclick="closeLoginModal()"><div class="modal-content" onclick="event.stopPropagation()"><h3 style="font-weight:900;">🔐 근무일지 로그인/가입</h3><p style="font-weight:600;">닉네임과 비밀번호를 입력하세요.</p><input type="text" id="loginNick" class="input-field" placeholder="닉네임 (ID)"><input type="password" id="loginPw" class="input-field" placeholder="비밀번호"><button id="confirmLoginBtn" class="action-btn" onclick="confirmLoginAndSave(event)">확인 및 저장</button><button class="action-btn bg-cancel" onclick="closeLoginModal()">취소</button></div></div>
-<div id="workLogPinModal" class="modal-overlay" style="display:none;" onclick="closeWorkLogPinModal()"><div class="modal-content" onclick="event.stopPropagation()" style="max-width:380px;"><h3 style="margin-top:0; text-align:center; color:var(--primary); font-weight:900;">🔒 근무일지 보안 잠금</h3><p style="text-align:center; font-size:0.9rem; color:var(--text-sub); font-weight:700; margin-bottom:12px;">근무일지 열람 및 기록을 위해<br>보안 비밀번호(4자리)를 입력해주세요.</p><input type="password" id="workLogPinInput" class="input-field" placeholder="비밀번호 입력" inputmode="numeric" maxlength="8" style="text-align:center; font-size:1.3rem; letter-spacing:6px; height:48px; border:2px solid var(--primary); margin-bottom:10px;" onkeydown="if(event.key==='Enter'){event.preventDefault();submitWorkLogPin();}"><div style="display:flex; gap:8px;"><button type="button" class="action-btn bg-submit" style="flex:2; margin-top:0;" onclick="submitWorkLogPin()">잠금 해제</button><button type="button" class="action-btn bg-cancel" style="flex:1; margin-top:0;" onclick="closeWorkLogPinModal()">취소</button></div></div></div>
+<div id="workLogPinModal" class="modal-overlay" style="display:none;" onclick="closeWorkLogPinModal()"><div class="modal-content" onclick="event.stopPropagation()" style="max-width:380px;"><h3 style="margin-top:0; text-align:center; color:var(--primary); font-weight:900;">🔒 근무일지 보안 잠금</h3><p style="text-align:center; font-size:0.9rem; color:var(--text-sub); font-weight:700; margin-bottom:12px;">근무일지 열람 및 기록을 위해<br>보안 비밀번호(4자리)를 입력해 주세요.</p><input type="password" id="workLogPinInput" class="input-field" placeholder="비밀번호 입력" inputmode="numeric" maxlength="8" style="text-align:center; font-size:1.3rem; letter-spacing:6px; height:48px; border:2px solid var(--primary); margin-bottom:10px;" onkeydown="if(event.key==='Enter'){event.preventDefault();submitWorkLogPin();}"><div style="display:flex; gap:8px;"><button type="button" class="action-btn bg-submit" style="flex:2; margin-top:0;" onclick="submitWorkLogPin()">잠금 해제</button><button type="button" class="action-btn bg-cancel" style="flex:1; margin-top:0;" onclick="closeWorkLogPinModal()">취소</button></div></div></div>
 <div id="visitorStatsModal" class="modal-overlay" style="display:none;" onclick="closeVisitorStats()">
     <div class="modal-content" onclick="event.stopPropagation()" style="max-width:560px; padding:16px;">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; gap:8px; flex-wrap:wrap; border-bottom:2px solid var(--primary); padding-bottom:10px;">
@@ -1438,7 +1438,7 @@
             <div class="stats-kpi-card" style="background:linear-gradient(135deg, #eff6ff, #dbeafe); border-color:#93c5fd;">
                 <div class="stats-kpi-label"><span style="color:#1e40af;">🟢 오늘 방문자</span><span id="todayVisitorDiffBadge" style="font-size:0.68rem; font-weight:900;">-</span></div>
                 <div id="todayVisitorCount" class="stats-kpi-val" style="color:#1d4ed8;">-</div>
-                <div id="todayClickSummarySub" class="stats-kpi-sub" style="color:#1e3a8a;">오늘 블럭 클릭: 0회</div>
+                <div id="todayClickSummarySub" class="stats-kpi-sub" style="color:#1e3a8a;">오늘 블록 클릭: 0회</div>
             </div>
             <div class="stats-kpi-card">
                 <div class="stats-kpi-label"><span>🗓️ 어제 방문자</span><span>전일 마감</span></div>
@@ -1453,13 +1453,13 @@
             <div class="stats-kpi-card" style="background:linear-gradient(135deg, #fffbeb, #fef3c7); border-color:#fcd34d;">
                 <div class="stats-kpi-label"><span style="color:#92400e;">🏆 총 누적 방문자</span><span style="color:#b45309;">전체 세션</span></div>
                 <div id="totalVisitorCount" class="stats-kpi-val" style="color:#b45309;">-</div>
-                <div id="totalClickSummarySub" class="stats-kpi-sub" style="color:#92400e;">누적 블럭 클릭: 0회</div>
+                <div id="totalClickSummarySub" class="stats-kpi-sub" style="color:#92400e;">누적 블록 클릭: 0회</div>
             </div>
             <div class="stats-kpi-card" style="grid-column: span 2; background:linear-gradient(135deg, #f0fdf4, #dcfce7); border-color:#86efac;">
                 <div class="stats-kpi-label"><span style="color:#065f46;">👤 오늘 순 방문자 (Unique) / 재방문율</span><span id="todayUniqueBadge" style="color:#047857; font-size:0.68rem; font-weight:900;">실제 인원 기준 (새 탭 중복 제외)</span></div>
                 <div style="display:flex; justify-content:space-between; align-items:baseline; gap:8px; flex-wrap:wrap;">
                     <div id="todayUniqueVisitorCount" class="stats-kpi-val" style="color:#047857;">-</div>
-                    <div id="todayReturnRateVal" style="font-size:0.86rem; font-weight:900; color:#065f46;">다중탭·재방문율: -%</div>
+                    <div id="todayReturnRateVal" style="font-size:0.86rem; font-weight:900; color:#065f46;">다중 탭·재방문율: -%</div>
                 </div>
                 <div id="totalUniqueSummarySub" class="stats-kpi-sub" style="color:#065f46;">누적 순 방문자(기기 기준): -명 · 자정 경계 자동 분리 적용</div>
             </div>
@@ -1476,7 +1476,7 @@
 
         <div class="stats-section-box">
             <div class="stats-section-title">
-                <span>🔥 가장 많이 클릭된 블럭 순위 (TOP 14)</span>
+                <span>🔥 가장 많이 클릭된 블록 순위 (TOP 14)</span>
                 <div style="display:flex; gap:4px;">
                     <button type="button" id="blockRankTabTotal" class="stats-tab-btn active" onclick="switchBlockRankMode('total')">누적 순위</button>
                     <button type="button" id="blockRankTabToday" class="stats-tab-btn" onclick="switchBlockRankMode('today')">오늘 순위</button>
@@ -1503,7 +1503,7 @@
 
         <div class="stats-section-box">
             <div class="stats-section-title">
-                <span>📱 접속 기기 비율 & ⏰ 교대근무 시간대 분포</span>
+                <span>📱 접속 기기 비율 & ⏰ 교대 근무 시간대 분포</span>
             </div>
             <div id="statsDeviceAndHourBox"></div>
         </div>
@@ -1516,7 +1516,7 @@
             <div id="statsDbContentGrid" class="stats-mini-grid"></div>
         </div>
 
-        <p style="font-size:0.74rem; color:var(--text-sub); text-align:center; margin:8px 0;">※ 방문자 수는 브라우저 탭 세션 기준(새로고침 중복 제외)이며, 블럭·터미널·기능 클릭은 실시간 누적 집계됩니다.</p>
+        <p style="font-size:0.74rem; color:var(--text-sub); text-align:center; margin:8px 0;">※ 방문자 수는 브라우저 탭 세션 기준(새로고침 중복 제외)이며, 블록·터미널·기능 클릭은 실시간 누적 집계됩니다.</p>
         <button class="action-btn bg-cancel" style="margin-top:4px;" onclick="closeVisitorStats()">닫기</button>
     </div>
 </div>
@@ -1737,11 +1737,11 @@ const STATS_BLOCK_META = [
     { id: "t3-content", label: "🚢 3항업 (신항 남측)", color: "#1e3a8a" },
     { id: "t2-content", label: "🏗️ 2항업 (신항 북측)", color: "#0284c7" },
     { id: "t1-content", label: "⚓ 1항업 (북항)", color: "#334155" },
-    { id: "ship-card", label: "🚢 선박정보 도감", color: "#0ea5e9" },
+    { id: "ship-card", label: "🚢 작업선박정보(등록및검색)", color: "#0ea5e9" },
     { id: "notice-card", label: "📢 공지사항", color: "#ef4444" },
     { id: "board-card", label: "💬 스트레스 해소(톡톡)", color: "#6366f1" },
-    { id: "archive-card", label: "📂 자료실(셔틀 등)", color: "#eab308" },
-    { id: "weather-card", label: "📡 날씨 및 도선상황", color: "#06b6d4" },
+    { id: "archive-card", label: "📂 자료실 (셔틀버스 시간표 등)", color: "#eab308" },
+    { id: "weather-card", label: "📡 날씨 및 도선 상황", color: "#06b6d4" },
     { id: "safety-card", label: "⛑️ 실전 통합 안전 지침", color: "#10b981" },
     { id: "guide-card", label: "📖 현장 실무 용어 가이드", color: "#8b5cf6" },
     { id: "privacy-center-card", label: "🛡️ 실전 보안 가이드", color: "#64748b" },
@@ -1765,8 +1765,8 @@ const STATS_ACTION_META = [
     { id: "excel_dl", label: "📊 엑셀(CSV) 저장" },
     { id: "receipt_share", label: "📸 명세서 저장·공유" },
     { id: "meal_view", label: "🍱 터미널 식단 조회" },
-    { id: "bay_plan", label: "🧩 베이플랜 조회" },
-    { id: "bus_view", label: "🚌 셔틀시간표 조회" },
+    { id: "bay_plan", label: "🧩 베이 플랜 조회" },
+    { id: "bus_view", label: "🚌 셔틀 시간표 조회" },
     { id: "leader_cal", label: "📅 조장 근무표 조회" },
     { id: "promo_share", label: "📤 홍보글 복사·공유" }
 ];
@@ -2005,7 +2005,7 @@ async function loadAndRenderVisitorStats() {
     const todayReturnRateEl = document.getElementById("todayReturnRateVal");
     const totalUniqueSubEl = document.getElementById("totalUniqueSummarySub");
     if (todayUniqueEl) todayUniqueEl.innerText = `${todayUniqueVisitors.toLocaleString()}명 (순 방문자)`;
-    if (todayReturnRateEl) todayReturnRateEl.innerText = `다중탭·재방문율: ${returnRatePct}% (재방문 ${repeatSessions}세션)`;
+    if (todayReturnRateEl) todayReturnRateEl.innerText = `다중 탭·재방문율: ${returnRatePct}% (재방문 ${repeatSessions}세션)`;
     if (totalUniqueSubEl) totalUniqueSubEl.innerText = `누적 순 방문자(기기 기준): ${totalUniqueVisitors.toLocaleString()}명 · 자정 경계(dateKey) 분리 적용`;
 
     const diffBadge = document.getElementById("todayVisitorDiffBadge");
@@ -2015,10 +2015,10 @@ async function loadAndRenderVisitorStats() {
             diffBadge.innerText = `▲ +${todayVisitors}명`;
             diffBadge.style.color = "#16a34a";
         } else if (diff > 0) {
-            diffBadge.innerText = `전일대비 ▲ +${diff}명`;
+            diffBadge.innerText = `전일 대비 ▲ +${diff}명`;
             diffBadge.style.color = "#16a34a";
         } else if (diff < 0) {
-            diffBadge.innerText = `전일대비 ▼ ${diff}명`;
+            diffBadge.innerText = `전일 대비 ▼ ${diff}명`;
             diffBadge.style.color = "#dc2626";
         } else {
             diffBadge.innerText = "전일과 동일";
@@ -2190,12 +2190,12 @@ async function loadAndRenderVisitorStats() {
     cachedStatsModalData.reportText = [
         `📊 [BUSAN HAK PORT 통합 운영 통계 리포트]`,
         `• 조회 일시: ${timeEl ? timeEl.innerText.replace('기준 시각: ', '') : ''}`,
-        `• 오늘 방문자: ${todayVisitors.toLocaleString()}명 / 순 방문자: ${todayUniqueVisitors.toLocaleString()}명 (다중탭·재방문율 ${returnRatePct}%)`,
+        `• 오늘 방문자: ${todayVisitors.toLocaleString()}명 / 순 방문자: ${todayUniqueVisitors.toLocaleString()}명 (다중 탭·재방문율 ${returnRatePct}%)`,
         `• 어제 방문자: ${yesterdayVisitors.toLocaleString()}명`,
         `• 최근 7일 방문자: ${weekVisitors.toLocaleString()}명 (일평균 ${weekAvg.toLocaleString()}명)`,
         `• 총 누적 방문자: ${totalVisitors.toLocaleString()}명 (누적 순 방문자: ${totalUniqueVisitors.toLocaleString()}명)`,
         `• 기기·시간대 표본 안내: 10/06(v2027) 이후 정상 집계 적용`,
-        `• 인기 클릭 블럭 TOP 5: ` + topBlocks.map((b, i) => `${i+1}위 ${b.label}(${b.cnt}회)`).join(", "),
+        `• 인기 클릭 블록 TOP 5: ` + topBlocks.map((b, i) => `${i+1}위 ${b.label}(${b.cnt}회)`).join(", "),
         `• 인기 터미널 TOP 3: ` + topTerms.map((t, i) => `${i+1}위 ${t.label}(${t.cnt}회)`).join(", ")
     ].join("\n");
 }
@@ -2296,7 +2296,7 @@ function submitWorkLogPin() {
         syncWorkLogExtraUnlockUI();
         const callback = pendingWorkLogAction;
         closeWorkLogPinModal();
-        showToast("🔓 추가 기능(검색·상세통계) 잠금이 해제되었습니다.");
+        showToast("🔓 추가 기능(검색·상세 통계) 잠금이 해제되었습니다.");
         if (typeof callback === "function") callback();
     } else {
         showToast("⚠️ 비밀번호가 일치하지 않습니다.");
@@ -2461,11 +2461,10 @@ function renderMainTickerText(message) {
     }
 }
 function loadBanner(){ db.collection('settings').doc('banner').onSnapshot((doc) => { if(!doc.exists) { renderMainTickerText(""); return; } globalTickerData = doc.data(); let msg = ""; if(globalTickerData.adminMessage) msg += `📢 ${globalTickerData.adminMessage}   ///   `; if(globalTickerData.userMessages && globalTickerData.userMessages.length > 0) { msg += globalTickerData.userMessages.map((m,i) => `${i+1}. ${m}`).join("   ///   "); } renderMainTickerText(msg); }); }
-function writeUserTicker(){ const m = prompt("현장 안전 문구 입력:"); if(!m) return; let msgs = globalTickerData.userMessages || []; msgs.unshift(m); if(msgs.length > 3) msgs = msgs.slice(0, 3); db.collection('settings').doc('banner').set({ userMessages: msgs }, { merge: true }).then(() => showToast("등록됨")).catch((e) => alert("실패: " + e.message)); }
-async function setAdminTicker(){ if(await verifyAdmin()){ const m = prompt("관리자 공지:"); if(m) db.collection('settings').doc('banner').set({adminMessage:m}, {merge:true}); } }
+function writeUserTicker(){ const m = prompt("현장 안전 문구를 입력하세요:"); if(!m) return; let msgs = globalTickerData.userMessages || []; msgs.unshift(m); if(msgs.length > 3) msgs = msgs.slice(0, 3); db.collection('settings').doc('banner').set({ userMessages: msgs }, { merge: true }).then(() => showToast("등록되었습니다.")).catch((e) => alert("실패: " + e.message)); }
+async function setAdminTicker(){ if(await verifyAdmin()){ const m = prompt("관리자 공지 문구를 입력하세요:"); if(m) db.collection('settings').doc('banner').set({adminMessage:m}, {merge:true}); } }
 async function openTickerManager(){ if(await verifyAdmin()){ document.getElementById('tickerManageModal').style.display='flex'; renderTickerList(); } }
-function renderTickerList() { const listContainer = document.getElementById('tickerListContainer'); listContainer.innerHTML = ''; const data = globalTickerData; let hasData = false; if (data.adminMessage) { hasData = true; listContainer.innerHTML += `<div class="ticker-manage-item"><span style="color:red; flex:1; font-weight:800;">📢 [관리자] ${data.adminMessage}</span><button onclick="deleteTickerMsg('admin', 0)" class="mini-btn btn-del-mini">삭제</button></div>`; } if (data.userMessages) { data.userMessages.forEach((m, i) => { hasData = true; listContainer.innerHTML += `<div class="ticker-manage-item"><span style="flex:1; font-weight:700;">${i + 1}. ${m}</span><button onclick="deleteTickerMsg('user', ${i})" class="mini-btn btn-del-mini">삭제</button></div>`; }); } if (!hasData) listContainer.innerHTML = '<div style="padding:10px; text-align:center; font-weight:700;">내용 없음</div>'; }
-// 이렇게 이름을 고쳐주시면 바로 작동합니다!
+function renderTickerList() { const listContainer = document.getElementById('tickerListContainer'); listContainer.innerHTML = ''; const data = globalTickerData; let hasData = false; if (data.adminMessage) { hasData = true; listContainer.innerHTML += `<div class="ticker-manage-item"><span style="color:red; flex:1; font-weight:800;">📢 [관리자] ${data.adminMessage}</span><button onclick="deleteTickerMsg('admin', 0)" class="mini-btn btn-del-mini">삭제</button></div>`; } if (data.userMessages) { data.userMessages.forEach((m, i) => { hasData = true; listContainer.innerHTML += `<div class="ticker-manage-item"><span style="flex:1; font-weight:700;">${i + 1}. ${m}</span><button onclick="deleteTickerMsg('user', ${i})" class="mini-btn btn-del-mini">삭제</button></div>`; }); } if (!hasData) listContainer.innerHTML = '<div style="padding:10px; text-align:center; font-weight:700;">등록된 내용이 없습니다.</div>'; }
 function openAllBayPlan() {
     trackAppEvent('actions', 'bay_plan');
     window.open("http://112.163.71.98:8080/webits/bayplan", "_blank"); 
@@ -2507,7 +2506,7 @@ async function openSectionTickerManager(sectionId) {
         if (!currentMessage) {
             const message = prompt(`${sectionLabel} 티커에 등록할 문구를 입력하세요:`);
             if (message === null) return;
-            if (!message.trim()) return alert("티커 문구를 입력해주세요.");
+            if (!message.trim()) return alert("티커 문구를 입력해 주세요.");
             await tickerRef.set({ message: message.trim(), updatedAt: firebase.firestore.FieldValue.serverTimestamp() });
             showToast(`${sectionLabel} 티커가 등록되었습니다.`);
             return;
@@ -2516,7 +2515,7 @@ async function openSectionTickerManager(sectionId) {
         if (action === "1") {
             const message = prompt("수정할 티커 문구를 입력하세요:", currentMessage);
             if (message === null) return;
-            if (!message.trim()) return alert("티커 문구를 입력해주세요.");
+            if (!message.trim()) return alert("티커 문구를 입력해 주세요.");
             await tickerRef.set({ message: message.trim(), updatedAt: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true });
             showToast(`${sectionLabel} 티커가 수정되었습니다.`);
         } else if (action === "2" && confirm(`${sectionLabel} 티커를 삭제할까요?`)) {
@@ -2561,7 +2560,7 @@ const terminalQuickConfig = {
         schedule: "https://www.hjnc.co.kr/esvc/vessel/berthScheduleT",
         chart: "https://www.hjnc.co.kr/esvc/vessel/berthScheduleG",
         status: "https://www.hjnc.co.kr/esvc/vessel/vesselStatus",
-        mealLabel: "한진식단",
+        mealLabel: "한진 식단",
         bayplan: "http://bayplan.hjnc.co.kr"
     },
     bnct: {
@@ -2662,10 +2661,10 @@ function renderFavoriteQuickBar() {
         if (!cfg) return "";
         const extraBtns = [];
         if (cfg.bayplan) {
-            extraBtns.push(`<a href="${cfg.bayplan}" target="_blank" class="fav-quick-btn extra">🧩베이</a>`);
+            extraBtns.push(`<a href="${cfg.bayplan}" target="_blank" class="fav-quick-btn extra">🧩 베이</a>`);
         }
         if (cfg.bus) {
-            extraBtns.push(`<button type="button" class="fav-quick-btn extra" onclick="openBusSchedule()">🚌셔틀</button>`);
+            extraBtns.push(`<button type="button" class="fav-quick-btn extra" onclick="openBusSchedule()">🚌 셔틀</button>`);
         }
         return `<div class="fav-quick-item">
             <div class="fav-quick-name">
@@ -2677,7 +2676,7 @@ function renderFavoriteQuickBar() {
                 <a href="${cfg.chart}" target="_blank" class="fav-quick-btn" onclick="trackAppEvent('terminals','${id}')">차트</a>
                 <a href="${cfg.status}" target="_blank" class="fav-quick-btn" onclick="trackAppEvent('terminals','${id}')">현황</a>
                 ${extraBtns.join("")}
-                <button type="button" class="fav-quick-btn meal" onclick="openHjncMealModal('${id}', '${cfg.mealLabel}')">🍱식단</button>
+                <button type="button" class="fav-quick-btn meal" onclick="openHjncMealModal('${id}', '${cfg.mealLabel}')">🍱 식단</button>
             </div>
         </div>`;
     }).join("");
@@ -2722,7 +2721,7 @@ function appendTerminalMealBlocks() {
 function getTerminalMealDocumentId(terminalId) {
     return terminalId === "hjnc" ? "hjnc_meal" : `meal_${terminalId}`;
 }
-function openHjncMealModal(terminalId = "hjnc", label = "한진식단") {
+function openHjncMealModal(terminalId = "hjnc", label = "한진 식단") {
     currentMealTerminalId = terminalId;
     trackAppEvent('actions', 'meal_view');
     trackAppEvent('terminals', terminalId);
@@ -2776,13 +2775,13 @@ async function uploadHjncMealImage(input) {
         status.innerText = "식단 이미지가 업데이트되었습니다.";
     } catch (error) {
         status.innerText = "이미지 업로드에 실패했습니다.";
-        alert("한진식단 이미지 업로드 실패: " + error.message);
+        alert("식단 이미지 업로드 실패: " + error.message);
     } finally {
         input.value = "";
     }
 }
-async function deleteTickerMsg(type, index){ if(!confirm("삭제?")) return; if(type === 'admin') { delete globalTickerData.adminMessage; await db.collection('settings').doc('banner').update({ adminMessage: firebase.firestore.FieldValue.delete() }); } else { globalTickerData.userMessages.splice(index, 1); await db.collection('settings').doc('banner').update({ userMessages: globalTickerData.userMessages }); } renderTickerList(); showToast("삭제됨"); }
-function downloadWorkLogsExcel() { if (!currentWorkerId || Object.keys(adminWorkLogs).length === 0) { return alert("다운로드할 근무 기록 데이터가 없습니다."); } trackAppEvent('actions', 'excel_dl'); let csvContent = "\uFEFF날짜,배이름,임금1,임금2,총임금,근무자,메모\n"; const sortedDates = Object.keys(adminWorkLogs).sort(); sortedDates.forEach(date => { const d = adminWorkLogs[date]; const ship = d.shipName || ""; const w1 = d.wage1 || 0; const w2 = d.wage2 || 0; const total = d.totalPay || 0; const workers = (d.coworkers || "").replace(/,/g, " "); const memo = (d.memo || "").replace(/\n/g, " ").replace(/,/g, " "); csvContent += `${date},${ship},${w1},${w2},${total},${workers},${memo}\n`; }); const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' }); const url = URL.createObjectURL(blob); const link = document.createElement("a"); const monthTitle = document.getElementById('calMonthYear').innerText; link.href = url; link.download = `${currentWorkerId}_${monthTitle}_근무기록.csv`; document.body.appendChild(link); link.click(); document.body.removeChild(link); showToast("📊 엑셀 파일이 다운로드 폴더에 저장되었습니다!"); }
+async function deleteTickerMsg(type, index){ if(!confirm("삭제하시겠습니까?")) return; if(type === 'admin') { delete globalTickerData.adminMessage; await db.collection('settings').doc('banner').update({ adminMessage: firebase.firestore.FieldValue.delete() }); } else { globalTickerData.userMessages.splice(index, 1); await db.collection('settings').doc('banner').update({ userMessages: globalTickerData.userMessages }); } renderTickerList(); showToast("삭제되었습니다."); }
+function downloadWorkLogsExcel() { if (!currentWorkerId || Object.keys(adminWorkLogs).length === 0) { return alert("다운로드할 근무 기록 데이터가 없습니다."); } trackAppEvent('actions', 'excel_dl'); let csvContent = "\uFEFF날짜,배 이름,임금 1,임금 2,총임금,근무자,메모\n"; const sortedDates = Object.keys(adminWorkLogs).sort(); sortedDates.forEach(date => { const d = adminWorkLogs[date]; const ship = d.shipName || ""; const w1 = d.wage1 || 0; const w2 = d.wage2 || 0; const total = d.totalPay || 0; const workers = (d.coworkers || "").replace(/,/g, " "); const memo = (d.memo || "").replace(/\n/g, " ").replace(/,/g, " "); csvContent += `${date},${ship},${w1},${w2},${total},${workers},${memo}\n`; }); const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' }); const url = URL.createObjectURL(blob); const link = document.createElement("a"); const monthTitle = document.getElementById('calMonthYear').innerText; link.href = url; link.download = `${currentWorkerId}_${monthTitle}_근무기록.csv`; document.body.appendChild(link); link.click(); document.body.removeChild(link); showToast("📊 엑셀 파일이 다운로드 폴더에 저장되었습니다!"); }
 let latestMonthlyStatsCache = { total: 0, w1Sum: 0, w2Sum: 0, days: 0, avg: 0 };
 let monthlyGoalAmount = Number(localStorage.getItem("busanPortMonthlyGoal")) || 4500000;
 function updateMonthlyGoalGaugeUI(currentTotal = 0, currentDays = 0) {
@@ -2815,11 +2814,11 @@ function changeMonthlyGoalAmount() {
         return;
     }
     const currentMan = Math.round((Number(monthlyGoalAmount) || 4500000) / 10000);
-    const input = prompt("이번 달 목표 수입 금액을 '만원' 단위로 입력해주세요 (예: 450):", String(currentMan));
+    const input = prompt("이번 달 목표 수입 금액을 '만 원' 단위로 입력해 주세요 (예: 450):", String(currentMan));
     if (input === null) return;
     const parsedMan = parseFloat(input.replace(/,/g, "").trim());
     if (isNaN(parsedMan) || parsedMan <= 0) {
-        alert("올바른 숫자를 입력해주세요.");
+        alert("올바른 숫자를 입력해 주세요.");
         return;
     }
     monthlyGoalAmount = Math.round(parsedMan * 10000);
@@ -2905,7 +2904,7 @@ async function refreshShipFormScheduleForSelectedDate() {
     const cacheKey = `${selectedScheduleTerminal}_${yearMonth}`;
     delete hjncScheduleMonthCache[cacheKey];
     const meta = getTerminalMeta(selectedScheduleTerminal);
-    showToast(`🔄 ${meta.label} 선석배정현황을 새로고침합니다...`);
+    showToast(`🔄 ${meta.label} 선석 배정 현황을 새로고침합니다...`);
     await loadShipFormScheduledShipsForDate(dateStr, true);
 }
 function renderShipFormScheduledShipsUI(dateStr, allVessels, terminalId = selectedScheduleTerminal) {
@@ -2934,8 +2933,8 @@ function renderShipFormScheduledShipsUI(dateStr, allVessels, terminalId = select
             listEl.innerHTML = `<div style="display:flex; flex-direction:column; gap:5px; width:100%; background:rgba(255,255,255,0.75); padding:7px 9px; border-radius:8px; border:1px dashed #cbd5e1;">
                 <span style="font-size:0.74rem; color:var(--text-main); font-weight:800;">📌 <b>${meta.label}</b> 터미널은 전용 보안·외부 뷰어 페이지로 제공됩니다.</span>
                 <div style="display:flex; flex-wrap:wrap; gap:6px; align-items:center;">
-                    <a href="${cfg.schedule}" target="_blank" onclick="trackAppEvent('terminals','${terminalId}')" style="background:${meta.color}; color:#fff; padding:4px 10px; border-radius:6px; font-size:0.73rem; font-weight:900; text-decoration:none;">🔗 ${meta.label} 선석스케줄 열기 ↗</a>
-                    <a href="${cfg.chart}" target="_blank" onclick="trackAppEvent('terminals','${terminalId}')" style="background:#0f172a; color:#fff; padding:4px 10px; border-radius:6px; font-size:0.73rem; font-weight:900; text-decoration:none;">📊 선석차트 열기 ↗</a>
+                    <a href="${cfg.schedule}" target="_blank" onclick="trackAppEvent('terminals','${terminalId}')" style="background:${meta.color}; color:#fff; padding:4px 10px; border-radius:6px; font-size:0.73rem; font-weight:900; text-decoration:none;">🔗 ${meta.label} 선석 스케줄 열기 ↗</a>
+                    <a href="${cfg.chart}" target="_blank" onclick="trackAppEvent('terminals','${terminalId}')" style="background:#0f172a; color:#fff; padding:4px 10px; border-radius:6px; font-size:0.73rem; font-weight:900; text-decoration:none;">📊 선석 차트 열기 ↗</a>
                     <button type="button" onclick="applyShipFormQuickChip('[${meta.badge}] ')" style="background:#ffffff; color:${meta.color}; border:1.5px solid ${meta.color}; padding:3px 9px; border-radius:6px; font-size:0.72rem; font-weight:900; cursor:pointer;">✏️ [${meta.badge}] 머리말 입력</button>
                 </div>
             </div>`;
@@ -2959,7 +2958,7 @@ function renderShipFormScheduledShipsUI(dateStr, allVessels, terminalId = select
         const depTime = extractShortTime(v.ATD);
         const timeBadge = arrDate === dateStr && arrTime
             ? `입항 ${arrTime}`
-            : (depTime ? `~출항 ${depTime}` : "작업중");
+            : (depTime ? `~출항 ${depTime}` : "작업 중");
         const isSelected = currentValue === name.toUpperCase() || currentValue === `[${meta.badge}] ${name.toUpperCase()}`;
         const selectedStyle = isSelected ? `background:${meta.color}; color:#ffffff; border-color:${meta.color};` : "";
         const timeStyle = isSelected ? "color:#ffedd5;" : "";
@@ -2987,7 +2986,7 @@ async function loadShipFormScheduledShipsForDate(dateStr, forceRefresh = false) 
     }
 
     titleEl.innerText = `⚓ ${dateStr} ${meta.label} 입항·접안 예정 선박 조회 중...`;
-    listEl.innerHTML = `<span style="font-size:0.74rem; color:var(--text-sub); font-weight:700;">${meta.label} 선석배정현황 데이터를 불러오는 중입니다...</span>`;
+    listEl.innerHTML = `<span style="font-size:0.74rem; color:var(--text-sub); font-weight:700;">${meta.label} 선석 배정 현황 데이터를 불러오는 중입니다...</span>`;
 
     const allVessels = await fetchHjncScheduleForMonth(yearMonth, forceRefresh, tid);
     const currentSelected = document.getElementById("shipFormScheduleDate")?.value;
@@ -3010,7 +3009,7 @@ function applyShipFormQuickChip(shipName, berthNo = "", ptnrCode = "", termBadge
     }
     const termPrefix = termBadge ? `[${termBadge}] ` : "";
     const extraInfo = berthNo ? ` (${berthNo}선석${ptnrCode ? ' · ' + ptnrCode : ''})` : "";
-    showToast(`🚢 ${termPrefix}'${shipName.trim()}'${extraInfo} 선박명이 신규등록 칸에 입력되었습니다.`);
+    showToast(`🚢 ${termPrefix}'${shipName.trim()}'${extraInfo} 선박명이 신규 등록 칸에 입력되었습니다.`);
 }
 function extractDatePrefix(dtStr) {
     if (!dtStr || typeof dtStr !== "string") return "";
@@ -3162,7 +3161,7 @@ async function refreshHjncScheduleForSelectedDate() {
     const cacheKey = `${selectedScheduleTerminal}_${yearMonth}`;
     delete hjncScheduleMonthCache[cacheKey];
     const meta = getTerminalMeta(selectedScheduleTerminal);
-    showToast(`🔄 ${meta.label} 선석배정현황을 새로고침합니다...`);
+    showToast(`🔄 ${meta.label} 선석 배정 현황을 새로고침합니다...`);
     await loadHjncScheduledShipsForDate(dateStr, true);
 }
 function renderHjncScheduledShipsUI(dateStr, allVessels, terminalId = selectedScheduleTerminal) {
@@ -3184,15 +3183,15 @@ function renderHjncScheduledShipsUI(dateStr, allVessels, terminalId = selectedSc
         uniqueMatched.push(v);
     });
 
-    titleEl.innerText = `⚓ ${dateStr} ${meta.label} 입항·작업 선박 (${uniqueMatched.length}척) — 터치 시 자동입력`;
+    titleEl.innerText = `⚓ ${dateStr} ${meta.label} 입항·작업 선박 (${uniqueMatched.length}척) — 터치 시 자동 입력`;
 
     if (uniqueMatched.length === 0) {
         if (!meta.live) {
             listEl.innerHTML = `<div style="display:flex; flex-direction:column; gap:5px; width:100%; background:rgba(255,255,255,0.75); padding:7px 9px; border-radius:8px; border:1px dashed #cbd5e1;">
                 <span style="font-size:0.74rem; color:var(--text-main); font-weight:800;">📌 <b>${meta.label}</b> 터미널은 전용 보안·외부 뷰어 페이지로 제공됩니다.</span>
                 <div style="display:flex; flex-wrap:wrap; gap:6px; align-items:center;">
-                    <a href="${cfg.schedule}" target="_blank" onclick="trackAppEvent('terminals','${terminalId}')" style="background:${meta.color}; color:#fff; padding:4px 10px; border-radius:6px; font-size:0.73rem; font-weight:900; text-decoration:none;">🔗 ${meta.label} 선석스케줄 열기 ↗</a>
-                    <a href="${cfg.chart}" target="_blank" onclick="trackAppEvent('terminals','${terminalId}')" style="background:#0f172a; color:#fff; padding:4px 10px; border-radius:6px; font-size:0.73rem; font-weight:900; text-decoration:none;">📊 선석차트 열기 ↗</a>
+                    <a href="${cfg.schedule}" target="_blank" onclick="trackAppEvent('terminals','${terminalId}')" style="background:${meta.color}; color:#fff; padding:4px 10px; border-radius:6px; font-size:0.73rem; font-weight:900; text-decoration:none;">🔗 ${meta.label} 선석 스케줄 열기 ↗</a>
+                    <a href="${cfg.chart}" target="_blank" onclick="trackAppEvent('terminals','${terminalId}')" style="background:#0f172a; color:#fff; padding:4px 10px; border-radius:6px; font-size:0.73rem; font-weight:900; text-decoration:none;">📊 선석 차트 열기 ↗</a>
                     <button type="button" onclick="applyQuickShipChip('[${meta.badge}] ')" style="background:#ffffff; color:${meta.color}; border:1.5px solid ${meta.color}; padding:3px 9px; border-radius:6px; font-size:0.72rem; font-weight:900; cursor:pointer;">✏️ [${meta.badge}] 머리말 입력</button>
                 </div>
             </div>`;
@@ -3216,7 +3215,7 @@ function renderHjncScheduledShipsUI(dateStr, allVessels, terminalId = selectedSc
         const depTime = extractShortTime(v.ATD);
         const timeBadge = arrDate === dateStr && arrTime
             ? `입항 ${arrTime}`
-            : (depTime ? `~출항 ${depTime}` : "작업중");
+            : (depTime ? `~출항 ${depTime}` : "작업 중");
         const isSelected = currentValue === name.toUpperCase() || currentValue === `[${meta.badge}] ${name.toUpperCase()}`;
         const selectedStyle = isSelected ? `background:${meta.color}; color:#ffffff; border-color:${meta.color};` : "";
         const timeStyle = isSelected ? "color:#ffedd5;" : "";
@@ -3244,7 +3243,7 @@ async function loadHjncScheduledShipsForDate(dateStr, forceRefresh = false) {
     }
 
     titleEl.innerText = `⚓ ${dateStr} ${meta.label} 입항·접안 예정 선박 조회 중...`;
-    listEl.innerHTML = `<span style="font-size:0.74rem; color:var(--text-sub); font-weight:700;">${meta.label} 선석배정현황 데이터를 불러오는 중입니다...</span>`;
+    listEl.innerHTML = `<span style="font-size:0.74rem; color:var(--text-sub); font-weight:700;">${meta.label} 선석 배정 현황 데이터를 불러오는 중입니다...</span>`;
 
     const allVessels = await fetchHjncScheduleForMonth(yearMonth, forceRefresh, tid);
     const currentSelected = document.getElementById("dailyLogForm")?.getAttribute("data-date");
@@ -3295,7 +3294,7 @@ function renderWorkLogQuickChips(dateStr) {
         : "";
 
     cwRow.innerHTML = topCws.length
-        ? `<span style="font-size:0.72rem; color:var(--text-sub); font-weight:800; align-self:center; margin-right:2px;">👥 동료추가:</span>` +
+        ? `<span style="font-size:0.72rem; color:var(--text-sub); font-weight:800; align-self:center; margin-right:2px;">👥 동료 추가:</span>` +
           topCws.map(name => {
               const safe = escapeShipCommentHtml(name);
               const jsSafe = name.replace(/\\/g, "\\\\").replace(/'/g, "\\'");
@@ -3361,7 +3360,7 @@ async function fetchBusanPortLiveWeather(force = false) {
             if (windEl) windEl.innerText = `💨 풍속 ${wind}m/s (순간 ${gust}) · ☔ ${rain}mm`;
             if (badgeEl) {
                 if (maxW >= 15) {
-                    badgeEl.innerText = "🔴 고소작업 통제 기준 (15m/s↑)";
+                    badgeEl.innerText = "🔴 고소 작업 통제 기준 (15m/s↑)";
                     badgeEl.style.background = "rgba(239,68,68,0.3)";
                     badgeEl.style.color = "#fca5a5";
                 } else if (maxW >= 10 || parseFloat(rain) >= 5) {
@@ -3379,7 +3378,7 @@ async function fetchBusanPortLiveWeather(force = false) {
         const now = new Date();
         const timeEl = document.getElementById("weatherUpdatedTimeText");
         if (timeEl) {
-            timeEl.innerText = `실시간 관측 갱신: ${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")} · 기준: 10m/s 강풍주의 / 15m/s 고소작업 통제`;
+            timeEl.innerText = `실시간 관측 갱신: ${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")} · 기준: 10m/s 강풍 주의 / 15m/s 고소 작업 통제`;
         }
         if (force) showToast("🌬️ 부산항 신항·북항 실시간 기상 정보가 갱신되었습니다.");
     } catch (e) {
@@ -3398,7 +3397,7 @@ function generateReceiptCanvas(mode) {
         title = "🧾 부산항 임금 산정 명세서";
         const sd = document.getElementById("wageStartDate")?.value || "-";
         const ed = document.getElementById("wageEndDate")?.value || "-";
-        subTitle = `근무일자: ${sd} ~ ${ed}`;
+        subTitle = `근무 일자: ${sd} ~ ${ed}`;
         document.querySelectorAll("#wageSpecBody tr").forEach(tr => {
             const tds = tr.querySelectorAll("td");
             if (tds.length === 2) {
@@ -3412,11 +3411,11 @@ function generateReceiptCanvas(mode) {
         subTitle = `근로자: ${currentWorkerId || "내 저장소"} · 발급일: ${new Date().toISOString().split("T")[0]}`;
         lines.push({ label: "🗓️ 총 출근일수", value: `${latestMonthlyStatsCache.days}일` });
         lines.push({ label: "📈 일평균 수입", value: `${latestMonthlyStatsCache.avg.toLocaleString()}원` });
-        lines.push({ label: "💵 임금1 합계", value: `${latestMonthlyStatsCache.w1Sum.toLocaleString()}원` });
-        lines.push({ label: "💴 임금2 합계", value: `${latestMonthlyStatsCache.w2Sum.toLocaleString()}원` });
+        lines.push({ label: "💵 임금 1 합계", value: `${latestMonthlyStatsCache.w1Sum.toLocaleString()}원` });
+        lines.push({ label: "💴 임금 2 합계", value: `${latestMonthlyStatsCache.w2Sum.toLocaleString()}원` });
         const goal = Math.max(100000, Number(monthlyGoalAmount) || 4500000);
         const pct = Math.round((latestMonthlyStatsCache.total / goal) * 100);
-        lines.push({ label: "🎯 월 목표 달성률", value: `${pct}% (목표 ${(goal/10000).toFixed(0)}만원)` });
+        lines.push({ label: "🎯 월 목표 달성률", value: `${pct}% (목표 ${(goal/10000).toFixed(0)}만 원)` });
         const sortedDates = Object.keys(adminWorkLogs || {}).sort().slice(-6);
         if (sortedDates.length > 0) {
             lines.push({ label: "── 최근 근무 내역 (최대 6건) ──", value: "" });
@@ -3564,8 +3563,8 @@ async function shareOrCopyAppPromo() {
         "",
         "✅ 주·야간/기능공/수당 자동 [임금계산기]",
         "✅ 달력에 적고 한 달 총액 자동 정산되는 [근무일지]",
-        "✅ 1·2·3항업 전 터미널 [스케줄·차트·베이플랜·식단표·셔틀시간표]",
-        "✅ 배마다 어떤 콘/장비 쓰는지 미리 보는 [선박정보 도감]",
+        "✅ 1·2·3항업 전 터미널 [스케줄·차트·베이 플랜·식단표·셔틀 시간표]",
+        "✅ 배마다 어떤 콘/장비 쓰는지 미리 보는 [작업선박정보 도감]",
         "✅ 신항·북항 실시간 풍속·날씨 및 도선 현황까지!",
         "",
         "👇 아래 주소 누르셔서 바로 써보세요!",
@@ -3619,24 +3618,24 @@ function updateMonthlyStatsUI(logsMap) {
     const avgEl = document.getElementById('monthlyAvgPay');
     const splitEl = document.getElementById('monthlySplitPay');
     const logSubMeta = document.getElementById('logCardSubMeta');
-    if (totalEl) totalEl.innerText = `이번달 총액: ${total.toLocaleString()}원`;
+    if (totalEl) totalEl.innerText = `이번 달 총액: ${total.toLocaleString()}원`;
     if (daysEl) daysEl.innerText = `${days}일`;
     if (avgEl) avgEl.innerText = `${avg.toLocaleString()}원`;
     if (splitEl) splitEl.innerText = `${(w1Sum/10000).toFixed(0)}만 / ${(w2Sum/10000).toFixed(0)}만`;
     if (logSubMeta) {
-        logSubMeta.innerText = days > 0 ? `이번 달 출근 ${days}일 · ${(total/10000).toFixed(0)}만원` : `날짜 클릭 기록 · 월간 정산 관리`;
+        logSubMeta.innerText = days > 0 ? `이번 달 출근 ${days}일 · ${(total/10000).toFixed(0)}만 원` : `날짜 클릭 기록 · 월간 정산 관리`;
     }
     updateMonthlyGoalGaugeUI(total, days);
     renderWorkLogQuickChips();
 }
 function renderCalendar(y, m){
     const g = document.getElementById('calendarGrid');
-    g.innerHTML = "";
     document.getElementById('calMonthYear').innerText = `${y}년 ${m+1}월`;
     const fD = new Date(y, m, 1).getDay(), lD = new Date(y, m+1, 0).getDate();
     const nowObj = new Date();
     const todayStr = `${nowObj.getFullYear()}-${String(nowObj.getMonth()+1).padStart(2,'0')}-${String(nowObj.getDate()).padStart(2,'0')}`;
-    for(let i=0; i<fD; i++) g.innerHTML += `<div></div>`;
+    const cellsHtml = [];
+    for(let i=0; i<fD; i++) cellsHtml.push(`<div></div>`);
     for(let d=1; d<=lD; d++){
         const dStr = `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
         let dayColor = "var(--text-main)";
@@ -3644,8 +3643,9 @@ function renderCalendar(y, m){
         if (currentDayObj === 0) dayColor = "#ef4444";
         if (currentDayObj === 6) dayColor = "#3b82f6";
         const isToday = (dStr === todayStr);
-        g.innerHTML += `<div id="cal-day-${d}" data-date="${dStr}" class="cal-day tap-effect ${isToday ? 'is-today' : ''}" onclick="clickDate('${dStr}')" style="color: ${dayColor};"><div>${d}${isToday ? '<span class="cal-today-tag">오늘</span>' : ''}</div><div class="cal-dot"></div></div>`;
+        cellsHtml.push(`<div id="cal-day-${d}" data-date="${dStr}" class="cal-day tap-effect ${isToday ? 'is-today' : ''}" onclick="clickDate('${dStr}')" style="color: ${dayColor};"><div>${d}${isToday ? '<span class="cal-today-tag">오늘</span>' : ''}</div><div class="cal-dot"></div></div>`);
     }
+    g.innerHTML = cellsHtml.join("");
     if(currentWorkerId) {
         const sDate = `${y}-${String(m+1).padStart(2,'0')}-01`, eDate = `${y}-${String(m+1).padStart(2,'0')}-${lD}`;
         db.collection('work_logs').where('date', '>=', sDate).where('date', '<=', eDate).get().then(s => {
@@ -3815,7 +3815,7 @@ function renderYearlySummaryReport(data, year, shipCounts = {}, coworkerCounts =
     latestYearlyReportText = [
         `[${year}년 근무일지 종합 정산 보고서]`,
         `- 근로자: ${currentWorkerId || "미로그인"}`,
-        `- 연간 총수입: ${totalYearPay.toLocaleString()}원 (임금1: ${totalYearW1.toLocaleString()}원 / 임금2: ${totalYearW2.toLocaleString()}원)`,
+        `- 연간 총수입: ${totalYearPay.toLocaleString()}원 (임금 1: ${totalYearW1.toLocaleString()}원 / 임금 2: ${totalYearW2.toLocaleString()}원)`,
         `- 연간 총 근로일수: ${totalYearDays}일 (가동 ${activeMonths}개월)`,
         `- 월평균 수입: ${avgMonthlyPay.toLocaleString()}원 / 일평균 수입: ${avgDailyPay.toLocaleString()}원`,
         `- 최고 수입월: ${bestPayMonth ? `${bestPayMonth.label} (${bestPayMonth.totalPay.toLocaleString()}원)` : "기록 없음"}`,
@@ -3847,7 +3847,7 @@ function renderYearlySummaryReport(data, year, shipCounts = {}, coworkerCounts =
             <div style="background:rgba(59,130,246,0.06); border:1px solid #bfdbfe; border-radius:8px; padding:8px 10px;">
                 <div style="font-size:0.72rem; color:#1e40af; font-weight:800;">💰 연간 누적 총수입</div>
                 <div style="font-size:1.02rem; font-weight:900; color:#1d4ed8; margin-top:2px;">${totalYearPay.toLocaleString()}원</div>
-                <div style="font-size:0.7rem; color:var(--text-sub); margin-top:2px;">임금1 ${(totalYearW1/10000).toFixed(0)}만 · 임금2 ${(totalYearW2/10000).toFixed(0)}만</div>
+                <div style="font-size:0.7rem; color:var(--text-sub); margin-top:2px;">임금 1 ${(totalYearW1/10000).toFixed(0)}만 · 임금 2 ${(totalYearW2/10000).toFixed(0)}만</div>
             </div>
             <div style="background:rgba(16,185,129,0.06); border:1px solid #a7f3d0; border-radius:8px; padding:8px 10px;">
                 <div style="font-size:0.72rem; color:#065f46; font-weight:800;">🗓️ 연간 누적 근로일수</div>
@@ -3856,13 +3856,13 @@ function renderYearlySummaryReport(data, year, shipCounts = {}, coworkerCounts =
             </div>
             <div style="background:rgba(245,158,11,0.07); border:1px solid #fde68a; border-radius:8px; padding:8px 10px;">
                 <div style="font-size:0.72rem; color:#92400e; font-weight:800;">📈 월평균 / 일평균 수입</div>
-                <div style="font-size:0.88rem; font-weight:900; color:#b45309; margin-top:2px;">월 ${(avgMonthlyPay/10000).toFixed(0)}만원 / 일 ${avgDailyPay.toLocaleString()}원</div>
+                <div style="font-size:0.88rem; font-weight:900; color:#b45309; margin-top:2px;">월 ${(avgMonthlyPay/10000).toFixed(0)}만 원 / 일 ${avgDailyPay.toLocaleString()}원</div>
                 <div style="font-size:0.7rem; color:${momDiffColor}; font-weight:800; margin-top:2px;">${curMonthObj.label}: ${momDiffText}</div>
             </div>
             <div style="background:rgba(139,92,246,0.06); border:1px solid #ddd6fe; border-radius:8px; padding:8px 10px;">
                 <div style="font-size:0.72rem; color:#5b21b6; font-weight:800;">🏆 연간 베스트 기록월</div>
-                <div style="font-size:0.8rem; font-weight:900; color:#6d28d9; margin-top:2px;">최고수입: ${bestPayMonth ? `${bestPayMonth.label} (${(bestPayMonth.totalPay/10000).toFixed(0)}만)` : '-'}</div>
-                <div style="font-size:0.75rem; color:#4c1d95; font-weight:800; margin-top:2px;">최다출근: ${bestDaysMonth ? `${bestDaysMonth.label} (${bestDaysMonth.workDays}일)` : '-'}</div>
+                <div style="font-size:0.8rem; font-weight:900; color:#6d28d9; margin-top:2px;">최고 수입: ${bestPayMonth ? `${bestPayMonth.label} (${(bestPayMonth.totalPay/10000).toFixed(0)}만)` : '-'}</div>
+                <div style="font-size:0.75rem; color:#4c1d95; font-weight:800; margin-top:2px;">최다 출근: ${bestDaysMonth ? `${bestDaysMonth.label} (${bestDaysMonth.workDays}일)` : '-'}</div>
             </div>
         </div>
 
@@ -4086,7 +4086,7 @@ function applyWorkLogFilter(externalLogs) {
 
     resultsBox.classList.remove('hidden');
     if (matched.length === 0) {
-        resultsBox.innerHTML = `<div style="text-align:center; padding:10px; font-size:0.82rem; color:var(--text-sub); font-weight:700;">조건에 맞는 근무 기록이 없습니다.${!externalLogs && !rangeFetchedLogs && (startDate || endDate) ? ' 다른 달 기록을 찾으시려면 [기간조회]를 눌러주세요.' : ''}</div>`;
+        resultsBox.innerHTML = `<div style="text-align:center; padding:10px; font-size:0.82rem; color:var(--text-sub); font-weight:700;">조건에 맞는 근무 기록이 없습니다.${!externalLogs && !rangeFetchedLogs && (startDate || endDate) ? ' 다른 달 기록을 찾으시려면 [기간 조회]를 눌러 주세요.' : ''}</div>`;
         return;
     }
 
@@ -4188,7 +4188,7 @@ async function confirmLoginAndSave(evt) {
     const btn = (evt && evt.currentTarget) || document.getElementById('confirmLoginBtn') || (typeof event !== 'undefined' && event ? event.target : null);
 
     if (!nick || !pw) {
-        alert("닉네임과 비밀번호를 입력해주세요.");
+        alert("닉네임과 비밀번호를 입력해 주세요.");
         return;
     }
 
@@ -4257,7 +4257,7 @@ function saveWorkLog(){
 
     // 🚩 [보안 강화] 로그인이 안 되어 있으면 저장 차단 및 로그인창 표시
     if(!currentWorkerId) {
-        alert("로그인이 필요합니다. 닉네임과 비번을 먼저 입력해주세요!");
+        alert("로그인이 필요합니다. 닉네임과 비밀번호를 먼저 입력해 주세요!");
         document.getElementById('loginModal').style.display = 'flex';
         return;
     }
@@ -4343,7 +4343,7 @@ function saveWorkLog(){
 function loginSuccess(name) { currentWorkerId = name; localStorage.setItem('myWorkerId', currentWorkerId); updateUserBar(); renderCalendar(currentDate.getFullYear(), currentDate.getMonth()); }
 function closeLoginModal(){ document.getElementById('loginModal').style.display = 'none'; }
 function updateUserBar() { document.getElementById('userProfileBar').style.display = currentWorkerId ? 'flex' : 'none'; if(currentWorkerId) document.getElementById('currentUserDisplay').innerText = `👤 ${currentWorkerId}`; }
-function logoutWorker() { if(confirm("로그아웃?")) { currentWorkerId = null; localStorage.removeItem('myWorkerId'); updateUserBar(); renderCalendar(currentDate.getFullYear(), currentDate.getMonth()); document.getElementById('dailyLogForm').classList.add('hidden'); } }
+function logoutWorker() { if(confirm("로그아웃하시겠습니까?")) { currentWorkerId = null; localStorage.removeItem('myWorkerId'); updateUserBar(); renderCalendar(currentDate.getFullYear(), currentDate.getMonth()); document.getElementById('dailyLogForm').classList.add('hidden'); } }
 function deleteWorkLog(){ if(!currentWorkerId) return; if(!confirm("정말 삭제하시겠습니까?")) return; const dStr = document.getElementById('dailyLogForm').getAttribute('data-date'); db.collection('work_logs').doc(`${currentWorkerId}_${dStr}`).delete().then(()=>{ showToast("삭제되었습니다."); document.getElementById('logShipName').value=''; document.getElementById('logWage1').value=''; document.getElementById('logWage2').value=''; document.getElementById('logCoworkers').value=''; document.getElementById('logMemo').value=''; document.getElementById('logImageInput').value = ''; const imgPreview = document.getElementById('logImagePreview'); if(imgPreview) { imgPreview.src = ''; imgPreview.style.display = 'none'; } renderCalendar(currentDate.getFullYear(), currentDate.getMonth()); }).catch(err => alert("삭제 실패: " + err.message)); }
 function changeMonth(s){ currentDate.setMonth(currentDate.getMonth()+s); renderCalendar(currentDate.getFullYear(), currentDate.getMonth()); }
 function previewLogImage(input){ if(input.files&&input.files[0]){ const r=new FileReader(); r.onload=e=>{const i=document.getElementById('logImagePreview'); i.src=e.target.result; i.style.display='block';}; r.readAsDataURL(input.files[0]); } }
@@ -4369,7 +4369,7 @@ function calcTimeAndFill() {
         const ed = document.getElementById('wageEndDate').value;
         const eh = parseInt(document.getElementById('wageEndHour').value, 10) || 0;
         if (!sd || !ed) {
-            alert("시작 날짜와 종료 날짜를 선택해주세요.");
+            alert("시작 날짜와 종료 날짜를 선택해 주세요.");
             return;
         }
         const month = parseInt(sd.split('-')[1], 10) || (new Date(sd).getMonth() + 1);
@@ -4380,13 +4380,13 @@ function calcTimeAndFill() {
         if (diffMs > 0) {
             const hours = Math.floor(diffMs / (1000 * 60 * 60));
             document.getElementById('wageTotalHours').value = hours;
-            showToast(`⏱️ 총 근무시간 ${hours}시간이 설정되었습니다.`);
+            showToast(`⏱️ 총 근무 시간 ${hours}시간이 설정되었습니다.`);
         } else {
             document.getElementById('wageTotalHours').value = '';
             if (sd !== ed || sh !== eh) {
                 alert("종료 시간이 시작 시간보다 빠를 수 없습니다.");
             } else {
-                alert("시작 시간과 종료 시간이 같습니다. 근무 시간을 확인해주세요.");
+                alert("시작 시간과 종료 시간이 같습니다. 근무 시간을 확인해 주세요.");
             }
         }
     } catch (e) {
@@ -4402,11 +4402,11 @@ function calculateWage() {
         const sd = document.getElementById('wageStartDate').value;
         const sh = parseInt(document.getElementById('wageStartHour').value, 10) || 0;
         if (!sd || !document.getElementById('wageEndDate').value) {
-            alert("근무 날짜를 선택해주세요.");
+            alert("근무 날짜를 선택해 주세요.");
             return;
         }
         if (totalHours <= 0) {
-            alert("총 근무 시간이 0시간입니다. [⏱️ 시간 설정 완료] 버튼을 누르거나 총근무 시간을 입력해주세요.");
+            alert("총 근무 시간이 0시간입니다. [⏱️ 시간 설정 완료] 버튼을 누르거나 총 근무 시간을 입력해 주세요.");
             return;
         }
         const startTime = sh;
@@ -4445,7 +4445,7 @@ function calculateWage() {
         lastCalculatedWageData = { date: sd, totalPay: finalTotal, summary: `[${roleLabel}] 총 ${totalHours}H (주간 ${dayHours}H / 야간 ${nightHours}H)` };
         let extraHtml = "";
         if (holidayAmt > 0) extraHtml += renderRow("🚜 지게차 수당 (" + holidayH + "H)", holidayAmt, "#ea580c");
-        if (weekendAmt > 0) extraHtml += renderRow("🎈 특별수당 (" + weekendH + "H)", weekendAmt, "#3b82f6");
+        if (weekendAmt > 0) extraHtml += renderRow("🎈 특별 수당 (" + weekendH + "H)", weekendAmt, "#3b82f6");
         if (rainAmt > 0) extraHtml += renderRow("☔ 우천 수당 (" + rainH + "H)", rainAmt, "#0284c7");
         if (hotAmt > 0) extraHtml += renderRow("☀️ 혹서기(30%) 수당 (" + hotH + "H)", hotAmt, "#d97706");
         if (holidayAmt === 0 && weekendAmt === 0 && otherAmt === 0) extraHtml += renderRow("➕ 추가 가산 수당", 0);
@@ -4457,7 +4457,7 @@ function calculateWage() {
         showToast("상세 계산서가 생성되었습니다!");
     } catch (e) {
         console.error(e);
-        alert("계산 오류: 입력창 값을 확인해주세요.");
+        alert("계산 오류: 입력창 값을 확인해 주세요.");
     }
 }
 function sendCalculatedWageToLog() {
@@ -4502,9 +4502,9 @@ function resetWageForm() {
         console.error(e);
     }
 }
-let currentEditNoticeId = null; let currentEditNoticeImg = null; function autoLink(text) { if (!text) return ""; const urlRegex = /(https?:\/\/[^\s]+)/g; return text.replace(urlRegex, function(url) { return `<a href="${url}" target="_blank" style="color:#2563eb; text-decoration:underline; font-weight:bold;">${url}</a>`; }); } async function startEditNotice(id, title, content, imgUrl, e) { e.stopPropagation(); if (!(await verifyAdmin())) return; currentEditNoticeId = id; currentEditNoticeImg = imgUrl; document.getElementById('noticeTitle').value = title; document.getElementById('noticeContent').value = content.replace(/\\n/g, '\n'); document.getElementById('noticeFileInput').value = ''; document.getElementById('noticeForm').classList.remove('hidden'); document.getElementById('noticeSubmitBtn').innerText = "수정 완료"; document.getElementById('noticeSubmitBtn').style.background = "var(--primary)"; document.getElementById('noticeCancelBtn').style.display = "block"; document.getElementById('noticeForm').scrollIntoView({behavior: 'smooth', block: 'center'}); } function cancelEditNotice() { currentEditNoticeId = null; currentEditNoticeImg = null; document.getElementById('noticeTitle').value = ''; document.getElementById('noticeContent').value = ''; document.getElementById('noticeFileInput').value = ''; document.getElementById('noticeSubmitBtn').innerText = "등록 완료"; document.getElementById('noticeSubmitBtn').style.background = "var(--success)"; document.getElementById('noticeCancelBtn').style.display = "none"; document.getElementById('noticeForm').classList.add('hidden'); } async function saveNotice() { if (!(await verifyAdmin())) return; const t = document.getElementById('noticeTitle').value.trim(); const c = document.getElementById('noticeContent').value.trim(); const f = document.getElementById('noticeFileInput').files[0]; const btn = document.getElementById('noticeSubmitBtn'); if (!t || !c) { alert("공지 제목과 내용을 입력해주세요."); return; } btn.innerText = "서버 기록 중..."; btn.disabled = true; const finalize = (url) => { const data = { title: t, content: c, timestamp: firebase.firestore.FieldValue.serverTimestamp() }; if (url) { data.imageUrl = url; } else if (currentEditNoticeId && currentEditNoticeImg) { data.imageUrl = currentEditNoticeImg; } else { data.imageUrl = null; } let req; if (currentEditNoticeId) { req = db.collection("notices").doc(currentEditNoticeId).update(data); } else { req = db.collection("notices").add(data); } req.then(() => { const isEdit = !!currentEditNoticeId; cancelEditNotice(); showToast(isEdit ? "공지가 수정되었습니다." : "공지가 등록되었습니다."); }).catch(err => { alert("저장 실패: " + err.message); btn.innerText = currentEditNoticeId ? "수정 완료" : "등록 완료"; btn.disabled = false; }); }; if (f) { const storageRef = storage.ref(`notices/${Date.now()}_${f.name}`); const uploadTask = storageRef.put(f); uploadTask.on('state_changed', (snap) => { const percent = Math.round((snap.bytesTransferred / snap.totalBytes) * 100); btn.innerText = `사진 업로드 중... ${percent}%`; }, (err) => { alert("사진 업로드 실패: " + err.message); btn.disabled = false; btn.innerText = currentEditNoticeId ? "수정 완료" : "등록 완료"; }, () => { uploadTask.snapshot.ref.getDownloadURL().then(url => finalize(url)); }); } else { finalize(null); } } function delNotice(id,e){ e.stopPropagation(); verifyAdmin().then(r=>{ if(r) db.collection("notices").doc(id).delete(); }); }
+let currentEditNoticeId = null; let currentEditNoticeImg = null; function autoLink(text) { if (!text) return ""; const urlRegex = /(https?:\/\/[^\s]+)/g; return text.replace(urlRegex, function(url) { return `<a href="${url}" target="_blank" style="color:#2563eb; text-decoration:underline; font-weight:bold;">${url}</a>`; }); } async function startEditNotice(id, title, content, imgUrl, e) { e.stopPropagation(); if (!(await verifyAdmin())) return; currentEditNoticeId = id; currentEditNoticeImg = imgUrl; document.getElementById('noticeTitle').value = title; document.getElementById('noticeContent').value = content.replace(/\\n/g, '\n'); document.getElementById('noticeFileInput').value = ''; document.getElementById('noticeForm').classList.remove('hidden'); document.getElementById('noticeSubmitBtn').innerText = "수정 완료"; document.getElementById('noticeSubmitBtn').style.background = "var(--primary)"; document.getElementById('noticeCancelBtn').style.display = "block"; document.getElementById('noticeForm').scrollIntoView({behavior: 'smooth', block: 'center'}); } function cancelEditNotice() { currentEditNoticeId = null; currentEditNoticeImg = null; document.getElementById('noticeTitle').value = ''; document.getElementById('noticeContent').value = ''; document.getElementById('noticeFileInput').value = ''; document.getElementById('noticeSubmitBtn').innerText = "등록 완료"; document.getElementById('noticeSubmitBtn').style.background = "var(--success)"; document.getElementById('noticeCancelBtn').style.display = "none"; document.getElementById('noticeForm').classList.add('hidden'); } async function saveNotice() { if (!(await verifyAdmin())) return; const t = document.getElementById('noticeTitle').value.trim(); const c = document.getElementById('noticeContent').value.trim(); const f = document.getElementById('noticeFileInput').files[0]; const btn = document.getElementById('noticeSubmitBtn'); if (!t || !c) { alert("공지 제목과 내용을 입력해 주세요."); return; } btn.innerText = "서버 기록 중..."; btn.disabled = true; const finalize = (url) => { const data = { title: t, content: c, timestamp: firebase.firestore.FieldValue.serverTimestamp() }; if (url) { data.imageUrl = url; } else if (currentEditNoticeId && currentEditNoticeImg) { data.imageUrl = currentEditNoticeImg; } else { data.imageUrl = null; } let req; if (currentEditNoticeId) { req = db.collection("notices").doc(currentEditNoticeId).update(data); } else { req = db.collection("notices").add(data); } req.then(() => { const isEdit = !!currentEditNoticeId; cancelEditNotice(); showToast(isEdit ? "공지가 수정되었습니다." : "공지가 등록되었습니다."); }).catch(err => { alert("저장 실패: " + err.message); btn.innerText = currentEditNoticeId ? "수정 완료" : "등록 완료"; btn.disabled = false; }); }; if (f) { const storageRef = storage.ref(`notices/${Date.now()}_${f.name}`); const uploadTask = storageRef.put(f); uploadTask.on('state_changed', (snap) => { const percent = Math.round((snap.bytesTransferred / snap.totalBytes) * 100); btn.innerText = `사진 업로드 중... ${percent}%`; }, (err) => { alert("사진 업로드 실패: " + err.message); btn.disabled = false; btn.innerText = currentEditNoticeId ? "수정 완료" : "등록 완료"; }, () => { uploadTask.snapshot.ref.getDownloadURL().then(url => finalize(url)); }); } else { finalize(null); } } function delNotice(id,e){ e.stopPropagation(); verifyAdmin().then(r=>{ if(r) db.collection("notices").doc(id).delete(); }); }
 
-async function addPost() { const nickVal = document.getElementById('inputNick').value.trim(); const titleVal = document.getElementById('inputTitle').value.trim(); const pwVal = document.getElementById('inputPw').value.trim(); const contentVal = document.getElementById('inputContent').value.trim(); const btnEl = document.querySelector('#boardForm .bg-submit'); if (nickVal && titleVal && pwVal && contentVal) { btnEl.innerText = "처리 중..."; btnEl.disabled = true; const pwHash = (/^[a-f0-9]{64}$/i.test(pwVal)) ? pwVal.toLowerCase() : (await sha256Hex(pwVal)); const postData = { nick: nickVal, title: titleVal, password: pwHash, content: contentVal, timestamp: firebase.firestore.FieldValue.serverTimestamp() }; if (currentEditPostId) { db.collection("posts").doc(currentEditPostId).update(postData).then(() => { resetBoardForm(); showToast("게시글이 수정되었습니다."); }).catch((e) => { alert("수정 실패"); btnEl.innerText = "수정 완료"; btnEl.disabled = false; }); } else { db.collection("posts").add(postData).then(() => { resetBoardForm(); showToast("게시글이 등록되었습니다."); }).catch((e) => { alert("등록 실패"); btnEl.innerText = "등록"; btnEl.disabled = false; }); } } else alert("모든 항목을 입력해주세요."); }
+async function addPost() { const nickVal = document.getElementById('inputNick').value.trim(); const titleVal = document.getElementById('inputTitle').value.trim(); const pwVal = document.getElementById('inputPw').value.trim(); const contentVal = document.getElementById('inputContent').value.trim(); const btnEl = document.querySelector('#boardForm .bg-submit'); if (nickVal && titleVal && pwVal && contentVal) { btnEl.innerText = "처리 중..."; btnEl.disabled = true; const pwHash = (/^[a-f0-9]{64}$/i.test(pwVal)) ? pwVal.toLowerCase() : (await sha256Hex(pwVal)); const postData = { nick: nickVal, title: titleVal, password: pwHash, content: contentVal, timestamp: firebase.firestore.FieldValue.serverTimestamp() }; if (currentEditPostId) { db.collection("posts").doc(currentEditPostId).update(postData).then(() => { resetBoardForm(); showToast("게시글이 수정되었습니다."); }).catch((e) => { alert("수정 실패"); btnEl.innerText = "수정 완료"; btnEl.disabled = false; }); } else { db.collection("posts").add(postData).then(() => { resetBoardForm(); showToast("게시글이 등록되었습니다."); }).catch((e) => { alert("등록 실패"); btnEl.innerText = "등록"; btnEl.disabled = false; }); } } else alert("모든 항목을 입력해 주세요."); }
 function resetBoardForm() { document.getElementById('inputNick').value = ''; document.getElementById('inputTitle').value = ''; document.getElementById('inputPw').value = ''; document.getElementById('inputContent').value = ''; document.getElementById('boardForm').classList.add('hidden'); const btnEl = document.querySelector('#boardForm .bg-submit'); if(btnEl) { btnEl.innerText = "등록"; btnEl.disabled = false; } currentEditPostId = null; }
 async function tryEditPost(id, savedPw, nick, title, content, e) { e.stopPropagation(); const inputPw = prompt("게시글 비밀번호를 입력하세요:"); if (inputPw === null) return; if (await verifyPasswordMatch(inputPw, savedPw)) { currentEditPostId = id; document.getElementById('inputNick').value = nick; document.getElementById('inputPw').value = inputPw.trim(); document.getElementById('inputTitle').value = title; document.getElementById('inputContent').value = content; document.getElementById('boardForm').classList.remove('hidden'); document.querySelector('#boardForm .bg-submit').innerText = "수정 완료"; document.getElementById('boardForm').scrollIntoView({behavior: 'smooth', block: 'center'}); showToast("수정 모드로 전환되었습니다."); } else alert("⚠️ 비밀번호가 일치하지 않습니다."); }
 async function deletePost(id,pw,e){ e.stopPropagation(); const inputPw = prompt("게시글 비밀번호를 입력하세요:"); if (inputPw === null) return; if(await verifyPasswordMatch(inputPw, pw) || await verifyAdmin()) db.collection("posts").doc(id).delete(); } 
@@ -4675,9 +4675,9 @@ function filterShips() {
         loadAndSearchAllShips(document.getElementById('shipSearch')?.value || '');
     }
 }
-function addArchive() { const t = document.getElementById('archiveTitle').value.trim(); const f = document.getElementById('archiveFile').files[0]; const btn = document.getElementById('archiveSubmitBtn'); if(!t || !f) return alert("파일 설명과 파일을 모두 선택해주세요."); btn.innerText = "서버 연결 중..."; btn.disabled = true; const ref = storage.ref(`archives/${Date.now()}_${f.name}`); const task = ref.put(f); task.on('state_changed', (s) => { const p = Math.round((s.bytesTransferred / s.totalBytes) * 100); btn.innerText = `업로드 중... ${p}%`; }, (e) => { alert("업로드 실패: " + e.message); btn.disabled = false; btn.innerText = "업로드 완료"; }, () => { task.snapshot.ref.getDownloadURL().then(url => { db.collection("archives").add({ title: t, url: url, timestamp: firebase.firestore.FieldValue.serverTimestamp() }).then(() => { document.getElementById('archiveTitle').value = ""; document.getElementById('archiveFile').value = ""; toggleHidden('archiveForm'); btn.innerText = "업로드 완료"; btn.disabled = false; showToast("파일이 성공적으로 등록되었습니다!"); }); }); } ); } async function deleteShip(id,e){e.stopPropagation(); if(await verifyAdmin()) db.collection("ships").doc(id).delete();} function delArchive(id,e){ e.stopPropagation(); verifyAdmin().then(r=>{ if(r) db.collection("archives").doc(id).delete(); }); } 
+function addArchive() { const t = document.getElementById('archiveTitle').value.trim(); const f = document.getElementById('archiveFile').files[0]; const btn = document.getElementById('archiveSubmitBtn'); if(!t || !f) return alert("파일 설명과 파일을 모두 선택해 주세요."); btn.innerText = "서버 연결 중..."; btn.disabled = true; const ref = storage.ref(`archives/${Date.now()}_${f.name}`); const task = ref.put(f); task.on('state_changed', (s) => { const p = Math.round((s.bytesTransferred / s.totalBytes) * 100); btn.innerText = `업로드 중... ${p}%`; }, (e) => { alert("업로드 실패: " + e.message); btn.disabled = false; btn.innerText = "업로드 완료"; }, () => { task.snapshot.ref.getDownloadURL().then(url => { db.collection("archives").add({ title: t, url: url, timestamp: firebase.firestore.FieldValue.serverTimestamp() }).then(() => { document.getElementById('archiveTitle').value = ""; document.getElementById('archiveFile').value = ""; toggleHidden('archiveForm'); btn.innerText = "업로드 완료"; btn.disabled = false; showToast("파일이 성공적으로 등록되었습니다!"); }); }); } ); } async function deleteShip(id,e){e.stopPropagation(); if(await verifyAdmin()) db.collection("ships").doc(id).delete();} function delArchive(id,e){ e.stopPropagation(); verifyAdmin().then(r=>{ if(r) db.collection("archives").doc(id).delete(); }); } 
 
-function renderBoardPage(p){ currentBoardPage = p; const l = document.getElementById("boardList"); l.innerHTML = ""; const start = (p-1) * postsPerPage; const end = start + postsPerPage; const pageData = allPostsData.slice(start, end); if(pageData.length === 0) { l.innerHTML = "<tr><td colspan='4' style='text-align:center; padding:20px; color:var(--text-sub); font-weight:700;'>게시글이 없습니다.</td></tr>"; document.getElementById("pagination").innerHTML = ""; return; } pageData.forEach((x, i) => { let dateStr = ""; if(x.timestamp) { const d = x.timestamp.toDate(); const month = String(d.getMonth() + 1).padStart(2, '0'); const day = String(d.getDate()).padStart(2, '0'); const hour = String(d.getHours()).padStart(2, '0'); const min = String(d.getMinutes()).padStart(2, '0'); dateStr = `${month}/${day} ${hour}:${min}`; } const rowId = `p-${x.id}`; const authorName = x.nick || '익명'; const postNum = allPostsData.length - ((currentBoardPage - 1) * postsPerPage) - i; const safeTitle = (x.title || '').replace(/'/g, "\\'").replace(/"/g, "&quot;"); const safeContent = (x.content || '').replace(/'/g, "\\'").replace(/"/g, "&quot;").replace(/\n/g, "\\n"); l.innerHTML += `<tr onclick="toggleBoardRow('${rowId}')" style="cursor:pointer;"> <td class="board-no">${postNum}</td> <td class="board-title">${x.title} <span id="cmt-badge-${x.id}" class="cmt-count-pill hidden"></span> <span style="font-size:0.75rem; color:var(--primary); margin-left:4px;">▼</span></td> <td class="board-date">${dateStr}</td> <td class="board-nick">${authorName}</td> </tr> <tr id="${rowId}" class="board-content-row"> <td colspan="4" class="board-content-box"> <div style="margin-bottom:15px; font-weight:600; background:var(--card-bg); padding:12px; border-radius:8px; border:1px solid var(--border);">${x.content}</div> <div style="text-align:right; border-bottom:1px dashed var(--border); padding-bottom:10px; margin-bottom:10px;"> <button class="mini-btn" style="background:var(--primary-light) !important; color:white !important;" onclick="tryEditPost('${x.id}', '${x.password}', '${authorName}', '${safeTitle}', '${safeContent}', event)">✏️ 수정</button> <button class="mini-btn btn-del" onclick="deletePost('${x.id}','${x.password}',event)">🗑️ 삭제</button> </div> <div id="cmt-list-${x.id}" class="comment-section"></div> <div class="comment-form"> <input id="cmt-name-${x.id}" class="comment-input-sm" placeholder="닉네임"> <input id="cmt-pw-${x.id}" class="comment-input-sm" type="password" placeholder="비밀번호"> <input id="cmt-txt-${x.id}" class="comment-input-lg" placeholder="따뜻한 댓글을 남겨주세요..."> <button class="comment-submit" onclick="addComment('${x.id}')">댓글 등록</button> </div> </td> </tr>`; loadComments(x.id); }); renderPagination(p); } 
+function renderBoardPage(p){ currentBoardPage = p; const l = document.getElementById("boardList"); Object.values(commentUnsubscribes).forEach(unsub => { if (typeof unsub === "function") unsub(); }); commentUnsubscribes = {}; l.innerHTML = ""; const start = (p-1) * postsPerPage; const end = start + postsPerPage; const pageData = allPostsData.slice(start, end); if(pageData.length === 0) { l.innerHTML = "<tr><td colspan='4' style='text-align:center; padding:20px; color:var(--text-sub); font-weight:700;'>게시글이 없습니다.</td></tr>"; document.getElementById("pagination").innerHTML = ""; return; } const rowsHtml = []; pageData.forEach((x, i) => { let dateStr = ""; if(x.timestamp) { const d = x.timestamp.toDate(); const month = String(d.getMonth() + 1).padStart(2, '0'); const day = String(d.getDate()).padStart(2, '0'); const hour = String(d.getHours()).padStart(2, '0'); const min = String(d.getMinutes()).padStart(2, '0'); dateStr = `${month}/${day} ${hour}:${min}`; } const rowId = `p-${x.id}`; const authorName = x.nick || '익명'; const postNum = allPostsData.length - ((currentBoardPage - 1) * postsPerPage) - i; const safeTitle = (x.title || '').replace(/'/g, "\\'").replace(/"/g, "&quot;"); const safeContent = (x.content || '').replace(/'/g, "\\'").replace(/"/g, "&quot;").replace(/\n/g, "\\n"); rowsHtml.push(`<tr onclick="toggleBoardRow('${rowId}')" style="cursor:pointer;"> <td class="board-no">${postNum}</td> <td class="board-title">${x.title} <span id="cmt-badge-${x.id}" class="cmt-count-pill hidden"></span> <span style="font-size:0.75rem; color:var(--primary); margin-left:4px;">▼</span></td> <td class="board-date">${dateStr}</td> <td class="board-nick">${authorName}</td> </tr> <tr id="${rowId}" class="board-content-row"> <td colspan="4" class="board-content-box"> <div style="margin-bottom:15px; font-weight:600; background:var(--card-bg); padding:12px; border-radius:8px; border:1px solid var(--border);">${x.content}</div> <div style="text-align:right; border-bottom:1px dashed var(--border); padding-bottom:10px; margin-bottom:10px;"> <button class="mini-btn" style="background:var(--primary-light) !important; color:white !important;" onclick="tryEditPost('${x.id}', '${x.password}', '${authorName}', '${safeTitle}', '${safeContent}', event)">✏️ 수정</button> <button class="mini-btn btn-del" onclick="deletePost('${x.id}','${x.password}',event)">🗑️ 삭제</button> </div> <div id="cmt-list-${x.id}" class="comment-section"></div> <div class="comment-form"> <input id="cmt-name-${x.id}" class="comment-input-sm" placeholder="닉네임"> <input id="cmt-pw-${x.id}" class="comment-input-sm" type="password" placeholder="비밀번호"> <input id="cmt-txt-${x.id}" class="comment-input-lg" placeholder="따뜻한 댓글을 남겨주세요..."> <button class="comment-submit" onclick="addComment('${x.id}')">댓글 등록</button> </div> </td> </tr>`); }); l.innerHTML = rowsHtml.join(""); pageData.forEach(x => loadComments(x.id)); renderPagination(p); } 
 function renderShipPage(p) {
     const list = document.getElementById("shipList");
     const pagination = document.getElementById("shipPagination");
@@ -4690,9 +4690,10 @@ function renderShipPage(p) {
     if (p === 1) pagination.scrollLeft = 0;
     const pageData = filteredShips.slice((p - 1) * postsPerPage, p * postsPerPage);
     if (pageData.length === 0) {
-        list.innerHTML = "<tr><td colspan='3' style='text-align:center; padding:20px; color:var(--text-sub); font-weight:700;'>조건에 맞는 선박정보가 없습니다.</td></tr>";
+        list.innerHTML = "<tr><td colspan='3' style='text-align:center; padding:20px; color:var(--text-sub); font-weight:700;'>조건에 맞는 선박 정보가 없습니다.</td></tr>";
         return;
     }
+    const rowsHtml = [];
     pageData.forEach((ship, index) => {
         const safeName = (ship.shipName || "").replace(/'/g, "\\'");
         const safeFeat = (ship.onboardFeat || "").replace(/'/g, "\\'").replace(/\n/g, "\\n");
@@ -4716,17 +4717,19 @@ function renderShipPage(p) {
             </div>`
             : "";
         const imageHtml = ship.imageUrl
-            ? `<img src="${ship.imageUrl}" style="max-width:100%; border-radius:8px; margin-top:8px; margin-bottom:10px; border:1px solid var(--border); cursor:pointer;" onclick="document.getElementById('imageModal').style.display='flex'; document.getElementById('modalImage').src=this.src;">`
+            ? `<img src="${ship.imageUrl}" loading="lazy" alt="선박 현장 이미지" style="max-width:100%; border-radius:8px; margin-top:8px; margin-bottom:10px; border:1px solid var(--border); cursor:pointer;" onclick="document.getElementById('imageModal').style.display='flex'; document.getElementById('modalImage').src=this.src;">`
             : "";
         const rowId = `s-${ship.id}`;
         const postNum = filteredShips.length - ((p - 1) * postsPerPage) - index;
-        list.innerHTML += `<tr onclick="toggleBoardRow('${rowId}')" style="cursor:pointer;"><td class="board-no">${postNum}</td><td class="board-title" style="white-space:normal; line-height:1.35;"><div>🚢 ${ship.shipName || "선박명 없음"} ${starBadge} <span style="font-size:0.75rem; color:var(--primary); margin-left:4px;">▼</span></div>${tagsInlineHtml}</td><td class="board-date">${dateStr}</td></tr><tr id="${rowId}" class="board-content-row"><td colspan="3" class="board-content-box">${detailMetaHtml}<div style="margin-bottom:12px; white-space:pre-wrap;">${ship.onboardFeat || ""}</div>${imageHtml}<div style="text-align:right; border-bottom:1px dashed var(--border); padding-bottom:10px; margin-bottom:10px;"><button class="mini-btn" style="background:var(--primary-light) !important; color:white !important;" onclick="tryEditShip('${ship.id}', '${safeName}', '${safeFeat}', '${savedPw}')">✏️ 수정</button><button class="mini-btn btn-del" onclick="deleteShip('${ship.id}',event)">🗑️ 삭제</button></div></td></tr>`;
-        document.getElementById(rowId).querySelector("td").insertAdjacentHTML("beforeend", renderShipCommentMarkup(ship.id));
+        rowsHtml.push(`<tr onclick="toggleBoardRow('${rowId}')" style="cursor:pointer;"><td class="board-no">${postNum}</td><td class="board-title" style="white-space:normal; line-height:1.35;"><div>🚢 ${ship.shipName || "선박명 없음"} ${starBadge} <span style="font-size:0.75rem; color:var(--primary); margin-left:4px;">▼</span></div>${tagsInlineHtml}</td><td class="board-date">${dateStr}</td></tr><tr id="${rowId}" class="board-content-row"><td colspan="3" class="board-content-box">${detailMetaHtml}<div style="margin-bottom:12px; white-space:pre-wrap;">${ship.onboardFeat || ""}</div>${imageHtml}<div style="text-align:right; border-bottom:1px dashed var(--border); padding-bottom:10px; margin-bottom:10px;"><button class="mini-btn" style="background:var(--primary-light) !important; color:white !important;" onclick="tryEditShip('${ship.id}', '${safeName}', '${safeFeat}', '${savedPw}')">✏️ 수정</button><button class="mini-btn btn-del" onclick="deleteShip('${ship.id}',event)">🗑️ 삭제</button></div>${renderShipCommentMarkup(ship.id)}</td></tr>`);
     });
+    list.innerHTML = rowsHtml.join("");
     const totalPages = Math.ceil(filteredShips.length / postsPerPage);
+    const pageHtml = [];
     for (let page = 1; page <= totalPages; page++) {
-        pagination.innerHTML += `<span class="page-num ${page === p ? 'active' : ''}" onclick="renderShipPage(${page})" style="flex:0 0 auto; cursor:pointer; padding:5px 12px; margin:2px; background:#e5e7eb; border-radius:8px; font-weight:800; font-size:0.9rem;">${page}</span>`;
+        pageHtml.push(`<span class="page-num ${page === p ? 'active' : ''}" onclick="renderShipPage(${page})" style="flex:0 0 auto; cursor:pointer; padding:5px 12px; margin:2px; background:#e5e7eb; border-radius:8px; font-weight:800; font-size:0.9rem;">${page}</span>`);
     }
+    pagination.innerHTML = pageHtml.join("");
 };
 function renderShipCommentMarkup(shipId) {
     return `<div style="margin-top:15px; border-top:1px dashed var(--border); padding-top:12px;">
@@ -4814,7 +4817,7 @@ async function submitShipComment(shipId) {
     const password = document.getElementById(`ship-comment-password-${shipId}`).value.trim();
     const text = document.getElementById(`ship-comment-text-${shipId}`).value.trim();
     if (!name || !password || !text) {
-        alert("닉네임, 비밀번호, 댓글 내용을 모두 입력해주세요.");
+        alert("닉네임, 비밀번호, 댓글 내용을 모두 입력해 주세요.");
         return;
     }
     const pwHash = (/^[a-f0-9]{64}$/i.test(password)) ? password.toLowerCase() : (await sha256Hex(password));
@@ -4827,8 +4830,8 @@ async function submitShipComment(shipId) {
         else document.getElementById(`ship-comment-text-${shipId}`).value = "";
     }).catch(error => alert("댓글 저장 실패: " + error.message));
 }
-function renderPagination(curr) { const total = Math.ceil(allPostsData.length / postsPerPage); const el = document.getElementById('pagination'); if(!el) return; el.innerHTML = ""; for(let i=1; i<=total; i++){ el.innerHTML += `<span class="page-num ${i===curr?'active':''}" onclick="renderBoardPage(${i})" style="cursor:pointer; padding:5px 12px; margin:2px; background:#e5e7eb; border-radius:8px; font-weight:800; font-size:0.9rem;">${i}</span>`; } } 
-function loadComments(pid){if(commentUnsubscribes[pid]) commentUnsubscribes[pid](); commentUnsubscribes[pid]=db.collection('posts').doc(pid).collection('comments').orderBy('timestamp','asc').onSnapshot(s=>{const el=document.getElementById(`cmt-list-${pid}`); const badgeEl=document.getElementById(`cmt-badge-${pid}`); if(badgeEl){ if(s.size>0){ badgeEl.innerText=`💬 ${s.size}`; badgeEl.classList.remove('hidden'); } else { badgeEl.classList.add('hidden'); } } if(!el) return; el.innerHTML=""; s.forEach(d=>{const c=d.data(); el.innerHTML+=`<div class="comment-item"><span><span class="comment-meta">${c.name}:</span><span class="comment-text">${c.text}</span></span><button class="comment-del-btn" onclick="deleteComment('${pid}','${d.id}','${c.password}')">×</button></div>`;});});} 
+function renderPagination(curr) { const total = Math.ceil(allPostsData.length / postsPerPage); const el = document.getElementById('pagination'); if(!el) return; const html = []; for(let i=1; i<=total; i++){ html.push(`<span class="page-num ${i===curr?'active':''}" onclick="renderBoardPage(${i})" style="cursor:pointer; padding:5px 12px; margin:2px; background:#e5e7eb; border-radius:8px; font-weight:800; font-size:0.9rem;">${i}</span>`); } el.innerHTML = html.join(""); } 
+function loadComments(pid){if(commentUnsubscribes[pid]) commentUnsubscribes[pid](); commentUnsubscribes[pid]=db.collection('posts').doc(pid).collection('comments').orderBy('timestamp','asc').onSnapshot(s=>{const el=document.getElementById(`cmt-list-${pid}`); const badgeEl=document.getElementById(`cmt-badge-${pid}`); if(badgeEl){ if(s.size>0){ badgeEl.innerText=`💬 ${s.size}`; badgeEl.classList.remove('hidden'); } else { badgeEl.classList.add('hidden'); } } if(!el) return; const items=[]; s.forEach(d=>{const c=d.data(); items.push(`<div class="comment-item"><span><span class="comment-meta">${c.name}:</span><span class="comment-text">${c.text}</span></span><button class="comment-del-btn" onclick="deleteComment('${pid}','${d.id}','${c.password}')">×</button></div>`);}); el.innerHTML=items.join("");});} 
 
 function openBusSchedule(){ trackAppEvent('actions', 'bus_view'); const m=document.getElementById('imageModal'); document.getElementById('modalImage').src='https://firebasestorage.googleapis.com/v0/b/busan-hak-port.firebasestorage.app/o/KakaoTalk_20260129_001114789.jpg?alt=media'; m.style.display='flex'; } function closeImageModal(){ document.getElementById('imageModal').style.display='none'; } function openPrivacy() { toggleDashItem('privacy-center-card'); document.getElementById('privacy-center-card').scrollIntoView({behavior: 'smooth', block: 'center'}); }
 
@@ -4850,34 +4853,34 @@ async function ensureTodayUpdateNotice() {
         "",
         "⭐ 1. [내 단골 터미널 빠른 실행 바] 상단 고정 기능",
         "• 1·2·3항업 9개 터미널 이름 왼쪽의 별표(⭐)를 터치하면 화면 최상단에 [내 단골 터미널 빠른 실행 바]가 생성됩니다.",
-        "• 폴더를 열지 않고도 상단에서 스케줄·차트·현황·베이플랜·셔틀·식단을 1초 만에 바로 실행할 수 있습니다.",
+        "• 폴더를 열지 않고도 상단에서 스케줄·차트·현황·베이 플랜·셔틀·식단을 1초 만에 바로 실행할 수 있습니다.",
         "",
         "🧮 2. 임금계산기 [넓게 보기 스위치] & [근무일지 원클릭 전송]",
         "• [📐 입력창 넓게 보기 / 5:5 단가표 나란히 보기] 전환 버튼이 추가되어 작은 스마트폰 화면에서도 편리하게 입력할 수 있습니다.",
-        "• 계산 완료 후 [✨ 📅 이 계산 결과를 근무일지로 보내기 ✨] 버튼을 누르면 해당 날짜의 근무일지에 실수령액과 근무시간 요약이 자동 입력됩니다.",
+        "• 계산 완료 후 [✨ 📅 이 계산 결과를 근무일지로 보내기 ✨] 버튼을 누르면 해당 날짜의 근무일지에 실수령액과 근무 시간 요약이 자동 입력됩니다.",
         "",
-        "🎯 3. 근무일지 [이번 달 목표 수입 달성률 게이지 바] & [동료·선박 원클릭 자동완성 칩]",
+        "🎯 3. 근무일지 [이번 달 목표 수입 달성률 게이지 바] & [동료·선박 원클릭 자동 완성 칩]",
         "• 본인의 월 목표 금액(예: 450만 원)을 설정하면 실시간 달성률(%) 게이지 바와 목표까지 남은 금액·예상 출근일수를 자동으로 계산해 줍니다.",
         "• 달력에서 날짜를 눌러 일지를 쓸 때, 최근 자주 입력한 [작업 선박명]과 [동반 근무자]가 버튼(칩)으로 자동 표시되어 터치 한 번으로 입력됩니다.",
         "",
-        "🚢 4. 선박정보 [작업 난이도 별점(★1~5) & 필수 장비 태그] 및 [전체 선박 도감 한눈에 보기]",
+        "🚢 4. 작업선박정보(등록및검색) [작업 난이도 별점(★1~5) & 필수 장비 태그] 및 [전체 선박 도감 한눈에 보기]",
         "• 선박 등록 시 작업 난이도(★1~5)와 특징 태그(#오토콘, #수동콘, #브릿지주의, #라싱바무거움 등)를 선택할 수 있습니다.",
         "• 하단 [📋 전체 선박 도감 한눈에 보기] 테이블에 상단 고정 헤더, 줄무늬(스트라이프) 가독성, 컴팩트 1줄 요약 및 터치 강조 효과를 적용해 한 화면에서 수많은 선박을 쾌적하게 확인할 수 있습니다.",
         "",
         "🌬️ 5. [부산항 실시간 기상 · 작업 안전 전광판] 탑재",
-        "• [날씨 및 도선상황] 탭을 열면 외부 사이트로 이동하기 전에 부산 신항(2·3항업)과 북항(1항업)의 현재 기온·체감온도, 순간 풍속(m/s), 강수량 및 강풍 작업 주의 단계를 즉시 보여줍니다.",
+        "• [날씨 및 도선 상황] 탭을 열면 외부 사이트로 이동하기 전에 부산 신항(2·3항업)과 북항(1항업)의 현재 기온·체감 온도, 순간 풍속(m/s), 강수량 및 강풍 작업 주의 단계를 즉시 보여줍니다.",
         "",
         "🔒 6. 개인 정산·고급 기능 전용 보안 잠금 및 [명세서 이미지 저장·카톡 공유]",
         "• 근무일지 기간·키워드 검색, 월별 수입·근로일수 막대그래프 및 연간 종합 정산 요약 보고서",
         "• 임금 산정 내역서 & 월간 정산 요약표 [📸 이미지(PNG) 저장 / 📤 카톡·문자 공유]",
-        "• 선박정보 장비태그·난이도 필터 및 하단 전체 선박 도감 뷰 (전용 보안 비밀번호 해제 시 열람 가능)",
+        "• 작업선박정보(등록및검색) 장비 태그·난이도 필터 및 하단 전체 선박 도감 뷰 (전용 보안 비밀번호 해제 시 열람 가능)",
         "",
         "🎨 7. 전체 화면 디자인 최적화 및 야간(다크) 모드 완벽 보완",
         "• 3항업·2항업·1항업 맞춤형 그라데이션 배너 및 소속 터미널 약칭 칩 표시",
         "• 모든 메뉴 카드에 아이콘 배지 및 실시간 현황(출근일수·등록 선박 수·게시글 수·댓글 수) 자동 표시",
-        "• 달력 '오늘' 날짜 배지 및 일별 수입 요약 칩(만 원 단위) 표시, 야간 작업 시 눈부심 없는 다크모드 완벽 대응",
+        "• 달력 '오늘' 날짜 배지 및 일별 수입 요약 칩(만 원 단위) 표시, 야간 작업 시 눈부심 없는 다크 모드 완벽 대응",
         "",
-        "언제나 안전을 최우선으로 작업하시길 바라며, 이용 문의나 건의사항은 운영관리자(이춘학 / 010-2846-8906)에게 문자 남겨주시기 바랍니다. 오늘도 무사고 안전 작업하십시오!"
+        "언제나 안전을 최우선으로 작업하시길 바라며, 이용 문의나 건의 사항은 운영관리자(이춘학 / 010-2846-8906)에게 문자 남겨 주시기 바랍니다. 오늘도 무사고 안전 작업하십시오!"
     ].join("\n");
     try {
         const docRef = db.collection("notices").doc(noticeDocId);
@@ -4906,15 +4909,15 @@ window.onload = async () => {
     try { const now = new Date(); now.setMinutes(now.getMinutes() - now.getTimezoneOffset()); const todayStr = now.toISOString().split('T')[0]; const sDate = document.getElementById('wageStartDate'); const eDate = document.getElementById('wageEndDate'); if(sDate) sDate.value = todayStr; if(eDate) eDate.value = todayStr; } catch(e) { console.error("날짜 초기화 오류", e); } 
     loadBanner(); 
     try { 
-        db.collection("notices").orderBy("timestamp","desc").onSnapshot(s => { const l = document.getElementById("noticeList"); l.innerHTML = ""; const badge = document.getElementById("noticeBadge"); const subMeta = document.getElementById("noticeCardSubMeta"); if (subMeta) subMeta.innerText = s.empty ? "운영 안내 및 주요 소식" : `등록된 공지 ${s.size}건`; if (s.empty) { l.innerHTML = "<tr><td colspan='3' style='text-align:center; padding:20px; color:var(--text-sub); font-weight:700;'>등록된 공지가 없습니다.</td></tr>"; if(badge) badge.classList.add("hidden"); return; } let isNew = false; const now = new Date(); let index = 0; s.forEach(d => { const x = d.data(); let dateStr = ""; if(x.timestamp) { const dt = x.timestamp.toDate(); dateStr = `${dt.getFullYear()}/${String(dt.getMonth()+1).padStart(2,'0')}/${String(dt.getDate()).padStart(2,'0')}`; if (index === 0) { const diffTime = now.getTime() - dt.getTime(); if (diffTime < 24 * 60 * 60 * 1000) isNew = true; } } const linkedContent = autoLink(x.content); const imageHtml = x.imageUrl ? `<img src="${x.imageUrl}" style="max-width:100%; border-radius:8px; margin-top:10px; border:1px solid rgba(0,0,0,0.1);" onclick="document.getElementById('imageModal').style.display='flex'; document.getElementById('modalImage').src=this.src;">` : ''; const safeTitle = (x.title || '').replace(/'/g, "\\'").replace(/"/g, "&quot;"); const safeContent = (x.content || '').replace(/'/g, "\\'").replace(/"/g, "&quot;").replace(/\n/g, "\\n"); const imgParam = x.imageUrl ? `'${x.imageUrl}'` : `null`; const rowId = `n-${d.id}`; l.innerHTML += `<tr onclick="toggleBoardRow('${rowId}')" style="cursor:pointer; background:${index === 0 ? 'rgba(239,68,68,0.06)' : 'rgba(239,68,68,0.02)'};"> <td class="board-no" style="color:var(--danger); font-weight:900;">${index === 0 ? '📌필독' : '공지'}</td> <td class="board-title">📢 ${x.title} <span style="font-size:0.75rem; color:var(--primary); margin-left:4px;">▼</span></td> <td class="board-date">${dateStr}</td> </tr> <tr id="${rowId}" class="board-content-row"> <td colspan="3" class="board-content-box" style="border-left: 3px solid var(--danger);"> <div style="margin-bottom:15px; white-space:pre-wrap; font-weight:600; background:var(--card-bg); padding:12px; border-radius:8px; border:1px solid var(--border);">${linkedContent}</div> ${imageHtml} <div style="text-align:right; margin-top:10px;"> <button class="mini-btn" style="background:var(--primary) !important; margin-right:5px; color:white !important;" onclick="startEditNotice('${d.id}', '${safeTitle}', '${safeContent}', ${imgParam}, event)">✏️ 수정(Admin)</button> <button class="mini-btn btn-del" onclick="delNotice('${d.id}',event)">🗑️ 삭제(Admin)</button> </div> </td> </tr>`; index++; }); if(badge) { if(isNew) badge.classList.remove("hidden"); else badge.classList.add("hidden"); } }); 
+        db.collection("notices").orderBy("timestamp","desc").onSnapshot(s => { const l = document.getElementById("noticeList"); const badge = document.getElementById("noticeBadge"); const subMeta = document.getElementById("noticeCardSubMeta"); if (subMeta) subMeta.innerText = s.empty ? "운영 안내 및 주요 소식" : `등록된 공지 ${s.size}건`; if (s.empty) { l.innerHTML = "<tr><td colspan='3' style='text-align:center; padding:20px; color:var(--text-sub); font-weight:700;'>등록된 공지가 없습니다.</td></tr>"; if(badge) badge.classList.add("hidden"); return; } let isNew = false; const now = new Date(); let index = 0; const rowsHtml = []; s.forEach(d => { const x = d.data(); let dateStr = ""; if(x.timestamp) { const dt = x.timestamp.toDate(); dateStr = `${dt.getFullYear()}/${String(dt.getMonth()+1).padStart(2,'0')}/${String(dt.getDate()).padStart(2,'0')}`; if (index === 0) { const diffTime = now.getTime() - dt.getTime(); if (diffTime < 24 * 60 * 60 * 1000) isNew = true; } } const linkedContent = autoLink(x.content); const imageHtml = x.imageUrl ? `<img src="${x.imageUrl}" loading="lazy" alt="공지사항 이미지" style="max-width:100%; border-radius:8px; margin-top:10px; border:1px solid rgba(0,0,0,0.1);" onclick="document.getElementById('imageModal').style.display='flex'; document.getElementById('modalImage').src=this.src;">` : ''; const safeTitle = (x.title || '').replace(/'/g, "\\'").replace(/"/g, "&quot;"); const safeContent = (x.content || '').replace(/'/g, "\\'").replace(/"/g, "&quot;").replace(/\n/g, "\\n"); const imgParam = x.imageUrl ? `'${x.imageUrl}'` : `null`; const rowId = `n-${d.id}`; rowsHtml.push(`<tr onclick="toggleBoardRow('${rowId}')" style="cursor:pointer; background:${index === 0 ? 'rgba(239,68,68,0.06)' : 'rgba(239,68,68,0.02)'};"> <td class="board-no" style="color:var(--danger); font-weight:900;">${index === 0 ? '📌 필독' : '공지'}</td> <td class="board-title">📢 ${x.title} <span style="font-size:0.75rem; color:var(--primary); margin-left:4px;">▼</span></td> <td class="board-date">${dateStr}</td> </tr> <tr id="${rowId}" class="board-content-row"> <td colspan="3" class="board-content-box" style="border-left: 3px solid var(--danger);"> <div style="margin-bottom:15px; white-space:pre-wrap; font-weight:600; background:var(--card-bg); padding:12px; border-radius:8px; border:1px solid var(--border);">${linkedContent}</div> ${imageHtml} <div style="text-align:right; margin-top:10px;"> <button class="mini-btn" style="background:var(--primary) !important; margin-right:5px; color:white !important;" onclick="startEditNotice('${d.id}', '${safeTitle}', '${safeContent}', ${imgParam}, event)">✏️ 수정(Admin)</button> <button class="mini-btn btn-del" onclick="delNotice('${d.id}',event)">🗑️ 삭제(Admin)</button> </div> </td> </tr>`); index++; }); l.innerHTML = rowsHtml.join(""); if(badge) { if(isNew) badge.classList.remove("hidden"); else badge.classList.add("hidden"); } }); 
         db.collection("posts").orderBy("timestamp","desc").onSnapshot(s => { allPostsData = []; s.forEach(d => { allPostsData.push({...d.data(), id:d.id}) }); const subMeta = document.getElementById("boardCardSubMeta"); if (subMeta) subMeta.innerText = allPostsData.length > 0 ? `자유 게시글 ${allPostsData.length}건` : "현장 동료 자유 소통방"; const badge = document.getElementById("boardBadge"); if (badge) { if (allPostsData.length > 0 && allPostsData[0].timestamp) { const now = new Date(); const dt = allPostsData[0].timestamp.toDate(); const diffTime = now.getTime() - dt.getTime(); if (diffTime < 24 * 60 * 60 * 1000) badge.classList.remove("hidden"); else badge.classList.add("hidden"); } else badge.classList.add("hidden"); } renderBoardPage(1); }); 
-        db.collection("ships").orderBy("timestamp","desc").onSnapshot(s=>{allShipsData=[]; s.forEach(d=>{allShipsData.push({...d.data(), id:d.id})}); const subMeta = document.getElementById("shipCardSubMeta"); if (subMeta) subMeta.innerText = allShipsData.length > 0 ? `등록 선박 ${allShipsData.length}척 · 장비도감` : "난이도 · 필수장비 도감"; filteredShips=allShipsData; renderShipPage(1); if(typeof loadAndSearchAllShips==="function") loadAndSearchAllShips(document.getElementById('shipSearch')?.value || '');}); 
-        db.collection("archives").orderBy("timestamp","desc").onSnapshot(s=>{const l=document.getElementById("fileList"); l.innerHTML=""; const subMeta = document.getElementById("archiveCardSubMeta"); if (subMeta) subMeta.innerText = s.size > 0 ? `등록 자료 ${s.size}건 · 시간표` : "터미널 셔틀시간표 · 서식"; s.forEach(d=>{const x=d.data(); l.innerHTML+=`<tr><td class="board-title" style="width: 75%; padding-left: 10px;"><a href="${x.url}" target="_blank" style="text-decoration:none; color:var(--primary); font-weight:800;">💾 ${x.title}</a></td><td style="width: 25%; text-align:center;"><button class="mini-btn btn-del" onclick="delArchive('${d.id}',event)">삭제</button></td></tr>`;})}); 
+        db.collection("ships").orderBy("timestamp","desc").onSnapshot(s=>{allShipsData=[]; s.forEach(d=>{allShipsData.push({...d.data(), id:d.id})}); const subMeta = document.getElementById("shipCardSubMeta"); if (subMeta) subMeta.innerText = allShipsData.length > 0 ? `등록 선박 ${allShipsData.length}척 · 장비 도감` : "난이도 · 필수 장비 도감"; filteredShips=allShipsData; renderShipPage(1); if(typeof loadAndSearchAllShips==="function") loadAndSearchAllShips(document.getElementById('shipSearch')?.value || '');}); 
+        db.collection("archives").orderBy("timestamp","desc").onSnapshot(s=>{const l=document.getElementById("fileList"); const subMeta = document.getElementById("archiveCardSubMeta"); if (subMeta) subMeta.innerText = s.size > 0 ? `등록 자료 ${s.size}건 · 시간표` : "터미널 셔틀 시간표 · 서식"; const rowsHtml=[]; s.forEach(d=>{const x=d.data(); rowsHtml.push(`<tr><td class="board-title" style="width: 75%; padding-left: 10px;"><a href="${x.url}" target="_blank" style="text-decoration:none; color:var(--primary); font-weight:800;">💾 ${x.title}</a></td><td style="width: 25%; text-align:center;"><button class="mini-btn btn-del" onclick="delArchive('${d.id}',event)">삭제</button></td></tr>`);}); l.innerHTML=rowsHtml.join("");}); 
     } catch(err) { console.warn("실시간 연결 오류:", err); } 
     if(localStorage.getItem('myWorkerId')) { currentWorkerId = localStorage.getItem('myWorkerId'); updateUserBar(); } 
 };
 
-let leaderCurrentDate = new Date(); let leaderOverrides = []; const baseCycle = ["재경", "성철", "개굴"]; const baseAnchor = "2026-02-01"; function openLeaderSchedule() { trackAppEvent('actions', 'leader_cal'); document.getElementById('leaderCalendarModal').style.display = 'flex'; leaderCurrentDate = new Date(); renderLeaderCalendar(leaderCurrentDate.getFullYear(), leaderCurrentDate.getMonth()); } function closeLeaderCalendar() { document.getElementById('leaderCalendarModal').style.display = 'none'; } function changeLeaderMonth(s) { leaderCurrentDate.setMonth(leaderCurrentDate.getMonth() + s); renderLeaderCalendar(leaderCurrentDate.getFullYear(), leaderCurrentDate.getMonth()); } function getSlotIndex(dStr) { const target = new Date(dStr); const anchor = new Date(baseAnchor); const diffDays = Math.floor((target.getTime() - anchor.getTime()) / (1000 * 60 * 60 * 24)); return ((diffDays % 3) + 3) % 3; } function getCalculatedLeader(targetDateStr) { const targetSlot = getSlotIndex(targetDateStr); for (let i = leaderOverrides.length - 1; i >= 0; i--) { const ov = leaderOverrides[i]; if (ov.date <= targetDateStr) { if (getSlotIndex(ov.date) === targetSlot) return ov.leader; } } return baseCycle[targetSlot]; } function renderLeaderCalendar(y, m) { document.getElementById('leaderCalMonthYear').innerText = `${y}년 ${m+1}월`; const lD = new Date(y, m+1, 0).getDate(); db.collection('leader_overrides').get().then(s => { leaderOverrides = []; s.forEach(doc => { leaderOverrides.push(doc.data()); }); leaderOverrides.sort((a, b) => a.date.localeCompare(b.date)); drawLeaderGrid(y, m, lD); }).catch(err => { drawLeaderGrid(y, m, lD); }); } function drawLeaderGrid(y, m, lD) { const g = document.getElementById('leaderCalendarGrid'); g.innerHTML = ""; const fD = new Date(y, m, 1).getDay(); for(let i=0; i<fD; i++) { g.innerHTML += `<div style="background:transparent; border:none;"></div>`; } for(let d=1; d<=lD; d++) { const dStr = `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`; const isAnchor = leaderOverrides.some(ov => ov.date === dStr); const leaderName = getCalculatedLeader(dStr); let badgeClass = "leader-badge "; if (leaderName.includes("재경")) badgeClass += "leader-jaekyung"; else if (leaderName.includes("성철")) badgeClass += "leader-sungchul"; else if (leaderName.includes("개굴")) badgeClass += "leader-gaegool"; else badgeClass += "leader-jaekyung"; let customStyle = isAnchor ? "border: 2px solid #ef4444;" : ""; if (!baseCycle.includes(leaderName)) customStyle += "background-color: #8b5cf6; color: white;"; let dayColor = "var(--text-main)"; let currentDayObj = new Date(y, m, d).getDay(); if (currentDayObj === 0) dayColor = "#ef4444"; if (currentDayObj === 6) dayColor = "#3b82f6"; g.innerHTML += `<div class="cal-day tap-effect" onclick="overrideLeader('${dStr}', '${leaderName}')" style="min-height: 65px; justify-content: flex-start; padding-top: 5px; background: white;"><span style="color: ${dayColor}; font-weight: 900; font-size: 0.95rem;">${d}</span><div class="${badgeClass}" style="${customStyle}">${leaderName}</div></div>`; } } async function overrideLeader(dStr, currentLeader) { if (!(await verifyAdmin())) return; const newLeader = prompt(`[${dStr}] 조장을 변경합니다.\n\n👉 이곳에 새 이름(예: 용병)을 넣으면 이후 3일마다 돌아오는 이 근무조의 스케줄이 모두 교체됩니다.\n\n※ 취소하려면 '초기화'를 입력하세요.`, currentLeader); if (newLeader === null) return; if (newLeader.trim() === "" || newLeader === "초기화") { db.collection('leader_overrides').doc(dStr).delete().then(() => { showToast("기존 패턴 복구완료."); renderLeaderCalendar(leaderCurrentDate.getFullYear(), leaderCurrentDate.getMonth()); }); } else { db.collection('leader_overrides').doc(dStr).set({ date: dStr, leader: newLeader.trim() }).then(() => { showToast("새 근무조 적용완료."); renderLeaderCalendar(leaderCurrentDate.getFullYear(), leaderCurrentDate.getMonth()); }); } }
+let leaderCurrentDate = new Date(); let leaderOverrides = []; const baseCycle = ["재경", "성철", "개굴"]; const baseAnchor = "2026-02-01"; function openLeaderSchedule() { trackAppEvent('actions', 'leader_cal'); document.getElementById('leaderCalendarModal').style.display = 'flex'; leaderCurrentDate = new Date(); renderLeaderCalendar(leaderCurrentDate.getFullYear(), leaderCurrentDate.getMonth()); } function closeLeaderCalendar() { document.getElementById('leaderCalendarModal').style.display = 'none'; } function changeLeaderMonth(s) { leaderCurrentDate.setMonth(leaderCurrentDate.getMonth() + s); renderLeaderCalendar(leaderCurrentDate.getFullYear(), leaderCurrentDate.getMonth()); } function getSlotIndex(dStr) { const target = new Date(dStr); const anchor = new Date(baseAnchor); const diffDays = Math.floor((target.getTime() - anchor.getTime()) / (1000 * 60 * 60 * 24)); return ((diffDays % 3) + 3) % 3; } function getCalculatedLeader(targetDateStr) { const targetSlot = getSlotIndex(targetDateStr); for (let i = leaderOverrides.length - 1; i >= 0; i--) { const ov = leaderOverrides[i]; if (ov.date <= targetDateStr) { if (getSlotIndex(ov.date) === targetSlot) return ov.leader; } } return baseCycle[targetSlot]; } function renderLeaderCalendar(y, m) { document.getElementById('leaderCalMonthYear').innerText = `${y}년 ${m+1}월`; const lD = new Date(y, m+1, 0).getDate(); db.collection('leader_overrides').get().then(s => { leaderOverrides = []; s.forEach(doc => { leaderOverrides.push(doc.data()); }); leaderOverrides.sort((a, b) => a.date.localeCompare(b.date)); drawLeaderGrid(y, m, lD); }).catch(err => { drawLeaderGrid(y, m, lD); }); } function drawLeaderGrid(y, m, lD) { const g = document.getElementById('leaderCalendarGrid'); const cells = []; const fD = new Date(y, m, 1).getDay(); for(let i=0; i<fD; i++) { cells.push(`<div style="background:transparent; border:none;"></div>`); } for(let d=1; d<=lD; d++) { const dStr = `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`; const isAnchor = leaderOverrides.some(ov => ov.date === dStr); const leaderName = getCalculatedLeader(dStr); let badgeClass = "leader-badge "; if (leaderName.includes("재경")) badgeClass += "leader-jaekyung"; else if (leaderName.includes("성철")) badgeClass += "leader-sungchul"; else if (leaderName.includes("개굴")) badgeClass += "leader-gaegool"; else badgeClass += "leader-jaekyung"; let customStyle = isAnchor ? "border: 2px solid #ef4444;" : ""; if (!baseCycle.includes(leaderName)) customStyle += "background-color: #8b5cf6; color: white;"; let dayColor = "var(--text-main)"; let currentDayObj = new Date(y, m, d).getDay(); if (currentDayObj === 0) dayColor = "#ef4444"; if (currentDayObj === 6) dayColor = "#3b82f6"; cells.push(`<div class="cal-day tap-effect" onclick="overrideLeader('${dStr}', '${leaderName}')" style="min-height: 65px; justify-content: flex-start; padding-top: 5px; background: white;"><span style="color: ${dayColor}; font-weight: 900; font-size: 0.95rem;">${d}</span><div class="${badgeClass}" style="${customStyle}">${leaderName}</div></div>`); } g.innerHTML = cells.join(""); } async function overrideLeader(dStr, currentLeader) { if (!(await verifyAdmin())) return; const newLeader = prompt(`[${dStr}] 조장을 변경합니다.\n\n👉 이곳에 새 이름(예: 용병)을 넣으면 이후 3일마다 돌아오는 이 근무조의 스케줄이 모두 교체됩니다.\n\n※ 취소하려면 '초기화'를 입력하세요.`, currentLeader); if (newLeader === null) return; if (newLeader.trim() === "" || newLeader === "초기화") { db.collection('leader_overrides').doc(dStr).delete().then(() => { showToast("기존 패턴이 복구되었습니다."); renderLeaderCalendar(leaderCurrentDate.getFullYear(), leaderCurrentDate.getMonth()); }); } else { db.collection('leader_overrides').doc(dStr).set({ date: dStr, leader: newLeader.trim() }).then(() => { showToast("새 근무조가 적용되었습니다."); renderLeaderCalendar(leaderCurrentDate.getFullYear(), leaderCurrentDate.getMonth()); }); } }
 </script>
   
     <!-- [여기서부터 복사] 조장 근무일 비밀번호 검증 스크립트 -->
@@ -4933,7 +4936,7 @@ function verifyLeaderAccess(event) {
         }
 
         // 2. 요청하신 안내 문구와 함께 비밀번호 입력창 호출
-        const userPassword = prompt("비번 입력하세요.\n(비번은 제작자에게 문의 바랍니다. 문의  :  luxrank@gmail.com)문자 : 010- 2846 -8906");
+        const userPassword = prompt("비밀번호를 입력하세요.\n(비밀번호는 제작자에게 문의 바랍니다. 문의: luxrank@gmail.com / 문자: 010-2846-8906)");
 
         // 3. 취소 버튼을 누르거나 빈값일 경우 안전하게 중단 (예외 처리)
         if (userPassword === null) {
@@ -4987,20 +4990,27 @@ async function loadAndSearchAllShips(searchKeyword = "") {
             throw new Error("Firebase Firestore가 초기화되지 않았습니다.");
         }
 
-        const db = firebase.firestore();
-        const querySnapshot = await db.collection("ships").get();
+        let shipList = [];
+        if (Array.isArray(allShipsData) && allShipsData.length > 0) {
+            shipList = allShipsData.map(item => ({ ...item }));
+        } else {
+            const db = firebase.firestore();
+            const querySnapshot = await db.collection("ships").get();
+            if (querySnapshot.empty) {
+                resultContainer.innerHTML = "<p style='text-align:center; padding:20px; color:var(--text-sub); font-weight:700;'>등록된 선박 데이터가 없습니다.</p>";
+                return;
+            }
+            querySnapshot.forEach(doc => {
+                let data = doc.data();
+                data.id = doc.id;
+                shipList.push(data);
+            });
+        }
 
-        if (querySnapshot.empty) {
+        if (shipList.length === 0) {
             resultContainer.innerHTML = "<p style='text-align:center; padding:20px; color:var(--text-sub); font-weight:700;'>등록된 선박 데이터가 없습니다.</p>";
             return;
         }
-
-        let shipList = [];
-        querySnapshot.forEach(doc => {
-            let data = doc.data();
-            data.id = doc.id;
-            shipList.push(data);
-        });
 
         shipList.sort((a, b) => {
             const tA = a.timestamp && a.timestamp.toMillis ? a.timestamp.toMillis() : 0;
@@ -5048,7 +5058,7 @@ async function loadAndSearchAllShips(searchKeyword = "") {
                     <thead>
                         <tr>
                             <th style="width:42px; text-align:center;">번호</th>
-                            <th>선박명 · 난이도 · 장비태그 · 작업요약</th>
+                            <th>선박명 · 난이도 · 장비 태그 · 작업 요약</th>
                             <th style="width:58px; text-align:center;">상세</th>
                         </tr>
                     </thead>
@@ -5103,7 +5113,7 @@ async function loadAndSearchAllShips(searchKeyword = "") {
     } catch (error) {
         console.error("[Fatal Error] 선박 정보 전체 조회 실패:", error);
         if (resultContainer) {
-            resultContainer.innerHTML = "<p style='text-align:center; padding:20px; color:var(--danger); font-weight:700;'>데이터를 불러오는 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.</p>";
+            resultContainer.innerHTML = "<p style='text-align:center; padding:20px; color:var(--danger); font-weight:700;'>데이터를 불러오는 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.</p>";
         }
     }
 }
@@ -5120,15 +5130,16 @@ function escapeHtml(str) {
 
 async function openShipDetailView(docId) {
     try {
-        const db = firebase.firestore();
-        const docSnap = await db.collection("ships").doc(docId).get();
-
-        if (!docSnap.exists) {
-            alert("해당 선박 정보를 찾을 수 없습니다.");
-            return;
+        let data = Array.isArray(allShipsData) ? allShipsData.find(s => s.id === docId) : null;
+        if (!data) {
+            const db = firebase.firestore();
+            const docSnap = await db.collection("ships").doc(docId).get();
+            if (!docSnap.exists) {
+                alert("해당 선박 정보를 찾을 수 없습니다.");
+                return;
+            }
+            data = docSnap.data();
         }
-
-        const data = docSnap.data();
         const name = data.shipName || data.name || "선박명 없음";
         const diff = Number(data.difficulty) || 0;
         const diffText = diff > 0 ? `${"★".repeat(diff)}${"☆".repeat(5 - diff)} (${diff}점)` : "미지정";
