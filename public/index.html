@@ -318,6 +318,16 @@
         .quick-chip-row { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 4px; margin-bottom: 8px; }
         .quick-chip-btn { background: #f1f5f9; border: 1px solid #cbd5e1; color: var(--primary); border-radius: 14px; padding: 3px 9px; font-size: 0.74rem; font-weight: 800; cursor: pointer; transition: all 0.15s; }
         .quick-chip-btn:active { transform: scale(0.95); background: #dbeafe; border-color: #3b82f6; }
+        .hjnc-schedule-box { background: linear-gradient(135deg, #fff7ed, #ffedd5); border: 1.5px solid #fdba74; border-radius: 10px; padding: 8px 10px; margin-top: 4px; margin-bottom: 8px; }
+        .hjnc-schedule-header { display: flex; justify-content: space-between; align-items: center; gap: 6px; margin-bottom: 6px; flex-wrap: wrap; }
+        .hjnc-ship-chip { display: inline-flex; align-items: center; gap: 4px; background: #ffffff; color: #9a3412; border: 1.5px solid #fb923c; border-radius: 8px; padding: 4px 8px; font-size: 0.75rem; font-weight: 900; cursor: pointer; transition: all 0.14s ease; box-shadow: 0 1px 2px rgba(234, 88, 12, 0.08); }
+        .hjnc-ship-chip:hover { background: #ffedd5; border-color: #ea580c; }
+        .hjnc-ship-chip:active { transform: scale(0.96); }
+        .hjnc-berth-tag { background: #ea580c; color: #ffffff; font-size: 0.65rem; font-weight: 900; padding: 1px 5px; border-radius: 4px; }
+        .hjnc-time-tag { color: #c2410c; font-size: 0.68rem; font-weight: 800; }
+        body.dark-mode .hjnc-schedule-box { background: rgba(234, 88, 12, 0.12); border-color: #ea580c; }
+        body.dark-mode .hjnc-ship-chip { background: #1e293b; color: #fdba74; border-color: #f97316; }
+        body.dark-mode .hjnc-time-tag { color: #fb923c; }
         .goal-gauge-box { margin-top: 10px; background: linear-gradient(135deg, #f8fafc, #eff6ff); border: 1.5px solid #93c5fd; border-radius: 10px; padding: 11px 12px; }
         .goal-progress-track { width: 100%; height: 14px; background: #e2e8f0; border-radius: 10px; overflow: hidden; margin: 7px 0 5px; box-shadow: inset 0 1px 2px rgba(0,0,0,0.08); }
         .goal-progress-fill { height: 100%; width: 0%; background: linear-gradient(90deg, #2563eb, #10b981); border-radius: 10px; transition: width 0.35s ease; }
@@ -557,6 +567,13 @@
                 <div id="dailyLogForm" class="hidden" style="margin-top:20px; padding:15px; background:rgba(0,0,0,0.03); border-radius:12px; border:1px solid var(--border);">
                     <h4 id="selectedDateText" style="margin:0 0 10px 0; color:var(--primary); text-align:center; font-size:1.15rem; font-weight:900;"></h4>
                     <div class="wage-row" style="margin-bottom:4px;"><label>배이름</label><input type="text" id="logShipName" class="input-field" placeholder="작업 선박명"></div>
+                    <div id="hjncScheduledShipBox" class="hjnc-schedule-box">
+                        <div class="hjnc-schedule-header">
+                            <span id="hjncScheduleBoxTitle" style="font-size:0.76rem; font-weight:900; color:#c2410c;">⚓ 한진(HJNC) 당일 입항·접안 선박 불러오는 중...</span>
+                            <a href="https://www.hjnc.co.kr/esvc/vessel/berthScheduleT" target="_blank" style="font-size:0.68rem; font-weight:800; color:#ea580c; text-decoration:underline;">원본 스케줄(T) ↗</a>
+                        </div>
+                        <div id="hjncScheduledShipList" style="display:flex; flex-wrap:wrap; gap:5px;"></div>
+                    </div>
                     <div id="quickShipChipRow" class="quick-chip-row"></div>
                     <div style="display:flex; gap:10px; margin-bottom:8px; width:100%;">
                         <div class="wage-row" style="flex:1; margin-bottom:0;"><label>임금1</label><input type="number" id="logWage1" class="input-field" placeholder="원"></div>
@@ -2523,7 +2540,136 @@ function changeMonthlyGoalAmount() {
     updateMonthlyGoalGaugeUI(latestMonthlyStatsCache.total, latestMonthlyStatsCache.days);
     showToast(`🎯 이번 달 목표 수입이 ${monthlyGoalAmount.toLocaleString()}원으로 설정되었습니다!`);
 }
-function renderWorkLogQuickChips() {
+const hjncScheduleMonthCache = {};
+function extractDatePrefix(dtStr) {
+    if (!dtStr || typeof dtStr !== "string") return "";
+    return dtStr.trim().slice(0, 10);
+}
+function extractShortTime(dtStr) {
+    if (!dtStr || typeof dtStr !== "string") return "";
+    const parts = dtStr.trim().split(/\s+/);
+    return parts[1] ? parts[1].slice(0, 5) : "";
+}
+function isVesselActiveOnDate(vessel, dateStr) {
+    if (!vessel || !dateStr) return false;
+    const etbDate = extractDatePrefix(vessel.ETB);
+    const ataDate = extractDatePrefix(vessel.ATA);
+    const atdDate = extractDatePrefix(vessel.ATD);
+    const atwDate = extractDatePrefix(vessel.ATW);
+    const atcDate = extractDatePrefix(vessel.ATC);
+
+    if (etbDate === dateStr || ataDate === dateStr || atdDate === dateStr || atwDate === dateStr || atcDate === dateStr) {
+        return true;
+    }
+    const startD = ataDate || etbDate || atwDate;
+    const endD = atdDate || atcDate || startD;
+    if (startD && endD && startD <= dateStr && dateStr <= endD) {
+        return true;
+    }
+    return false;
+}
+async function fetchHjncScheduleForMonth(yearMonth) {
+    if (hjncScheduleMonthCache[yearMonth]) {
+        return hjncScheduleMonthCache[yearMonth];
+    }
+    const [yStr, mStr] = yearMonth.split("-");
+    const y = parseInt(yStr, 10);
+    const m = parseInt(mStr, 10);
+    const prevD = new Date(y, m - 1, -2);
+    const nextD = new Date(y, m, 3);
+    const fmt = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    const startDate = fmt(prevD);
+    const endDate = fmt(nextD);
+
+    let vessels = [];
+    try {
+        const res = await fetch(`/api/hjnc-schedule?startDate=${encodeURIComponent(startDate)}&endDate=${encodeURIComponent(endDate)}`);
+        if (res.ok) {
+            const json = await res.json();
+            if (json && Array.isArray(json.vessels)) {
+                vessels = json.vessels;
+            }
+        }
+    } catch (e) {}
+
+    if (vessels.length > 0) {
+        hjncScheduleMonthCache[yearMonth] = vessels;
+        try {
+            db.collection("hjnc_schedules").doc(yearMonth).set({
+                yearMonth,
+                vessels,
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            }, { merge: true }).catch(() => {});
+        } catch (e) {}
+        return vessels;
+    }
+
+    try {
+        const snap = await db.collection("hjnc_schedules").doc(yearMonth).get();
+        if (snap.exists && Array.isArray(snap.data()?.vessels)) {
+            vessels = snap.data().vessels;
+            hjncScheduleMonthCache[yearMonth] = vessels;
+            return vessels;
+        }
+    } catch (e) {}
+
+    return [];
+}
+async function loadHjncScheduledShipsForDate(dateStr) {
+    const titleEl = document.getElementById("hjncScheduleBoxTitle");
+    const listEl = document.getElementById("hjncScheduledShipList");
+    if (!titleEl || !listEl || !dateStr) return;
+
+    const yearMonth = dateStr.slice(0, 7);
+    titleEl.innerText = `⚓ ${dateStr} 한진(HJNC) 입항·접안 예정 선박 조회 중...`;
+    listEl.innerHTML = `<span style="font-size:0.74rem; color:var(--text-sub); font-weight:700;">실시간 선석배정현황(T) 데이터를 불러오는 중입니다...</span>`;
+
+    const allVessels = await fetchHjncScheduleForMonth(yearMonth);
+    const currentSelected = document.getElementById("dailyLogForm")?.getAttribute("data-date");
+    if (currentSelected && currentSelected !== dateStr) return;
+
+    const matched = (allVessels || []).filter(v => isVesselActiveOnDate(v, dateStr));
+    const seen = new Set();
+    const uniqueMatched = [];
+    matched.forEach(v => {
+        const name = String(v.VSL_NM || "").trim();
+        if (!name || seen.has(name)) return;
+        seen.add(name);
+        uniqueMatched.push(v);
+    });
+
+    titleEl.innerText = `⚓ ${dateStr} 한진(HJNC) 입항·작업 선박 (${uniqueMatched.length}척) — 터치 시 자동입력`;
+
+    if (uniqueMatched.length === 0) {
+        listEl.innerHTML = `<span style="font-size:0.74rem; color:var(--text-sub); font-weight:700;">해당 날짜(${dateStr})에 조회된 한진(HJNC) 입항·접안 선박이 없습니다.</span>`;
+        return;
+    }
+
+    listEl.innerHTML = uniqueMatched.map(v => {
+        const name = String(v.VSL_NM || "").trim();
+        const safeName = escapeShipCommentHtml(name);
+        const jsSafeName = name.replace(/\\/g, "\\\\").replace(/'/g, "\\'");
+        const berth = escapeShipCommentHtml(v.BERTH_NO || "-");
+        const ptnr = escapeShipCommentHtml(v.PTNR_CODE || "");
+        const arrDate = extractDatePrefix(v.ATA || v.ETB);
+        const arrTime = extractShortTime(v.ATA || v.ETB);
+        const depTime = extractShortTime(v.ATD);
+        const timeBadge = arrDate === dateStr && arrTime
+            ? `입항 ${arrTime}`
+            : (depTime ? `~출항 ${depTime}` : "작업중");
+        return `<button type="button" class="hjnc-ship-chip" onclick="applyQuickShipChip('${jsSafeName}', '${berth}', '${ptnr}')">
+            <span class="hjnc-berth-tag">${berth}</span>
+            <span>🚢 ${safeName}</span>
+            ${ptnr ? `<span style="font-size:0.66rem; color:#64748b; font-weight:800;">(${ptnr})</span>` : ""}
+            <span class="hjnc-time-tag">${timeBadge}</span>
+        </button>`;
+    }).join("");
+}
+function renderWorkLogQuickChips(dateStr) {
+    const targetDate = dateStr || document.getElementById("dailyLogForm")?.getAttribute("data-date") || "";
+    if (targetDate) {
+        loadHjncScheduledShipsForDate(targetDate);
+    }
     const shipRow = document.getElementById("quickShipChipRow");
     const cwRow = document.getElementById("quickCoworkerChipRow");
     if (!shipRow || !cwRow) return;
@@ -2553,7 +2699,7 @@ function renderWorkLogQuickChips() {
     const topCws = Object.entries(cwFreq).sort((a, b) => b[1] - a[1]).slice(0, 7).map(x => x[0]);
 
     shipRow.innerHTML = topShips.length
-        ? `<span style="font-size:0.72rem; color:var(--text-sub); font-weight:800; align-self:center; margin-right:2px;">🚢 빠른입력:</span>` +
+        ? `<span style="font-size:0.72rem; color:var(--text-sub); font-weight:800; align-self:center; margin-right:2px;">🚢 내 최근 선박:</span>` +
           topShips.map(name => {
               const safe = escapeShipCommentHtml(name);
               const jsSafe = name.replace(/\\/g, "\\\\").replace(/'/g, "\\'");
@@ -2570,11 +2716,12 @@ function renderWorkLogQuickChips() {
           }).join("")
         : "";
 }
-function applyQuickShipChip(shipName) {
+function applyQuickShipChip(shipName, berthNo = "", ptnrCode = "") {
     const input = document.getElementById("logShipName");
     if (!input) return;
     input.value = shipName;
-    showToast(`🚢 '${shipName}' 선박명이 입력되었습니다.`);
+    const extraInfo = berthNo ? ` (${berthNo}선석${ptnrCode ? ' · ' + ptnrCode : ''})` : "";
+    showToast(`🚢 '${shipName}'${extraInfo} 선박명이 입력되었습니다.`);
 }
 function applyQuickCoworkerChip(workerName) {
     const input = document.getElementById("logCoworkers");
@@ -3428,7 +3575,7 @@ function jumpToLogDate(dStr) {
     const formEl = document.getElementById('dailyLogForm');
     if (formEl) formEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
-function clickDate(dStr){ document.getElementById('selectedDateText').innerText = dStr; document.getElementById('dailyLogForm').classList.remove('hidden'); document.getElementById('dailyLogForm').setAttribute('data-date', dStr); const d = adminWorkLogs[dStr]; document.getElementById('logShipName').value = d ? (d.shipName || '') : ''; document.getElementById('logWage1').value = d ? (d.wage1 || '') : ''; document.getElementById('logWage2').value = d ? (d.wage2 || '') : ''; document.getElementById('logCoworkers').value = d ? (d.coworkers || '') : ''; document.getElementById('logMemo').value = d ? d.memo : ''; const img = document.getElementById('logImagePreview'); if(d && d.imageUrl){ img.src = d.imageUrl; img.style.display = 'block'; } else { img.style.display = 'none'; img.src = ""; } document.getElementById('logImageInput').value = ''; renderWorkLogQuickChips(); }
+function clickDate(dStr){ document.getElementById('selectedDateText').innerText = dStr; document.getElementById('dailyLogForm').classList.remove('hidden'); document.getElementById('dailyLogForm').setAttribute('data-date', dStr); const d = adminWorkLogs[dStr]; document.getElementById('logShipName').value = d ? (d.shipName || '') : ''; document.getElementById('logWage1').value = d ? (d.wage1 || '') : ''; document.getElementById('logWage2').value = d ? (d.wage2 || '') : ''; document.getElementById('logCoworkers').value = d ? (d.coworkers || '') : ''; document.getElementById('logMemo').value = d ? d.memo : ''; const img = document.getElementById('logImagePreview'); if(d && d.imageUrl){ img.src = d.imageUrl; img.style.display = 'block'; } else { img.style.display = 'none'; img.src = ""; } document.getElementById('logImageInput').value = ''; renderWorkLogQuickChips(dStr); }
 function trySaveWorkLog(){ if(currentWorkerId) saveWorkLog(); else document.getElementById('loginModal').style.display = 'flex'; }
 async function confirmLoginAndSave(evt) {
     const nick = document.getElementById('loginNick').value.trim();
