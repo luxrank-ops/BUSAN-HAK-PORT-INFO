@@ -812,7 +812,7 @@
             <div class="dash-header tap-effect" onclick="toggleDashItem('ship-card')" style="flex-direction: row !important; justify-content: flex-start !important; padding: 14px 12px; gap: 10px; min-height: auto;">
                 <span class="dash-icon-badge" style="background: #f0f9ff; border: 1px solid #bae6fd;">🚢</span>
                 <div style="flex:1; min-width:0;">
-                    <div class="dash-title" style="color: var(--primary); font-size: 0.96rem !important; font-weight: 900; margin: 0; text-align: left; line-height: 1.25;">작업선박정보(등록및검색)</div>
+                    <div class="dash-title" style="color: var(--primary); font-size: 0.96rem !important; font-weight: 900; margin: 0; text-align: left; line-height: 1.25;">작업 선박 정보(등록및검색)</div>
                     <div id="shipCardSubMeta" class="dash-sub-meta">난이도 · 필수 장비 도감</div>
                 </div>
             </div>
@@ -1045,7 +1045,7 @@
                         </ul>
                         <div style="background: white; border: 1px dashed var(--danger); padding: 10px; border-radius: 8px; text-align: center;">
                             <p style="margin: 0; font-weight: 900; font-size: 1.05rem; color: #b91c1c;">☎️ 부산항 24시간 비상 핫라인: 119</p>
-                            <p style="margin: 4px 0 0 0; font-size: 0.8rem; color: var(--text-sub); font-weight: 700;">※ 앱 상단의 [작업선박정보(등록및검색)] 탭에서 해당 터미널 통제실 연락처 확인 가능</p>
+                            <p style="margin: 4px 0 0 0; font-size: 0.8rem; color: var(--text-sub); font-weight: 700;">※ 앱 상단의 [작업 선박 정보(등록및검색)] 탭에서 해당 터미널 통제실 연락처 확인 가능</p>
                         </div>
                     </div>
                 </div>
@@ -1265,7 +1265,7 @@
                         <ul style="padding-left: 20px; margin: 0;">
                             <li style="margin-bottom: 6px;"><b>데이터 암호화:</b> 모든 근무일지 및 게시판 데이터는 구글 파이어베이스(Firebase)의 강력한 글로벌 보안망을 통해 암호화되어 전송 및 저장됩니다.</li>
                             <li style="margin-bottom: 6px;"><b>로컬 스토리지 보관:</b> 로그인 상태는 사용자의 스마트폰 기기 내부(Local Storage)에만 안전하게 암호화 보관됩니다.</li>
-                            <li><span style="color:var(--primary); font-weight:bold;">비밀번호 단방향 암호화(SHA-256):</span> 관리자·근무일지 계정·게시글·댓글·작업선박정보 비밀번호는 평문(원문)으로 저장되지 않고 <b>SHA-256 해시 알고리즘</b>으로 암호화되어 저장되며, 관리자는 Firebase Auth 인증 및 UID 화이트리스트 검증으로 이중 보호됩니다.</li>
+                            <li><span style="color:var(--primary); font-weight:bold;">비밀번호 단방향 암호화(SHA-256):</span> 관리자·근무일지 계정·게시글·댓글·작업 선박 정보 비밀번호는 평문(원문)으로 저장되지 않고 <b>SHA-256 해시 알고리즘</b>으로 암호화되어 저장되며, 관리자는 Firebase Auth 인증 및 UID 화이트리스트 검증으로 이중 보호됩니다.</li>
                         </ul>
                     </div>
                 </div>
@@ -1330,7 +1330,7 @@
                     <div>• <b>임금계산기:</b> 주·야간/기능공/수당 자동 분리 및 근무일지 1초 연동</div>
                     <div>• <b>근무일지:</b> 달력 기록 · 월간 정산 · 목표 수입 달성률 · 엑셀 저장</div>
                     <div>• <b>1·2·3항업 통합:</b> 전 터미널 스케줄·차트·베이 플랜·식단표·셔틀 시간표</div>
-                    <div>• <b>작업선박정보 & 기상:</b> 작업 난이도(★1~5)·장비 태그 도감 및 신항·북항 실시간 풍속</div>
+                    <div>• <b>작업 선박 정보(등록및검색) & 기상:</b> 작업 난이도(★1~5)·장비 태그 도감 및 신항·북항 실시간 풍속</div>
                     <div style="margin-top:6px; font-weight:900; color:#1d4ed8;">👉 접속 주소: <a href="https://busan-hak-port.web.app" target="_blank" style="color:#2563eb; text-decoration:underline;">https://busan-hak-port.web.app</a></div>
                 </div>
                 <div style="display:grid; grid-template-columns:1fr; gap:8px; font-size:0.86rem;">
@@ -1737,7 +1737,7 @@ const STATS_BLOCK_META = [
     { id: "t3-content", label: "🚢 3항업 (신항 남측)", color: "#1e3a8a" },
     { id: "t2-content", label: "🏗️ 2항업 (신항 북측)", color: "#0284c7" },
     { id: "t1-content", label: "⚓ 1항업 (북항)", color: "#334155" },
-    { id: "ship-card", label: "🚢 작업선박정보(등록및검색)", color: "#0ea5e9" },
+    { id: "ship-card", label: "🚢 작업 선박 정보(등록및검색)", color: "#0ea5e9" },
     { id: "notice-card", label: "📢 공지사항", color: "#ef4444" },
     { id: "board-card", label: "💬 스트레스 해소(톡톡)", color: "#6366f1" },
     { id: "archive-card", label: "📂 자료실 (셔틀버스 시간표 등)", color: "#eab308" },
@@ -3564,7 +3564,7 @@ async function shareOrCopyAppPromo() {
         "✅ 주·야간/기능공/수당 자동 [임금계산기]",
         "✅ 달력에 적고 한 달 총액 자동 정산되는 [근무일지]",
         "✅ 1·2·3항업 전 터미널 [스케줄·차트·베이 플랜·식단표·셔틀 시간표]",
-        "✅ 배마다 어떤 콘/장비 쓰는지 미리 보는 [작업선박정보 도감]",
+        "✅ 배마다 어떤 콘/장비 쓰는지 미리 보는 [작업 선박 정보(등록및검색) 도감]",
         "✅ 신항·북항 실시간 풍속·날씨 및 도선 현황까지!",
         "",
         "👇 아래 주소 누르셔서 바로 써보세요!",
