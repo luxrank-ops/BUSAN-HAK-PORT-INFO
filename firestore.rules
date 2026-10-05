@@ -1,0 +1,192 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ---------------------------------------------------------
+    // 0. Global Safety Net (Default Deny)
+    // ---------------------------------------------------------
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // ---------------------------------------------------------
+    // 1. Hardened Helper Functions
+    // ---------------------------------------------------------
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-가-힣.]+$');
+    }
+
+    function isSha256Hash(val) {
+      return val is string && val.size() == 64 && val.matches('^[a-fA-F0-9]{64}$');
+    }
+
+    function isAdmin() {
+      return isSignedIn() && (
+        request.auth.uid in ['admin_luxrank', 'luxrank_admin_uid'] ||
+        (request.auth.token.email_verified == true && request.auth.token.email == 'luxrank@gmail.com') ||
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+      );
+    }
+
+    // ---------------------------------------------------------
+    // 2. settings Collection
+    //    - settings/admin: 클라이언트 읽기·쓰기 완전 차단 (비밀번호 유출 원천 봉쇄)
+    //    - 티커 및 식단표 문서: 익명 인증 이상 조회 가능, 관리자만 수정
+    // ---------------------------------------------------------
+    match /settings/admin {
+      allow read, write: if false;
+    }
+
+    match /settings/{settingId} {
+      allow get: if isSignedIn() && settingId != 'admin' && isValidId(settingId);
+      allow list: if false;
+      allow create, update: if isSignedIn() && settingId != 'admin' && isValidId(settingId) && (
+        isAdmin() ||
+        (settingId == 'banner' && incoming().diff(existing()).affectedKeys().hasOnly(['userMessages']) && incoming().userMessages is list && incoming().userMessages.size() <= 3)
+      );
+      allow delete: if isAdmin() && settingId != 'admin';
+    }
+
+    // ---------------------------------------------------------
+    // 3. admins Collection (관리자 UID 화이트리스트)
+    // ---------------------------------------------------------
+    match /admins/{adminUid} {
+      allow get: if isSignedIn() && request.auth.uid == adminUid;
+      allow list: if false;
+      allow write: if isAdmin();
+    }
+
+    // ---------------------------------------------------------
+    // 4. visitor_stats Collection
+    //    - 읽기: 인증된 세션 허용
+    //    - 쓰기(create/update): count 및 unique는 감소 불가(증가만 허용), 삭제(delete) 완전 금지
+    // ---------------------------------------------------------
+    function isValidVisitorStatWrite() {
+      return (!('count' in incoming()) || (
+        incoming().count is int &&
+        incoming().count >= (resource == null || !('count' in existing()) ? 0 : existing().count) &&
+        incoming().count <= (resource == null || !('count' in existing()) ? 10000 : existing().count + 5)
+      )) &&
+      (!('unique' in incoming()) || (
+        incoming().unique is int &&
+        incoming().unique >= (resource == null || !('unique' in existing()) ? 0 : existing().unique) &&
+        incoming().unique <= (resource == null || !('unique' in existing()) ? 10000 : existing().unique + 5)
+      ));
+    }
+
+    match /visitor_stats/{statId} {
+      allow get: if isSignedIn() && isValidId(statId);
+      allow list: if false;
+      allow create, update: if isSignedIn() && isValidId(statId) && isValidVisitorStatWrite();
+      allow delete: if false;
+    }
+
+    // ---------------------------------------------------------
+    // 5. user_profiles Collection
+    //    - 전체 목록(list) 조회 금지 (단건 get만 허용하여 계정·비번 덤프 차단)
+    //    - 생성·수정 시 SHA-256 해시(64자 hex)만 허용 (평문 저장 원천 차단)
+    // ---------------------------------------------------------
+    match /user_profiles/{nick} {
+      allow get: if isSignedIn() && isValidId(nick);
+      allow list: if isAdmin();
+      allow create: if isSignedIn() && isValidId(nick) &&
+        incoming().keys().hasAll(['password', 'createdAt']) &&
+        incoming().keys().hasOnly(['password', 'createdAt']) &&
+        isSha256Hash(incoming().password);
+      allow update: if isSignedIn() && isValidId(nick) &&
+        incoming().diff(existing()).affectedKeys().hasOnly(['password']) &&
+        isSha256Hash(incoming().password);
+      allow delete: if isAdmin();
+    }
+
+    // ---------------------------------------------------------
+    // 6. work_logs Collection (근무일지)
+    //    - 인증된 사용자만 본인의 workerId 조건으로 조회/저장/삭제
+    // ---------------------------------------------------------
+    match /work_logs/{logId} {
+      allow get: if isSignedIn() && isValidId(logId);
+      allow list: if isSignedIn() && resource.data.workerId is string && resource.data.workerId.size() <= 64;
+      allow create, update: if isSignedIn() && isValidId(logId) &&
+        incoming().workerId is string && incoming().workerId.size() >= 1 && incoming().workerId.size() <= 64 &&
+        incoming().date is string && incoming().date.size() == 10;
+      allow delete: if isSignedIn() && isValidId(logId);
+    }
+
+    // ---------------------------------------------------------
+    // 7. hjnc_schedules Collection (터미널 선석 스케줄 캐시)
+    // ---------------------------------------------------------
+    match /hjnc_schedules/{schedId} {
+      allow get, list: if isSignedIn();
+      allow create, update: if isSignedIn() && isValidId(schedId);
+      allow delete: if isAdmin();
+    }
+
+    // ---------------------------------------------------------
+    // 8. notices, posts, ships, archives, leader_overrides
+    // ---------------------------------------------------------
+    match /notices/{noticeId} {
+      allow get, list: if isSignedIn();
+      allow create, update: if isSignedIn() && (isAdmin() || noticeId == 'update_2026_10_04_v2027');
+      allow delete: if isAdmin();
+    }
+
+    match /posts/{postId} {
+      allow get, list: if isSignedIn();
+      allow create, update: if isSignedIn() && isValidId(postId) &&
+        incoming().nick is string && incoming().nick.size() <= 50 &&
+        incoming().title is string && incoming().title.size() <= 200 &&
+        incoming().content is string && incoming().content.size() <= 10000 &&
+        isSha256Hash(incoming().password);
+      allow delete: if isSignedIn() && isValidId(postId);
+
+      match /comments/{commentId} {
+        allow get, list: if isSignedIn();
+        allow create, update: if isSignedIn() && isValidId(commentId) &&
+          incoming().name is string && incoming().name.size() <= 50 &&
+          incoming().text is string && incoming().text.size() <= 2000 &&
+          isSha256Hash(incoming().password);
+        allow delete: if isSignedIn() && isValidId(commentId);
+      }
+    }
+
+    match /ships/{shipId} {
+      allow get, list: if isSignedIn();
+      allow create, update: if isSignedIn() && isValidId(shipId) &&
+        incoming().shipName is string && incoming().shipName.size() <= 120 &&
+        isSha256Hash(incoming().password);
+      allow delete: if isAdmin();
+
+      match /comments/{commentId} {
+        allow get, list: if isSignedIn();
+        allow create, update: if isSignedIn() && isValidId(commentId) &&
+          incoming().name is string && incoming().name.size() <= 50 &&
+          incoming().text is string && incoming().text.size() <= 2000 &&
+          isSha256Hash(incoming().password);
+        allow delete: if isSignedIn() && isValidId(commentId);
+      }
+    }
+
+    match /archives/{archiveId} {
+      allow get, list: if isSignedIn();
+      allow create, update: if isSignedIn() && isValidId(archiveId);
+      allow delete: if isAdmin();
+    }
+
+    match /leader_overrides/{dateId} {
+      allow get, list: if isSignedIn();
+      allow create, update, delete: if isAdmin();
+    }
+  }
+}

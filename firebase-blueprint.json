@@ -1,0 +1,76 @@
+{
+  "entities": {
+    "AdminSetting": {
+      "title": "AdminSetting",
+      "description": "Admin authentication settings document (locked from client access).",
+      "type": "object",
+      "properties": {
+        "passwordHash": { "type": "string", "minLength": 64, "maxLength": 64 },
+        "role": { "type": "string", "maxLength": 32 }
+      },
+      "required": ["passwordHash"]
+    },
+    "VisitorStat": {
+      "title": "VisitorStat",
+      "description": "Total and daily visitor session and unique visitor statistics.",
+      "type": "object",
+      "properties": {
+        "date": { "type": "string", "maxLength": 16 },
+        "count": { "type": "integer" },
+        "unique": { "type": "integer" },
+        "devices": { "type": "object" },
+        "hours": { "type": "object" },
+        "blocks": { "type": "object" },
+        "terminals": { "type": "object" },
+        "actions": { "type": "object" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["count"]
+    },
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "Worker account profile storing SHA-256 hashed password.",
+      "type": "object",
+      "properties": {
+        "password": { "type": "string", "minLength": 64, "maxLength": 64, "pattern": "^[a-fA-F0-9]{64}$" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["password"]
+    },
+    "WorkLog": {
+      "title": "WorkLog",
+      "description": "Daily work log entry for a port worker.",
+      "type": "object",
+      "properties": {
+        "workerId": { "type": "string", "maxLength": 64 },
+        "date": { "type": "string", "maxLength": 10 },
+        "shipName": { "type": "string", "maxLength": 120 },
+        "wage1": { "type": "number" },
+        "wage2": { "type": "number" },
+        "totalPay": { "type": "number" },
+        "coworkers": { "type": "string", "maxLength": 200 },
+        "memo": { "type": "string", "maxLength": 2000 },
+        "imageUrl": { "type": "string", "maxLength": 1000 }
+      },
+      "required": ["workerId", "date"]
+    }
+  },
+  "firestore": {
+    "/settings/{settingId}": {
+      "schema": "AdminSetting",
+      "description": "App settings and meal/ticker configurations (settings/admin is completely blocked)."
+    },
+    "/visitor_stats/{statId}": {
+      "schema": "VisitorStat",
+      "description": "Visitor session, unique visitor, device, and hour slot counters (increment-only, delete forbidden)."
+    },
+    "/user_profiles/{nick}": {
+      "schema": "UserProfile",
+      "description": "Worker login profiles with SHA-256 password hashes."
+    },
+    "/work_logs/{logId}": {
+      "schema": "WorkLog",
+      "description": "Worker daily work logs."
+    }
+  }
+}

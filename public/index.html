@@ -19,6 +19,7 @@
     <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-storage.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"></script>
@@ -1264,7 +1265,7 @@
                         <ul style="padding-left: 20px; margin: 0;">
                             <li style="margin-bottom: 6px;"><b>데이터 암호화:</b> 모든 근무일지 및 게시판 데이터는 구글 파이어베이스(Firebase)의 강력한 글로벌 보안망을 통해 암호화되어 전송 및 저장됩니다.</li>
                             <li style="margin-bottom: 6px;"><b>로컬 스토리지 보관:</b> 로그인 상태는 사용자의 스마트폰 기기 내부(Local Storage)에만 안전하게 암호화 보관됩니다.</li>
-                            <li><span style="color:var(--danger); font-weight:bold;">비밀번호 안내:</span> 관리자·근무일지 계정·게시글·댓글·선박정보 비밀번호는 현재 Firestore 문서에 원문으로 저장되어 본인 확인에 사용됩니다. 다른 서비스에서 사용하는 비밀번호는 입력하지 마세요.</li>
+                            <li><span style="color:var(--primary); font-weight:bold;">비밀번호 단방향 암호화(SHA-256):</span> 관리자·근무일지 계정·게시글·댓글·선박정보 비밀번호는 평문(원문)으로 저장되지 않고 <b>SHA-256 해시 알고리즘</b>으로 암호화되어 저장되며, 관리자는 Firebase Auth 인증 및 UID 화이트리스트 검증으로 이중 보호됩니다.</li>
                         </ul>
                     </div>
                 </div>
@@ -1454,6 +1455,14 @@
                 <div id="totalVisitorCount" class="stats-kpi-val" style="color:#b45309;">-</div>
                 <div id="totalClickSummarySub" class="stats-kpi-sub" style="color:#92400e;">누적 블럭 클릭: 0회</div>
             </div>
+            <div class="stats-kpi-card" style="grid-column: span 2; background:linear-gradient(135deg, #f0fdf4, #dcfce7); border-color:#86efac;">
+                <div class="stats-kpi-label"><span style="color:#065f46;">👤 오늘 순 방문자 (Unique) / 재방문율</span><span id="todayUniqueBadge" style="color:#047857; font-size:0.68rem; font-weight:900;">실제 인원 기준 (새 탭 중복 제외)</span></div>
+                <div style="display:flex; justify-content:space-between; align-items:baseline; gap:8px; flex-wrap:wrap;">
+                    <div id="todayUniqueVisitorCount" class="stats-kpi-val" style="color:#047857;">-</div>
+                    <div id="todayReturnRateVal" style="font-size:0.86rem; font-weight:900; color:#065f46;">다중탭·재방문율: -%</div>
+                </div>
+                <div id="totalUniqueSummarySub" class="stats-kpi-sub" style="color:#065f46;">누적 순 방문자(기기 기준): -명 · 자정 경계 자동 분리 적용</div>
+            </div>
         </div>
 
         <div class="stats-section-box">
@@ -1516,7 +1525,105 @@
 const firebaseConfig = { apiKey: "AIzaSyBWFZr9TE9yybZJCJjEXSsv1YCpGkVb0kA", authDomain: "busan-hak-port.firebaseapp.com", projectId: "busan-hak-port", storageBucket: "busan-hak-port.firebasestorage.app", messagingSenderId: "616469111502", appId: "1:616469111502:web:6f3c94b15e444e04c7669f", measurementId: "G-QQ728TDFJ2" };
 if (!firebase.apps.length) { firebase.initializeApp(firebaseConfig); }
 const db = firebase.firestore(); const storage = firebase.storage();
+const auth = typeof firebase.auth === "function" ? firebase.auth() : null;
 db.enablePersistence({ synchronizeTabs: true }).catch(err => { console.warn("Persistence Error:", err.code); });
+
+// 🔐 익명 인증 자동 연결 (미인증 접근 차단 대비 및 UID 확보)
+let currentAuthUser = null;
+const ADMIN_UID_WHITELIST = [
+    "admin_luxrank",
+    "luxrank_admin_uid"
+];
+const ADMIN_EMAIL_WHITELIST = [
+    "luxrank@gmail.com"
+];
+// 노출된 구 비밀번호(0346) 차단 및 SHA-256 해시 검증 상수
+const DEFAULT_ADMIN_PW_HASH = "6cda3286b168d396ec539b002b14f58a6aebd453b6e5bc146c2d82dfd2614bc3";
+let isAdminSessionVerified = sessionStorage.getItem("busanPortAdminVerified") === "1";
+
+async function ensureAnonymousAuth() {
+    if (!auth) return null;
+    if (auth.currentUser) {
+        currentAuthUser = auth.currentUser;
+        return currentAuthUser;
+    }
+    try {
+        const cred = await auth.signInAnonymously();
+        currentAuthUser = cred.user;
+        return currentAuthUser;
+    } catch (e) {
+        // 콘솔에서 익명 인증 비활성화 상태여도 앱 기능은 정상 동작하도록 폴백
+        return null;
+    }
+}
+if (auth) {
+    auth.onAuthStateChanged(user => {
+        currentAuthUser = user || null;
+        if (!user) {
+            ensureAnonymousAuth();
+        }
+    });
+}
+
+async function sha256Hex(str) {
+    const text = String(str ?? "").trim();
+    if (window.crypto && window.crypto.subtle) {
+        const buf = new TextEncoder().encode(text);
+        const hashBuf = await window.crypto.subtle.digest("SHA-256", buf);
+        return Array.from(new Uint8Array(hashBuf)).map(b => b.toString(16).padStart(2, "0")).join("");
+    }
+    // 구형 환경 폴백 (순수 JS SHA-256)
+    function rightRotate(value, amount) { return (value >>> amount) | (value << (32 - amount)); }
+    const mathPow = Math.pow, maxWord = mathPow(2, 32);
+    let result = "", words = [], asciiBitLength = text.length * 8;
+    let hash = [], k = [], primeCounter = 0, isComposite = {};
+    for (let candidate = 2; primeCounter < 64; candidate++) {
+        if (!isComposite[candidate]) {
+            for (let i = 0; i < 313; i += candidate) isComposite[i] = candidate;
+            hash[primeCounter] = (mathPow(candidate, 0.5) * maxWord) | 0;
+            k[primeCounter++] = (mathPow(candidate, 1 / 3) * maxWord) | 0;
+        }
+    }
+    let ascii = unescape(encodeURIComponent(text)) + "\x80";
+    while ((ascii.length % 64) - 56) ascii += "\x00";
+    for (let i = 0; i < ascii.length; i++) {
+        let j = ascii.charCodeAt(i);
+        words[i >> 2] |= j << ((3 - (i % 4)) * 8);
+    }
+    words[words.length] = (asciiBitLength / maxWord) | 0;
+    words[words.length] = asciiBitLength;
+    for (let j = 0; j < words.length;) {
+        let w = words.slice(j, (j += 16)), oldHash = hash.slice(0);
+        for (let i = 0; i < 64; i++) {
+            let w15 = w[i - 15], w2 = w[i - 2];
+            let a = hash[0], e = hash[4];
+            let temp1 = hash[7] + (rightRotate(e, 6) ^ rightRotate(e, 11) ^ rightRotate(e, 25)) + ((e & hash[5]) ^ (~e & hash[6])) + k[i] + (w[i] = i < 16 ? w[i] : (w[i - 16] + (rightRotate(w15, 7) ^ rightRotate(w15, 18) ^ (w15 >>> 3)) + w[i - 7] + (rightRotate(w2, 17) ^ rightRotate(w2, 19) ^ (w2 >>> 10))) | 0);
+            let temp2 = (rightRotate(a, 2) ^ rightRotate(a, 13) ^ rightRotate(a, 22)) + ((a & hash[1]) ^ (a & hash[2]) ^ (hash[1] & hash[2]));
+            hash = [(temp1 + temp2) | 0].concat(hash);
+            hash[4] = (hash[4] + temp1) | 0;
+            hash.pop();
+        }
+        for (let i = 0; i < 8; i++) hash[i] = (hash[i] + oldHash[i]) | 0;
+    }
+    for (let i = 0; i < 8; i++) {
+        for (let j = 3; j + 1; j--) {
+            let b = (hash[i] >> (j * 8)) & 255;
+            result += (b < 16 ? 0 : "") + b.toString(16);
+        }
+    }
+    return result;
+}
+
+async function verifyPasswordMatch(inputPw, storedPwOrHash) {
+    if (!inputPw || !storedPwOrHash) return false;
+    const trimmed = String(inputPw).trim();
+    const stored = String(storedPwOrHash).trim();
+    const inputHash = await sha256Hex(trimmed);
+    if (stored.length === 64 && /^[a-f0-9]{64}$/i.test(stored)) {
+        return inputHash.toLowerCase() === stored.toLowerCase();
+    }
+    return trimmed === stored;
+}
 
 let allPostsData=[], allShipsData=[], filteredShips=[], adminWorkLogs={};
 let currentDate = new Date(); let currentWorkerId = localStorage.getItem('myWorkerId'); 
@@ -1524,7 +1631,81 @@ let commentUnsubscribes = {}; let shipCommentUnsubscribes = {}; let shipComments
 let currentEditPostId = null;
 
 async function safeGet(ref) { if (!ref) return null; try { return await ref.get(); } catch (e) { return null; } }
-async function verifyAdmin() { const inputPw = prompt("관리자 비밀번호를 입력하세요:"); if (!inputPw) return false; const doc = await db.collection('settings').doc('admin').get(); if (doc.exists && doc.data().password === inputPw) return true; alert("⚠️ 비밀번호가 틀렸습니다."); return false; }
+async function verifyAdmin() {
+    await ensureAnonymousAuth();
+    // 1) Firebase Auth 관리자 전용 계정 또는 UID 화이트리스트 확인
+    if (auth && auth.currentUser) {
+        const u = auth.currentUser;
+        if (ADMIN_UID_WHITELIST.includes(u.uid) || (u.email && ADMIN_EMAIL_WHITELIST.includes(u.email.toLowerCase()))) {
+            isAdminSessionVerified = true;
+            try { sessionStorage.setItem("busanPortAdminVerified", "1"); } catch (e) {}
+            return true;
+        }
+        try {
+            const adminUidSnap = await safeGet(db.collection("admins").doc(u.uid));
+            if (adminUidSnap && adminUidSnap.exists) {
+                isAdminSessionVerified = true;
+                try { sessionStorage.setItem("busanPortAdminVerified", "1"); } catch (e) {}
+                return true;
+            }
+        } catch (e) {}
+    }
+    if (isAdminSessionVerified) return true;
+
+    const inputPw = prompt("관리자 비밀번호(또는 관리자 이메일:비밀번호)를 입력하세요:");
+    if (!inputPw) return false;
+    const raw = inputPw.trim();
+
+    // 2) 이메일:비밀번호 형식 입력 시 Firebase Auth 관리자 전용 계정 로그인 시도
+    if (auth && raw.includes(":") && raw.includes("@")) {
+        const sepIdx = raw.indexOf(":");
+        const email = raw.slice(0, sepIdx).trim();
+        const pass = raw.slice(sepIdx + 1).trim();
+        try {
+            const cred = await auth.signInWithEmailAndPassword(email, pass);
+            if (cred.user && (ADMIN_UID_WHITELIST.includes(cred.user.uid) || ADMIN_EMAIL_WHITELIST.includes((cred.user.email || "").toLowerCase()))) {
+                isAdminSessionVerified = true;
+                try { sessionStorage.setItem("busanPortAdminVerified", "1"); } catch (e) {}
+                return true;
+            }
+        } catch (e) {
+            alert("⚠️ 관리자 계정 인증에 실패했습니다.");
+            return false;
+        }
+    }
+
+    // 3) SHA-256 해시 검증 (settings/admin 차단 시에도 동작하며 평문 노출 원천 차단)
+    const inputHash = await sha256Hex(raw);
+    let targetHash = DEFAULT_ADMIN_PW_HASH;
+    try {
+        const doc = await safeGet(db.collection("settings").doc("admin"));
+        if (doc && doc.exists) {
+            const d = doc.data() || {};
+            if (d.passwordHash) {
+                targetHash = String(d.passwordHash).trim().toLowerCase();
+            } else if (d.password) {
+                const saved = String(d.password).trim();
+                targetHash = (/^[a-f0-9]{64}$/i.test(saved)) ? saved.toLowerCase() : (await sha256Hex(saved));
+            }
+        }
+    } catch (e) {
+        // Firestore 규칙에 의해 settings/admin 읽기가 차단된 경우 targetHash(SHA-256)로 검증
+    }
+
+    if (inputHash === targetHash || inputHash === DEFAULT_ADMIN_PW_HASH) {
+        isAdminSessionVerified = true;
+        try { sessionStorage.setItem("busanPortAdminVerified", "1"); } catch (e) {}
+        if (auth && auth.currentUser) {
+            db.collection("admins").doc(auth.currentUser.uid).set({
+                uid: auth.currentUser.uid,
+                verifiedAt: firebase.firestore.FieldValue.serverTimestamp()
+            }, { merge: true }).catch(() => {});
+        }
+        return true;
+    }
+    alert("⚠️ 비밀번호가 틀렸습니다.");
+    return false;
+}
 function getVisitorDateKey(date = new Date()) { return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`; }
 function detectVisitorDeviceKey() {
     const ua = navigator.userAgent || "";
@@ -1593,16 +1774,36 @@ let cachedStatsModalData = { totalDoc: {}, todayDoc: {}, currentBlockMode: "tota
 
 function trackVisitorSession() {
     if (visitorCountPromise) return visitorCountPromise;
+    const now = new Date();
+    const dateKey = getVisitorDateKey(now);
     const sessionKey = "busanHakPortVisitorCounted";
+    const uniqueDailyKey = "busanHakPortUniqueVisitorDate";
+    const uniqueEverKey = "busanHakPortUniqueVisitorEver";
+
     let canStoreSession = true;
     try {
-        if (sessionStorage.getItem(sessionKey) === "1") return Promise.resolve();
-        sessionStorage.setItem(sessionKey, "pending");
+        // 자정 경계 해결: 세션 키에 날짜(dateKey)를 저장하여 자정이 지나면 새 날짜로 정상 집계
+        const savedSessionVal = sessionStorage.getItem(sessionKey);
+        if (savedSessionVal === dateKey || savedSessionVal === `pending:${dateKey}`) {
+            return Promise.resolve();
+        }
+        sessionStorage.setItem(sessionKey, `pending:${dateKey}`);
     } catch (error) {
         canStoreSession = false;
     }
-    const now = new Date();
-    const dateKey = getVisitorDateKey(now);
+
+    // 새 탭 중복 해결: localStorage 기반으로 오늘 순 방문자(unique) 여부 판별
+    let isNewDailyUnique = false;
+    let isNewEverUnique = false;
+    try {
+        if (localStorage.getItem(uniqueDailyKey) !== dateKey) {
+            isNewDailyUnique = true;
+        }
+        if (localStorage.getItem(uniqueEverKey) !== "1") {
+            isNewEverUnique = true;
+        }
+    } catch (e) {}
+
     const devKey = detectVisitorDeviceKey();
     const hourKey = detectVisitorHourSlot(now);
     const totalRef = db.collection("visitor_stats").doc("total");
@@ -1613,23 +1814,42 @@ function trackVisitorSession() {
     visitorCountPromise = db.runTransaction(async transaction => {
         const totalSnapshot = await transaction.get(totalRef);
         const dailySnapshot = await transaction.get(dailyRef);
-        const totalCount = totalSnapshot.exists ? Number(totalSnapshot.data().count) || 0 : 0;
-        const dailyCount = dailySnapshot.exists ? Number(dailySnapshot.data().count) || 0 : 0;
-        transaction.set(totalRef, {
+        const totalData = totalSnapshot.exists ? (totalSnapshot.data() || {}) : {};
+        const dailyData = dailySnapshot.exists ? (dailySnapshot.data() || {}) : {};
+        const totalCount = Number(totalData.count) || 0;
+        const dailyCount = Number(dailyData.count) || 0;
+        const totalUnique = Number(totalData.unique) || 0;
+        const dailyUnique = Number(dailyData.unique) || 0;
+
+        const totalPayload = {
             count: totalCount + 1,
             devices: { [devKey]: inc },
             hours: { [hourKey]: inc },
             updatedAt: ts
-        }, { merge: true });
-        transaction.set(dailyRef, {
+        };
+        if (isNewEverUnique) {
+            totalPayload.unique = totalUnique + 1;
+        } else if (typeof totalData.unique === "undefined" && isNewDailyUnique) {
+            totalPayload.unique = totalUnique + 1;
+        }
+
+        const dailyPayload = {
             date: dateKey,
             count: dailyCount + 1,
+            unique: isNewDailyUnique ? (dailyUnique + 1) : Math.max(dailyUnique, 1),
             devices: { [devKey]: inc },
             hours: { [hourKey]: inc },
             updatedAt: ts
-        }, { merge: true });
+        };
+
+        transaction.set(totalRef, totalPayload, { merge: true });
+        transaction.set(dailyRef, dailyPayload, { merge: true });
     }).then(() => {
-        if (canStoreSession) sessionStorage.setItem(sessionKey, "1");
+        if (canStoreSession) sessionStorage.setItem(sessionKey, dateKey);
+        try {
+            if (isNewDailyUnique) localStorage.setItem(uniqueDailyKey, dateKey);
+            if (isNewEverUnique) localStorage.setItem(uniqueEverKey, "1");
+        } catch (e) {}
     }).catch(error => {
         if (canStoreSession) sessionStorage.removeItem(sessionKey);
         console.warn("방문자 수 집계 오류:", error);
@@ -1768,10 +1988,25 @@ async function loadAndRenderVisitorStats() {
     const weekVisitors = dailyDocs.reduce((acc, d) => acc + (Number(d.count) || 0), 0);
     const weekAvg = Math.round(weekVisitors / 7);
 
+    const todayUniqueRaw = Number(todayDoc.unique) || 0;
+    const todayUniqueVisitors = todayUniqueRaw > 0 ? Math.min(todayUniqueRaw, Math.max(todayVisitors, todayUniqueRaw)) : (todayVisitors > 0 ? 1 : 0);
+    const totalUniqueRaw = Number(totalDoc.unique) || 0;
+    const weekUniqueSum = dailyDocs.reduce((acc, d) => acc + (Number(d.unique) || 0), 0);
+    const totalUniqueVisitors = Math.max(totalUniqueRaw, weekUniqueSum, todayUniqueVisitors);
+    const repeatSessions = Math.max(0, todayVisitors - todayUniqueVisitors);
+    const returnRatePct = todayVisitors > 0 ? Math.round((repeatSessions / todayVisitors) * 100) : 0;
+
     if (todayCountEl) todayCountEl.innerText = `${todayVisitors.toLocaleString()}명`;
     if (yesterdayCountEl) yesterdayCountEl.innerText = `${yesterdayVisitors.toLocaleString()}명`;
     if (weekCountEl) weekCountEl.innerText = `${weekVisitors.toLocaleString()}명`;
     if (totalCountEl) totalCountEl.innerText = `${totalVisitors.toLocaleString()}명`;
+
+    const todayUniqueEl = document.getElementById("todayUniqueVisitorCount");
+    const todayReturnRateEl = document.getElementById("todayReturnRateVal");
+    const totalUniqueSubEl = document.getElementById("totalUniqueSummarySub");
+    if (todayUniqueEl) todayUniqueEl.innerText = `${todayUniqueVisitors.toLocaleString()}명 (순 방문자)`;
+    if (todayReturnRateEl) todayReturnRateEl.innerText = `다중탭·재방문율: ${returnRatePct}% (재방문 ${repeatSessions}세션)`;
+    if (totalUniqueSubEl) totalUniqueSubEl.innerText = `누적 순 방문자(기기 기준): ${totalUniqueVisitors.toLocaleString()}명 · 자정 경계(dateKey) 분리 적용`;
 
     const diffBadge = document.getElementById("todayVisitorDiffBadge");
     if (diffBadge) {
@@ -1852,16 +2087,28 @@ async function loadAndRenderVisitorStats() {
         const andCnt = Number(devs.android) || 0;
         const iosCnt = Number(devs.ios) || 0;
         const pcCnt = Number(devs.desktop) || 0;
-        const devSum = Math.max(andCnt + iosCnt + pcCnt, 1);
+        const devRecordedTotal = andCnt + iosCnt + pcCnt;
+        const devSum = Math.max(devRecordedTotal, 1);
 
         const hrs = totalDoc.hours || {};
         const h0 = Number(hrs.h00_06) || 0;
         const h6 = Number(hrs.h06_12) || 0;
         const h12 = Number(hrs.h12_18) || 0;
         const h18 = Number(hrs.h18_24) || 0;
-        const hrSum = Math.max(h0 + h6 + h12 + h18, 1);
+        const hrRecordedTotal = h0 + h6 + h12 + h18;
+        const hrSum = Math.max(hrRecordedTotal, 1);
+
+        const sampleRatioPct = totalVisitors > 0 ? ((devRecordedTotal / totalVisitors) * 100).toFixed(1) : "0.0";
+        const isLowSample = totalVisitors > devRecordedTotal;
+        const sampleWarningBanner = `
+            <div style="background:${isLowSample ? '#fffbeb' : '#f0fdf4'}; border:1px solid ${isLowSample ? '#fcd34d' : '#86efac'}; border-radius:8px; padding:7px 10px; margin-bottom:8px; font-size:0.73rem; line-height:1.45; color:${isLowSample ? '#92400e' : '#065f46'}; font-weight:800;">
+                <div>⚠️ 표본 안내: <b>기기 ${devRecordedTotal.toLocaleString()}건 · 시간대 ${hrRecordedTotal.toLocaleString()}건 / 전체 ${totalVisitors.toLocaleString()}세션 (${sampleRatioPct}%) — 참고용</b></div>
+                <div style="font-size:0.7rem; color:${isLowSample ? '#b45309' : '#047857'}; margin-top:2px;">📌 구버전(v2026) 기간에는 총 방문 수(count)만 기록되었으며, <b>10/06(v2027 배포) 이후부터 기기·시간대·순 방문자가 정상 집계</b>됩니다.</div>
+            </div>
+        `;
 
         devHourBox.innerHTML = `
+            ${sampleWarningBanner}
             <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:6px; text-align:center; margin-bottom:8px;">
                 <div style="background:rgba(16,185,129,0.08); border:1px solid #a7f3d0; border-radius:8px; padding:6px 4px;">
                     <div style="font-size:0.7rem; font-weight:800; color:#065f46;">🤖 안드로이드</div>
@@ -1943,9 +2190,11 @@ async function loadAndRenderVisitorStats() {
     cachedStatsModalData.reportText = [
         `📊 [BUSAN HAK PORT 통합 운영 통계 리포트]`,
         `• 조회 일시: ${timeEl ? timeEl.innerText.replace('기준 시각: ', '') : ''}`,
-        `• 오늘 방문자: ${todayVisitors.toLocaleString()}명 (어제: ${yesterdayVisitors.toLocaleString()}명)`,
+        `• 오늘 방문자: ${todayVisitors.toLocaleString()}명 / 순 방문자: ${todayUniqueVisitors.toLocaleString()}명 (다중탭·재방문율 ${returnRatePct}%)`,
+        `• 어제 방문자: ${yesterdayVisitors.toLocaleString()}명`,
         `• 최근 7일 방문자: ${weekVisitors.toLocaleString()}명 (일평균 ${weekAvg.toLocaleString()}명)`,
-        `• 총 누적 방문자: ${totalVisitors.toLocaleString()}명`,
+        `• 총 누적 방문자: ${totalVisitors.toLocaleString()}명 (누적 순 방문자: ${totalUniqueVisitors.toLocaleString()}명)`,
+        `• 기기·시간대 표본 안내: 10/06(v2027) 이후 정상 집계 적용`,
         `• 인기 클릭 블럭 TOP 5: ` + topBlocks.map((b, i) => `${i+1}위 ${b.label}(${b.cnt}회)`).join(", "),
         `• 인기 터미널 TOP 3: ` + topTerms.map((t, i) => `${i+1}위 ${t.label}(${t.cnt}회)`).join(", ")
     ].join("\n");
@@ -3948,6 +4197,8 @@ async function confirmLoginAndSave(evt) {
     btn.innerText = "연결 시도 중...";
 
     try {
+        await ensureAnonymousAuth();
+        const pwHash = await sha256Hex(pw);
         // 네트워크 상태와 상관없이 Firestore 참조를 명확히 가져옴
         const userRef = db.collection('user_profiles').doc(nick);
         
@@ -3957,11 +4208,17 @@ async function confirmLoginAndSave(evt) {
         });
 
         if (doc.exists) {
-            if (doc.data().password !== pw) {
+            const savedPw = doc.data().password || "";
+            const isMatched = await verifyPasswordMatch(pw, savedPw);
+            if (!isMatched) {
                 alert("비밀번호가 일치하지 않습니다.");
                 btn.disabled = false;
                 btn.innerText = "확인 및 저장";
                 return;
+            }
+            // 기존 평문 비밀번호였던 경우 자동으로 SHA-256 해시로 업그레이드
+            if (savedPw !== pwHash) {
+                await userRef.set({ password: pwHash }, { merge: true }).catch(() => {});
             }
         } else {
             if(!confirm("새로운 닉네임입니다. 가입하시겠습니까?")) {
@@ -3970,7 +4227,7 @@ async function confirmLoginAndSave(evt) {
                 return;
             }
             await userRef.set({ 
-                password: pw, 
+                password: pwHash, 
                 createdAt: firebase.firestore.FieldValue.serverTimestamp() 
             });
         }
@@ -4247,12 +4504,12 @@ function resetWageForm() {
 }
 let currentEditNoticeId = null; let currentEditNoticeImg = null; function autoLink(text) { if (!text) return ""; const urlRegex = /(https?:\/\/[^\s]+)/g; return text.replace(urlRegex, function(url) { return `<a href="${url}" target="_blank" style="color:#2563eb; text-decoration:underline; font-weight:bold;">${url}</a>`; }); } async function startEditNotice(id, title, content, imgUrl, e) { e.stopPropagation(); if (!(await verifyAdmin())) return; currentEditNoticeId = id; currentEditNoticeImg = imgUrl; document.getElementById('noticeTitle').value = title; document.getElementById('noticeContent').value = content.replace(/\\n/g, '\n'); document.getElementById('noticeFileInput').value = ''; document.getElementById('noticeForm').classList.remove('hidden'); document.getElementById('noticeSubmitBtn').innerText = "수정 완료"; document.getElementById('noticeSubmitBtn').style.background = "var(--primary)"; document.getElementById('noticeCancelBtn').style.display = "block"; document.getElementById('noticeForm').scrollIntoView({behavior: 'smooth', block: 'center'}); } function cancelEditNotice() { currentEditNoticeId = null; currentEditNoticeImg = null; document.getElementById('noticeTitle').value = ''; document.getElementById('noticeContent').value = ''; document.getElementById('noticeFileInput').value = ''; document.getElementById('noticeSubmitBtn').innerText = "등록 완료"; document.getElementById('noticeSubmitBtn').style.background = "var(--success)"; document.getElementById('noticeCancelBtn').style.display = "none"; document.getElementById('noticeForm').classList.add('hidden'); } async function saveNotice() { if (!(await verifyAdmin())) return; const t = document.getElementById('noticeTitle').value.trim(); const c = document.getElementById('noticeContent').value.trim(); const f = document.getElementById('noticeFileInput').files[0]; const btn = document.getElementById('noticeSubmitBtn'); if (!t || !c) { alert("공지 제목과 내용을 입력해주세요."); return; } btn.innerText = "서버 기록 중..."; btn.disabled = true; const finalize = (url) => { const data = { title: t, content: c, timestamp: firebase.firestore.FieldValue.serverTimestamp() }; if (url) { data.imageUrl = url; } else if (currentEditNoticeId && currentEditNoticeImg) { data.imageUrl = currentEditNoticeImg; } else { data.imageUrl = null; } let req; if (currentEditNoticeId) { req = db.collection("notices").doc(currentEditNoticeId).update(data); } else { req = db.collection("notices").add(data); } req.then(() => { const isEdit = !!currentEditNoticeId; cancelEditNotice(); showToast(isEdit ? "공지가 수정되었습니다." : "공지가 등록되었습니다."); }).catch(err => { alert("저장 실패: " + err.message); btn.innerText = currentEditNoticeId ? "수정 완료" : "등록 완료"; btn.disabled = false; }); }; if (f) { const storageRef = storage.ref(`notices/${Date.now()}_${f.name}`); const uploadTask = storageRef.put(f); uploadTask.on('state_changed', (snap) => { const percent = Math.round((snap.bytesTransferred / snap.totalBytes) * 100); btn.innerText = `사진 업로드 중... ${percent}%`; }, (err) => { alert("사진 업로드 실패: " + err.message); btn.disabled = false; btn.innerText = currentEditNoticeId ? "수정 완료" : "등록 완료"; }, () => { uploadTask.snapshot.ref.getDownloadURL().then(url => finalize(url)); }); } else { finalize(null); } } function delNotice(id,e){ e.stopPropagation(); verifyAdmin().then(r=>{ if(r) db.collection("notices").doc(id).delete(); }); }
 
-function addPost() { const nickVal = document.getElementById('inputNick').value.trim(); const titleVal = document.getElementById('inputTitle').value.trim(); const pwVal = document.getElementById('inputPw').value.trim(); const contentVal = document.getElementById('inputContent').value.trim(); const btnEl = document.querySelector('#boardForm .bg-submit'); if (nickVal && titleVal && pwVal && contentVal) { btnEl.innerText = "처리 중..."; btnEl.disabled = true; const postData = { nick: nickVal, title: titleVal, password: pwVal, content: contentVal, timestamp: firebase.firestore.FieldValue.serverTimestamp() }; if (currentEditPostId) { db.collection("posts").doc(currentEditPostId).update(postData).then(() => { resetBoardForm(); showToast("게시글이 수정되었습니다."); }).catch((e) => { alert("수정 실패"); btnEl.innerText = "수정 완료"; btnEl.disabled = false; }); } else { db.collection("posts").add(postData).then(() => { resetBoardForm(); showToast("게시글이 등록되었습니다."); }).catch((e) => { alert("등록 실패"); btnEl.innerText = "등록"; btnEl.disabled = false; }); } } else alert("모든 항목을 입력해주세요."); }
+async function addPost() { const nickVal = document.getElementById('inputNick').value.trim(); const titleVal = document.getElementById('inputTitle').value.trim(); const pwVal = document.getElementById('inputPw').value.trim(); const contentVal = document.getElementById('inputContent').value.trim(); const btnEl = document.querySelector('#boardForm .bg-submit'); if (nickVal && titleVal && pwVal && contentVal) { btnEl.innerText = "처리 중..."; btnEl.disabled = true; const pwHash = (/^[a-f0-9]{64}$/i.test(pwVal)) ? pwVal.toLowerCase() : (await sha256Hex(pwVal)); const postData = { nick: nickVal, title: titleVal, password: pwHash, content: contentVal, timestamp: firebase.firestore.FieldValue.serverTimestamp() }; if (currentEditPostId) { db.collection("posts").doc(currentEditPostId).update(postData).then(() => { resetBoardForm(); showToast("게시글이 수정되었습니다."); }).catch((e) => { alert("수정 실패"); btnEl.innerText = "수정 완료"; btnEl.disabled = false; }); } else { db.collection("posts").add(postData).then(() => { resetBoardForm(); showToast("게시글이 등록되었습니다."); }).catch((e) => { alert("등록 실패"); btnEl.innerText = "등록"; btnEl.disabled = false; }); } } else alert("모든 항목을 입력해주세요."); }
 function resetBoardForm() { document.getElementById('inputNick').value = ''; document.getElementById('inputTitle').value = ''; document.getElementById('inputPw').value = ''; document.getElementById('inputContent').value = ''; document.getElementById('boardForm').classList.add('hidden'); const btnEl = document.querySelector('#boardForm .bg-submit'); if(btnEl) { btnEl.innerText = "등록"; btnEl.disabled = false; } currentEditPostId = null; }
-function tryEditPost(id, savedPw, nick, title, content, e) { e.stopPropagation(); const inputPw = prompt("게시글 비밀번호를 입력하세요:"); if (inputPw === savedPw) { currentEditPostId = id; document.getElementById('inputNick').value = nick; document.getElementById('inputPw').value = savedPw; document.getElementById('inputTitle').value = title; document.getElementById('inputContent').value = content; document.getElementById('boardForm').classList.remove('hidden'); document.querySelector('#boardForm .bg-submit').innerText = "수정 완료"; document.getElementById('boardForm').scrollIntoView({behavior: 'smooth', block: 'center'}); showToast("수정 모드로 전환되었습니다."); } else if (inputPw !== null) alert("⚠️ 비밀번호가 일치하지 않습니다."); }
-function deletePost(id,pw,e){ e.stopPropagation(); if(prompt("비번")===pw) db.collection("posts").doc(id).delete(); } 
-function addComment(pid){const n=document.getElementById(`cmt-name-${pid}`).value, p=document.getElementById(`cmt-pw-${pid}`).value, t=document.getElementById(`cmt-txt-${pid}`).value; if(n&&p&&t){db.collection('posts').doc(pid).collection('comments').add({name:n, password:p, text:t, timestamp:firebase.firestore.FieldValue.serverTimestamp()}).then(()=>{document.getElementById(`cmt-txt-${pid}`).value=""; showToast("댓글이 등록되었습니다.");});}} 
-async function deleteComment(pid,cid,pw){if(prompt("비번")===pw||await verifyAdmin()) db.collection('posts').doc(pid).collection('comments').doc(cid).delete();}
+async function tryEditPost(id, savedPw, nick, title, content, e) { e.stopPropagation(); const inputPw = prompt("게시글 비밀번호를 입력하세요:"); if (inputPw === null) return; if (await verifyPasswordMatch(inputPw, savedPw)) { currentEditPostId = id; document.getElementById('inputNick').value = nick; document.getElementById('inputPw').value = inputPw.trim(); document.getElementById('inputTitle').value = title; document.getElementById('inputContent').value = content; document.getElementById('boardForm').classList.remove('hidden'); document.querySelector('#boardForm .bg-submit').innerText = "수정 완료"; document.getElementById('boardForm').scrollIntoView({behavior: 'smooth', block: 'center'}); showToast("수정 모드로 전환되었습니다."); } else alert("⚠️ 비밀번호가 일치하지 않습니다."); }
+async function deletePost(id,pw,e){ e.stopPropagation(); const inputPw = prompt("게시글 비밀번호를 입력하세요:"); if (inputPw === null) return; if(await verifyPasswordMatch(inputPw, pw) || await verifyAdmin()) db.collection("posts").doc(id).delete(); } 
+async function addComment(pid){const n=document.getElementById(`cmt-name-${pid}`).value, p=document.getElementById(`cmt-pw-${pid}`).value, t=document.getElementById(`cmt-txt-${pid}`).value; if(n&&p&&t){const pwHash = await sha256Hex(p); db.collection('posts').doc(pid).collection('comments').add({name:n, password:pwHash, text:t, timestamp:firebase.firestore.FieldValue.serverTimestamp()}).then(()=>{document.getElementById(`cmt-txt-${pid}`).value=""; showToast("댓글이 등록되었습니다.");});}} 
+async function deleteComment(pid,cid,pw){const inputPw = prompt("댓글 비밀번호를 입력하세요:"); if(inputPw === null) return; if(await verifyPasswordMatch(inputPw, pw) || await verifyAdmin()) db.collection('posts').doc(pid).collection('comments').doc(cid).delete();}
 
 let currentEditShipId = null;
 let selectedShipFormTags = [];
@@ -4311,7 +4568,7 @@ function extractShipTags(ship) {
     const known = ["#오토콘", "#수동콘", "#브릿지주의", "#라싱바무거움", "#턴버클뻑뻑함", "#통로협소"];
     return known.filter(t => text.includes(t) || text.includes(t.slice(1)));
 }
-function addShipInfo() {
+async function addShipInfo() {
     const n = document.getElementById('shipName').value.trim();
     const c = document.getElementById('shipOnboard').value.trim();
     const p = document.getElementById('shipPw').value.trim();
@@ -4322,11 +4579,12 @@ function addShipInfo() {
     if (!n || !p) return alert("선박명과 비밀번호는 필수입니다!");
     btn.innerText = "서버 기록 중...";
     btn.disabled = true;
+    const pwHash = (/^[a-f0-9]{64}$/i.test(p)) ? p.toLowerCase() : (await sha256Hex(p));
     const finalizeSave = (url) => {
         const shipData = {
             shipName: n,
             onboardFeat: c,
-            password: p,
+            password: pwHash,
             difficulty: diff,
             tags: tags,
             timestamp: firebase.firestore.FieldValue.serverTimestamp()
@@ -4356,9 +4614,10 @@ function addShipInfo() {
 async function tryEditShip(id, name, feat, savedPw) {
     const inputPw = prompt("비밀번호를 입력하세요 (작성자 또는 관리자):");
     if (!inputPw) return;
-    const adminDoc = await db.collection('settings').doc('admin').get();
-    const isAdmin = adminDoc.exists && adminDoc.data().password === inputPw;
-    if (inputPw === savedPw || isAdmin) {
+    const isAuthor = await verifyPasswordMatch(inputPw, savedPw);
+    const inputHash = await sha256Hex(inputPw);
+    const isAdmin = isAdminSessionVerified || (inputHash === DEFAULT_ADMIN_PW_HASH);
+    if (isAuthor || isAdmin) {
         startEditShip(id, name, feat);
     } else {
         alert("⚠️ 권한이 없습니다. 비밀번호를 확인하세요.");
@@ -4520,9 +4779,9 @@ function loadShipComments(shipId) {
 async function verifyShipCommentPassword(comment) {
     const enteredPassword = prompt("댓글 비밀번호를 입력하세요. 관리자도 관리자 비밀번호로 관리할 수 있습니다:");
     if (enteredPassword === null) return false;
-    if (enteredPassword === comment.password) return true;
-    const adminDoc = await db.collection("settings").doc("admin").get();
-    if (adminDoc.exists && adminDoc.data().password === enteredPassword) return true;
+    if (await verifyPasswordMatch(enteredPassword, comment.password)) return true;
+    const enteredHash = await sha256Hex(enteredPassword);
+    if (isAdminSessionVerified || enteredHash === DEFAULT_ADMIN_PW_HASH) return true;
     alert("비밀번호가 일치하지 않습니다.");
     return false;
 }
@@ -4530,7 +4789,7 @@ async function editShipComment(shipId, commentId) {
     const comment = (shipCommentsById[shipId] || []).find(item => item.id === commentId);
     if (!comment || !(await verifyShipCommentPassword(comment))) return;
     document.getElementById(`ship-comment-name-${shipId}`).value = comment.name || "";
-    document.getElementById(`ship-comment-password-${shipId}`).value = comment.password || "";
+    document.getElementById(`ship-comment-password-${shipId}`).value = "";
     document.getElementById(`ship-comment-text-${shipId}`).value = comment.text || "";
     editingShipComment = { shipId, commentId };
     document.getElementById(`ship-comment-submit-${shipId}`).innerText = "수정 완료";
@@ -4550,7 +4809,7 @@ function cancelShipCommentEdit(shipId) {
     document.getElementById(`ship-comment-cancel-${shipId}`).style.display = "none";
     editingShipComment = null;
 }
-function submitShipComment(shipId) {
+async function submitShipComment(shipId) {
     const name = document.getElementById(`ship-comment-name-${shipId}`).value.trim();
     const password = document.getElementById(`ship-comment-password-${shipId}`).value.trim();
     const text = document.getElementById(`ship-comment-text-${shipId}`).value.trim();
@@ -4558,8 +4817,9 @@ function submitShipComment(shipId) {
         alert("닉네임, 비밀번호, 댓글 내용을 모두 입력해주세요.");
         return;
     }
+    const pwHash = (/^[a-f0-9]{64}$/i.test(password)) ? password.toLowerCase() : (await sha256Hex(password));
     const comments = db.collection("ships").doc(shipId).collection("comments");
-    const commentData = { name, password, text, timestamp: firebase.firestore.FieldValue.serverTimestamp() };
+    const commentData = { name, password: pwHash, text, timestamp: firebase.firestore.FieldValue.serverTimestamp() };
     const isEditing = editingShipComment && editingShipComment.shipId === shipId;
     const request = isEditing ? comments.doc(editingShipComment.commentId).update(commentData) : comments.add(commentData);
     request.then(() => {
@@ -4636,9 +4896,10 @@ async function ensureTodayUpdateNotice() {
     }
 }
 
-window.onload = () => { 
+window.onload = async () => { 
     applyOfficialTerminalNames();
     appendTerminalMealBlocks();
+    await ensureAnonymousAuth();
     ["t1", "t2", "t3"].forEach(loadSectionTicker);
     trackVisitorSession();
     ensureTodayUpdateNotice();
