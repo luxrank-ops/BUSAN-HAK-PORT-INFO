@@ -569,8 +569,11 @@
                     <div class="wage-row" style="margin-bottom:4px;"><label>배이름</label><input type="text" id="logShipName" class="input-field" placeholder="작업 선박명"></div>
                     <div id="hjncScheduledShipBox" class="hjnc-schedule-box">
                         <div class="hjnc-schedule-header">
-                            <span id="hjncScheduleBoxTitle" style="font-size:0.76rem; font-weight:900; color:#c2410c;">⚓ 한진(HJNC) 당일 입항·접안 선박 불러오는 중...</span>
-                            <a href="https://www.hjnc.co.kr/esvc/vessel/berthScheduleT" target="_blank" style="font-size:0.68rem; font-weight:800; color:#ea580c; text-decoration:underline;">원본 스케줄(T) ↗</a>
+                            <span id="hjncScheduleBoxTitle" style="font-size:0.76rem; font-weight:900; color:#c2410c;">⚓ 한진(HJNC) 당일 입항·접안 선박</span>
+                            <div style="display:flex; align-items:center; gap:6px;">
+                                <button type="button" onclick="refreshHjncScheduleForSelectedDate()" style="background:#ffffff; border:1px solid #fb923c; color:#ea580c; border-radius:5px; padding:1px 6px; font-size:0.66rem; font-weight:800; cursor:pointer;">🔄 갱신</button>
+                                <a href="https://www.hjnc.co.kr/esvc/vessel/berthScheduleT" target="_blank" style="font-size:0.68rem; font-weight:800; color:#ea580c; text-decoration:underline;">원본(T) ↗</a>
+                            </div>
                         </div>
                         <div id="hjncScheduledShipList" style="display:flex; flex-wrap:wrap; gap:5px;"></div>
                     </div>
@@ -2119,6 +2122,12 @@ function toggleDashItem(id){
         if(id === 'log-card') {
             syncWorkLogExtraUnlockUI();
             renderCalendar(currentDate.getFullYear(), currentDate.getMonth());
+            const formEl = document.getElementById('dailyLogForm');
+            if (formEl && !formEl.getAttribute('data-date')) {
+                const nowObj = new Date();
+                const todayStr = `${nowObj.getFullYear()}-${String(nowObj.getMonth()+1).padStart(2,'0')}-${String(nowObj.getDate()).padStart(2,'0')}`;
+                clickDate(todayStr);
+            }
         } else if(id === 'ship-card' || id === 'wage-card') {
             syncWorkLogExtraUnlockUI();
         } else if(id === 'weather-card') {
@@ -2543,7 +2552,8 @@ function changeMonthlyGoalAmount() {
 const hjncScheduleMonthCache = {};
 function extractDatePrefix(dtStr) {
     if (!dtStr || typeof dtStr !== "string") return "";
-    return dtStr.trim().slice(0, 10);
+    const m = dtStr.trim().match(/^(\d{4})[-./](\d{2})[-./](\d{2})/);
+    return m ? `${m[1]}-${m[2]}-${m[3]}` : dtStr.trim().slice(0, 10);
 }
 function extractShortTime(dtStr) {
     if (!dtStr || typeof dtStr !== "string") return "";
@@ -2568,8 +2578,8 @@ function isVesselActiveOnDate(vessel, dateStr) {
     }
     return false;
 }
-async function fetchHjncScheduleForMonth(yearMonth) {
-    if (hjncScheduleMonthCache[yearMonth]) {
+async function fetchHjncScheduleForMonth(yearMonth, forceRefresh = false) {
+    if (!forceRefresh && hjncScheduleMonthCache[yearMonth] && hjncScheduleMonthCache[yearMonth].length > 0) {
         return hjncScheduleMonthCache[yearMonth];
     }
     const [yStr, mStr] = yearMonth.split("-");
@@ -2582,52 +2592,109 @@ async function fetchHjncScheduleForMonth(yearMonth) {
     const endDate = fmt(nextD);
 
     let vessels = [];
-    try {
-        const res = await fetch(`/api/hjnc-schedule?startDate=${encodeURIComponent(startDate)}&endDate=${encodeURIComponent(endDate)}`);
-        if (res.ok) {
-            const json = await res.json();
-            if (json && Array.isArray(json.vessels)) {
-                vessels = json.vessels;
-            }
-        }
-    } catch (e) {}
 
-    if (vessels.length > 0) {
-        hjncScheduleMonthCache[yearMonth] = vessels;
+    // 1순위: Firestore(hjnc_schedules)에서 즉시 로드 (GitHub Pages·정적 호스팅·모바일 어디서든 0.1초 내 작동)
+    if (!forceRefresh) {
         try {
-            db.collection("hjnc_schedules").doc(yearMonth).set({
-                yearMonth,
-                vessels,
-                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-            }, { merge: true }).catch(() => {});
+            const snap = await db.collection("hjnc_schedules").doc(yearMonth).get();
+            if (snap.exists) {
+                const data = snap.data() || {};
+                if (typeof data.vesselsJson === "string" && data.vesselsJson.length > 2) {
+                    vessels = JSON.parse(data.vesselsJson);
+                } else if (Array.isArray(data.vessels)) {
+                    vessels = data.vessels;
+                }
+            }
         } catch (e) {}
+    }
+
+    // 백그라운드 또는 강제 새로고침 시 실시간 /api/hjnc-schedule 동기화
+    const syncFromLiveApi = async () => {
+        try {
+            const controller = new AbortController();
+            const timer = setTimeout(() => controller.abort(), 6500);
+            const res = await fetch(`/api/hjnc-schedule?startDate=${encodeURIComponent(startDate)}&endDate=${encodeURIComponent(endDate)}`, {
+                signal: controller.signal
+            });
+            clearTimeout(timer);
+            if (res.ok) {
+                const json = await res.json();
+                if (json && Array.isArray(json.vessels) && json.vessels.length > 0) {
+                    const slim = json.vessels.map(v => ({
+                        VSL_NM: v.VSL_NM || "",
+                        BERTH_NO: v.BERTH_NO || "",
+                        PTNR_CODE: v.PTNR_CODE || "",
+                        VOY_NO: v.VOY_NO || "",
+                        OPR_VOY: v.OPR_VOY || "",
+                        ETB: v.ETB || "",
+                        ATA: v.ATA || "",
+                        ATW: v.ATW || "",
+                        ATC: v.ATC || "",
+                        ATD: v.ATD || "",
+                        STATUS: v.STATUS || ""
+                    }));
+                    hjncScheduleMonthCache[yearMonth] = slim;
+                    db.collection("hjnc_schedules").doc(yearMonth).set({
+                        yearMonth,
+                        vesselsJson: JSON.stringify(slim),
+                        count: slim.length,
+                        updatedAt: new Date().toISOString()
+                    }, { merge: true }).catch(() => {});
+                    return slim;
+                }
+            }
+        } catch (e) {}
+        return null;
+    };
+
+    if (vessels.length > 0 && !forceRefresh) {
+        hjncScheduleMonthCache[yearMonth] = vessels;
+        syncFromLiveApi().then(updated => {
+            if (updated && updated.length > 0) {
+                const curDate = document.getElementById("dailyLogForm")?.getAttribute("data-date");
+                if (curDate && curDate.startsWith(yearMonth)) {
+                    renderHjncScheduledShipsUI(curDate, updated);
+                }
+            }
+        });
         return vessels;
     }
 
+    const liveVessels = await syncFromLiveApi();
+    if (liveVessels && liveVessels.length > 0) {
+        return liveVessels;
+    }
+
+    // 강제 새로고침 실패 시 Firestore 폴백
     try {
         const snap = await db.collection("hjnc_schedules").doc(yearMonth).get();
-        if (snap.exists && Array.isArray(snap.data()?.vessels)) {
-            vessels = snap.data().vessels;
-            hjncScheduleMonthCache[yearMonth] = vessels;
-            return vessels;
+        if (snap.exists) {
+            const data = snap.data() || {};
+            if (typeof data.vesselsJson === "string") {
+                vessels = JSON.parse(data.vesselsJson);
+            } else if (Array.isArray(data.vessels)) {
+                vessels = data.vessels;
+            }
+            if (vessels.length > 0) hjncScheduleMonthCache[yearMonth] = vessels;
         }
     } catch (e) {}
 
-    return [];
+    return vessels;
 }
-async function loadHjncScheduledShipsForDate(dateStr) {
+async function refreshHjncScheduleForSelectedDate() {
+    const dateStr = document.getElementById("dailyLogForm")?.getAttribute("data-date");
+    if (!dateStr) return;
+    const yearMonth = dateStr.slice(0, 7);
+    delete hjncScheduleMonthCache[yearMonth];
+    showToast("🔄 한진(HJNC) 선석배정현황을 새로고침합니다...");
+    await loadHjncScheduledShipsForDate(dateStr, true);
+}
+function renderHjncScheduledShipsUI(dateStr, allVessels) {
     const titleEl = document.getElementById("hjncScheduleBoxTitle");
     const listEl = document.getElementById("hjncScheduledShipList");
     if (!titleEl || !listEl || !dateStr) return;
 
-    const yearMonth = dateStr.slice(0, 7);
-    titleEl.innerText = `⚓ ${dateStr} 한진(HJNC) 입항·접안 예정 선박 조회 중...`;
-    listEl.innerHTML = `<span style="font-size:0.74rem; color:var(--text-sub); font-weight:700;">실시간 선석배정현황(T) 데이터를 불러오는 중입니다...</span>`;
-
-    const allVessels = await fetchHjncScheduleForMonth(yearMonth);
-    const currentSelected = document.getElementById("dailyLogForm")?.getAttribute("data-date");
-    if (currentSelected && currentSelected !== dateStr) return;
-
+    const currentValue = (document.getElementById("logShipName")?.value || "").trim().toUpperCase();
     const matched = (allVessels || []).filter(v => isVesselActiveOnDate(v, dateStr));
     const seen = new Set();
     const uniqueMatched = [];
@@ -2657,13 +2724,31 @@ async function loadHjncScheduledShipsForDate(dateStr) {
         const timeBadge = arrDate === dateStr && arrTime
             ? `입항 ${arrTime}`
             : (depTime ? `~출항 ${depTime}` : "작업중");
-        return `<button type="button" class="hjnc-ship-chip" onclick="applyQuickShipChip('${jsSafeName}', '${berth}', '${ptnr}')">
-            <span class="hjnc-berth-tag">${berth}</span>
+        const isSelected = currentValue === name.toUpperCase();
+        const selectedStyle = isSelected ? "background:#ea580c; color:#ffffff; border-color:#c2410c;" : "";
+        const timeStyle = isSelected ? "color:#ffedd5;" : "";
+        return `<button type="button" class="hjnc-ship-chip" style="${selectedStyle}" onclick="applyQuickShipChip('${jsSafeName}', '${berth}', '${ptnr}')">
+            <span class="hjnc-berth-tag" style="${isSelected ? 'background:#ffffff; color:#ea580c;' : ''}">${berth}</span>
             <span>🚢 ${safeName}</span>
-            ${ptnr ? `<span style="font-size:0.66rem; color:#64748b; font-weight:800;">(${ptnr})</span>` : ""}
-            <span class="hjnc-time-tag">${timeBadge}</span>
+            ${ptnr ? `<span style="font-size:0.66rem; color:${isSelected ? '#fed7aa' : '#64748b'}; font-weight:800;">(${ptnr})</span>` : ""}
+            <span class="hjnc-time-tag" style="${timeStyle}">${timeBadge}</span>
         </button>`;
     }).join("");
+}
+async function loadHjncScheduledShipsForDate(dateStr, forceRefresh = false) {
+    const titleEl = document.getElementById("hjncScheduleBoxTitle");
+    const listEl = document.getElementById("hjncScheduledShipList");
+    if (!titleEl || !listEl || !dateStr) return;
+
+    const yearMonth = dateStr.slice(0, 7);
+    titleEl.innerText = `⚓ ${dateStr} 한진(HJNC) 입항·접안 예정 선박 조회 중...`;
+    listEl.innerHTML = `<span style="font-size:0.74rem; color:var(--text-sub); font-weight:700;">선석배정현황(T) 데이터를 불러오는 중입니다...</span>`;
+
+    const allVessels = await fetchHjncScheduleForMonth(yearMonth, forceRefresh);
+    const currentSelected = document.getElementById("dailyLogForm")?.getAttribute("data-date");
+    if (currentSelected && currentSelected !== dateStr) return;
+
+    renderHjncScheduledShipsUI(dateStr, allVessels);
 }
 function renderWorkLogQuickChips(dateStr) {
     const targetDate = dateStr || document.getElementById("dailyLogForm")?.getAttribute("data-date") || "";
@@ -2720,6 +2805,13 @@ function applyQuickShipChip(shipName, berthNo = "", ptnrCode = "") {
     const input = document.getElementById("logShipName");
     if (!input) return;
     input.value = shipName;
+    const curDate = document.getElementById("dailyLogForm")?.getAttribute("data-date");
+    if (curDate) {
+        const ym = curDate.slice(0, 7);
+        if (hjncScheduleMonthCache[ym]) {
+            renderHjncScheduledShipsUI(curDate, hjncScheduleMonthCache[ym]);
+        }
+    }
     const extraInfo = berthNo ? ` (${berthNo}선석${ptnrCode ? ' · ' + ptnrCode : ''})` : "";
     showToast(`🚢 '${shipName}'${extraInfo} 선박명이 입력되었습니다.`);
 }
@@ -3078,10 +3170,18 @@ function renderCalendar(y, m){
             });
             updateMonthlyStatsUI(adminWorkLogs);
             applyWorkLogFilter();
+            const selDate = document.getElementById('dailyLogForm')?.getAttribute('data-date');
+            if (selDate && !document.getElementById('dailyLogForm')?.classList.contains('hidden')) {
+                loadHjncScheduledShipsForDate(selDate);
+            }
             if (isWorkLogUnlocked) loadAndRenderYearlyD3Chart(y);
         });
     } else {
         updateMonthlyStatsUI({});
+        const selDate = document.getElementById('dailyLogForm')?.getAttribute('data-date');
+        if (selDate && !document.getElementById('dailyLogForm')?.classList.contains('hidden')) {
+            loadHjncScheduledShipsForDate(selDate);
+        }
         if (isWorkLogUnlocked) loadAndRenderYearlyD3Chart(y);
     }
 }
