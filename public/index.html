@@ -360,6 +360,27 @@
         .board-table tbody tr:not(.board-content-row) { transition: background 0.15s ease; }
         .board-table tbody tr:not(.board-content-row):hover { background: rgba(59, 130, 246, 0.05); }
         .cmt-count-pill { display: inline-flex; align-items: center; background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; border-radius: 10px; padding: 1px 6px; font-size: 0.7rem; font-weight: 900; margin-left: 4px; vertical-align: middle; }
+        /* 📊 관리자 통합 운영 통계 대시보드 스타일 */
+        .stats-kpi-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-bottom: 12px; }
+        .stats-kpi-card { background: var(--bg-color); border: 1.5px solid var(--border); border-radius: 10px; padding: 10px 12px; display: flex; flex-direction: column; justify-content: space-between; }
+        .stats-kpi-label { font-size: 0.74rem; font-weight: 800; color: var(--text-sub); display: flex; align-items: center; justify-content: space-between; }
+        .stats-kpi-val { font-size: 1.32rem; font-weight: 900; color: var(--primary); margin-top: 4px; font-variant-numeric: tabular-nums; }
+        .stats-kpi-sub { font-size: 0.68rem; font-weight: 800; margin-top: 3px; color: var(--text-sub); }
+        .stats-section-box { background: var(--card-bg); border: 1.5px solid var(--border); border-radius: 12px; padding: 12px; margin-bottom: 12px; box-shadow: 0 2px 5px rgba(15, 23, 42, 0.03); }
+        .stats-section-title { font-size: 0.88rem; font-weight: 900; color: var(--primary); margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between; gap: 6px; flex-wrap: wrap; }
+        .stats-rank-row { margin-bottom: 8px; }
+        .stats-rank-row:last-child { margin-bottom: 0; }
+        .stats-rank-top { display: flex; justify-content: space-between; align-items: center; font-size: 0.78rem; font-weight: 800; margin-bottom: 3px; gap: 6px; }
+        .stats-rank-bar-bg { width: 100%; height: 8px; background: rgba(148, 163, 184, 0.2); border-radius: 6px; overflow: hidden; }
+        .stats-rank-bar-fill { height: 100%; border-radius: 6px; transition: width 0.35s ease; }
+        .stats-tab-btn { border: 1px solid var(--border); background: var(--bg-color); color: var(--text-sub); font-size: 0.7rem; font-weight: 800; padding: 3px 8px; border-radius: 6px; cursor: pointer; }
+        .stats-tab-btn.active { background: var(--primary); color: #ffffff; border-color: var(--primary); }
+        .stats-7day-chart { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; align-items: end; height: 110px; padding-top: 18px; border-bottom: 1.5px solid var(--border); }
+        .stats-7day-col { display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%; }
+        .stats-7day-bar { width: 100%; max-width: 26px; background: linear-gradient(180deg, #3b82f6, #1d4ed8); border-radius: 5px 5px 0 0; min-height: 4px; transition: height 0.3s ease; }
+        .stats-7day-bar.is-today { background: linear-gradient(180deg, #f59e0b, #d97706); }
+        .stats-mini-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; }
+        .stats-mini-item { background: var(--bg-color); border: 1px solid var(--border); border-radius: 8px; padding: 7px 9px; display: flex; justify-content: space-between; align-items: center; font-size: 0.76rem; font-weight: 800; }
     </style>
     <link rel="apple-touch-icon" href="./icon-192.png">
 </head>
@@ -1357,7 +1378,97 @@
 <div id="tickerManageModal" class="modal-overlay" onclick="document.getElementById('tickerManageModal').style.display='none'"><div class="modal-content" onclick="event.stopPropagation()"><h3 style="margin-top:0; font-weight:900;">⚙️ 알림글 삭제</h3><div id="tickerListContainer"></div><button class="action-btn bg-cancel" onclick="document.getElementById('tickerManageModal').style.display='none'" style="margin-top:10px;">닫기</button></div></div>
 <div id="loginModal" class="modal-overlay" style="display:none;" onclick="closeLoginModal()"><div class="modal-content" onclick="event.stopPropagation()"><h3 style="font-weight:900;">🔐 근무일지 로그인/가입</h3><p style="font-weight:600;">닉네임과 비밀번호를 입력하세요.</p><input type="text" id="loginNick" class="input-field" placeholder="닉네임 (ID)"><input type="password" id="loginPw" class="input-field" placeholder="비밀번호"><button id="confirmLoginBtn" class="action-btn" onclick="confirmLoginAndSave(event)">확인 및 저장</button><button class="action-btn bg-cancel" onclick="closeLoginModal()">취소</button></div></div>
 <div id="workLogPinModal" class="modal-overlay" style="display:none;" onclick="closeWorkLogPinModal()"><div class="modal-content" onclick="event.stopPropagation()" style="max-width:380px;"><h3 style="margin-top:0; text-align:center; color:var(--primary); font-weight:900;">🔒 근무일지 보안 잠금</h3><p style="text-align:center; font-size:0.9rem; color:var(--text-sub); font-weight:700; margin-bottom:12px;">근무일지 열람 및 기록을 위해<br>보안 비밀번호(4자리)를 입력해주세요.</p><input type="password" id="workLogPinInput" class="input-field" placeholder="비밀번호 입력" inputmode="numeric" maxlength="8" style="text-align:center; font-size:1.3rem; letter-spacing:6px; height:48px; border:2px solid var(--primary); margin-bottom:10px;" onkeydown="if(event.key==='Enter'){event.preventDefault();submitWorkLogPin();}"><div style="display:flex; gap:8px;"><button type="button" class="action-btn bg-submit" style="flex:2; margin-top:0;" onclick="submitWorkLogPin()">잠금 해제</button><button type="button" class="action-btn bg-cancel" style="flex:1; margin-top:0;" onclick="closeWorkLogPinModal()">취소</button></div></div></div>
-<div id="visitorStatsModal" class="modal-overlay" style="display:none;" onclick="closeVisitorStats()"><div class="modal-content" onclick="event.stopPropagation()" style="max-width:420px;"><h3 style="margin:0 0 16px; text-align:center; color:var(--primary); font-weight:900;">📊 방문자 통계</h3><div style="display:flex; justify-content:space-between; align-items:center; padding:14px 12px; margin-bottom:8px; background:var(--bg-color); border-radius:8px;"><span style="font-weight:800;">당일 방문자 수</span><strong id="todayVisitorCount" style="font-size:1.25rem; color:var(--primary);">-</strong></div><div style="display:flex; justify-content:space-between; align-items:center; padding:14px 12px; background:var(--bg-color); border-radius:8px;"><span style="font-weight:800;">총 방문자 수</span><strong id="totalVisitorCount" style="font-size:1.25rem; color:var(--primary);">-</strong></div><p style="font-size:0.78rem; color:var(--text-sub); text-align:center; margin:12px 0;">브라우저 탭 세션 기준 · 새로고침 중복 제외</p><button class="action-btn bg-cancel" onclick="closeVisitorStats()">닫기</button></div></div>
+<div id="visitorStatsModal" class="modal-overlay" style="display:none;" onclick="closeVisitorStats()">
+    <div class="modal-content" onclick="event.stopPropagation()" style="max-width:560px; padding:16px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; gap:8px; flex-wrap:wrap; border-bottom:2px solid var(--primary); padding-bottom:10px;">
+            <div>
+                <h3 style="margin:0; color:var(--primary); font-weight:900; font-size:1.12rem;">📊 앱 통합 운영 · 방문자 상세 통계</h3>
+                <div id="visitorStatsUpdatedTime" style="font-size:0.7rem; color:var(--text-sub); font-weight:700; margin-top:2px;">실시간 운영 데이터 분석 리포트</div>
+            </div>
+            <div style="display:flex; gap:5px;">
+                <button type="button" onclick="refreshVisitorStatsModal()" style="background:#eff6ff; color:#1d4ed8; border:1px solid #93c5fd; border-radius:6px; padding:5px 9px; font-size:0.74rem; font-weight:900; cursor:pointer;">🔄 새로고침</button>
+                <button type="button" onclick="copyVisitorStatsReport()" style="background:var(--primary); color:#fff; border:none; border-radius:6px; padding:5px 9px; font-size:0.74rem; font-weight:900; cursor:pointer;">📋 리포트 복사</button>
+            </div>
+        </div>
+
+        <div class="stats-kpi-grid">
+            <div class="stats-kpi-card" style="background:linear-gradient(135deg, #eff6ff, #dbeafe); border-color:#93c5fd;">
+                <div class="stats-kpi-label"><span style="color:#1e40af;">🟢 오늘 방문자</span><span id="todayVisitorDiffBadge" style="font-size:0.68rem; font-weight:900;">-</span></div>
+                <div id="todayVisitorCount" class="stats-kpi-val" style="color:#1d4ed8;">-</div>
+                <div id="todayClickSummarySub" class="stats-kpi-sub" style="color:#1e3a8a;">오늘 블럭 클릭: 0회</div>
+            </div>
+            <div class="stats-kpi-card">
+                <div class="stats-kpi-label"><span>🗓️ 어제 방문자</span><span>전일 마감</span></div>
+                <div id="yesterdayVisitorCount" class="stats-kpi-val">-</div>
+                <div id="weekAvgVisitorSub" class="stats-kpi-sub">최근 7일 일평균: -명</div>
+            </div>
+            <div class="stats-kpi-card">
+                <div class="stats-kpi-label"><span>📅 최근 7일 누적</span><span>주간 합계</span></div>
+                <div id="weekVisitorCount" class="stats-kpi-val" style="color:#047857;">-</div>
+                <div id="peakDayVisitorSub" class="stats-kpi-sub">최근 7일 최고: -</div>
+            </div>
+            <div class="stats-kpi-card" style="background:linear-gradient(135deg, #fffbeb, #fef3c7); border-color:#fcd34d;">
+                <div class="stats-kpi-label"><span style="color:#92400e;">🏆 총 누적 방문자</span><span style="color:#b45309;">전체 세션</span></div>
+                <div id="totalVisitorCount" class="stats-kpi-val" style="color:#b45309;">-</div>
+                <div id="totalClickSummarySub" class="stats-kpi-sub" style="color:#92400e;">누적 블럭 클릭: 0회</div>
+            </div>
+        </div>
+
+        <div class="stats-section-box">
+            <div class="stats-section-title">
+                <span>📈 최근 7일 일별 방문자 추이</span>
+                <span style="font-size:0.7rem; color:var(--text-sub); font-weight:700;">주황색: 오늘</span>
+            </div>
+            <div id="stats7DayChart" class="stats-7day-chart"></div>
+            <div id="stats7DayLabels" style="display:grid; grid-template-columns:repeat(7, 1fr); gap:5px; text-align:center; margin-top:5px; font-size:0.68rem; font-weight:800; color:var(--text-sub);"></div>
+        </div>
+
+        <div class="stats-section-box">
+            <div class="stats-section-title">
+                <span>🔥 가장 많이 클릭된 블럭 순위 (TOP 14)</span>
+                <div style="display:flex; gap:4px;">
+                    <button type="button" id="blockRankTabTotal" class="stats-tab-btn active" onclick="switchBlockRankMode('total')">누적 순위</button>
+                    <button type="button" id="blockRankTabToday" class="stats-tab-btn" onclick="switchBlockRankMode('today')">오늘 순위</button>
+                </div>
+            </div>
+            <div id="statsBlockRankingList"></div>
+        </div>
+
+        <div class="stats-section-box">
+            <div class="stats-section-title">
+                <span>⚓ 9대 터미널별 인기 클릭 순위</span>
+                <span style="font-size:0.7rem; color:var(--text-sub); font-weight:700;">스케줄·차트·식단 포함</span>
+            </div>
+            <div id="statsTerminalRankingList"></div>
+        </div>
+
+        <div class="stats-section-box">
+            <div class="stats-section-title">
+                <span>⚡ 주요 스마트 기능 사용 횟수</span>
+                <span style="font-size:0.7rem; color:var(--text-sub); font-weight:700;">오늘 / 누적</span>
+            </div>
+            <div id="statsActionUsageGrid" class="stats-mini-grid"></div>
+        </div>
+
+        <div class="stats-section-box">
+            <div class="stats-section-title">
+                <span>📱 접속 기기 비율 & ⏰ 교대근무 시간대 분포</span>
+            </div>
+            <div id="statsDeviceAndHourBox"></div>
+        </div>
+
+        <div class="stats-section-box" style="margin-bottom:8px;">
+            <div class="stats-section-title">
+                <span>📦 앱 데이터베이스(DB) 누적 콘텐츠 현황</span>
+                <span style="font-size:0.7rem; color:var(--text-sub); font-weight:700;">실시간 서버 기준</span>
+            </div>
+            <div id="statsDbContentGrid" class="stats-mini-grid"></div>
+        </div>
+
+        <p style="font-size:0.74rem; color:var(--text-sub); text-align:center; margin:8px 0;">※ 방문자 수는 브라우저 탭 세션 기준(새로고침 중복 제외)이며, 블럭·터미널·기능 클릭은 실시간 누적 집계됩니다.</p>
+        <button class="action-btn bg-cancel" style="margin-top:4px;" onclick="closeVisitorStats()">닫기</button>
+    </div>
+</div>
 
 <script>
 const firebaseConfig = { apiKey: "AIzaSyBWFZr9TE9yybZJCJjEXSsv1YCpGkVb0kA", authDomain: "busan-hak-port.firebaseapp.com", projectId: "busan-hak-port", storageBucket: "busan-hak-port.firebasestorage.app", messagingSenderId: "616469111502", appId: "1:616469111502:web:6f3c94b15e444e04c7669f", measurementId: "G-QQ728TDFJ2" };
@@ -1373,6 +1484,71 @@ let currentEditPostId = null;
 async function safeGet(ref) { if (!ref) return null; try { return await ref.get(); } catch (e) { return null; } }
 async function verifyAdmin() { const inputPw = prompt("관리자 비밀번호를 입력하세요:"); if (!inputPw) return false; const doc = await db.collection('settings').doc('admin').get(); if (doc.exists && doc.data().password === inputPw) return true; alert("⚠️ 비밀번호가 틀렸습니다."); return false; }
 function getVisitorDateKey(date = new Date()) { return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`; }
+function detectVisitorDeviceKey() {
+    const ua = navigator.userAgent || "";
+    if (/android/i.test(ua)) return "android";
+    if (/iPad|iPhone|iPod/i.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)) return "ios";
+    return "desktop";
+}
+function detectVisitorHourSlot(date = new Date()) {
+    const h = date.getHours();
+    if (h < 6) return "h00_06";
+    if (h < 12) return "h06_12";
+    if (h < 18) return "h12_18";
+    return "h18_24";
+}
+function trackAppEvent(category, key) {
+    if (!category || !key || typeof db === "undefined") return;
+    try {
+        const dateKey = getVisitorDateKey();
+        const inc = firebase.firestore.FieldValue.increment(1);
+        const ts = firebase.firestore.FieldValue.serverTimestamp();
+        const payload = { [category]: { [key]: inc }, updatedAt: ts };
+        db.collection("visitor_stats").doc("total").set(payload, { merge: true }).catch(() => {});
+        db.collection("visitor_stats").doc(`daily-${dateKey}`).set({ date: dateKey, ...payload }, { merge: true }).catch(() => {});
+    } catch (e) {}
+}
+const STATS_BLOCK_META = [
+    { id: "wage-card", label: "🧮 임금계산기", color: "#2563eb" },
+    { id: "log-card", label: "📅 근무일지", color: "#059669" },
+    { id: "t3-content", label: "🚢 3항업 (신항 남측)", color: "#1e3a8a" },
+    { id: "t2-content", label: "🏗️ 2항업 (신항 북측)", color: "#0284c7" },
+    { id: "t1-content", label: "⚓ 1항업 (북항)", color: "#334155" },
+    { id: "ship-card", label: "🚢 선박정보 도감", color: "#0ea5e9" },
+    { id: "notice-card", label: "📢 공지사항", color: "#ef4444" },
+    { id: "board-card", label: "💬 스트레스 해소(톡톡)", color: "#6366f1" },
+    { id: "archive-card", label: "📂 자료실(셔틀 등)", color: "#eab308" },
+    { id: "weather-card", label: "📡 날씨 및 도선상황", color: "#06b6d4" },
+    { id: "safety-card", label: "⛑️ 실전 통합 안전 지침", color: "#10b981" },
+    { id: "guide-card", label: "📖 현장 실무 용어 가이드", color: "#8b5cf6" },
+    { id: "privacy-center-card", label: "🛡️ 실전 보안 가이드", color: "#64748b" },
+    { id: "main-manual-card", label: "🔅 앱 공유 · 사용 설명서", color: "#f59e0b" }
+];
+const STATS_TERMINAL_META = [
+    { id: "hjnc", label: "한진신항만 (HJNC · 3항업)", color: "#f97316" },
+    { id: "bnct", label: "고려신항만 (BNCT · 3항업)", color: "#2563eb" },
+    { id: "dgt", label: "동원글로벌 (DGT · 3항업)", color: "#0d9488" },
+    { id: "bct", label: "부산컨테이너 (BCT · 3항업)", color: "#16a34a" },
+    { id: "pnc", label: "부산신항만 (PNC · 2항업)", color: "#0284c7" },
+    { id: "hpnt", label: "HMM 신항만 (HPNT · 2항업)", color: "#4f46e5" },
+    { id: "pnit", label: "신항국제 (PNIT · 2항업)", color: "#7c3aed" },
+    { id: "bptc", label: "북항 통합 (BPTC · 1항업)", color: "#475569" },
+    { id: "hbct", label: "허치슨 (HBCT · 1항업)", color: "#dc2626" }
+];
+const STATS_ACTION_META = [
+    { id: "wage_calc", label: "🧮 임금 계산 실행" },
+    { id: "wage_to_log", label: "✨ 일지로 임금 전송" },
+    { id: "log_save", label: "💾 근무일지 저장" },
+    { id: "excel_dl", label: "📊 엑셀(CSV) 저장" },
+    { id: "receipt_share", label: "📸 명세서 저장·공유" },
+    { id: "meal_view", label: "🍱 터미널 식단 조회" },
+    { id: "bay_plan", label: "🧩 베이플랜 조회" },
+    { id: "bus_view", label: "🚌 셔틀시간표 조회" },
+    { id: "leader_cal", label: "📅 조장 근무표 조회" },
+    { id: "promo_share", label: "📤 홍보글 복사·공유" }
+];
+let cachedStatsModalData = { totalDoc: {}, todayDoc: {}, currentBlockMode: "total", reportText: "" };
+
 function trackVisitorSession() {
     if (visitorCountPromise) return visitorCountPromise;
     const sessionKey = "busanHakPortVisitorCounted";
@@ -1383,16 +1559,33 @@ function trackVisitorSession() {
     } catch (error) {
         canStoreSession = false;
     }
-    const dateKey = getVisitorDateKey();
+    const now = new Date();
+    const dateKey = getVisitorDateKey(now);
+    const devKey = detectVisitorDeviceKey();
+    const hourKey = detectVisitorHourSlot(now);
     const totalRef = db.collection("visitor_stats").doc("total");
     const dailyRef = db.collection("visitor_stats").doc(`daily-${dateKey}`);
+    const inc = firebase.firestore.FieldValue.increment(1);
+    const ts = firebase.firestore.FieldValue.serverTimestamp();
+
     visitorCountPromise = db.runTransaction(async transaction => {
         const totalSnapshot = await transaction.get(totalRef);
         const dailySnapshot = await transaction.get(dailyRef);
         const totalCount = totalSnapshot.exists ? Number(totalSnapshot.data().count) || 0 : 0;
         const dailyCount = dailySnapshot.exists ? Number(dailySnapshot.data().count) || 0 : 0;
-        transaction.set(totalRef, { count: totalCount + 1, updatedAt: firebase.firestore.FieldValue.serverTimestamp() });
-        transaction.set(dailyRef, { date: dateKey, count: dailyCount + 1, updatedAt: firebase.firestore.FieldValue.serverTimestamp() });
+        transaction.set(totalRef, {
+            count: totalCount + 1,
+            devices: { [devKey]: inc },
+            hours: { [hourKey]: inc },
+            updatedAt: ts
+        }, { merge: true });
+        transaction.set(dailyRef, {
+            date: dateKey,
+            count: dailyCount + 1,
+            devices: { [devKey]: inc },
+            hours: { [hourKey]: inc },
+            updatedAt: ts
+        }, { merge: true });
     }).then(() => {
         if (canStoreSession) sessionStorage.setItem(sessionKey, "1");
     }).catch(error => {
@@ -1403,25 +1596,331 @@ function trackVisitorSession() {
     });
     return visitorCountPromise;
 }
+function switchBlockRankMode(mode) {
+    cachedStatsModalData.currentBlockMode = mode;
+    const btnTotal = document.getElementById("blockRankTabTotal");
+    const btnToday = document.getElementById("blockRankTabToday");
+    if (btnTotal) btnTotal.classList.toggle("active", mode === "total");
+    if (btnToday) btnToday.classList.toggle("active", mode === "today");
+    renderStatsBlockRanking(cachedStatsModalData.totalDoc, cachedStatsModalData.todayDoc, mode);
+}
+function renderStatsBlockRanking(totalDoc, todayDoc, mode = "total") {
+    const listEl = document.getElementById("statsBlockRankingList");
+    if (!listEl) return;
+    const totalBlocks = (totalDoc && totalDoc.blocks) || {};
+    const todayBlocks = (todayDoc && todayDoc.blocks) || {};
+    const items = STATS_BLOCK_META.map(m => {
+        const tCnt = Number(totalBlocks[m.id]) || 0;
+        const dCnt = Number(todayBlocks[m.id]) || 0;
+        return {
+            ...m,
+            totalCount: tCnt,
+            todayCount: dCnt,
+            activeCount: mode === "today" ? dCnt : tCnt
+        };
+    }).sort((a, b) => b.activeCount - a.activeCount || b.totalCount - a.totalCount);
+
+    const sumActive = items.reduce((acc, x) => acc + x.activeCount, 0);
+    const maxActive = Math.max(items[0]?.activeCount || 0, 1);
+
+    listEl.innerHTML = items.map((item, idx) => {
+        const pctOfTotal = sumActive > 0 ? Math.round((item.activeCount / sumActive) * 100) : 0;
+        const barWidth = item.activeCount > 0 ? Math.max(4, Math.round((item.activeCount / maxActive) * 100)) : 0;
+        const medal = idx === 0 && item.activeCount > 0 ? "🥇 " : idx === 1 && item.activeCount > 0 ? "🥈 " : idx === 2 && item.activeCount > 0 ? "🥉 " : `${idx + 1}위. `;
+        const subText = mode === "today"
+            ? `오늘 ${item.todayCount.toLocaleString()}회 (${pctOfTotal}%) · 누적 ${item.totalCount.toLocaleString()}회`
+            : `누적 ${item.totalCount.toLocaleString()}회 (${pctOfTotal}%) · 오늘 ${item.todayCount.toLocaleString()}회`;
+        return `<div class="stats-rank-row">
+            <div class="stats-rank-top">
+                <span style="color:var(--text-main); font-weight:${idx < 3 && item.activeCount > 0 ? '900' : '800'};">${medal}${item.label}</span>
+                <span style="color:${item.activeCount > 0 ? 'var(--primary)' : 'var(--text-sub)'}; font-variant-numeric:tabular-nums;">${subText}</span>
+            </div>
+            <div class="stats-rank-bar-bg">
+                <div class="stats-rank-bar-fill" style="width:${barWidth}%; background:${item.color};"></div>
+            </div>
+        </div>`;
+    }).join("");
+}
+function renderStatsTerminalRanking(totalDoc, todayDoc) {
+    const listEl = document.getElementById("statsTerminalRankingList");
+    if (!listEl) return;
+    const totalTerms = (totalDoc && totalDoc.terminals) || {};
+    const todayTerms = (todayDoc && todayDoc.terminals) || {};
+    const items = STATS_TERMINAL_META.map(m => ({
+        ...m,
+        totalCount: Number(totalTerms[m.id]) || 0,
+        todayCount: Number(todayTerms[m.id]) || 0
+    })).sort((a, b) => b.totalCount - a.totalCount || b.todayCount - a.todayCount);
+
+    const sumTotal = items.reduce((a, b) => a + b.totalCount, 0);
+    const maxTotal = Math.max(items[0]?.totalCount || 0, 1);
+
+    listEl.innerHTML = items.map((item, idx) => {
+        const pct = sumTotal > 0 ? Math.round((item.totalCount / sumTotal) * 100) : 0;
+        const barW = item.totalCount > 0 ? Math.max(4, Math.round((item.totalCount / maxTotal) * 100)) : 0;
+        const rankPrefix = idx === 0 && item.totalCount > 0 ? "🥇 " : idx === 1 && item.totalCount > 0 ? "🥈 " : idx === 2 && item.totalCount > 0 ? "🥉 " : `${idx + 1}. `;
+        return `<div class="stats-rank-row">
+            <div class="stats-rank-top">
+                <span>${rankPrefix}${item.label}</span>
+                <span style="color:var(--primary); font-variant-numeric:tabular-nums;">누적 ${item.totalCount.toLocaleString()}회 (${pct}%) · 오늘 ${item.todayCount}회</span>
+            </div>
+            <div class="stats-rank-bar-bg">
+                <div class="stats-rank-bar-fill" style="width:${barW}%; background:${item.color};"></div>
+            </div>
+        </div>`;
+    }).join("");
+}
 async function openVisitorStats() {
     try {
         if (!(await verifyAdmin())) return;
         await trackVisitorSession();
         const modal = document.getElementById("visitorStatsModal");
-        const todayCount = document.getElementById("todayVisitorCount");
-        const totalCount = document.getElementById("totalVisitorCount");
-        todayCount.innerText = "불러오는 중...";
-        totalCount.innerText = "불러오는 중...";
         modal.style.display = "flex";
-        const dateKey = getVisitorDateKey();
-        const [dailySnapshot, totalSnapshot] = await Promise.all([
-            db.collection("visitor_stats").doc(`daily-${dateKey}`).get(),
-            db.collection("visitor_stats").doc("total").get()
-        ]);
-        todayCount.innerText = (dailySnapshot.exists ? Number(dailySnapshot.data().count) || 0 : 0).toLocaleString();
-        totalCount.innerText = (totalSnapshot.exists ? Number(totalSnapshot.data().count) || 0 : 0).toLocaleString();
+        await loadAndRenderVisitorStats();
     } catch (error) {
         alert("방문자 통계를 불러오지 못했습니다: " + error.message);
+    }
+}
+async function refreshVisitorStatsModal() {
+    showToast("🔄 최신 운영 통계를 불러오는 중...");
+    await loadAndRenderVisitorStats();
+    showToast("✅ 실시간 통계가 갱신되었습니다.");
+}
+async function loadAndRenderVisitorStats() {
+    const todayCountEl = document.getElementById("todayVisitorCount");
+    const yesterdayCountEl = document.getElementById("yesterdayVisitorCount");
+    const weekCountEl = document.getElementById("weekVisitorCount");
+    const totalCountEl = document.getElementById("totalVisitorCount");
+    if (todayCountEl) todayCountEl.innerText = "...";
+    if (totalCountEl) totalCountEl.innerText = "...";
+
+    const now = new Date();
+    const dayKeys = [];
+    const dayLabels = ["일", "월", "화", "수", "목", "금", "토"];
+    for (let i = 6; i >= 0; i--) {
+        const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() - i);
+        dayKeys.push({
+            key: getVisitorDateKey(d),
+            shortDate: `${d.getMonth() + 1}/${d.getDate()}`,
+            dayName: dayLabels[d.getDay()],
+            isToday: i === 0
+        });
+    }
+
+    const [totalSnap, ...dailySnaps] = await Promise.all([
+        db.collection("visitor_stats").doc("total").get(),
+        ...dayKeys.map(dk => db.collection("visitor_stats").doc(`daily-${dk.key}`).get())
+    ]);
+
+    const totalDoc = totalSnap.exists ? totalSnap.data() : {};
+    const dailyDocs = dailySnaps.map(s => (s.exists ? s.data() : {}));
+    const todayDoc = dailyDocs[6] || {};
+    const yesterdayDoc = dailyDocs[5] || {};
+
+    cachedStatsModalData.totalDoc = totalDoc;
+    cachedStatsModalData.todayDoc = todayDoc;
+
+    const todayVisitors = Number(todayDoc.count) || 0;
+    const yesterdayVisitors = Number(yesterdayDoc.count) || 0;
+    const totalVisitors = Number(totalDoc.count) || 0;
+    const weekVisitors = dailyDocs.reduce((acc, d) => acc + (Number(d.count) || 0), 0);
+    const weekAvg = Math.round(weekVisitors / 7);
+
+    if (todayCountEl) todayCountEl.innerText = `${todayVisitors.toLocaleString()}명`;
+    if (yesterdayCountEl) yesterdayCountEl.innerText = `${yesterdayVisitors.toLocaleString()}명`;
+    if (weekCountEl) weekCountEl.innerText = `${weekVisitors.toLocaleString()}명`;
+    if (totalCountEl) totalCountEl.innerText = `${totalVisitors.toLocaleString()}명`;
+
+    const diffBadge = document.getElementById("todayVisitorDiffBadge");
+    if (diffBadge) {
+        const diff = todayVisitors - yesterdayVisitors;
+        if (yesterdayVisitors === 0 && todayVisitors > 0) {
+            diffBadge.innerText = `▲ +${todayVisitors}명`;
+            diffBadge.style.color = "#16a34a";
+        } else if (diff > 0) {
+            diffBadge.innerText = `전일대비 ▲ +${diff}명`;
+            diffBadge.style.color = "#16a34a";
+        } else if (diff < 0) {
+            diffBadge.innerText = `전일대비 ▼ ${diff}명`;
+            diffBadge.style.color = "#dc2626";
+        } else {
+            diffBadge.innerText = "전일과 동일";
+            diffBadge.style.color = "var(--text-sub)";
+        }
+    }
+
+    const weekAvgEl = document.getElementById("weekAvgVisitorSub");
+    if (weekAvgEl) weekAvgEl.innerText = `최근 7일 일평균: ${weekAvg.toLocaleString()}명`;
+
+    let peakDay = { label: "-", count: 0 };
+    dayKeys.forEach((dk, idx) => {
+        const c = Number(dailyDocs[idx]?.count) || 0;
+        if (c >= peakDay.count) peakDay = { label: `${dk.shortDate}(${dk.dayName})`, count: c };
+    });
+    const peakDayEl = document.getElementById("peakDayVisitorSub");
+    if (peakDayEl) peakDayEl.innerText = `최고: ${peakDay.label} (${peakDay.count}명)`;
+
+    const sumObjValues = obj => Object.values(obj || {}).reduce((a, b) => a + (Number(b) || 0), 0);
+    const todayBlockClicks = sumObjValues(todayDoc.blocks) + sumObjValues(todayDoc.terminals);
+    const totalBlockClicks = sumObjValues(totalDoc.blocks) + sumObjValues(totalDoc.terminals);
+    const todayClickSub = document.getElementById("todayClickSummarySub");
+    const totalClickSub = document.getElementById("totalClickSummarySub");
+    if (todayClickSub) todayClickSub.innerText = `오늘 메뉴·터미널 클릭: ${todayBlockClicks.toLocaleString()}회`;
+    if (totalClickSub) totalClickSub.innerText = `누적 메뉴·터미널 클릭: ${totalBlockClicks.toLocaleString()}회`;
+
+    // 7일 추이 차트 렌더링
+    const chartEl = document.getElementById("stats7DayChart");
+    const labelsEl = document.getElementById("stats7DayLabels");
+    const max7Day = Math.max(...dailyDocs.map(d => Number(d.count) || 0), 1);
+    if (chartEl && labelsEl) {
+        chartEl.innerHTML = dayKeys.map((dk, idx) => {
+            const c = Number(dailyDocs[idx]?.count) || 0;
+            const hPct = c > 0 ? Math.max(8, Math.round((c / max7Day) * 78)) : 4;
+            return `<div class="stats-7day-col">
+                <span style="font-size:0.68rem; font-weight:900; color:${dk.isToday ? '#d97706' : 'var(--primary)'}; margin-bottom:3px;">${c}</span>
+                <div class="stats-7day-bar ${dk.isToday ? 'is-today' : ''}" style="height:${hPct}px;"></div>
+            </div>`;
+        }).join("");
+        labelsEl.innerHTML = dayKeys.map(dk => `<div style="color:${dk.isToday ? '#d97706' : 'var(--text-sub)'}; font-weight:${dk.isToday ? '900' : '800'};">${dk.shortDate}<br>(${dk.isToday ? '오늘' : dk.dayName})</div>`).join("");
+    }
+
+    // 블럭 클릭 순위 & 터미널 순위 렌더링
+    renderStatsBlockRanking(totalDoc, todayDoc, cachedStatsModalData.currentBlockMode || "total");
+    renderStatsTerminalRanking(totalDoc, todayDoc);
+
+    // 주요 기능 사용 횟수 렌더링
+    const actionGridEl = document.getElementById("statsActionUsageGrid");
+    if (actionGridEl) {
+        const tActions = totalDoc.actions || {};
+        const dActions = todayDoc.actions || {};
+        actionGridEl.innerHTML = STATS_ACTION_META.map(a => {
+            const tVal = Number(tActions[a.id]) || 0;
+            const dVal = Number(dActions[a.id]) || 0;
+            return `<div class="stats-mini-item">
+                <span style="color:var(--text-main);">${a.label}</span>
+                <span style="color:var(--primary); font-variant-numeric:tabular-nums;">${dVal} / <b>${tVal.toLocaleString()}회</b></span>
+            </div>`;
+        }).join("");
+    }
+
+    // 접속 기기 및 시간대 분포 렌더링
+    const devHourBox = document.getElementById("statsDeviceAndHourBox");
+    if (devHourBox) {
+        const devs = totalDoc.devices || {};
+        const andCnt = Number(devs.android) || 0;
+        const iosCnt = Number(devs.ios) || 0;
+        const pcCnt = Number(devs.desktop) || 0;
+        const devSum = Math.max(andCnt + iosCnt + pcCnt, 1);
+
+        const hrs = totalDoc.hours || {};
+        const h0 = Number(hrs.h00_06) || 0;
+        const h6 = Number(hrs.h06_12) || 0;
+        const h12 = Number(hrs.h12_18) || 0;
+        const h18 = Number(hrs.h18_24) || 0;
+        const hrSum = Math.max(h0 + h6 + h12 + h18, 1);
+
+        devHourBox.innerHTML = `
+            <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:6px; text-align:center; margin-bottom:8px;">
+                <div style="background:rgba(16,185,129,0.08); border:1px solid #a7f3d0; border-radius:8px; padding:6px 4px;">
+                    <div style="font-size:0.7rem; font-weight:800; color:#065f46;">🤖 안드로이드</div>
+                    <div style="font-size:0.9rem; font-weight:900; color:#047857; margin-top:2px;">${andCnt.toLocaleString()}명 (${andCnt ? Math.round((andCnt/devSum)*100) : 0}%)</div>
+                </div>
+                <div style="background:rgba(59,130,246,0.08); border:1px solid #bfdbfe; border-radius:8px; padding:6px 4px;">
+                    <div style="font-size:0.7rem; font-weight:800; color:#1e40af;">🍎 아이폰(iOS)</div>
+                    <div style="font-size:0.9rem; font-weight:900; color:#1d4ed8; margin-top:2px;">${iosCnt.toLocaleString()}명 (${iosCnt ? Math.round((iosCnt/devSum)*100) : 0}%)</div>
+                </div>
+                <div style="background:rgba(100,116,139,0.08); border:1px solid #cbd5e1; border-radius:8px; padding:6px 4px;">
+                    <div style="font-size:0.7rem; font-weight:800; color:#334155;">💻 PC · 기타</div>
+                    <div style="font-size:0.9rem; font-weight:900; color:#475569; margin-top:2px;">${pcCnt.toLocaleString()}명 (${pcCnt ? Math.round((pcCnt/devSum)*100) : 0}%)</div>
+                </div>
+            </div>
+            <div style="display:grid; grid-template-columns:repeat(4, 1fr); gap:4px; text-align:center;">
+                <div style="background:var(--bg-color); border:1px solid var(--border); border-radius:6px; padding:5px 2px;">
+                    <div style="font-size:0.66rem; color:var(--text-sub); font-weight:800;">🌙 00~06시</div>
+                    <div style="font-size:0.8rem; font-weight:900; color:var(--primary); margin-top:2px;">${h0}회 (${h0 ? Math.round((h0/hrSum)*100) : 0}%)</div>
+                </div>
+                <div style="background:var(--bg-color); border:1px solid var(--border); border-radius:6px; padding:5px 2px;">
+                    <div style="font-size:0.66rem; color:var(--text-sub); font-weight:800;">☀️ 06~12시</div>
+                    <div style="font-size:0.8rem; font-weight:900; color:#2563eb; margin-top:2px;">${h6}회 (${h6 ? Math.round((h6/hrSum)*100) : 0}%)</div>
+                </div>
+                <div style="background:var(--bg-color); border:1px solid var(--border); border-radius:6px; padding:5px 2px;">
+                    <div style="font-size:0.66rem; color:var(--text-sub); font-weight:800;">🌤️ 12~18시</div>
+                    <div style="font-size:0.8rem; font-weight:900; color:#d97706; margin-top:2px;">${h12}회 (${h12 ? Math.round((h12/hrSum)*100) : 0}%)</div>
+                </div>
+                <div style="background:var(--bg-color); border:1px solid var(--border); border-radius:6px; padding:5px 2px;">
+                    <div style="font-size:0.66rem; color:var(--text-sub); font-weight:800;">🌉 18~24시</div>
+                    <div style="font-size:0.8rem; font-weight:900; color:#7c3aed; margin-top:2px;">${h18}회 (${h18 ? Math.round((h18/hrSum)*100) : 0}%)</div>
+                </div>
+            </div>
+        `;
+    }
+
+    // 앱 DB 누적 콘텐츠 현황 조회
+    const dbGridEl = document.getElementById("statsDbContentGrid");
+    if (dbGridEl) {
+        let workersCnt = 0, logsCnt = 0, noticesCnt = 0, archivesCnt = 0;
+        try {
+            const [uSnap, lSnap, nSnap, aSnap] = await Promise.all([
+                db.collection("user_profiles").get(),
+                db.collection("work_logs").get(),
+                db.collection("notices").get(),
+                db.collection("archives").get()
+            ]);
+            workersCnt = uSnap.size;
+            logsCnt = lSnap.size;
+            noticesCnt = nSnap.size;
+            archivesCnt = aSnap.size;
+        } catch (e) {}
+        const shipsCnt = Array.isArray(allShipsData) ? allShipsData.length : 0;
+        const postsCnt = Array.isArray(allPostsData) ? allPostsData.length : 0;
+        dbGridEl.innerHTML = `
+            <div class="stats-mini-item"><span>🚢 등록 선박 도감</span><b style="color:#0284c7;">${shipsCnt.toLocaleString()}척</b></div>
+            <div class="stats-mini-item"><span>💬 자유게시판 게시글</span><b style="color:#4f46e5;">${postsCnt.toLocaleString()}건</b></div>
+            <div class="stats-mini-item"><span>👤 가입 근로자 계정</span><b style="color:#047857;">${workersCnt.toLocaleString()}명</b></div>
+            <div class="stats-mini-item"><span>📅 누적 근무일지 기록</span><b style="color:#d97706;">${logsCnt.toLocaleString()}건</b></div>
+            <div class="stats-mini-item"><span>📢 등록 공지사항</span><b style="color:#dc2626;">${noticesCnt.toLocaleString()}건</b></div>
+            <div class="stats-mini-item"><span>📂 자료실 업로드 파일</span><b style="color:var(--primary);">${archivesCnt.toLocaleString()}개</b></div>
+        `;
+    }
+
+    const timeEl = document.getElementById("visitorStatsUpdatedTime");
+    if (timeEl) {
+        timeEl.innerText = `기준 시각: ${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}`;
+    }
+
+    // 복사할 요약 텍스트 생성
+    const topBlocks = STATS_BLOCK_META
+        .map(m => ({ label: m.label, cnt: Number((totalDoc.blocks || {})[m.id]) || 0 }))
+        .sort((a, b) => b.cnt - a.cnt)
+        .slice(0, 5);
+    const topTerms = STATS_TERMINAL_META
+        .map(m => ({ label: m.label, cnt: Number((totalDoc.terminals || {})[m.id]) || 0 }))
+        .sort((a, b) => b.cnt - a.cnt)
+        .slice(0, 3);
+
+    cachedStatsModalData.reportText = [
+        `📊 [BUSAN HAK PORT 통합 운영 통계 리포트]`,
+        `• 조회 일시: ${timeEl ? timeEl.innerText.replace('기준 시각: ', '') : ''}`,
+        `• 오늘 방문자: ${todayVisitors.toLocaleString()}명 (어제: ${yesterdayVisitors.toLocaleString()}명)`,
+        `• 최근 7일 방문자: ${weekVisitors.toLocaleString()}명 (일평균 ${weekAvg.toLocaleString()}명)`,
+        `• 총 누적 방문자: ${totalVisitors.toLocaleString()}명`,
+        `• 인기 클릭 블럭 TOP 5: ` + topBlocks.map((b, i) => `${i+1}위 ${b.label}(${b.cnt}회)`).join(", "),
+        `• 인기 터미널 TOP 3: ` + topTerms.map((t, i) => `${i+1}위 ${t.label}(${t.cnt}회)`).join(", ")
+    ].join("\n");
+}
+function copyVisitorStatsReport() {
+    const txt = cachedStatsModalData.reportText;
+    if (!txt) return;
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(txt).then(() => showToast("📋 운영 통계 리포트가 클립보드에 복사되었습니다!"));
+    } else {
+        const ta = document.createElement("textarea");
+        ta.value = txt;
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand("copy");
+        document.body.removeChild(ta);
+        showToast("📋 운영 통계 리포트가 복사되었습니다!");
     }
 }
 function closeVisitorStats() { document.getElementById("visitorStatsModal").style.display = "none"; }
@@ -1598,6 +2097,7 @@ function toggleDashItem(id){
         c.classList.add('expanded');
         const content = c.querySelector('.dash-content');
         if(content) content.style.display='block';
+        trackAppEvent('blocks', id);
         syncBottomNavActive(id);
         if(id === 'log-card') {
             syncWorkLogExtraUnlockUI();
@@ -1620,6 +2120,9 @@ function toggleSection(id){
     el.classList.toggle('collapsed');
     const isExpanded = !el.classList.contains('collapsed');
     el.style.border = isExpanded ? '2px solid var(--primary)' : '1px solid var(--border)';
+    if (isExpanded) {
+        trackAppEvent('blocks', id);
+    }
 }
 function toggleContent(id){
     const e = document.getElementById(id);
@@ -1629,6 +2132,9 @@ function toggleContent(id){
     const parentBlock = e.closest('.terminal-block');
     if (parentBlock) {
         parentBlock.classList.toggle('active-block', isOpening);
+    }
+    if (isOpening && id.startsWith('term-')) {
+        trackAppEvent('terminals', id.replace('term-', ''));
     }
 }
 function toggleHidden(id){ document.getElementById(id).classList.toggle('hidden'); }
@@ -1657,6 +2163,7 @@ async function openTickerManager(){ if(await verifyAdmin()){ document.getElement
 function renderTickerList() { const listContainer = document.getElementById('tickerListContainer'); listContainer.innerHTML = ''; const data = globalTickerData; let hasData = false; if (data.adminMessage) { hasData = true; listContainer.innerHTML += `<div class="ticker-manage-item"><span style="color:red; flex:1; font-weight:800;">📢 [관리자] ${data.adminMessage}</span><button onclick="deleteTickerMsg('admin', 0)" class="mini-btn btn-del-mini">삭제</button></div>`; } if (data.userMessages) { data.userMessages.forEach((m, i) => { hasData = true; listContainer.innerHTML += `<div class="ticker-manage-item"><span style="flex:1; font-weight:700;">${i + 1}. ${m}</span><button onclick="deleteTickerMsg('user', ${i})" class="mini-btn btn-del-mini">삭제</button></div>`; }); } if (!hasData) listContainer.innerHTML = '<div style="padding:10px; text-align:center; font-weight:700;">내용 없음</div>'; }
 // 이렇게 이름을 고쳐주시면 바로 작동합니다!
 function openAllBayPlan() {
+    trackAppEvent('actions', 'bay_plan');
     window.open("http://112.163.71.98:8080/webits/bayplan", "_blank"); 
 }
 const terminalTickerLabels = { t1: "1항업", t2: "2항업", t3: "3항업" };
@@ -1862,9 +2369,9 @@ function renderFavoriteQuickBar() {
                 <span>${cfg.short}</span>
             </div>
             <div class="fav-quick-actions">
-                <a href="${cfg.schedule}" target="_blank" class="fav-quick-btn">스케줄</a>
-                <a href="${cfg.chart}" target="_blank" class="fav-quick-btn">차트</a>
-                <a href="${cfg.status}" target="_blank" class="fav-quick-btn">현황</a>
+                <a href="${cfg.schedule}" target="_blank" class="fav-quick-btn" onclick="trackAppEvent('terminals','${id}')">스케줄</a>
+                <a href="${cfg.chart}" target="_blank" class="fav-quick-btn" onclick="trackAppEvent('terminals','${id}')">차트</a>
+                <a href="${cfg.status}" target="_blank" class="fav-quick-btn" onclick="trackAppEvent('terminals','${id}')">현황</a>
                 ${extraBtns.join("")}
                 <button type="button" class="fav-quick-btn meal" onclick="openHjncMealModal('${id}', '${cfg.mealLabel}')">🍱식단</button>
             </div>
@@ -1913,6 +2420,8 @@ function getTerminalMealDocumentId(terminalId) {
 }
 function openHjncMealModal(terminalId = "hjnc", label = "한진식단") {
     currentMealTerminalId = terminalId;
+    trackAppEvent('actions', 'meal_view');
+    trackAppEvent('terminals', terminalId);
     document.getElementById("hjncMealTitle").innerText = `🍱 ${label}`;
     document.getElementById("hjncMealModal").style.display = "flex";
     loadHjncMealImage();
@@ -1969,7 +2478,7 @@ async function uploadHjncMealImage(input) {
     }
 }
 async function deleteTickerMsg(type, index){ if(!confirm("삭제?")) return; if(type === 'admin') { delete globalTickerData.adminMessage; await db.collection('settings').doc('banner').update({ adminMessage: firebase.firestore.FieldValue.delete() }); } else { globalTickerData.userMessages.splice(index, 1); await db.collection('settings').doc('banner').update({ userMessages: globalTickerData.userMessages }); } renderTickerList(); showToast("삭제됨"); }
-function downloadWorkLogsExcel() { if (!currentWorkerId || Object.keys(adminWorkLogs).length === 0) { return alert("다운로드할 근무 기록 데이터가 없습니다."); } let csvContent = "\uFEFF날짜,배이름,임금1,임금2,총임금,근무자,메모\n"; const sortedDates = Object.keys(adminWorkLogs).sort(); sortedDates.forEach(date => { const d = adminWorkLogs[date]; const ship = d.shipName || ""; const w1 = d.wage1 || 0; const w2 = d.wage2 || 0; const total = d.totalPay || 0; const workers = (d.coworkers || "").replace(/,/g, " "); const memo = (d.memo || "").replace(/\n/g, " ").replace(/,/g, " "); csvContent += `${date},${ship},${w1},${w2},${total},${workers},${memo}\n`; }); const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' }); const url = URL.createObjectURL(blob); const link = document.createElement("a"); const monthTitle = document.getElementById('calMonthYear').innerText; link.href = url; link.download = `${currentWorkerId}_${monthTitle}_근무기록.csv`; document.body.appendChild(link); link.click(); document.body.removeChild(link); showToast("📊 엑셀 파일이 다운로드 폴더에 저장되었습니다!"); }
+function downloadWorkLogsExcel() { if (!currentWorkerId || Object.keys(adminWorkLogs).length === 0) { return alert("다운로드할 근무 기록 데이터가 없습니다."); } trackAppEvent('actions', 'excel_dl'); let csvContent = "\uFEFF날짜,배이름,임금1,임금2,총임금,근무자,메모\n"; const sortedDates = Object.keys(adminWorkLogs).sort(); sortedDates.forEach(date => { const d = adminWorkLogs[date]; const ship = d.shipName || ""; const w1 = d.wage1 || 0; const w2 = d.wage2 || 0; const total = d.totalPay || 0; const workers = (d.coworkers || "").replace(/,/g, " "); const memo = (d.memo || "").replace(/\n/g, " ").replace(/,/g, " "); csvContent += `${date},${ship},${w1},${w2},${total},${workers},${memo}\n`; }); const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' }); const url = URL.createObjectURL(blob); const link = document.createElement("a"); const monthTitle = document.getElementById('calMonthYear').innerText; link.href = url; link.download = `${currentWorkerId}_${monthTitle}_근무기록.csv`; document.body.appendChild(link); link.click(); document.body.removeChild(link); showToast("📊 엑셀 파일이 다운로드 폴더에 저장되었습니다!"); }
 let latestMonthlyStatsCache = { total: 0, w1Sum: 0, w2Sum: 0, days: 0, avg: 0 };
 let monthlyGoalAmount = Number(localStorage.getItem("busanPortMonthlyGoal")) || 4500000;
 function updateMonthlyGoalGaugeUI(currentTotal = 0, currentDays = 0) {
@@ -2245,6 +2754,7 @@ function saveReceiptImage(mode) {
         openWorkLogPinModal(() => saveReceiptImage(mode));
         return;
     }
+    trackAppEvent('actions', 'receipt_share');
     const { canvas, title } = generateReceiptCanvas(mode);
     const dataUrl = canvas.toDataURL("image/png");
     const link = document.createElement("a");
@@ -2260,6 +2770,7 @@ async function shareReceiptCard(mode) {
         openWorkLogPinModal(() => shareReceiptCard(mode));
         return;
     }
+    trackAppEvent('actions', 'receipt_share');
     const { canvas, title, subTitle, lines, highlightTotal } = generateReceiptCanvas(mode);
     const textSummary = [
         `[${title}]`,
@@ -2303,6 +2814,7 @@ function toggleWageLayoutMode() {
     }
 }
 async function shareOrCopyAppPromo() {
+    trackAppEvent('actions', 'promo_share');
     const promoText = [
         "🚢 [부산항 항만 근로자 필수 앱 - BUSAN HAK PORT] 🚢",
         "",
@@ -3025,6 +3537,7 @@ function saveWorkLog(){
         }; 
 
         db.collection('work_logs').doc(docId).set(logData, {merge: true}).then(() => { 
+            trackAppEvent('actions', 'log_save');
             btn.innerText = "✅ 저장 완료!"; 
             btn.style.background = "var(--success)"; 
             showToast("근무일지가 안전하게 저장되었습니다."); 
@@ -3180,6 +3693,7 @@ function calculateWage() {
         specBody.innerHTML = ` ${renderRow("☀️ 주간 기본 ("+dayHours+"H)", dayAmt)} ${renderRow("🌙 야간 할증 ("+nightHours+"H)", nightAmt)} ${renderRow("🔧 기능공 수당 추가", skilledAmt, "var(--primary)")} ${extraHtml} ${taxAmt > 0 ? renderRow("💸 공제액 (세금/보험)", -taxAmt, "var(--danger)") : ""} `;
         document.getElementById('wageTotal').innerText = finalTotal.toLocaleString() + "원";
         document.getElementById('wageResultBox').classList.remove('hidden');
+        trackAppEvent('actions', 'wage_calc');
         showToast("상세 계산서가 생성되었습니다!");
     } catch (e) {
         console.error(e);
@@ -3188,6 +3702,7 @@ function calculateWage() {
 }
 function sendCalculatedWageToLog() {
     if (!lastCalculatedWageData) return;
+    trackAppEvent('actions', 'wage_to_log');
     const { date, totalPay, summary } = lastCalculatedWageData;
     const logCard = document.getElementById('log-card');
     if (logCard && !logCard.classList.contains('expanded')) {
@@ -3551,7 +4066,7 @@ function submitShipComment(shipId) {
 function renderPagination(curr) { const total = Math.ceil(allPostsData.length / postsPerPage); const el = document.getElementById('pagination'); if(!el) return; el.innerHTML = ""; for(let i=1; i<=total; i++){ el.innerHTML += `<span class="page-num ${i===curr?'active':''}" onclick="renderBoardPage(${i})" style="cursor:pointer; padding:5px 12px; margin:2px; background:#e5e7eb; border-radius:8px; font-weight:800; font-size:0.9rem;">${i}</span>`; } } 
 function loadComments(pid){if(commentUnsubscribes[pid]) commentUnsubscribes[pid](); commentUnsubscribes[pid]=db.collection('posts').doc(pid).collection('comments').orderBy('timestamp','asc').onSnapshot(s=>{const el=document.getElementById(`cmt-list-${pid}`); const badgeEl=document.getElementById(`cmt-badge-${pid}`); if(badgeEl){ if(s.size>0){ badgeEl.innerText=`💬 ${s.size}`; badgeEl.classList.remove('hidden'); } else { badgeEl.classList.add('hidden'); } } if(!el) return; el.innerHTML=""; s.forEach(d=>{const c=d.data(); el.innerHTML+=`<div class="comment-item"><span><span class="comment-meta">${c.name}:</span><span class="comment-text">${c.text}</span></span><button class="comment-del-btn" onclick="deleteComment('${pid}','${d.id}','${c.password}')">×</button></div>`;});});} 
 
-function openBusSchedule(){ const m=document.getElementById('imageModal'); document.getElementById('modalImage').src='https://firebasestorage.googleapis.com/v0/b/busan-hak-port.firebasestorage.app/o/KakaoTalk_20260129_001114789.jpg?alt=media'; m.style.display='flex'; } function closeImageModal(){ document.getElementById('imageModal').style.display='none'; } function openPrivacy() { toggleDashItem('privacy-center-card'); document.getElementById('privacy-center-card').scrollIntoView({behavior: 'smooth', block: 'center'}); }
+function openBusSchedule(){ trackAppEvent('actions', 'bus_view'); const m=document.getElementById('imageModal'); document.getElementById('modalImage').src='https://firebasestorage.googleapis.com/v0/b/busan-hak-port.firebasestorage.app/o/KakaoTalk_20260129_001114789.jpg?alt=media'; m.style.display='flex'; } function closeImageModal(){ document.getElementById('imageModal').style.display='none'; } function openPrivacy() { toggleDashItem('privacy-center-card'); document.getElementById('privacy-center-card').scrollIntoView({behavior: 'smooth', block: 'center'}); }
 
 if ("serviceWorker" in navigator) {
     navigator.serviceWorker.getRegistrations().then(registrations => {
@@ -3634,7 +4149,7 @@ window.onload = () => {
     if(localStorage.getItem('myWorkerId')) { currentWorkerId = localStorage.getItem('myWorkerId'); updateUserBar(); } 
 };
 
-let leaderCurrentDate = new Date(); let leaderOverrides = []; const baseCycle = ["재경", "성철", "개굴"]; const baseAnchor = "2026-02-01"; function openLeaderSchedule() { document.getElementById('leaderCalendarModal').style.display = 'flex'; leaderCurrentDate = new Date(); renderLeaderCalendar(leaderCurrentDate.getFullYear(), leaderCurrentDate.getMonth()); } function closeLeaderCalendar() { document.getElementById('leaderCalendarModal').style.display = 'none'; } function changeLeaderMonth(s) { leaderCurrentDate.setMonth(leaderCurrentDate.getMonth() + s); renderLeaderCalendar(leaderCurrentDate.getFullYear(), leaderCurrentDate.getMonth()); } function getSlotIndex(dStr) { const target = new Date(dStr); const anchor = new Date(baseAnchor); const diffDays = Math.floor((target.getTime() - anchor.getTime()) / (1000 * 60 * 60 * 24)); return ((diffDays % 3) + 3) % 3; } function getCalculatedLeader(targetDateStr) { const targetSlot = getSlotIndex(targetDateStr); for (let i = leaderOverrides.length - 1; i >= 0; i--) { const ov = leaderOverrides[i]; if (ov.date <= targetDateStr) { if (getSlotIndex(ov.date) === targetSlot) return ov.leader; } } return baseCycle[targetSlot]; } function renderLeaderCalendar(y, m) { document.getElementById('leaderCalMonthYear').innerText = `${y}년 ${m+1}월`; const lD = new Date(y, m+1, 0).getDate(); db.collection('leader_overrides').get().then(s => { leaderOverrides = []; s.forEach(doc => { leaderOverrides.push(doc.data()); }); leaderOverrides.sort((a, b) => a.date.localeCompare(b.date)); drawLeaderGrid(y, m, lD); }).catch(err => { drawLeaderGrid(y, m, lD); }); } function drawLeaderGrid(y, m, lD) { const g = document.getElementById('leaderCalendarGrid'); g.innerHTML = ""; const fD = new Date(y, m, 1).getDay(); for(let i=0; i<fD; i++) { g.innerHTML += `<div style="background:transparent; border:none;"></div>`; } for(let d=1; d<=lD; d++) { const dStr = `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`; const isAnchor = leaderOverrides.some(ov => ov.date === dStr); const leaderName = getCalculatedLeader(dStr); let badgeClass = "leader-badge "; if (leaderName.includes("재경")) badgeClass += "leader-jaekyung"; else if (leaderName.includes("성철")) badgeClass += "leader-sungchul"; else if (leaderName.includes("개굴")) badgeClass += "leader-gaegool"; else badgeClass += "leader-jaekyung"; let customStyle = isAnchor ? "border: 2px solid #ef4444;" : ""; if (!baseCycle.includes(leaderName)) customStyle += "background-color: #8b5cf6; color: white;"; let dayColor = "var(--text-main)"; let currentDayObj = new Date(y, m, d).getDay(); if (currentDayObj === 0) dayColor = "#ef4444"; if (currentDayObj === 6) dayColor = "#3b82f6"; g.innerHTML += `<div class="cal-day tap-effect" onclick="overrideLeader('${dStr}', '${leaderName}')" style="min-height: 65px; justify-content: flex-start; padding-top: 5px; background: white;"><span style="color: ${dayColor}; font-weight: 900; font-size: 0.95rem;">${d}</span><div class="${badgeClass}" style="${customStyle}">${leaderName}</div></div>`; } } async function overrideLeader(dStr, currentLeader) { if (!(await verifyAdmin())) return; const newLeader = prompt(`[${dStr}] 조장을 변경합니다.\n\n👉 이곳에 새 이름(예: 용병)을 넣으면 이후 3일마다 돌아오는 이 근무조의 스케줄이 모두 교체됩니다.\n\n※ 취소하려면 '초기화'를 입력하세요.`, currentLeader); if (newLeader === null) return; if (newLeader.trim() === "" || newLeader === "초기화") { db.collection('leader_overrides').doc(dStr).delete().then(() => { showToast("기존 패턴 복구완료."); renderLeaderCalendar(leaderCurrentDate.getFullYear(), leaderCurrentDate.getMonth()); }); } else { db.collection('leader_overrides').doc(dStr).set({ date: dStr, leader: newLeader.trim() }).then(() => { showToast("새 근무조 적용완료."); renderLeaderCalendar(leaderCurrentDate.getFullYear(), leaderCurrentDate.getMonth()); }); } }
+let leaderCurrentDate = new Date(); let leaderOverrides = []; const baseCycle = ["재경", "성철", "개굴"]; const baseAnchor = "2026-02-01"; function openLeaderSchedule() { trackAppEvent('actions', 'leader_cal'); document.getElementById('leaderCalendarModal').style.display = 'flex'; leaderCurrentDate = new Date(); renderLeaderCalendar(leaderCurrentDate.getFullYear(), leaderCurrentDate.getMonth()); } function closeLeaderCalendar() { document.getElementById('leaderCalendarModal').style.display = 'none'; } function changeLeaderMonth(s) { leaderCurrentDate.setMonth(leaderCurrentDate.getMonth() + s); renderLeaderCalendar(leaderCurrentDate.getFullYear(), leaderCurrentDate.getMonth()); } function getSlotIndex(dStr) { const target = new Date(dStr); const anchor = new Date(baseAnchor); const diffDays = Math.floor((target.getTime() - anchor.getTime()) / (1000 * 60 * 60 * 24)); return ((diffDays % 3) + 3) % 3; } function getCalculatedLeader(targetDateStr) { const targetSlot = getSlotIndex(targetDateStr); for (let i = leaderOverrides.length - 1; i >= 0; i--) { const ov = leaderOverrides[i]; if (ov.date <= targetDateStr) { if (getSlotIndex(ov.date) === targetSlot) return ov.leader; } } return baseCycle[targetSlot]; } function renderLeaderCalendar(y, m) { document.getElementById('leaderCalMonthYear').innerText = `${y}년 ${m+1}월`; const lD = new Date(y, m+1, 0).getDate(); db.collection('leader_overrides').get().then(s => { leaderOverrides = []; s.forEach(doc => { leaderOverrides.push(doc.data()); }); leaderOverrides.sort((a, b) => a.date.localeCompare(b.date)); drawLeaderGrid(y, m, lD); }).catch(err => { drawLeaderGrid(y, m, lD); }); } function drawLeaderGrid(y, m, lD) { const g = document.getElementById('leaderCalendarGrid'); g.innerHTML = ""; const fD = new Date(y, m, 1).getDay(); for(let i=0; i<fD; i++) { g.innerHTML += `<div style="background:transparent; border:none;"></div>`; } for(let d=1; d<=lD; d++) { const dStr = `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`; const isAnchor = leaderOverrides.some(ov => ov.date === dStr); const leaderName = getCalculatedLeader(dStr); let badgeClass = "leader-badge "; if (leaderName.includes("재경")) badgeClass += "leader-jaekyung"; else if (leaderName.includes("성철")) badgeClass += "leader-sungchul"; else if (leaderName.includes("개굴")) badgeClass += "leader-gaegool"; else badgeClass += "leader-jaekyung"; let customStyle = isAnchor ? "border: 2px solid #ef4444;" : ""; if (!baseCycle.includes(leaderName)) customStyle += "background-color: #8b5cf6; color: white;"; let dayColor = "var(--text-main)"; let currentDayObj = new Date(y, m, d).getDay(); if (currentDayObj === 0) dayColor = "#ef4444"; if (currentDayObj === 6) dayColor = "#3b82f6"; g.innerHTML += `<div class="cal-day tap-effect" onclick="overrideLeader('${dStr}', '${leaderName}')" style="min-height: 65px; justify-content: flex-start; padding-top: 5px; background: white;"><span style="color: ${dayColor}; font-weight: 900; font-size: 0.95rem;">${d}</span><div class="${badgeClass}" style="${customStyle}">${leaderName}</div></div>`; } } async function overrideLeader(dStr, currentLeader) { if (!(await verifyAdmin())) return; const newLeader = prompt(`[${dStr}] 조장을 변경합니다.\n\n👉 이곳에 새 이름(예: 용병)을 넣으면 이후 3일마다 돌아오는 이 근무조의 스케줄이 모두 교체됩니다.\n\n※ 취소하려면 '초기화'를 입력하세요.`, currentLeader); if (newLeader === null) return; if (newLeader.trim() === "" || newLeader === "초기화") { db.collection('leader_overrides').doc(dStr).delete().then(() => { showToast("기존 패턴 복구완료."); renderLeaderCalendar(leaderCurrentDate.getFullYear(), leaderCurrentDate.getMonth()); }); } else { db.collection('leader_overrides').doc(dStr).set({ date: dStr, leader: newLeader.trim() }).then(() => { showToast("새 근무조 적용완료."); renderLeaderCalendar(leaderCurrentDate.getFullYear(), leaderCurrentDate.getMonth()); }); } }
 </script>
   
     <!-- [여기서부터 복사] 조장 근무일 비밀번호 검증 스크립트 -->
