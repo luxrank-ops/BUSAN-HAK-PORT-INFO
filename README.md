@@ -68,13 +68,38 @@ python -m http.server 8000
 http://localhost:8000/public/index.html
 ```
 
-## Firebase 배포
-
-Firebase CLI가 설치되어 있다고 가정하면 아래 명령으로 배포할 수 있습니다.
+## 검사 및 빌드
 
 ```bash
-firebase deploy --only hosting --project busan-hak-port
+npm ci
+npm run check
 ```
+
+`npm run check`는 TypeScript 타입, 필수 배포 파일, JSON 형식, HTML 문서 및 인라인 JavaScript 문법을 검사합니다. Pull Request와 `main`/`arena/**` 브랜치 푸시에서도 동일한 검사가 자동 실행됩니다.
+
+## 승인형 Firebase 배포
+
+운영 배포는 GitHub에 코드를 푸시하는 것만으로는 실행되지 않습니다. GitHub Actions의 **Firebase 운영 배포** 워크플로를 수동 실행하고, 질문 **“배포하시겠습니까?”**에 **“예”**를 선택한 경우에만 다음 순서로 배포됩니다.
+
+1. `main` 브랜치인지 확인
+2. 의존성 설치
+3. 타입 및 정적 파일 최종 검사
+4. Google Cloud 서비스 계정 인증
+5. Firebase Hosting 운영 배포
+
+“아니요”를 선택하면 배포 명령은 실행되지 않습니다. 동시에 두 운영 배포가 실행되지 않도록 동시 실행도 제한합니다.
+
+### 최초 1회 필요한 GitHub Secret
+
+`Production` 환경 또는 저장소 Actions secret에 다음 이름으로 Firebase 배포용 서비스 계정 JSON을 등록해야 합니다.
+
+```text
+FIREBASE_SERVICE_ACCOUNT_BUSAN_HAK_PORT
+```
+
+서비스 계정 키는 저장소 파일이나 채팅에 올리지 말고 GitHub의 암호화된 Secret에만 저장합니다. 운영 URL은 `https://busan-hak-port.web.app`입니다.
+
+> `server.ts`의 터미널 일정 API는 로컬 Express 실행용입니다. 현재 Firebase Hosting 워크플로는 `public/` 정적 파일만 배포하며 서버 프로세스는 배포하지 않습니다. 운영 화면은 API 응답이 JSON일 때만 해당 응답을 사용하고, 그 외에는 Firestore 캐시를 사용합니다.
 
 ## 참고
 

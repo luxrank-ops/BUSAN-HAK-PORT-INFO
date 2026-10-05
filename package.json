@@ -5,9 +5,12 @@
   "type": "module",
   "scripts": {
     "dev": "tsx server.ts",
-    "build": "echo 'Build complete'",
+    "build": "npm run validate",
     "start": "tsx server.ts",
-    "lint": "echo 'Lint complete'"
+    "typecheck": "tsc --noEmit",
+    "validate": "node scripts/validate.mjs",
+    "check": "npm run typecheck && npm run validate",
+    "lint": "npm run check"
   },
   "dependencies": {
     "express": "^4.21.2"
