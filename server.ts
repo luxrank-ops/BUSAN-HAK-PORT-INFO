@@ -275,6 +275,7 @@ async function fetchTerminalScheduleVessels(terminalId: string, startDate: strin
     const baseUrl = tid === 'hpnt'
       ? 'https://www.hpnt.co.kr/infoservice/vessel/vslScheduleList.jsp'
       : 'https://www.pnitl.com/infoservice/vessel/vslScheduleList.jsp';
+    const originUrl = tid === 'hpnt' ? 'https://www.hpnt.co.kr' : 'https://www.pnitl.com';
     const tmnCod = tid === 'hpnt' ? 'H' : 'P';
 
     const pageRes = await httpRequestText(baseUrl);
@@ -283,17 +284,22 @@ async function fetchTerminalScheduleVessels(terminalId: string, startDate: strin
       ? rawCookies.map((c: string) => c.split(';')[0]).join('; ')
       : String(rawCookies).split(';')[0];
 
-    const formBody = new URLSearchParams({
+    const csrfMatch = pageRes.body.match(/CSRF_TOKEN'\s*,\s*value\s*:\s*'([^']+)'/);
+    const csrfToken = csrfMatch ? csrfMatch[1] : '';
+
+    const formParams: Record<string, string> = {
       isSearch: 'Y',
       page: '1',
-      URI: '/infoservice/vessel/vslScheduleList.jsp',
+      URI: '',
       userID: '',
       groupID: 'U999',
       tmnCod,
       strdStDate: startDate,
       strdEdDate: endDate,
       route: ''
-    }).toString();
+    };
+    if (csrfToken) formParams.CSRF_TOKEN = csrfToken;
+    const formBody = new URLSearchParams(formParams).toString();
 
     let html = pageRes.body;
     try {
@@ -301,6 +307,7 @@ async function fetchTerminalScheduleVessels(terminalId: string, startDate: strin
         method: 'POST',
         headers: {
           Cookie: cookieHeader,
+          Origin: originUrl,
           'Content-Type': 'application/x-www-form-urlencoded',
           Referer: baseUrl,
           'Content-Length': String(Buffer.byteLength(formBody))
@@ -397,26 +404,68 @@ async function fetchTerminalScheduleVessels(terminalId: string, startDate: strin
   }
 
   if (tid === 'hbct') {
-    const res = await httpRequestText('https://custom.hktl.com/jsp/T01/sunsuk.jsp', { encoding: 'euc-kr' });
-    const rowRegex = /<tr[^>]*bgcolor="#(?:CCFFFF|FFFFFF|F0F8FF|FFFFCC)"[^>]*>([\s\S]*?)<\/tr>/gi;
+    const [y1, m1, d1] = startDate.split('-');
     const results: any[] = [];
-    let rowMatch;
-    while ((rowMatch = rowRegex.exec(res.body)) !== null) {
-      const cells = Array.from(rowMatch[1].matchAll(/<td[^>]*>([\s\S]*?)<\/td>/gi)).map((m) => stripTags(m[1]));
-      // 0:모선항차, 1:/, 2:선석, 3:0/0, 4:입항예정, 5:접안일시, 6:출항일시, 7:반입마감, 8:접안방향, 9:물량, 10:비고, 11:선박명, 12:선사
-      if (cells.length >= 13 && cells[11]) {
-        results.push({
-          TERMINAL: 'HBCT',
-          VSL_NM: cells[11],
-          BERTH_NO: cells[2] || '',
-          PTNR_CODE: cells[12] || '',
-          VOY_NO: cells[0] || '',
-          ETB: normalizeDateTimeStr(cells[4]),
-          ATA: normalizeDateTimeStr(cells[5] || cells[4]),
-          ATW: normalizeDateTimeStr(cells[5] || cells[4]),
-          ATC: normalizeDateTimeStr(cells[6]),
-          ATD: normalizeDateTimeStr(cells[6])
-        });
+    const seenKeys = new Set<string>();
+    const pagesToFetch = [1, 2, 3];
+
+    const pageBodies = await Promise.all(
+      pagesToFetch.map(async (pageNum) => {
+        const formBody = new URLSearchParams({
+          year: y1,
+          month: m1,
+          day: d1,
+          langType: 'K',
+          mainType: 'T01',
+          subType: '01',
+          optType: 'T',
+          terminal: 'HBCTLIB',
+          currentPage: String(pageNum),
+          startPage: '1'
+        }).toString();
+
+        try {
+          const res = await httpRequestText('https://custom.hktl.com/jsp/T01/sunsuk.jsp', {
+            method: 'POST',
+            encoding: 'euc-kr',
+            headers: {
+              'Content-Type': 'application/x-www-form-urlencoded',
+              Referer: 'https://custom.hktl.com/jsp/T01/sunsuk.jsp',
+              'Content-Length': String(Buffer.byteLength(formBody))
+            },
+            body: formBody
+          });
+          return res.body;
+        } catch {
+          return '';
+        }
+      })
+    );
+
+    for (const body of pageBodies) {
+      if (!body) continue;
+      const rowRegex = /<tr[^>]*bgcolor="#(?:CCFFFF|FFFFFF|F0F8FF|FFFFCC|CCCCCC|FFFF99)"[^>]*>([\s\S]*?)<\/tr>/gi;
+      let rowMatch;
+      while ((rowMatch = rowRegex.exec(body)) !== null) {
+        const cells = Array.from(rowMatch[1].matchAll(/<td[^>]*>([\s\S]*?)<\/td>/gi)).map((m) => stripTags(m[1]));
+        if (cells.length >= 13 && cells[11] && cells[11] !== '선명') {
+          const key = `${cells[0]}_${cells[11]}_${cells[4]}`;
+          if (!seenKeys.has(key)) {
+            seenKeys.add(key);
+            results.push({
+              TERMINAL: 'HBCT',
+              VSL_NM: cells[11],
+              BERTH_NO: cells[2] || '',
+              PTNR_CODE: cells[12] || '',
+              VOY_NO: cells[0] || '',
+              ETB: normalizeDateTimeStr(cells[4]),
+              ATA: normalizeDateTimeStr(cells[5] || cells[4]),
+              ATW: normalizeDateTimeStr(cells[5] || cells[4]),
+              ATC: normalizeDateTimeStr(cells[6]),
+              ATD: normalizeDateTimeStr(cells[6])
+            });
+          }
+        }
       }
     }
     return results;
