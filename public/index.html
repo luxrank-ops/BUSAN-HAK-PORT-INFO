@@ -607,48 +607,55 @@
                     <div style="background:rgba(16,185,129,0.08); padding:8px 4px; border-radius:8px; border:1px solid var(--border);"><div style="font-size:0.72rem; color:var(--text-sub); font-weight:800;">임금 1 / 임금 2</div><div id="monthlySplitPay" style="font-size:0.78rem; font-weight:900; color:#047857; margin-top:4px;">0 / 0</div></div>
                 </div>
                 <div id="monthlyTotalDisplay" style="text-align:center; margin-top:10px; font-weight:900; color:var(--primary); font-size:1.25rem; background:rgba(10,27,63,0.03); padding:12px; border-radius:10px; border:1.5px solid var(--primary);">이번 달 총액: 0원</div>
-                <div id="monthlyGoalLockBanner" onclick="openWorkLogPinModal()" style="cursor:pointer; margin-top:10px; background:linear-gradient(135deg, #eff6ff, #e0f2fe); border:1.5px solid #7dd3fc; border-radius:10px; padding:10px 12px; display:flex; justify-content:space-between; align-items:center;">
-                    <span style="font-size:0.84rem; font-weight:900; color:#0369a1;">🔒 🎯 이번 달 목표 수입 달성률 게이지 (잠김)</span>
-                    <span style="background:#0284c7; color:white; font-size:0.74rem; font-weight:800; padding:4px 10px; border-radius:6px;">비밀번호 해제</span>
+                <div id="d3ChartLockBanner" onclick="openWorkLogPinModal()" style="cursor:pointer; margin-top:12px; background:linear-gradient(135deg, #eff6ff, #dcfce7); border:1.5px solid #60a5fa; border-radius:10px; padding:11px 12px; display:flex; justify-content:space-between; align-items:center; gap:8px;">
+                    <div style="display:flex; flex-direction:column; gap:3px; min-width:0;">
+                        <span style="font-size:0.86rem; font-weight:900; color:var(--primary);">🔒 📊 스마트 수입·정산 통합 분석 리포트 (잠김)</span>
+                        <span style="font-size:0.73rem; font-weight:800; color:#1e40af;">목표 수입 달성 게이지 · 정산 요약표 캡처/공유 · 월별 수입/근로일수 그래프</span>
+                    </div>
+                    <span style="background:var(--primary); color:white; font-size:0.74rem; font-weight:800; padding:5px 10px; border-radius:6px; flex-shrink:0;">비밀번호 해제</span>
                 </div>
-                <div id="monthlyGoalGaugeBox" class="goal-gauge-box hidden">
-                    <div style="display:flex; justify-content:space-between; align-items:center; gap:6px; flex-wrap:wrap;">
-                        <span style="font-size:0.84rem; font-weight:900; color:var(--primary);">🎯 이번 달 목표 수입 달성률</span>
-                        <div style="display:flex; align-items:center; gap:6px;">
-                            <span id="monthlyGoalAmountText" style="font-size:0.8rem; font-weight:900; color:#1d4ed8;">목표: 4,500,000원</span>
-                            <button type="button" onclick="changeMonthlyGoalAmount()" style="background:var(--primary); color:#fff; border:none; border-radius:6px; padding:3px 8px; font-size:0.72rem; font-weight:800; cursor:pointer;">목표 설정</button>
+                <div id="monthlyD3ChartSection" class="hidden" style="margin-top:12px; background:var(--card-bg); border:2px solid var(--primary); border-radius:12px; padding:14px 12px; box-shadow:0 3px 10px rgba(10,27,63,0.08);">
+                    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:6px; padding-bottom:10px; margin-bottom:12px; border-bottom:2px solid var(--primary);">
+                        <span style="font-size:0.98rem; font-weight:900; color:var(--primary);">📊 스마트 수입·정산 통합 분석 리포트</span>
+                        <span style="font-size:0.72rem; font-weight:800; color:#1d4ed8; background:#eff6ff; border:1px solid #bfdbfe; padding:2px 8px; border-radius:12px;">목표 달성 · 요약표 공유 · 월별 그래프</span>
+                    </div>
+
+                    <div id="monthlyGoalGaugeBox" class="goal-gauge-box" style="margin-top:0; margin-bottom:12px;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; gap:6px; flex-wrap:wrap;">
+                            <span style="font-size:0.84rem; font-weight:900; color:var(--primary);">🎯 이번 달 목표 수입 달성 게이지</span>
+                            <div style="display:flex; align-items:center; gap:6px;">
+                                <span id="monthlyGoalAmountText" style="font-size:0.8rem; font-weight:900; color:#1d4ed8;">목표: 4,500,000원</span>
+                                <button type="button" onclick="changeMonthlyGoalAmount()" style="background:var(--primary); color:#fff; border:none; border-radius:6px; padding:3px 8px; font-size:0.72rem; font-weight:800; cursor:pointer;">목표 설정</button>
+                            </div>
+                        </div>
+                        <div class="goal-progress-track">
+                            <div id="monthlyGoalProgressFill" class="goal-progress-fill"></div>
+                        </div>
+                        <div style="display:flex; justify-content:space-between; align-items:center; font-size:0.76rem; font-weight:800; color:var(--text-sub);">
+                            <span id="monthlyGoalPercentText" style="color:#047857; font-weight:900;">달성률 0%</span>
+                            <span id="monthlyGoalRemainText">목표까지 4,500,000원 남음</span>
                         </div>
                     </div>
-                    <div class="goal-progress-track">
-                        <div id="monthlyGoalProgressFill" class="goal-progress-fill"></div>
-                    </div>
-                    <div style="display:flex; justify-content:space-between; align-items:center; font-size:0.76rem; font-weight:800; color:var(--text-sub);">
-                        <span id="monthlyGoalPercentText" style="color:#047857; font-weight:900;">달성률 0%</span>
-                        <span id="monthlyGoalRemainText">목표까지 4,500,000원 남음</span>
-                    </div>
-                </div>
-                <div id="monthlyReceiptLockBanner" onclick="openWorkLogPinModal()" style="cursor:pointer; margin-top:10px; background:linear-gradient(135deg, #f5f3ff, #ede9fe); border:1.5px solid #c4b5fd; border-radius:10px; padding:10px 12px; display:flex; justify-content:space-between; align-items:center;">
-                    <span style="font-size:0.84rem; font-weight:900; color:#5b21b6;">🔒 🧾 이번 달 정산 요약표 이미지 캡처 · 공유 (잠김)</span>
-                    <span style="background:#6d28d9; color:white; font-size:0.74rem; font-weight:800; padding:4px 10px; border-radius:6px;">비밀번호 해제</span>
-                </div>
-                <div id="monthlyReceiptShareSection" class="hidden" style="display:flex; gap:6px; margin-top:10px;">
-                    <button type="button" class="action-btn" style="flex:1; margin:0; padding:10px 6px; font-size:0.84rem; background:#4f46e5;" onclick="saveReceiptImage('monthly')">📸 월간 정산표 이미지 저장</button>
-                    <button type="button" class="action-btn" style="flex:1; margin:0; padding:10px 6px; font-size:0.84rem; background:#0284c7;" onclick="shareReceiptCard('monthly')">📤 월간 정산표 카톡·공유</button>
-                </div>
-                <div id="d3ChartLockBanner" onclick="openWorkLogPinModal()" style="cursor:pointer; margin-top:12px; background:linear-gradient(135deg, #f0fdf4, #dcfce7); border:1.5px solid #86efac; border-radius:10px; padding:11px 12px; display:flex; justify-content:space-between; align-items:center;">
-                    <span style="font-size:0.85rem; font-weight:900; color:#166534;">📊 월별 총수입 · 근로일수 D3.js 그래프 (잠김)</span>
-                    <span style="background:#15803d; color:white; font-size:0.75rem; font-weight:800; padding:4px 10px; border-radius:6px;">비밀번호 해제</span>
-                </div>
-                <div id="monthlyD3ChartSection" class="hidden" style="margin-top:12px; background:var(--card-bg); border:1.5px solid var(--primary); border-radius:12px; padding:12px; box-shadow:0 2px 6px rgba(10,27,63,0.06);">
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; flex-wrap:wrap; gap:6px;">
-                        <span id="d3ChartYearTitle" style="font-size:0.95rem; font-weight:900; color:var(--primary);">📊 월별 총수입 및 근로일수 추이</span>
-                        <div style="display:flex; gap:10px; font-size:0.75rem; font-weight:800;">
-                            <span style="display:inline-flex; align-items:center; gap:4px; color:#1d4ed8;"><span style="width:10px; height:10px; background:#3b82f6; border-radius:2px; display:inline-block;"></span>총수입(만 원)</span>
-                            <span style="display:inline-flex; align-items:center; gap:4px; color:#047857;"><span style="width:10px; height:10px; background:#10b981; border-radius:2px; display:inline-block;"></span>근로일수(일)</span>
+
+                    <div id="monthlyReceiptShareSection" style="background:linear-gradient(135deg, #f5f3ff, #ede9fe); border:1.5px solid #c4b5fd; border-radius:10px; padding:10px 12px; margin-bottom:14px;">
+                        <div style="font-size:0.83rem; font-weight:900; color:#5b21b6; margin-bottom:8px;">🧾 이번 달 정산 요약표 이미지 캡처 · 공유</div>
+                        <div style="display:flex; gap:6px;">
+                            <button type="button" class="action-btn" style="flex:1; margin:0; padding:10px 6px; font-size:0.84rem; background:#4f46e5;" onclick="saveReceiptImage('monthly')">📸 월간 정산표 이미지 저장</button>
+                            <button type="button" class="action-btn" style="flex:1; margin:0; padding:10px 6px; font-size:0.84rem; background:#0284c7;" onclick="shareReceiptCard('monthly')">📤 월간 정산표 카톡·공유</button>
                         </div>
                     </div>
-                    <div id="monthlyD3ChartContainer" style="width:100%; overflow-x:auto;"></div>
-                    <div id="yearlyD3ReportContainer" style="margin-top:12px; border-top:1.5px dashed var(--border); padding-top:12px;"></div>
+
+                    <div style="border-top:1.5px dashed var(--border); padding-top:12px;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; flex-wrap:wrap; gap:6px;">
+                            <span id="d3ChartYearTitle" style="font-size:0.92rem; font-weight:900; color:var(--primary);">📊 월별 총수입 · 근로일수 그래프</span>
+                            <div style="display:flex; gap:10px; font-size:0.75rem; font-weight:800;">
+                                <span style="display:inline-flex; align-items:center; gap:4px; color:#1d4ed8;"><span style="width:10px; height:10px; background:#3b82f6; border-radius:2px; display:inline-block;"></span>총수입(만 원)</span>
+                                <span style="display:inline-flex; align-items:center; gap:4px; color:#047857;"><span style="width:10px; height:10px; background:#10b981; border-radius:2px; display:inline-block;"></span>근로일수(일)</span>
+                            </div>
+                        </div>
+                        <div id="monthlyD3ChartContainer" style="width:100%; overflow-x:auto;"></div>
+                        <div id="yearlyD3ReportContainer" style="margin-top:12px; border-top:1.5px dashed var(--border); padding-top:12px;"></div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -2230,10 +2237,6 @@ function syncWorkLogExtraUnlockUI() {
     const shipFullListSection = document.getElementById("shipFullListSection");
     const wageReceiptLockBanner = document.getElementById("wageReceiptLockBanner");
     const wageReceiptShareActions = document.getElementById("wageReceiptShareActions");
-    const monthlyReceiptLockBanner = document.getElementById("monthlyReceiptLockBanner");
-    const monthlyReceiptShareSection = document.getElementById("monthlyReceiptShareSection");
-    const monthlyGoalLockBanner = document.getElementById("monthlyGoalLockBanner");
-    const monthlyGoalGaugeBox = document.getElementById("monthlyGoalGaugeBox");
     if (isWorkLogUnlocked) {
         if (lockBanner) lockBanner.style.display = "none";
         if (filterContent) filterContent.classList.remove("hidden");
@@ -2246,10 +2249,7 @@ function syncWorkLogExtraUnlockUI() {
         if (shipFullListSection) shipFullListSection.classList.remove("hidden");
         if (wageReceiptLockBanner) wageReceiptLockBanner.style.display = "none";
         if (wageReceiptShareActions) wageReceiptShareActions.classList.remove("hidden");
-        if (monthlyReceiptLockBanner) monthlyReceiptLockBanner.style.display = "none";
-        if (monthlyReceiptShareSection) monthlyReceiptShareSection.classList.remove("hidden");
-        if (monthlyGoalLockBanner) monthlyGoalLockBanner.style.display = "none";
-        if (monthlyGoalGaugeBox) monthlyGoalGaugeBox.classList.remove("hidden");
+        updateMonthlyGoalGaugeUI(latestMonthlyStatsCache.total, latestMonthlyStatsCache.days);
         loadAndRenderYearlyD3Chart(currentDate.getFullYear());
         if (typeof loadAndSearchAllShips === "function") {
             loadAndSearchAllShips(document.getElementById('shipSearch')?.value || '');
@@ -2266,10 +2266,6 @@ function syncWorkLogExtraUnlockUI() {
         if (shipFullListSection) shipFullListSection.classList.add("hidden");
         if (wageReceiptLockBanner) wageReceiptLockBanner.style.display = "flex";
         if (wageReceiptShareActions) wageReceiptShareActions.classList.add("hidden");
-        if (monthlyReceiptLockBanner) monthlyReceiptLockBanner.style.display = "flex";
-        if (monthlyReceiptShareSection) monthlyReceiptShareSection.classList.add("hidden");
-        if (monthlyGoalLockBanner) monthlyGoalLockBanner.style.display = "flex";
-        if (monthlyGoalGaugeBox) monthlyGoalGaugeBox.classList.add("hidden");
     }
 }
 function openWorkLogPinModal(onUnlock) {
