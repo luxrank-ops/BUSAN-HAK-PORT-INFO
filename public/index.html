@@ -378,6 +378,10 @@
         .dash-icon-badge { width: 38px; height: 38px; border-radius: 10px; display: inline-flex; align-items: center; justify-content: center; font-size: 1.2rem; flex-shrink: 0; box-shadow: inset 0 1px 2px rgba(255,255,255,0.6); }
         .dash-icon-badge.hero { width: 52px; height: 52px; border-radius: 14px; font-size: 1.85rem; margin-bottom: 2px; }
         .dash-sub-meta { font-size: 0.72rem; color: var(--text-sub); font-weight: 700; margin-top: 2px; line-height: 1.2; word-break: keep-all; }
+        .port-banner-ship { background: linear-gradient(135deg, #fefce8 0%, #fef08a 100%) !important; border: 1.5px solid #fde047 !important; border-left: 5px solid #f59e0b !important; color: #713f12 !important; }
+        .port-banner-ship .port-mini-chip { background: rgba(255,255,255,0.8) !important; color: #854d0e !important; border: 1px solid #facc15 !important; }
+        body.dark-mode .port-banner-ship { background: linear-gradient(135deg, #422006 0%, #713f12 100%) !important; border-color: #ca8a04 !important; border-left: 5px solid #facc15 !important; color: #fef08a !important; }
+        body.dark-mode .port-banner-ship .port-mini-chip { background: rgba(0,0,0,0.35) !important; color: #fde047 !important; border-color: #eab308 !important; }
         .port-banner-t3 { background: linear-gradient(135deg, #0a1b3f 0%, #1e3a8a 100%) !important; border-left: 5px solid #f59e0b !important; }
         .port-banner-t2 { background: linear-gradient(135deg, #0f2942 0%, #0369a1 100%) !important; border-left: 5px solid #38bdf8 !important; }
         .port-banner-t1 { background: linear-gradient(135deg, #1e293b 0%, #334155 100%) !important; border-left: 5px solid #10b981 !important; }
@@ -753,7 +757,7 @@
         </div>
     </div>
 
-    <div class="card" style="margin-bottom: 20px; border: none; box-shadow: none; background: transparent;">
+    <div class="card" style="margin-bottom: 8px; border: none; box-shadow: none; background: transparent;">
         <div class="section-header tap-effect port-banner-t1" onclick="toggleSection('t1-content', this)" style="color: white; border-radius: 10px; padding: 14px 15px; gap: 8px; flex-wrap: wrap;">
             <span class="section-title" style="font-size: 1.08rem; font-weight: 900;">⚓ 1항업 (북항) ▼</span>
             <div class="port-chip-group">
@@ -765,6 +769,109 @@
             <div class="terminal-ticker"><div class="terminal-ticker-wrap"><div id="t1TickerText" class="terminal-ticker-item">1항업 티커를 불러오는 중...</div></div><button class="terminal-ticker-admin" type="button" title="1항업 티커 관리" onclick="openSectionTickerManager('t1')">관리</button></div>
             <div class="terminal-block"><div class="terminal-header tap-effect" onclick="toggleContent('term-bptc')">북항 통합 (BPTC) ▼</div><div id="term-bptc" class="terminal-body"><div class="terminal-actions"><a href="http://info.bptc.co.kr:9084/content/sw/frame/berth_status_text_frame_sw_kr.jsp?p_id=BETX_SH_KR&snb_num=2&snb_div=service" target="_blank" class="terminal-btn">스케줄</a><a href="http://info.bptc.co.kr:9084/content/sw/frame/berth_status_text_frame_sw_kr.jsp?p_id=BETX_SH_KR&snb_num=2&snb_div=service" target="_blank" class="terminal-btn">차트</a><a href="http://info.bptc.co.kr:9084/content/index.jsp#03" target="_blank" class="terminal-btn">현황</a></div></div></div>
             <div class="terminal-block"><div class="terminal-header tap-effect" onclick="toggleContent('term-hbct')">허치슨 (HBCT/자성대) ▼</div><div id="term-hbct" class="terminal-body"><div class="terminal-actions"><a href="https://custom.hktl.com/jsp/T01/sunsuk.jsp" target="_blank" class="terminal-btn">스케줄</a><a href="https://custom.hktl.com/jsp/T01/sunsuk.jsp" target="_blank" class="terminal-btn">차트</a><a href="https://custom.hktl.com/jsp/T03/bonsun.jsp" target="_blank" class="terminal-btn">현황</a></div></div></div>
+        </div>
+    </div>
+
+    <div id="ship-card" class="dash-card card" style="margin-bottom: 20px; border: none; box-shadow: none; background: transparent;">
+        <div class="section-header tap-effect port-banner-ship" onclick="toggleDashItem('ship-card')" style="border-radius: 10px; padding: 14px 15px; gap: 8px; flex-wrap: wrap; justify-content: center !important; text-align: center !important;">
+            <span class="section-title" style="font-size: 1.08rem; font-weight: 900; text-align: center;">🚢 작업 선박 정보(등록및검색) ▼</span>
+            <div class="port-chip-group" style="margin-left: 0 !important; justify-content: center;">
+                <span id="shipCardSubMeta" class="port-mini-chip">난이도 · 필수 장비 도감</span>
+            </div>
+        </div>
+        <div class="dash-content" style="background: var(--card-bg); border: 1px solid var(--border); border-radius: 8px; margin-top: 4px;">
+            <div style="display:flex; gap:5px; margin-bottom:8px;">
+                <input type="text" id="shipSearch" class="input-field" placeholder="선박명 또는 #태그 검색 (예: MAERSK, #오토콘)" onkeyup="filterShips()" style="margin-bottom:0;">
+                <button class="action-btn" style="width:auto; padding: 0 15px; margin-top:0;" onclick="filterShips()">🔍</button>
+            </div>
+            <div id="shipExtraLockBanner" onclick="openWorkLogPinModal()" style="cursor:pointer; margin-bottom:10px; background:linear-gradient(135deg, #eff6ff, #dbeafe); border:1.5px solid #93c5fd; border-radius:10px; padding:10px 12px; display:flex; justify-content:space-between; align-items:center;">
+                <span style="font-size:0.84rem; font-weight:900; color:var(--primary);">🔒 장비 태그·난이도 필터 및 전체 선박 도감 뷰 (잠김)</span>
+                <span style="background:var(--primary); color:white; font-size:0.75rem; font-weight:800; padding:4px 10px; border-radius:6px;">비밀번호 해제</span>
+            </div>
+            <div id="shipFilterBarArea" class="ship-filter-bar hidden">
+                <div style="width:100%; display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                    <span style="font-size:0.76rem; font-weight:900; color:var(--primary);">🏷️ 장비·특징 태그 & 난이도 빠른 필터</span>
+                    <button type="button" onclick="resetShipFilters()" style="background:transparent; border:1px solid var(--border); border-radius:6px; padding:2px 7px; font-size:0.7rem; font-weight:800; color:var(--text-sub); cursor:pointer;">필터 초기화</button>
+                </div>
+                <button type="button" class="ship-tag-chip" data-filter-tag="#오토콘" onclick="toggleShipFilterTag('#오토콘')">#오토콘</button>
+                <button type="button" class="ship-tag-chip" data-filter-tag="#수동콘" onclick="toggleShipFilterTag('#수동콘')">#수동콘</button>
+                <button type="button" class="ship-tag-chip" data-filter-tag="#브릿지주의" onclick="toggleShipFilterTag('#브릿지주의')">#브릿지주의</button>
+                <button type="button" class="ship-tag-chip" data-filter-tag="#라싱바무거움" onclick="toggleShipFilterTag('#라싱바무거움')">#라싱바무거움</button>
+                <button type="button" class="ship-tag-chip" data-filter-tag="#턴버클뻑뻑함" onclick="toggleShipFilterTag('#턴버클뻑뻑함')">#턴버클뻑뻑함</button>
+                <button type="button" class="ship-tag-chip" data-filter-tag="#통로협소" onclick="toggleShipFilterTag('#통로협소')">#통로협소</button>
+                <select id="shipDifficultyFilter" onchange="filterShips()" style="margin-left:auto; border:1.5px solid #cbd5e1; border-radius:16px; padding:3px 8px; font-size:0.75rem; font-weight:800; color:var(--primary); background:#fff; outline:none;">
+                    <option value="0">★ 난이도 전체</option>
+                    <option value="5">★★★★★ (5점·극상)</option>
+                    <option value="4">★★★★☆ 이상 (4점+)</option>
+                    <option value="3">★★★☆☆ 이상 (3점+)</option>
+                    <option value="2">★★☆☆☆ 이하 (수월)</option>
+                </select>
+            </div>
+            <a href="https://www.marinetraffic.com/" target="_blank" class="action-btn" style="background:#0284c7; text-align:center; display:block; text-decoration:none; margin-bottom:10px; padding:12px;">🌍 실시간 위치</a>
+            <button class="action-btn" style="background:var(--accent); margin-bottom:10px;" onclick="toggleHidden('shipForm')">📝 신규 등록</button>
+            <div id="shipForm" class="hidden" style="background:rgba(10,27,63,0.03); padding:12px; border-radius:10px; border:1px solid var(--border); margin-bottom:12px;">
+                <input type="password" id="shipPw" class="input-field" placeholder="비밀번호" style="text-align:left; margin-bottom:8px;">
+                <input type="text" id="shipName" class="input-field" placeholder="선박명" style="text-align:left; margin-bottom:6px;">
+                <div id="shipFormScheduledBox" class="hjnc-schedule-box" style="margin-bottom:10px;">
+                    <div class="hjnc-schedule-header">
+                        <div style="display:flex; align-items:center; gap:5px; flex-wrap:wrap;">
+                            <span id="shipFormScheduleTitle" style="font-size:0.75rem; font-weight:900; color:#c2410c;">⚓ 터미널별 입항·접안 선박 빠른 선택</span>
+                            <input type="date" id="shipFormScheduleDate" onclick="openDatePicker('shipFormScheduleDate', event)" onchange="onShipFormScheduleDateChange(this.value)" style="border:1.2px solid #fb923c; border-radius:6px; padding:1px 5px; font-size:0.71rem; font-weight:800; color:#9a3412; background:#fff; cursor:pointer; height:24px;">
+                        </div>
+                        <div style="display:flex; align-items:center; gap:5px;">
+                            <button type="button" onclick="refreshShipFormScheduleForSelectedDate()" style="background:#ffffff; border:1px solid #fb923c; color:#ea580c; border-radius:5px; padding:1px 6px; font-size:0.66rem; font-weight:800; cursor:pointer;">🔄 갱신</button>
+                            <a id="shipFormScheduleOrigLink" href="https://www.hjnc.co.kr/esvc/vessel/berthScheduleT" target="_blank" style="font-size:0.68rem; font-weight:800; color:#ea580c; text-decoration:underline;">스케줄 ↗</a>
+                            <a id="shipFormChartOrigLink" href="https://www.hjnc.co.kr/esvc/vessel/berthScheduleG" target="_blank" style="font-size:0.68rem; font-weight:800; color:#2563eb; text-decoration:underline;">차트 ↗</a>
+                        </div>
+                    </div>
+                    <div id="shipFormScheduleTabBar" class="term-sched-tab-bar"></div>
+                    <div id="shipFormScheduledShipList" style="display:flex; flex-wrap:wrap; gap:5px;"></div>
+                </div>
+                <div style="margin-bottom:10px; background:#fff; padding:10px; border-radius:8px; border:1px solid var(--border);">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; flex-wrap:wrap; gap:6px;">
+                        <span style="font-size:0.84rem; font-weight:900; color:var(--primary);">⭐ 작업 난이도 선택 (★1~5)</span>
+                        <span id="shipDifficultyLabel" style="font-size:0.8rem; font-weight:900; color:#d97706;">★★★☆☆ (보통·3점)</span>
+                    </div>
+                    <input type="hidden" id="shipDifficultyInput" value="3">
+                    <div class="ship-star-picker" id="shipStarPicker">
+                        <button type="button" class="ship-star-btn active" onclick="setShipDifficulty(1)">★1</button>
+                        <button type="button" class="ship-star-btn active" onclick="setShipDifficulty(2)">★2</button>
+                        <button type="button" class="ship-star-btn active" onclick="setShipDifficulty(3)">★3</button>
+                        <button type="button" class="ship-star-btn" onclick="setShipDifficulty(4)">★4</button>
+                        <button type="button" class="ship-star-btn" onclick="setShipDifficulty(5)">★5</button>
+                    </div>
+                </div>
+                <div style="margin-bottom:10px; background:#fff; padding:10px; border-radius:8px; border:1px solid var(--border);">
+                    <div style="font-size:0.84rem; font-weight:900; color:var(--primary); margin-bottom:6px;">🏷️ 필수 장비 · 선박 특징 태그 (중복 선택 가능)</div>
+                    <div id="shipFormTagList" style="display:flex; flex-wrap:wrap; gap:6px;">
+                        <button type="button" class="ship-tag-chip" data-form-tag="#오토콘" onclick="toggleShipFormTag('#오토콘')">#오토콘</button>
+                        <button type="button" class="ship-tag-chip" data-form-tag="#수동콘" onclick="toggleShipFormTag('#수동콘')">#수동콘</button>
+                        <button type="button" class="ship-tag-chip" data-form-tag="#브릿지주의" onclick="toggleShipFormTag('#브릿지주의')">#브릿지주의</button>
+                        <button type="button" class="ship-tag-chip" data-form-tag="#라싱바무거움" onclick="toggleShipFormTag('#라싱바무거움')">#라싱바무거움</button>
+                        <button type="button" class="ship-tag-chip" data-form-tag="#턴버클뻑뻑함" onclick="toggleShipFormTag('#턴버클뻑뻑함')">#턴버클뻑뻑함</button>
+                        <button type="button" class="ship-tag-chip" data-form-tag="#통로협소" onclick="toggleShipFormTag('#통로협소')">#통로협소</button>
+                    </div>
+                </div>
+                <textarea id="shipOnboard" class="input-field textarea-field" placeholder="작업 내용 및 준비 장비 상세 메모"></textarea>
+                <input type="file" id="shipFileInput" class="input-field">
+                <button id="shipSubmitBtn" class="action-btn bg-submit" onclick="addShipInfo()">등록/수정</button>
+            </div>
+            <table class="board-table" style="margin-top:0;">
+                <thead><tr><th style="width:10%">No.</th><th style="width:62%">선박명 · 난이도 · 장비 태그</th><th style="width:28%">등록일</th></tr></thead>
+                <tbody id="shipList"></tbody>
+            </table>
+            <div id="shipPagination" style="display:flex; justify-content:flex-start; gap:5px; margin-top:10px; margin-bottom:15px; overflow-x:auto; overflow-y:hidden; white-space:nowrap; -webkit-overflow-scrolling:touch; overscroll-behavior-x:contain;"></div>
+            <div id="shipFullListLockBanner" onclick="openWorkLogPinModal()" style="cursor:pointer; margin-top:14px; background:linear-gradient(135deg, #f0fdf4, #dcfce7); border:1.5px solid #86efac; border-radius:10px; padding:11px 12px; display:flex; justify-content:space-between; align-items:center;">
+                <span style="font-size:0.85rem; font-weight:900; color:#166534;">📋 전체 선박 도감 한눈에 보기 · 전체 목록 뷰 (잠김)</span>
+                <span style="background:#15803d; color:white; font-size:0.75rem; font-weight:800; padding:4px 10px; border-radius:6px;">비밀번호 해제</span>
+            </div>
+            <div id="shipFullListSection" class="hidden" style="margin-top:16px; padding-top:14px; border-top:2px dashed var(--border);">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; flex-wrap:wrap; gap:6px;">
+                    <span style="font-size:0.92rem; font-weight:900; color:var(--primary);">📋 전체 선박 도감 한눈에 보기 (전체 목록 뷰)</span>
+                    <button type="button" onclick="loadAndSearchAllShips(document.getElementById('shipSearch')?.value || '')" style="background:var(--primary); color:white; border:none; border-radius:6px; padding:5px 10px; font-size:0.76rem; font-weight:800; cursor:pointer;">🔄 전체 새로고침</button>
+                </div>
+                <div id="vessel-result-container"></div>
+            </div>
         </div>
     </div>
 
@@ -847,110 +954,6 @@
                         <input type="file" id="archiveFile" class="input-field">
                         <button id="archiveSubmitBtn" class="action-btn bg-submit" onclick="addArchive()">업로드 완료</button>
                     </div>
-                </div>
-            </div>
-        </div>
-
-        <div id="ship-card" class="dash-card">
-            <div class="dash-header tap-effect" onclick="toggleDashItem('ship-card')" style="flex-direction: row !important; justify-content: flex-start !important; padding: 14px 12px; gap: 10px; min-height: auto;">
-                <span class="dash-icon-badge" style="background: #f0f9ff; border: 1px solid #bae6fd;">🚢</span>
-                <div style="flex:1; min-width:0;">
-                    <div class="dash-title" style="color: var(--primary); font-size: 0.96rem !important; font-weight: 900; margin: 0; text-align: left; line-height: 1.25;">작업 선박 정보(등록및검색)</div>
-                    <div id="shipCardSubMeta" class="dash-sub-meta">난이도 · 필수 장비 도감</div>
-                </div>
-            </div>
-            <div class="dash-content">
-                <div style="display:flex; gap:5px; margin-bottom:8px;">
-                    <input type="text" id="shipSearch" class="input-field" placeholder="선박명 또는 #태그 검색 (예: MAERSK, #오토콘)" onkeyup="filterShips()" style="margin-bottom:0;">
-                    <button class="action-btn" style="width:auto; padding: 0 15px; margin-top:0;" onclick="filterShips()">🔍</button>
-                </div>
-                <div id="shipExtraLockBanner" onclick="openWorkLogPinModal()" style="cursor:pointer; margin-bottom:10px; background:linear-gradient(135deg, #eff6ff, #dbeafe); border:1.5px solid #93c5fd; border-radius:10px; padding:10px 12px; display:flex; justify-content:space-between; align-items:center;">
-                    <span style="font-size:0.84rem; font-weight:900; color:var(--primary);">🔒 장비 태그·난이도 필터 및 전체 선박 도감 뷰 (잠김)</span>
-                    <span style="background:var(--primary); color:white; font-size:0.75rem; font-weight:800; padding:4px 10px; border-radius:6px;">비밀번호 해제</span>
-                </div>
-                <div id="shipFilterBarArea" class="ship-filter-bar hidden">
-                    <div style="width:100%; display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
-                        <span style="font-size:0.76rem; font-weight:900; color:var(--primary);">🏷️ 장비·특징 태그 & 난이도 빠른 필터</span>
-                        <button type="button" onclick="resetShipFilters()" style="background:transparent; border:1px solid var(--border); border-radius:6px; padding:2px 7px; font-size:0.7rem; font-weight:800; color:var(--text-sub); cursor:pointer;">필터 초기화</button>
-                    </div>
-                    <button type="button" class="ship-tag-chip" data-filter-tag="#오토콘" onclick="toggleShipFilterTag('#오토콘')">#오토콘</button>
-                    <button type="button" class="ship-tag-chip" data-filter-tag="#수동콘" onclick="toggleShipFilterTag('#수동콘')">#수동콘</button>
-                    <button type="button" class="ship-tag-chip" data-filter-tag="#브릿지주의" onclick="toggleShipFilterTag('#브릿지주의')">#브릿지주의</button>
-                    <button type="button" class="ship-tag-chip" data-filter-tag="#라싱바무거움" onclick="toggleShipFilterTag('#라싱바무거움')">#라싱바무거움</button>
-                    <button type="button" class="ship-tag-chip" data-filter-tag="#턴버클뻑뻑함" onclick="toggleShipFilterTag('#턴버클뻑뻑함')">#턴버클뻑뻑함</button>
-                    <button type="button" class="ship-tag-chip" data-filter-tag="#통로협소" onclick="toggleShipFilterTag('#통로협소')">#통로협소</button>
-                    <select id="shipDifficultyFilter" onchange="filterShips()" style="margin-left:auto; border:1.5px solid #cbd5e1; border-radius:16px; padding:3px 8px; font-size:0.75rem; font-weight:800; color:var(--primary); background:#fff; outline:none;">
-                        <option value="0">★ 난이도 전체</option>
-                        <option value="5">★★★★★ (5점·극상)</option>
-                        <option value="4">★★★★☆ 이상 (4점+)</option>
-                        <option value="3">★★★☆☆ 이상 (3점+)</option>
-                        <option value="2">★★☆☆☆ 이하 (수월)</option>
-                    </select>
-                </div>
-                <a href="https://www.marinetraffic.com/" target="_blank" class="action-btn" style="background:#0284c7; text-align:center; display:block; text-decoration:none; margin-bottom:10px; padding:12px;">🌍 실시간 위치</a>
-                <button class="action-btn" style="background:var(--accent); margin-bottom:10px;" onclick="toggleHidden('shipForm')">📝 신규 등록</button>
-                <div id="shipForm" class="hidden" style="background:rgba(10,27,63,0.03); padding:12px; border-radius:10px; border:1px solid var(--border); margin-bottom:12px;">
-                    <input type="password" id="shipPw" class="input-field" placeholder="비밀번호" style="text-align:left; margin-bottom:8px;">
-                    <input type="text" id="shipName" class="input-field" placeholder="선박명" style="text-align:left; margin-bottom:6px;">
-                    <div id="shipFormScheduledBox" class="hjnc-schedule-box" style="margin-bottom:10px;">
-                        <div class="hjnc-schedule-header">
-                            <div style="display:flex; align-items:center; gap:5px; flex-wrap:wrap;">
-                                <span id="shipFormScheduleTitle" style="font-size:0.75rem; font-weight:900; color:#c2410c;">⚓ 터미널별 입항·접안 선박 빠른 선택</span>
-                                <input type="date" id="shipFormScheduleDate" onclick="openDatePicker('shipFormScheduleDate', event)" onchange="onShipFormScheduleDateChange(this.value)" style="border:1.2px solid #fb923c; border-radius:6px; padding:1px 5px; font-size:0.71rem; font-weight:800; color:#9a3412; background:#fff; cursor:pointer; height:24px;">
-                            </div>
-                            <div style="display:flex; align-items:center; gap:5px;">
-                                <button type="button" onclick="refreshShipFormScheduleForSelectedDate()" style="background:#ffffff; border:1px solid #fb923c; color:#ea580c; border-radius:5px; padding:1px 6px; font-size:0.66rem; font-weight:800; cursor:pointer;">🔄 갱신</button>
-                                <a id="shipFormScheduleOrigLink" href="https://www.hjnc.co.kr/esvc/vessel/berthScheduleT" target="_blank" style="font-size:0.68rem; font-weight:800; color:#ea580c; text-decoration:underline;">스케줄 ↗</a>
-                                <a id="shipFormChartOrigLink" href="https://www.hjnc.co.kr/esvc/vessel/berthScheduleG" target="_blank" style="font-size:0.68rem; font-weight:800; color:#2563eb; text-decoration:underline;">차트 ↗</a>
-                            </div>
-                        </div>
-                        <div id="shipFormScheduleTabBar" class="term-sched-tab-bar"></div>
-                        <div id="shipFormScheduledShipList" style="display:flex; flex-wrap:wrap; gap:5px;"></div>
-                    </div>
-                    <div style="margin-bottom:10px; background:#fff; padding:10px; border-radius:8px; border:1px solid var(--border);">
-                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; flex-wrap:wrap; gap:6px;">
-                            <span style="font-size:0.84rem; font-weight:900; color:var(--primary);">⭐ 작업 난이도 선택 (★1~5)</span>
-                            <span id="shipDifficultyLabel" style="font-size:0.8rem; font-weight:900; color:#d97706;">★★★☆☆ (보통·3점)</span>
-                        </div>
-                        <input type="hidden" id="shipDifficultyInput" value="3">
-                        <div class="ship-star-picker" id="shipStarPicker">
-                            <button type="button" class="ship-star-btn active" onclick="setShipDifficulty(1)">★1</button>
-                            <button type="button" class="ship-star-btn active" onclick="setShipDifficulty(2)">★2</button>
-                            <button type="button" class="ship-star-btn active" onclick="setShipDifficulty(3)">★3</button>
-                            <button type="button" class="ship-star-btn" onclick="setShipDifficulty(4)">★4</button>
-                            <button type="button" class="ship-star-btn" onclick="setShipDifficulty(5)">★5</button>
-                        </div>
-                    </div>
-                    <div style="margin-bottom:10px; background:#fff; padding:10px; border-radius:8px; border:1px solid var(--border);">
-                        <div style="font-size:0.84rem; font-weight:900; color:var(--primary); margin-bottom:6px;">🏷️ 필수 장비 · 선박 특징 태그 (중복 선택 가능)</div>
-                        <div id="shipFormTagList" style="display:flex; flex-wrap:wrap; gap:6px;">
-                            <button type="button" class="ship-tag-chip" data-form-tag="#오토콘" onclick="toggleShipFormTag('#오토콘')">#오토콘</button>
-                            <button type="button" class="ship-tag-chip" data-form-tag="#수동콘" onclick="toggleShipFormTag('#수동콘')">#수동콘</button>
-                            <button type="button" class="ship-tag-chip" data-form-tag="#브릿지주의" onclick="toggleShipFormTag('#브릿지주의')">#브릿지주의</button>
-                            <button type="button" class="ship-tag-chip" data-form-tag="#라싱바무거움" onclick="toggleShipFormTag('#라싱바무거움')">#라싱바무거움</button>
-                            <button type="button" class="ship-tag-chip" data-form-tag="#턴버클뻑뻑함" onclick="toggleShipFormTag('#턴버클뻑뻑함')">#턴버클뻑뻑함</button>
-                            <button type="button" class="ship-tag-chip" data-form-tag="#통로협소" onclick="toggleShipFormTag('#통로협소')">#통로협소</button>
-                        </div>
-                    </div>
-                    <textarea id="shipOnboard" class="input-field textarea-field" placeholder="작업 내용 및 준비 장비 상세 메모"></textarea>
-                    <input type="file" id="shipFileInput" class="input-field">
-                    <button id="shipSubmitBtn" class="action-btn bg-submit" onclick="addShipInfo()">등록/수정</button>
-                </div>
-                <table class="board-table" style="margin-top:0;">
-                    <thead><tr><th style="width:10%">No.</th><th style="width:62%">선박명 · 난이도 · 장비 태그</th><th style="width:28%">등록일</th></tr></thead>
-                    <tbody id="shipList"></tbody>
-                </table>
-                <div id="shipPagination" style="display:flex; justify-content:flex-start; gap:5px; margin-top:10px; margin-bottom:15px; overflow-x:auto; overflow-y:hidden; white-space:nowrap; -webkit-overflow-scrolling:touch; overscroll-behavior-x:contain;"></div>
-                <div id="shipFullListLockBanner" onclick="openWorkLogPinModal()" style="cursor:pointer; margin-top:14px; background:linear-gradient(135deg, #f0fdf4, #dcfce7); border:1.5px solid #86efac; border-radius:10px; padding:11px 12px; display:flex; justify-content:space-between; align-items:center;">
-                    <span style="font-size:0.85rem; font-weight:900; color:#166534;">📋 전체 선박 도감 한눈에 보기 · 전체 목록 뷰 (잠김)</span>
-                    <span style="background:#15803d; color:white; font-size:0.75rem; font-weight:800; padding:4px 10px; border-radius:6px;">비밀번호 해제</span>
-                </div>
-                <div id="shipFullListSection" class="hidden" style="margin-top:16px; padding-top:14px; border-top:2px dashed var(--border);">
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; flex-wrap:wrap; gap:6px;">
-                        <span style="font-size:0.92rem; font-weight:900; color:var(--primary);">📋 전체 선박 도감 한눈에 보기 (전체 목록 뷰)</span>
-                        <button type="button" onclick="loadAndSearchAllShips(document.getElementById('shipSearch')?.value || '')" style="background:var(--primary); color:white; border:none; border-radius:6px; padding:5px 10px; font-size:0.76rem; font-weight:800; cursor:pointer;">🔄 전체 새로고침</button>
-                    </div>
-                    <div id="vessel-result-container"></div>
                 </div>
             </div>
         </div>
