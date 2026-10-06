@@ -7,7 +7,10 @@
     "dev": "tsx server.ts",
     "build": "tsc --noEmit server.ts --esModuleInterop --module esnext --moduleResolution bundler --target es2022 --skipLibCheck",
     "start": "tsx server.ts",
-    "lint": "tsc --noEmit server.ts --esModuleInterop --module esnext --moduleResolution bundler --target es2022 --skipLibCheck"
+    "typecheck": "tsc --noEmit",
+    "validate": "node scripts/validate.mjs",
+    "check": "npm run typecheck && npm run validate",
+    "lint": "npm run check"
   },
   "dependencies": {
     "express": "^4.21.2"
