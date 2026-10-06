@@ -20,17 +20,57 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  credentials:
+    name: 배포 자격 확인
+    runs-on: ubuntu-latest
+    outputs:
+      has_credentials: ${{ steps.check.outputs.has_credentials }}
+    steps:
+      - name: 서비스 계정 시크릿 존재 확인
+        id: check
+        env:
+          SERVICE_ACCOUNT_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_BUSAN_HAK_PORT }}
+        run: |
+          if [ -n "$SERVICE_ACCOUNT_JSON" ]; then
+            echo "has_credentials=true" >> "$GITHUB_OUTPUT"
+            echo "배포용 서비스 계정 시크릿(FIREBASE_SERVICE_ACCOUNT_BUSAN_HAK_PORT)이 등록되어 있습니다."
+          else
+            echo "has_credentials=false" >> "$GITHUB_OUTPUT"
+            echo "배포용 서비스 계정 시크릿(FIREBASE_SERVICE_ACCOUNT_BUSAN_HAK_PORT)이 등록되어 있지 않습니다."
+          fi
+
   cancelled:
     name: 배포 취소 확인
+    needs: credentials
     if: ${{ inputs.deploy_confirmation != '예' }}
     runs-on: ubuntu-latest
     steps:
       - name: 취소 안내
         run: echo '사용자가 배포를 승인하지 않아 아무것도 배포하지 않았습니다.'
 
+  skipped:
+    name: 배포 자격 없음 안내
+    needs: credentials
+    if: ${{ inputs.deploy_confirmation == '예' && needs.credentials.outputs.has_credentials != 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: 건너뜀 안내
+        run: |
+          echo '원본 Firebase 프로젝트(busan-hak-port) 배포용 서비스 계정 시크릿이 없어 배포를 건너뜁니다.'
+          echo ''
+          echo '※ 운영 사이트(https://busan-hak-port-info.vercel.app)는 Vercel이 GitHub main 푸시 시 자동 배포하므로 이 워크플로우와 무관합니다.'
+          echo '※ Firebase Hosting(busan-hak-port.web.app)을 갱신하려면:'
+          echo '  1. https://console.cloud.google.com/iam-admin/serviceaccounts?project=busan-hak-port 에서'
+          echo '     반드시 "busan-hak-port" 프로젝트의 서비스 계정 키(JSON)를 발급합니다.'
+          echo '     (이름이 비슷한 busan-hak-port-paid-2026 프로젝트의 키로는 배포할 수 없습니다.)'
+          echo '  2. GitHub Settings → Secrets and variables → Actions에'
+          echo '     FIREBASE_SERVICE_ACCOUNT_BUSAN_HAK_PORT 이름으로 JSON 전체 내용을 등록합니다.'
+          echo '  3. 본 워크플로우를 다시 실행하고 "예"를 선택합니다.'
+
   deploy:
     name: 승인 후 Firebase Hosting 배포
-    if: ${{ inputs.deploy_confirmation == '예' }}
+    needs: credentials
+    if: ${{ inputs.deploy_confirmation == '예' && needs.credentials.outputs.has_credentials == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     environment:

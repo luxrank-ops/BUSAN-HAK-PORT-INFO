@@ -21,7 +21,13 @@
 ## 배포 상태
 
 공개 URL:
-- https://busan-hak-port.web.app
+
+| 구분 | URL | 배포 방식 | 상태 (2026-10-06 기준) |
+| --- | --- | --- | --- |
+| **운영 (1차)** | https://busan-hak-port-info.vercel.app | Vercel — GitHub `main` 브랜치 머지 시 **자동 프로덕션 배포** | ✅ 최신(v2027) 서비스 중. 현장 사용자 기준 운영 주소 |
+| 레거시 (보조) | https://busan-hak-port.web.app | Firebase Hosting — 승인형 GitHub Actions 워크플로 | ⚠️ v2026 구버전 게시 중. 원본 프로젝트 배포 키 미등록으로 갱신 중단 (아래 "승인형 Firebase 배포" 참고) |
+
+> ⚠️ **데이터 저장소 유의**: 호스팅 위치와 무관하게 앱의 모든 Firestore·Storage 데이터(공지사항·공지 이미지, 근무일지, 게시판, 선박정보, 방문 통계)는 Firebase 프로젝트 **`busan-hak-port`**(프로젝트 번호 `616469111502`)에 저장됩니다. 이 프로젝트는 운영 데이터의 심장이므로 **삭제·보관 정지하면 안 됩니다.** 프로젝트 접근이 안 되는 계정(luxrank75@gmail.com 등)에서는 보이지 않을 수 있으며, 원본 소유 Google 계정에서의 접근 복구가 선행되어야 합니다.
 
 ## 기술 스택
 
@@ -78,13 +84,18 @@ npm run check
 
 ## 승인형 Firebase 배포
 
+> **2026-10-06 상태 안내**: 현재 등록된 서비스 계정 키가 **다른 프로젝트(`busan-hak-port-paid-2026`) 소속**이라 실제 배포 대상인 `busan-hak-port` 프로젝트를 배포할 권한이 없어, 최근 실행들이 "Failed to get Firebase project" 오류로 실패했습니다. 이에 따라 워크플로우를 개선하여, 이제는 배포용 시크릿이 없거나 잘못된 프로젝트의 키인 경우 **실패(빨간 X) 대신 안내와 함께 실행을 건너뜁니다.** 원본 프로젝트 소속 서비스 계정 키를 아래 방법으로 등록하면 다시 배포됩니다.
+>
+> ⚠️ 키 발급 시 프로젝트를 반드시 **`busan-hak-port`** 로 선택하세요. 이름이 비슷한 `busan-hak-port-paid-2026` 프로젝트의 키(`firebase-adminsdk-fbsvc@busan-hak-port-paid-2026.iam.gserviceaccount.com`)로는 배포할 수 없습니다.
+
 운영 배포는 GitHub에 코드를 푸시하는 것만으로는 실행되지 않습니다. GitHub Actions의 **Firebase 운영 배포** 워크플로를 수동 실행하고, 질문 **“배포하시겠습니까?”**에 **“예”**를 선택한 경우에만 다음 순서로 배포됩니다.
 
 1. `main` 브랜치인지 확인
-2. 의존성 설치
-3. 타입 및 정적 파일 최종 검사
-4. Google Cloud 서비스 계정 인증
-5. Firebase Hosting 운영 배포
+2. 배포용 서비스 계정 시크릿 존재 확인 (없으면 배포 대신 안내 후 건너뜀)
+3. 의존성 설치
+4. 타입 및 정적 파일 최종 검사
+5. Google Cloud 서비스 계정 인증
+6. Firebase Hosting 운영 배포
 
 “아니요”를 선택하면 배포 명령은 실행되지 않습니다. 동시에 두 운영 배포가 실행되지 않도록 동시 실행도 제한합니다.
 
