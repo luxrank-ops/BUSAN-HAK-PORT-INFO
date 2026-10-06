@@ -23,21 +23,63 @@ jobs:
   credentials:
     name: 배포 자격 확인
     runs-on: ubuntu-latest
+    # 배포 작업과 반드시 동일한 시크릿 범위를 읽도록 Production 환경을 지정합니다.
+    # 이 블록이 없으면 저장소 시크릿만 보이기 때문에, 시크릿을 Production 환경에만
+    # 등록한 경우 가드는 "없음"으로 판정하고 실제 배포 작업만 값을 읽어 불일치가 발생합니다.
+    environment:
+      name: Production
+      url: https://busan-hak-port.web.app
     outputs:
       has_credentials: ${{ steps.check.outputs.has_credentials }}
+      reason: ${{ steps.check.outputs.reason }}
     steps:
-      - name: 서비스 계정 시크릿 존재 확인
+      - name: Node.js 설정
+        uses: actions/setup-node@v5
+        with:
+          node-version: 22
+
+      - name: 서비스 계정 시크릿 존재·프로젝트 확인
         id: check
         env:
           SERVICE_ACCOUNT_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_BUSAN_HAK_PORT }}
         run: |
-          if [ -n "$SERVICE_ACCOUNT_JSON" ]; then
-            echo "has_credentials=true" >> "$GITHUB_OUTPUT"
-            echo "배포용 서비스 계정 시크릿(FIREBASE_SERVICE_ACCOUNT_BUSAN_HAK_PORT)이 등록되어 있습니다."
-          else
+          set -euo pipefail
+
+          if [ -z "$SERVICE_ACCOUNT_JSON" ]; then
             echo "has_credentials=false" >> "$GITHUB_OUTPUT"
+            echo "reason=missing" >> "$GITHUB_OUTPUT"
             echo "배포용 서비스 계정 시크릿(FIREBASE_SERVICE_ACCOUNT_BUSAN_HAK_PORT)이 등록되어 있지 않습니다."
+            exit 0
           fi
+
+          # 시크릿 본문은 절대 출력하지 않고 project_id 값만 추출합니다.
+          PROJECT_ID=$(printf '%s' "$SERVICE_ACCOUNT_JSON" | node -e '
+            let raw = "";
+            process.stdin.on("data", (chunk) => { raw += chunk; });
+            process.stdin.on("end", () => {
+              try {
+                console.log(JSON.parse(raw).project_id || "");
+              } catch {
+                console.log("");
+              }
+            });
+          ')
+
+          if [ "$PROJECT_ID" != "busan-hak-port" ]; then
+            echo "has_credentials=false" >> "$GITHUB_OUTPUT"
+            echo "reason=wrong_project" >> "$GITHUB_OUTPUT"
+            if [ -z "$PROJECT_ID" ]; then
+              echo "시크릿이 유효한 서비스 계정 JSON이 아니거나 project_id 필드가 없습니다."
+            else
+              echo "시크릿의 project_id가 \"${PROJECT_ID}\" 입니다. 배포 대상인 \"busan-hak-port\"가 아닙니다."
+            fi
+            echo "이 키로는 \"Failed to get Firebase project\" 오류가 나므로 배포를 진행하지 않습니다."
+            exit 0
+          fi
+
+          echo "has_credentials=true" >> "$GITHUB_OUTPUT"
+          echo "reason=ok" >> "$GITHUB_OUTPUT"
+          echo "배포용 서비스 계정 시크릿이 등록되어 있고 project_id가 \"busan-hak-port\"로 일치합니다."
 
   cancelled:
     name: 배포 취소 확인
@@ -56,7 +98,9 @@ jobs:
     steps:
       - name: 건너뜀 안내
         run: |
-          echo '원본 Firebase 프로젝트(busan-hak-port) 배포용 서비스 계정 시크릿이 없어 배포를 건너뜁니다.'
+          echo "건너뜀 사유: ${{ needs.credentials.outputs.reason }}"
+          echo ''
+          echo '원본 Firebase 프로젝트(busan-hak-port) 배포 자격이 없어 배포를 건너뜁니다.'
           echo ''
           echo '※ 운영 사이트(https://busan-hak-port-info.vercel.app)는 Vercel이 GitHub main 푸시 시 자동 배포하므로 이 워크플로우와 무관합니다.'
           echo '※ Firebase Hosting(busan-hak-port.web.app)을 갱신하려면:'
@@ -65,6 +109,8 @@ jobs:
           echo '     (이름이 비슷한 busan-hak-port-paid-2026 프로젝트의 키로는 배포할 수 없습니다.)'
           echo '  2. GitHub Settings → Secrets and variables → Actions에'
           echo '     FIREBASE_SERVICE_ACCOUNT_BUSAN_HAK_PORT 이름으로 JSON 전체 내용을 등록합니다.'
+          echo '     저장소 시크릿과 Production 환경 시크릿 중 한 곳에만 등록하세요.'
+          echo '     두 곳에 서로 다른 값을 등록하면 Production 환경 값이 우선 적용됩니다.'
           echo '  3. 본 워크플로우를 다시 실행하고 "예"를 선택합니다.'
 
   deploy:

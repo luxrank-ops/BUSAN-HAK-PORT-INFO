@@ -80,18 +80,18 @@ npm ci
 npm run check
 ```
 
-`npm run check`는 TypeScript 타입, 필수 배포 파일, JSON 형식, HTML 문서 및 인라인 JavaScript 문법을 검사합니다. Pull Request와 `main`/`arena/**` 브랜치 푸시에서도 동일한 검사가 자동 실행됩니다.
+`npm run check`는 TypeScript 타입, 필수 배포 파일, JSON 형식, HTML 문서 및 인라인 JavaScript 문법을 검사합니다. 추가로 `.github/workflows/*.yml`의 YAML 문법과, Firebase 배포 시크릿을 참조하는 작업들의 `environment` 범위 일치 여부를 검사합니다. Pull Request와 `main`/`arena/**` 브랜치 푸시에서도 동일한 검사가 자동 실행됩니다.
 
 ## 승인형 Firebase 배포
 
-> **2026-10-06 상태 안내**: 현재 등록된 서비스 계정 키가 **다른 프로젝트(`busan-hak-port-paid-2026`) 소속**이라 실제 배포 대상인 `busan-hak-port` 프로젝트를 배포할 권한이 없어, 최근 실행들이 "Failed to get Firebase project" 오류로 실패했습니다. 이에 따라 워크플로우를 개선하여, 이제는 배포용 시크릿이 없거나 잘못된 프로젝트의 키인 경우 **실패(빨간 X) 대신 안내와 함께 실행을 건너뜁니다.** 원본 프로젝트 소속 서비스 계정 키를 아래 방법으로 등록하면 다시 배포됩니다.
+> **2026-10-06 상태 안내**: 현재 등록된 서비스 계정 키가 **다른 프로젝트(`busan-hak-port-paid-2026`) 소속**이라 실제 배포 대상인 `busan-hak-port` 프로젝트를 배포할 권한이 없어, 최근 실행들이 "Failed to get Firebase project" 오류로 실패했습니다. 워크플로우를 개선하여, 이제는 배포용 시크릿이 없거나 **다른 프로젝트의 키인 경우에도** 실패(빨간 X) 대신 안내와 함께 실행을 건너뜁니다. 원본 프로젝트 소속 서비스 계정 키를 아래 방법으로 등록하면 다시 배포됩니다.
 >
 > ⚠️ 키 발급 시 프로젝트를 반드시 **`busan-hak-port`** 로 선택하세요. 이름이 비슷한 `busan-hak-port-paid-2026` 프로젝트의 키(`firebase-adminsdk-fbsvc@busan-hak-port-paid-2026.iam.gserviceaccount.com`)로는 배포할 수 없습니다.
 
 운영 배포는 GitHub에 코드를 푸시하는 것만으로는 실행되지 않습니다. GitHub Actions의 **Firebase 운영 배포** 워크플로를 수동 실행하고, 질문 **“배포하시겠습니까?”**에 **“예”**를 선택한 경우에만 다음 순서로 배포됩니다.
 
-1. `main` 브랜치인지 확인
-2. 배포용 서비스 계정 시크릿 존재 확인 (없으면 배포 대신 안내 후 건너뜀)
+1. 배포용 서비스 계정 시크릿 존재·`project_id` 확인 (없거나 다른 프로젝트 키면 배포 대신 안내 후 건너뜀)
+2. `main` 브랜치인지 확인
 3. 의존성 설치
 4. 타입 및 정적 파일 최종 검사
 5. Google Cloud 서비스 계정 인증
@@ -101,11 +101,19 @@ npm run check
 
 ### 최초 1회 필요한 GitHub Secret
 
-`Production` 환경 또는 저장소 Actions secret에 다음 이름으로 Firebase 배포용 서비스 계정 JSON을 등록해야 합니다.
+다음 이름으로 Firebase 배포용 서비스 계정 JSON을 등록해야 합니다.
 
 ```text
 FIREBASE_SERVICE_ACCOUNT_BUSAN_HAK_PORT
 ```
+
+**저장소 시크릿 한 곳에만 등록하는 것을 권장합니다** (Settings → Secrets and variables → Actions → *Repository secrets*).
+
+`Production` 환경 시크릿으로도 동작합니다. 자격 확인 작업과 배포 작업이 모두 `Production` 환경을 지정해 **동일한 범위**를 읽기 때문입니다. 다만 두 곳에 서로 다른 값을 등록하면 `Production` 환경 값이 우선 적용되어 저장소에 넣은 값은 무시되므로, 혼선을 막으려면 한 곳에만 두세요.
+
+> 자격 확인 작업에 `environment: Production`이 없던 시절에는 저장소 시크릿만 읽혔습니다. 그 상태에서 시크릿을 `Production` 환경에만 등록하면 자격 확인은 "없음"으로 판정되어 **배포가 아무 안내 없이 건너뛰어집니다.** `npm run check`가 이 범위 불일치를 검사하므로 재발을 막습니다.
+
+등록 후 워크플로를 다시 실행하면 자격 확인 단계가 키의 `project_id`가 `busan-hak-port`인지 확인합니다. 다른 프로젝트 키(예: `busan-hak-port-paid-2026`)이면 `"Failed to get Firebase project"` 오류로 실패하기 전에 안내와 함께 건너뜁니다.
 
 서비스 계정 키는 저장소 파일이나 채팅에 올리지 말고 GitHub의 암호화된 Secret에만 저장합니다. 운영 URL은 `https://busan-hak-port.web.app`입니다.
 
