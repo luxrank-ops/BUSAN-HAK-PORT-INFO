@@ -585,7 +585,6 @@
                         <div id="terminalScheduleTabBar" class="term-sched-tab-bar"></div>
                         <div id="hjncScheduledShipList" style="display:flex; flex-wrap:wrap; gap:5px;"></div>
                     </div>
-                    <div id="quickShipChipRow" class="quick-chip-row"></div>
                     <div style="display:flex; gap:10px; margin-bottom:8px; width:100%;">
                         <div class="wage-row" style="flex:1; margin-bottom:0;"><label>임금 1</label><input type="number" id="logWage1" class="input-field" placeholder="원"></div>
                         <div class="wage-row" style="flex:1; margin-bottom:0;"><label>임금 2</label><input type="number" id="logWage2" class="input-field" placeholder="원"></div>
@@ -3252,16 +3251,12 @@ function renderWorkLogQuickChips(dateStr) {
     if (targetDate) {
         loadHjncScheduledShipsForDate(targetDate);
     }
-    const shipRow = document.getElementById("quickShipChipRow");
     const cwRow = document.getElementById("quickCoworkerChipRow");
-    if (!shipRow || !cwRow) return;
+    if (!cwRow) return;
 
-    const shipFreq = {};
     const cwFreq = {};
     Object.values(adminWorkLogs || {}).forEach(log => {
         if (!log) return;
-        const s = (log.shipName || "").trim();
-        if (s) shipFreq[s] = (shipFreq[s] || 0) + 2;
         const cw = (log.coworkers || "").trim();
         if (cw) {
             cw.split(/[,/\s]+/).map(x => x.trim()).filter(Boolean).forEach(name => {
@@ -3269,25 +3264,11 @@ function renderWorkLogQuickChips(dateStr) {
             });
         }
     });
-    (allShipsData || []).slice(0, 8).forEach(s => {
-        const name = (s.shipName || "").trim();
-        if (name && !shipFreq[name]) shipFreq[name] = 1;
-    });
     ["재경", "성철", "개굴"].forEach(name => {
         if (!cwFreq[name]) cwFreq[name] = 1;
     });
 
-    const topShips = Object.entries(shipFreq).sort((a, b) => b[1] - a[1]).slice(0, 6).map(x => x[0]);
     const topCws = Object.entries(cwFreq).sort((a, b) => b[1] - a[1]).slice(0, 7).map(x => x[0]);
-
-    shipRow.innerHTML = topShips.length
-        ? `<span style="font-size:0.72rem; color:var(--text-sub); font-weight:800; align-self:center; margin-right:2px;">🚢 내 최근 선박:</span>` +
-          topShips.map(name => {
-              const safe = escapeShipCommentHtml(name);
-              const jsSafe = name.replace(/\\/g, "\\\\").replace(/'/g, "\\'");
-              return `<button type="button" class="quick-chip-btn" onclick="applyQuickShipChip('${jsSafe}')">+ ${safe}</button>`;
-          }).join("")
-        : "";
 
     cwRow.innerHTML = topCws.length
         ? `<span style="font-size:0.72rem; color:var(--text-sub); font-weight:800; align-self:center; margin-right:2px;">👥 동료 추가:</span>` +
