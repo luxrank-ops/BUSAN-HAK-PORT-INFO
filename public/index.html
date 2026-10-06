@@ -319,6 +319,22 @@
         .quick-chip-row { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 4px; margin-bottom: 8px; }
         .quick-chip-btn { background: #f1f5f9; border: 1px solid #cbd5e1; color: var(--primary); border-radius: 14px; padding: 3px 9px; font-size: 0.74rem; font-weight: 800; cursor: pointer; transition: all 0.15s; }
         .quick-chip-btn:active { transform: scale(0.95); background: #dbeafe; border-color: #3b82f6; }
+        .quick-chip-btn.selected { background: var(--primary); border-color: var(--primary); color: #ffffff; }
+        .coworker-roster-box { background: linear-gradient(135deg, #f8fafc, #eff6ff); border: 1.5px solid #93c5fd; border-radius: 10px; padding: 10px; margin-top: 4px; margin-bottom: 10px; }
+        body.dark-mode .coworker-roster-box { background: rgba(30, 41, 59, 0.92); border-color: #3b82f6; }
+        .coworker-filter-bar { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 7px; }
+        .coworker-filter-tab { background: #ffffff; color: #475569; border: 1px solid #cbd5e1; border-radius: 6px; padding: 3px 7px; font-size: 0.71rem; font-weight: 800; cursor: pointer; line-height: 1.2; }
+        .coworker-filter-tab.active { background: var(--primary); color: #ffffff; border-color: var(--primary); }
+        body.dark-mode .coworker-filter-tab { background: #1e293b; color: #cbd5e1; border-color: #475569; }
+        body.dark-mode .coworker-filter-tab.active { background: #2563eb; color: #ffffff; border-color: #60a5fa; }
+        .coworker-roster-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(92px, 1fr)); gap: 5px; max-height: 230px; overflow-y: auto; padding: 4px 2px; border-top: 1px dashed #cbd5e1; }
+        .coworker-member-btn { display: flex; align-items: center; justify-content: space-between; gap: 3px; background: #ffffff; color: var(--text-main); border: 1.5px solid #cbd5e1; border-radius: 7px; padding: 5px 7px; font-size: 0.76rem; font-weight: 800; cursor: pointer; transition: all 0.12s ease; text-align: left; }
+        .coworker-member-btn:hover { border-color: #2563eb; background: #eff6ff; }
+        .coworker-member-btn.selected { background: #1d4ed8; color: #ffffff; border-color: #1e40af; box-shadow: 0 1px 4px rgba(29, 78, 216, 0.28); }
+        .coworker-member-code { font-size: 0.63rem; font-weight: 700; color: #64748b; flex-shrink: 0; }
+        .coworker-member-btn.selected .coworker-member-code { color: #bfdbfe; }
+        body.dark-mode .coworker-member-btn { background: #0f172a; color: #f1f5f9; border-color: #334155; }
+        body.dark-mode .coworker-member-btn.selected { background: #2563eb; color: #ffffff; border-color: #60a5fa; }
         .hjnc-schedule-box { background: linear-gradient(135deg, #fff7ed, #ffedd5); border: 1.5px solid #fdba74; border-radius: 10px; padding: 8px 10px; margin-top: 4px; margin-bottom: 8px; }
         .hjnc-schedule-header { display: flex; justify-content: space-between; align-items: center; gap: 6px; margin-bottom: 6px; flex-wrap: wrap; }
         .term-sched-tab-bar { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 7px; padding-bottom: 6px; border-bottom: 1px dashed #fdba74; }
@@ -589,8 +605,29 @@
                         <div class="wage-row" style="flex:1; margin-bottom:0;"><label>임금 1</label><input type="number" id="logWage1" class="input-field" placeholder="원"></div>
                         <div class="wage-row" style="flex:1; margin-bottom:0;"><label>임금 2</label><input type="number" id="logWage2" class="input-field" placeholder="원"></div>
                     </div>
-                    <div class="wage-row" style="margin-bottom:4px;"><label>근무자</label><input type="text" id="logCoworkers" class="input-field" placeholder="예: 재경, 성철 (2~4명)"></div>
-                    <div id="quickCoworkerChipRow" class="quick-chip-row"></div>
+                    <div class="wage-row" style="margin-bottom:4px;"><label>근무자</label><input type="text" id="logCoworkers" class="input-field" placeholder="예: 재경, 성철 (2~4명)" oninput="syncCoworkerSelectionUI()"></div>
+                    <div id="coworkerLockBanner" onclick="openWorkLogPinModal(() => toggleCoworkerRosterPanel(true))" style="cursor:pointer; margin-top:4px; margin-bottom:8px; background:linear-gradient(135deg, #eff6ff, #dbeafe); border:1.5px solid #93c5fd; border-radius:8px; padding:9px 11px; display:flex; justify-content:space-between; align-items:center; gap:6px;">
+                        <span style="font-size:0.82rem; font-weight:900; color:var(--primary);">🔒 👥 동료 추가 · 작업자 선택 (잠김)</span>
+                        <span style="background:var(--primary); color:white; font-size:0.73rem; font-weight:800; padding:3px 9px; border-radius:6px; flex-shrink:0;">비밀번호 해제</span>
+                    </div>
+                    <div id="coworkerUnlockedArea" class="hidden">
+                        <div id="quickCoworkerChipRow" class="quick-chip-row"></div>
+                        <div id="coworkerRosterPanel" class="coworker-roster-box hidden">
+                            <div style="display:flex; justify-content:space-between; align-items:center; gap:6px; margin-bottom:7px; flex-wrap:wrap;">
+                                <span style="font-size:0.8rem; font-weight:900; color:var(--primary);">📋 작업자 선택 ( 터치 시 추가/해제)</span>
+                                <div style="display:flex; gap:4px;">
+                                    <button type="button" onclick="clearSelectedCoworkers()" style="background:#fee2e2; color:#dc2626; border:1px solid #fca5a5; border-radius:6px; padding:2px 7px; font-size:0.69rem; font-weight:800; cursor:pointer;">비우기</button>
+                                    <button type="button" onclick="toggleCoworkerRosterPanel(false)" style="background:#ffffff; color:var(--text-sub); border:1px solid #cbd5e1; border-radius:6px; padding:2px 7px; font-size:0.69rem; font-weight:800; cursor:pointer;">닫기 ▲</button>
+                                </div>
+                            </div>
+                            <div style="display:flex; gap:5px; margin-bottom:6px;">
+                                <input type="text" id="coworkerSearchInput" class="input-field" placeholder="이름, 사번(예: 1509), 초성(예: ㄱㅅㅊ) 검색..." oninput="renderCoworkerRosterGrid()" style="height:34px; font-size:0.8rem; text-align:left; padding:0 9px; flex:1;">
+                                <button type="button" onclick="resetCoworkerRosterFilter()" style="background:#e2e8f0; color:#334155; border:none; border-radius:7px; padding:0 9px; font-size:0.73rem; font-weight:800; cursor:pointer; flex-shrink:0;">전체</button>
+                            </div>
+                            <div id="coworkerFilterBar" class="coworker-filter-bar"></div>
+                            <div id="coworkerRosterGrid" class="coworker-roster-grid"></div>
+                        </div>
+                    </div>
                     <textarea id="logMemo" class="input-field textarea-field" placeholder="작업 내용..."></textarea>
                     <label style="font-size:0.9rem; font-weight:800; display:block; margin-top:10px; margin-bottom:4px;">📷 현장 사진</label>
                     <input type="file" id="logImageInput" class="input-field" accept="image/*" onchange="previewLogImage(this)">
@@ -2236,6 +2273,8 @@ function syncWorkLogExtraUnlockUI() {
     const shipFullListSection = document.getElementById("shipFullListSection");
     const wageReceiptLockBanner = document.getElementById("wageReceiptLockBanner");
     const wageReceiptShareActions = document.getElementById("wageReceiptShareActions");
+    const coworkerLockBanner = document.getElementById("coworkerLockBanner");
+    const coworkerUnlockedArea = document.getElementById("coworkerUnlockedArea");
     if (isWorkLogUnlocked) {
         if (lockBanner) lockBanner.style.display = "none";
         if (filterContent) filterContent.classList.remove("hidden");
@@ -2248,6 +2287,9 @@ function syncWorkLogExtraUnlockUI() {
         if (shipFullListSection) shipFullListSection.classList.remove("hidden");
         if (wageReceiptLockBanner) wageReceiptLockBanner.style.display = "none";
         if (wageReceiptShareActions) wageReceiptShareActions.classList.remove("hidden");
+        if (coworkerLockBanner) coworkerLockBanner.style.display = "none";
+        if (coworkerUnlockedArea) coworkerUnlockedArea.classList.remove("hidden");
+        renderWorkLogQuickChips();
         updateMonthlyGoalGaugeUI(latestMonthlyStatsCache.total, latestMonthlyStatsCache.days);
         loadAndRenderYearlyD3Chart(currentDate.getFullYear());
         if (typeof loadAndSearchAllShips === "function") {
@@ -2265,6 +2307,8 @@ function syncWorkLogExtraUnlockUI() {
         if (shipFullListSection) shipFullListSection.classList.add("hidden");
         if (wageReceiptLockBanner) wageReceiptLockBanner.style.display = "flex";
         if (wageReceiptShareActions) wageReceiptShareActions.classList.add("hidden");
+        if (coworkerLockBanner) coworkerLockBanner.style.display = "flex";
+        if (coworkerUnlockedArea) coworkerUnlockedArea.classList.add("hidden");
     }
 }
 function openWorkLogPinModal(onUnlock) {
@@ -3246,6 +3290,241 @@ async function loadHjncScheduledShipsForDate(dateStr, forceRefresh = false) {
 
     renderHjncScheduledShipsUI(dateStr, allVessels, tid);
 }
+const HANJIN_COWORKER_ROSTER = [
+    // 상단 좌측 (5명)
+    { code: "1509", name: "천태운", group: "top" },
+    { code: "1542", name: "김성철", group: "top" },
+    { code: "1703", name: "최경용", group: "top" },
+    { code: "1674", name: "김찬일", group: "top" },
+    { code: "1702", name: "박환태", group: "top" },
+    // 상단 우측 (5명)
+    { code: "1621", name: "황인섭", group: "top" },
+    { code: "1644", name: "박재경", group: "top" },
+    { code: "1546", name: "박홍근", group: "top" },
+    { code: "1558", name: "임정윤", group: "top" },
+    { code: "1515", name: "김민재", group: "top" },
+    // 하단 좌측 (1~51, 51명)
+    { code: "1570", name: "원지현", group: "left" },
+    { code: "1651", name: "이종림", group: "left" },
+    { code: "1596", name: "최정한", group: "left" },
+    { code: "1519", name: "신승호", group: "left" },
+    { code: "1517", name: "박상원", group: "left" },
+    { code: "1514", name: "김영수3", group: "left" },
+    { code: "1525", name: "이경덕", group: "left" },
+    { code: "1573", name: "이성", group: "left" },
+    { code: "1572", name: "변근식", group: "left" },
+    { code: "1577", name: "김성원", group: "left" },
+    { code: "1522", name: "오규환", group: "left" },
+    { code: "1532", name: "정영중", group: "left" },
+    { code: "1549", name: "양기택", group: "left" },
+    { code: "1543", name: "이재열", group: "left" },
+    { code: "1547", name: "박상준", group: "left" },
+    { code: "1548", name: "장영근", group: "left" },
+    { code: "1556", name: "최동일", group: "left" },
+    { code: "1552", name: "이부원", group: "left" },
+    { code: "1557", name: "강남오", group: "left" },
+    { code: "1562", name: "서창우", group: "left" },
+    { code: "1608", name: "신경호", group: "left" },
+    { code: "1591", name: "최준호", group: "left" },
+    { code: "1593", name: "남영우", group: "left" },
+    { code: "1609", name: "백상훈", group: "left" },
+    { code: "1590", name: "오경환", group: "left" },
+    { code: "1626", name: "이승환2", group: "left" },
+    { code: "1602", name: "김경민1", group: "left" },
+    { code: "1606", name: "강무성", group: "left" },
+    { code: "1607", name: "이준필", group: "left" },
+    { code: "1613", name: "박세훈", group: "left" },
+    { code: "1640", name: "김명준", group: "left" },
+    { code: "1648", name: "김치성", group: "left" },
+    { code: "1647", name: "노익곤", group: "left" },
+    { code: "1658", name: "박규태", group: "left" },
+    { code: "1659", name: "김봉준", group: "left" },
+    { code: "1667", name: "김성연", group: "left" },
+    { code: "1666", name: "곽민석", group: "left" },
+    { code: "1675", name: "김동근", group: "left" },
+    { code: "1680", name: "김광명", group: "left" },
+    { code: "1685", name: "박진우", group: "left" },
+    { code: "1682", name: "정진희", group: "left" },
+    { code: "1699", name: "임종호", group: "left" },
+    { code: "1696", name: "김근우", group: "left" },
+    { code: "1698", name: "조훈철", group: "left" },
+    { code: "1704", name: "전상진", group: "left" },
+    { code: "1705", name: "백승윤", group: "left" },
+    { code: "1706", name: "이수남", group: "left" },
+    { code: "1707", name: "김단우", group: "left" },
+    { code: "1708", name: "최승훈", group: "left" },
+    { code: "1710", name: "김민재2", group: "left" },
+    { code: "1711", name: "김근우1", group: "left" },
+    // 하단 우측 (1~48, 48명)
+    { code: "1575", name: "최정열", group: "right" },
+    { code: "1587", name: "윤일언", group: "right" },
+    { code: "1527", name: "이봉호", group: "right" },
+    { code: "1531", name: "김영민1", group: "right" },
+    { code: "1554", name: "김영구", group: "right" },
+    { code: "1610", name: "김경찬", group: "right" },
+    { code: "1600", name: "최병섭", group: "right" },
+    { code: "1642", name: "박창훈", group: "right" },
+    { code: "1604", name: "오세민", group: "right" },
+    { code: "1614", name: "설석종", group: "right" },
+    { code: "1635", name: "허영구", group: "right" },
+    { code: "1615", name: "박성용", group: "right" },
+    { code: "1616", name: "강진명", group: "right" },
+    { code: "1653", name: "이성현", group: "right" },
+    { code: "1627", name: "신철구", group: "right" },
+    { code: "1636", name: "황인기", group: "right" },
+    { code: "1637", name: "구자성", group: "right" },
+    { code: "1639", name: "사승동", group: "right" },
+    { code: "1646", name: "최영용", group: "right" },
+    { code: "1649", name: "노경민", group: "right" },
+    { code: "1656", name: "김정희", group: "right" },
+    { code: "1661", name: "이춘학", group: "right" },
+    { code: "1650", name: "윤상건", group: "right" },
+    { code: "1662", name: "이정식", group: "right" },
+    { code: "1655", name: "김찬우1", group: "right" },
+    { code: "1664", name: "정현철", group: "right" },
+    { code: "1665", name: "김영현", group: "right" },
+    { code: "1687", name: "고덕화", group: "right" },
+    { code: "1683", name: "윤승주", group: "right" },
+    { code: "1691", name: "김종성", group: "right" },
+    { code: "1686", name: "강성빈", group: "right" },
+    { code: "1652", name: "박현대", group: "right" },
+    { code: "1693", name: "유동석", group: "right" },
+    { code: "1694", name: "김유신1", group: "right" },
+    { code: "1695", name: "김찬구", group: "right" },
+    { code: "1668", name: "이수열", group: "right" },
+    { code: "1697", name: "성민근", group: "right" },
+    { code: "1586", name: "안영준", group: "right" },
+    { code: "1641", name: "오용구", group: "right" },
+    { code: "1709", name: "이재호", group: "right" },
+    { code: "9533", name: "정철화", group: "right" },
+    { code: "9534", name: "여상규", group: "right" },
+    { code: "9535", name: "하승환", group: "right" },
+    { code: "9536", name: "이준수", group: "right" },
+    { code: "9537", name: "윤동환", group: "right" },
+    { code: "9538", name: "이현재", group: "right" },
+    { code: "9539", name: "김창홍", group: "right" },
+    { code: "9540", name: "이재원", group: "right" }
+];
+const HANGUL_CHO_LIST = ["ㄱ","ㄲ","ㄴ","ㄷ","ㄸ","ㄹ","ㅁ","ㅂ","ㅃ","ㅅ","ㅆ","ㅇ","ㅈ","ㅉ","ㅊ","ㅋ","ㅌ","ㅍ","ㅎ"];
+function getHangulChosung(str) {
+    return Array.from(String(str || "")).map(ch => {
+        const code = ch.charCodeAt(0) - 0xAC00;
+        if (code >= 0 && code <= 11171) {
+            return HANGUL_CHO_LIST[Math.floor(code / 588)] || ch;
+        }
+        return ch;
+    }).join("");
+}
+let selectedCoworkerFilter = "all";
+function getSelectedCoworkerList() {
+    const raw = (document.getElementById("logCoworkers")?.value || "").trim();
+    if (!raw) return [];
+    return raw.split(/[,]+/).map(s => s.trim()).filter(Boolean);
+}
+function toggleCoworkerRosterPanel(forceOpen) {
+    if (!isWorkLogUnlocked) {
+        openWorkLogPinModal(() => toggleCoworkerRosterPanel(true));
+        return;
+    }
+    const panel = document.getElementById("coworkerRosterPanel");
+    if (!panel) return;
+    const willOpen = typeof forceOpen === "boolean" ? forceOpen : panel.classList.contains("hidden");
+    panel.classList.toggle("hidden", !willOpen);
+    renderWorkLogQuickChips();
+    if (willOpen) {
+        renderCoworkerFilterBar();
+        renderCoworkerRosterGrid();
+    }
+}
+function selectCoworkerFilter(filterKey) {
+    selectedCoworkerFilter = filterKey;
+    renderCoworkerFilterBar();
+    renderCoworkerRosterGrid();
+}
+function resetCoworkerRosterFilter() {
+    selectedCoworkerFilter = "all";
+    const searchEl = document.getElementById("coworkerSearchInput");
+    if (searchEl) searchEl.value = "";
+    renderCoworkerFilterBar();
+    renderCoworkerRosterGrid();
+}
+function clearSelectedCoworkers() {
+    const input = document.getElementById("logCoworkers");
+    if (!input) return;
+    input.value = "";
+    syncCoworkerSelectionUI();
+    showToast("👥 근무자 입력란을 비웠습니다.");
+}
+function renderCoworkerFilterBar() {
+    const bar = document.getElementById("coworkerFilterBar");
+    if (!bar) return;
+    const tabs = [
+        { key: "all", label: `전체 (${HANJIN_COWORKER_ROSTER.length})` },
+        { key: "top", label: "상단 (10)" },
+        { key: "left", label: "좌측 (51)" },
+        { key: "right", label: "우측 (48)" },
+        { key: "ㄱ", label: "ㄱ" },
+        { key: "ㄴ", label: "ㄴ" },
+        { key: "ㅂ", label: "ㅂ" },
+        { key: "ㅅ", label: "ㅅ" },
+        { key: "ㅇ", label: "ㅇ" },
+        { key: "ㅈ", label: "ㅈ" },
+        { key: "ㅊ", label: "ㅊ" },
+        { key: "ㅎ", label: "ㅎ" },
+        { key: "etc", label: "기타" }
+    ];
+    bar.innerHTML = tabs.map(t => {
+        const active = selectedCoworkerFilter === t.key ? "active" : "";
+        return `<button type="button" class="coworker-filter-tab ${active}" onclick="selectCoworkerFilter('${t.key}')">${t.label}</button>`;
+    }).join("");
+}
+function renderCoworkerRosterGrid() {
+    const grid = document.getElementById("coworkerRosterGrid");
+    if (!grid) return;
+    const query = (document.getElementById("coworkerSearchInput")?.value || "").trim();
+    const selectedList = getSelectedCoworkerList();
+    const mainChoSet = new Set(["ㄱ","ㄴ","ㅂ","ㅅ","ㅇ","ㅈ","ㅊ","ㅎ"]);
+
+    const filtered = HANJIN_COWORKER_ROSTER.filter(item => {
+        if (query) {
+            const cho = getHangulChosung(item.name);
+            if (!item.name.includes(query) && !item.code.includes(query) && !cho.includes(query)) {
+                return false;
+            }
+        }
+        if (selectedCoworkerFilter === "all") return true;
+        if (["top", "left", "right"].includes(selectedCoworkerFilter)) {
+            return item.group === selectedCoworkerFilter;
+        }
+        const firstCho = getHangulChosung(item.name.charAt(0));
+        if (selectedCoworkerFilter === "etc") {
+            return !mainChoSet.has(firstCho);
+        }
+        return firstCho === selectedCoworkerFilter;
+    });
+
+    if (filtered.length === 0) {
+        grid.innerHTML = `<div style="grid-column:1/-1; text-align:center; padding:14px 6px; font-size:0.78rem; color:var(--text-sub); font-weight:700;">검색 조건에 맞는 인원이 없습니다.</div>`;
+        return;
+    }
+
+    grid.innerHTML = filtered.map(item => {
+        const isSelected = selectedList.includes(item.name);
+        const safeName = escapeShipCommentHtml(item.name);
+        const jsSafeName = item.name.replace(/\\/g, "\\\\").replace(/'/g, "\\'");
+        return `<button type="button" class="coworker-member-btn ${isSelected ? 'selected' : ''}" onclick="applyQuickCoworkerChip('${jsSafeName}')">
+            <span>${isSelected ? '✓ ' : '+ '}${safeName}</span>
+            <span class="coworker-member-code">${item.code}</span>
+        </button>`;
+    }).join("");
+}
+function syncCoworkerSelectionUI() {
+    renderWorkLogQuickChips();
+    const panel = document.getElementById("coworkerRosterPanel");
+    if (panel && !panel.classList.contains("hidden")) {
+        renderCoworkerRosterGrid();
+    }
+}
 function renderWorkLogQuickChips(dateStr) {
     const targetDate = dateStr || document.getElementById("dailyLogForm")?.getAttribute("data-date") || "";
     if (targetDate) {
@@ -3260,24 +3539,29 @@ function renderWorkLogQuickChips(dateStr) {
         const cw = (log.coworkers || "").trim();
         if (cw) {
             cw.split(/[,/\s]+/).map(x => x.trim()).filter(Boolean).forEach(name => {
+                if (name === "개굴") return;
                 cwFreq[name] = (cwFreq[name] || 0) + 2;
             });
         }
     });
-    ["재경", "성철", "개굴"].forEach(name => {
+    ["재경", "성철"].forEach(name => {
         if (!cwFreq[name]) cwFreq[name] = 1;
     });
+    delete cwFreq["개굴"];
 
     const topCws = Object.entries(cwFreq).sort((a, b) => b[1] - a[1]).slice(0, 7).map(x => x[0]);
+    const selectedList = getSelectedCoworkerList();
+    const panelOpen = !document.getElementById("coworkerRosterPanel")?.classList.contains("hidden");
 
-    cwRow.innerHTML = topCws.length
-        ? `<span style="font-size:0.72rem; color:var(--text-sub); font-weight:800; align-self:center; margin-right:2px;">👥 동료 추가:</span>` +
-          topCws.map(name => {
-              const safe = escapeShipCommentHtml(name);
-              const jsSafe = name.replace(/\\/g, "\\\\").replace(/'/g, "\\'");
-              return `<button type="button" class="quick-chip-btn" onclick="applyQuickCoworkerChip('${jsSafe}')">+ ${safe}</button>`;
-          }).join("")
-        : "";
+    cwRow.innerHTML =
+        `<span style="font-size:0.72rem; color:var(--text-sub); font-weight:800; align-self:center; margin-right:2px;">👥 동료 추가:</span>` +
+        topCws.map(name => {
+            const safe = escapeShipCommentHtml(name);
+            const jsSafe = name.replace(/\\/g, "\\\\").replace(/'/g, "\\'");
+            const isSel = selectedList.includes(name);
+            return `<button type="button" class="quick-chip-btn ${isSel ? 'selected' : ''}" onclick="applyQuickCoworkerChip('${jsSafe}')">${isSel ? '✓' : '+'} ${safe}</button>`;
+        }).join("") +
+        `<button type="button" class="quick-chip-btn" style="background:${panelOpen ? 'var(--primary)' : '#eff6ff'}; color:${panelOpen ? '#ffffff' : '#1d4ed8'}; border-color:#60a5fa; font-weight:900;" onclick="toggleCoworkerRosterPanel()">📋 작업자 선택 (${HANJIN_COWORKER_ROSTER.length}명) ${panelOpen ? '▲' : '▼'}</button>`;
 }
 function applyQuickShipChip(shipName, berthNo = "", ptnrCode = "", termBadge = "") {
     const input = document.getElementById("logShipName");
@@ -3297,6 +3581,10 @@ function applyQuickShipChip(shipName, berthNo = "", ptnrCode = "", termBadge = "
     showToast(`🚢 ${termPrefix}'${shipName.trim()}'${extraInfo} 선박명이 입력되었습니다.`);
 }
 function applyQuickCoworkerChip(workerName) {
+    if (!isWorkLogUnlocked) {
+        openWorkLogPinModal(() => applyQuickCoworkerChip(workerName));
+        return;
+    }
     const input = document.getElementById("logCoworkers");
     if (!input) return;
     const current = input.value.trim();
@@ -3304,11 +3592,16 @@ function applyQuickCoworkerChip(workerName) {
         input.value = workerName;
     } else {
         const list = current.split(/[,]+/).map(s => s.trim()).filter(Boolean);
-        if (!list.includes(workerName)) {
+        const idx = list.indexOf(workerName);
+        if (idx >= 0) {
+            list.splice(idx, 1);
+            input.value = list.join(", ");
+        } else {
             list.push(workerName);
             input.value = list.join(", ");
         }
     }
+    syncCoworkerSelectionUI();
 }
 let lastWeatherFetchedAt = 0;
 async function fetchBusanPortLiveWeather(force = false) {
