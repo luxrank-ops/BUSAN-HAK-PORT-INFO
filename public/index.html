@@ -1560,6 +1560,16 @@
                 <span style="font-size:0.7rem; color:var(--text-sub); font-weight:700;">실시간 서버 기준</span>
             </div>
             <div id="statsDbContentGrid" class="stats-mini-grid"></div>
+            <div id="statsWorkerAccountDetailBox" class="hidden" style="margin-top:10px; border-top:1.5px dashed var(--border); padding-top:10px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; gap:6px; flex-wrap:wrap; margin-bottom:8px;">
+                    <span id="statsWorkerAccountTitle" style="font-size:0.84rem; font-weight:900; color:#047857;">👤 가입 근로자 계정 상세 목록</span>
+                    <div style="display:flex; gap:5px; align-items:center;">
+                        <input type="text" id="statsWorkerSearchInput" placeholder="닉네임 검색..." oninput="renderStatsWorkerAccountList()" style="height:28px; width:125px; font-size:0.75rem; padding:0 8px; border:1px solid var(--border); border-radius:6px; background:var(--bg-color); color:var(--text-main); font-weight:800;">
+                        <button type="button" onclick="toggleStatsWorkerAccountList(false)" style="background:var(--bg-color); color:var(--text-sub); border:1px solid var(--border); border-radius:6px; padding:3px 8px; font-size:0.72rem; font-weight:800; cursor:pointer;">닫기 ▲</button>
+                    </div>
+                </div>
+                <div id="statsWorkerAccountListContainer" style="max-height:260px; overflow-y:auto; border:1px solid var(--border); border-radius:8px; background:var(--bg-color);"></div>
+            </div>
         </div>
 
         <p style="font-size:0.74rem; color:var(--text-sub); text-align:center; margin:8px 0;">※ 방문자 수는 브라우저 탭 세션 기준(새로고침 중복 제외)이며, 블록·터미널·기능 클릭은 실시간 누적 집계됩니다.</p>
@@ -2194,6 +2204,8 @@ async function loadAndRenderVisitorStats() {
     const dbGridEl = document.getElementById("statsDbContentGrid");
     if (dbGridEl) {
         let workersCnt = 0, logsCnt = 0, noticesCnt = 0, archivesCnt = 0;
+        const workerAccounts = [];
+        const workerLogSummary = {};
         try {
             const [uSnap, lSnap, nSnap, aSnap] = await Promise.all([
                 db.collection("user_profiles").get(),
@@ -2205,17 +2217,75 @@ async function loadAndRenderVisitorStats() {
             logsCnt = lSnap.size;
             noticesCnt = nSnap.size;
             archivesCnt = aSnap.size;
+
+            lSnap.forEach(doc => {
+                const d = doc.data() || {};
+                const wid = String(d.workerId || "").trim() || (doc.id.includes("_") ? doc.id.split("_")[0] : "");
+                if (!wid) return;
+                if (!workerLogSummary[wid]) {
+                    workerLogSummary[wid] = { count: 0, totalPay: 0, lastDate: "", lastSavedMs: 0 };
+                }
+                workerLogSummary[wid].count += 1;
+                const pay = Number(d.totalPay) || ((Number(d.wage1) || 0) + (Number(d.wage2) || 0));
+                workerLogSummary[wid].totalPay += pay;
+                const dateStr = String(d.date || "");
+                if (dateStr && (!workerLogSummary[wid].lastDate || dateStr > workerLogSummary[wid].lastDate)) {
+                    workerLogSummary[wid].lastDate = dateStr;
+                }
+                const tsMs = d.timestamp && typeof d.timestamp.toMillis === "function" ? d.timestamp.toMillis() : 0;
+                if (tsMs > workerLogSummary[wid].lastSavedMs) {
+                    workerLogSummary[wid].lastSavedMs = tsMs;
+                }
+            });
+
+            uSnap.forEach(doc => {
+                const d = doc.data() || {};
+                const nick = doc.id;
+                let createdMs = 0;
+                let createdStr = "날짜 기록 없음";
+                const rawTs = d.createdAt || d.timestamp || d.updatedAt;
+                if (rawTs && typeof rawTs.toDate === "function") {
+                    const dt = rawTs.toDate();
+                    createdMs = dt.getTime();
+                    createdStr = `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, "0")}-${String(dt.getDate()).padStart(2, "0")} ${String(dt.getHours()).padStart(2, "0")}:${String(dt.getMinutes()).padStart(2, "0")}`;
+                } else if (typeof rawTs === "string" && rawTs.trim()) {
+                    createdStr = rawTs.trim();
+                }
+                const logStat = workerLogSummary[nick] || { count: 0, totalPay: 0, lastDate: "-", lastSavedMs: 0 };
+                const pwStr = String(d.password || "");
+                const isSha256 = /^[a-f0-9]{64}$/i.test(pwStr);
+                workerAccounts.push({
+                    nick,
+                    createdMs,
+                    createdStr,
+                    logCount: logStat.count,
+                    totalPay: logStat.totalPay,
+                    lastDate: logStat.lastDate || "-",
+                    lastSavedMs: logStat.lastSavedMs,
+                    isSha256
+                });
+            });
+
+            workerAccounts.sort((a, b) => (b.createdMs - a.createdMs) || (b.lastSavedMs - a.lastSavedMs) || (b.logCount - a.logCount) || a.nick.localeCompare(b.nick, "ko"));
+            cachedStatsModalData.workerAccounts = workerAccounts;
         } catch (e) {}
         const shipsCnt = Array.isArray(allShipsData) ? allShipsData.length : 0;
         const postsCnt = Array.isArray(allPostsData) ? allPostsData.length : 0;
         dbGridEl.innerHTML = `
             <div class="stats-mini-item"><span>🚢 등록 선박 도감</span><b style="color:#0284c7;">${shipsCnt.toLocaleString()}척</b></div>
             <div class="stats-mini-item"><span>💬 자유게시판 게시글</span><b style="color:#4f46e5;">${postsCnt.toLocaleString()}건</b></div>
-            <div class="stats-mini-item"><span>👤 가입 근로자 계정</span><b style="color:#047857;">${workersCnt.toLocaleString()}명</b></div>
+            <div class="stats-mini-item tap-effect" onclick="toggleStatsWorkerAccountList()" title="클릭하여 가입 근로자 계정 상세 정보 보기" style="cursor:pointer; border:1.5px solid #10b981; background:rgba(16,185,129,0.08);">
+                <span>👤 가입 근로자 계정 <span style="font-size:0.65rem; color:#047857; text-decoration:underline;">(상세 ▼)</span></span>
+                <b style="color:#047857;">${workersCnt.toLocaleString()}명</b>
+            </div>
             <div class="stats-mini-item"><span>📅 누적 근무일지 기록</span><b style="color:#d97706;">${logsCnt.toLocaleString()}건</b></div>
             <div class="stats-mini-item"><span>📢 등록 공지사항</span><b style="color:#dc2626;">${noticesCnt.toLocaleString()}건</b></div>
             <div class="stats-mini-item"><span>📂 자료실 업로드 파일</span><b style="color:var(--primary);">${archivesCnt.toLocaleString()}개</b></div>
         `;
+        const detailBox = document.getElementById("statsWorkerAccountDetailBox");
+        if (detailBox && !detailBox.classList.contains("hidden")) {
+            renderStatsWorkerAccountList();
+        }
     }
 
     const timeEl = document.getElementById("visitorStatsUpdatedTime");
@@ -2259,6 +2329,65 @@ function copyVisitorStatsReport() {
         document.body.removeChild(ta);
         showToast("📋 운영 통계 리포트가 복사되었습니다!");
     }
+}
+function toggleStatsWorkerAccountList(forceOpen) {
+    const box = document.getElementById("statsWorkerAccountDetailBox");
+    if (!box) return;
+    const willOpen = typeof forceOpen === "boolean" ? forceOpen : box.classList.contains("hidden");
+    box.classList.toggle("hidden", !willOpen);
+    if (willOpen) {
+        renderStatsWorkerAccountList();
+        setTimeout(() => box.scrollIntoView({ behavior: "smooth", block: "nearest" }), 60);
+    }
+}
+function renderStatsWorkerAccountList() {
+    const container = document.getElementById("statsWorkerAccountListContainer");
+    const titleEl = document.getElementById("statsWorkerAccountTitle");
+    if (!container) return;
+    const allList = Array.isArray(cachedStatsModalData.workerAccounts) ? cachedStatsModalData.workerAccounts : [];
+    const q = (document.getElementById("statsWorkerSearchInput")?.value || "").trim().toLowerCase();
+    const filtered = q ? allList.filter(w => w.nick.toLowerCase().includes(q) || w.createdStr.toLowerCase().includes(q)) : allList;
+
+    if (titleEl) {
+        titleEl.innerText = `👤 가입 근로자 계정 상세 (${filtered.length}명 / 총 ${allList.length}명)`;
+    }
+    if (filtered.length === 0) {
+        container.innerHTML = `<div style="padding:18px; text-align:center; font-size:0.8rem; color:var(--text-sub); font-weight:800;">조회된 가입 근로자 계정이 없습니다.</div>`;
+        return;
+    }
+
+    const escapeTxt = s => String(s || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+    const rows = filtered.map((w, idx) => `
+        <tr style="border-bottom:1px solid var(--border); background:${idx % 2 === 1 ? 'rgba(10,27,63,0.025)' : 'transparent'};">
+            <td style="padding:7px 6px; text-align:center; font-weight:800; color:var(--text-sub); font-size:0.73rem;">${idx + 1}</td>
+            <td style="padding:7px 6px; font-weight:900; color:var(--primary); font-size:0.8rem;">
+                <div>👤 ${escapeTxt(w.nick)}</div>
+                <div style="font-size:0.65rem; color:${w.isSha256 ? '#047857' : '#d97706'}; font-weight:700; margin-top:1px;">${w.isSha256 ? '🔒 암호화(SHA-256)' : '🔑 일반 저장'}</div>
+            </td>
+            <td style="padding:7px 6px; text-align:center; font-size:0.73rem; font-weight:800; color:var(--text-main);">
+                <div>${escapeTxt(w.createdStr)}</div>
+                <div style="font-size:0.66rem; color:var(--text-sub); margin-top:1px;">최근 기록: ${escapeTxt(w.lastDate)}</div>
+            </td>
+            <td style="padding:7px 6px; text-align:right; font-size:0.75rem; font-weight:900; color:#047857; font-variant-numeric:tabular-nums;">
+                <div>${w.logCount.toLocaleString()}건</div>
+                <div style="font-size:0.66rem; color:#2563eb; font-weight:800; margin-top:1px;">${w.totalPay.toLocaleString()}원</div>
+            </td>
+        </tr>
+    `).join("");
+
+    container.innerHTML = `
+        <table style="width:100%; border-collapse:collapse; text-align:left;">
+            <thead style="position:sticky; top:0; background:var(--primary); color:#ffffff; font-size:0.72rem; font-weight:900; z-index:2;">
+                <tr>
+                    <th style="padding:6px; width:36px; text-align:center;">No.</th>
+                    <th style="padding:6px;">닉네임 (ID) · 보안</th>
+                    <th style="padding:6px; text-align:center;">가입 일시 / 최근 근무일</th>
+                    <th style="padding:6px; text-align:right;">일지 수 / 누적액</th>
+                </tr>
+            </thead>
+            <tbody>${rows}</tbody>
+        </table>
+    `;
 }
 function closeVisitorStats() { document.getElementById("visitorStatsModal").style.display = "none"; }
 
