@@ -1687,32 +1687,15 @@ let commentUnsubscribes = {}; let shipCommentUnsubscribes = {}; let shipComments
 let currentEditPostId = null;
 
 async function safeGet(ref) { if (!ref) return null; try { return await ref.get(); } catch (e) { return null; } }
-async function verifyAdmin() {
+async function verifyAdmin(forcePrompt = false) {
     await ensureAnonymousAuth();
-    // 1) Firebase Auth 관리자 전용 계정 또는 UID 화이트리스트 확인
-    if (auth && auth.currentUser) {
-        const u = auth.currentUser;
-        if (ADMIN_UID_WHITELIST.includes(u.uid) || (u.email && ADMIN_EMAIL_WHITELIST.includes(u.email.toLowerCase()))) {
-            isAdminSessionVerified = true;
-            try { sessionStorage.setItem("busanPortAdminVerified", "1"); } catch (e) {}
-            return true;
-        }
-        try {
-            const adminUidSnap = await safeGet(db.collection("admins").doc(u.uid));
-            if (adminUidSnap && adminUidSnap.exists) {
-                isAdminSessionVerified = true;
-                try { sessionStorage.setItem("busanPortAdminVerified", "1"); } catch (e) {}
-                return true;
-            }
-        } catch (e) {}
-    }
-    if (isAdminSessionVerified) return true;
+    if (!forcePrompt && isAdminSessionVerified) return true;
 
     const inputPw = prompt("관리자 비밀번호(또는 관리자 이메일:비밀번호)를 입력하세요:");
     if (!inputPw) return false;
     const raw = inputPw.trim();
 
-    // 2) 이메일:비밀번호 형식 입력 시 Firebase Auth 관리자 전용 계정 로그인 시도
+    // 1) 이메일:비밀번호 형식 입력 시 Firebase Auth 관리자 전용 계정 로그인 시도
     if (auth && raw.includes(":") && raw.includes("@")) {
         const sepIdx = raw.indexOf(":");
         const email = raw.slice(0, sepIdx).trim();
@@ -1730,7 +1713,7 @@ async function verifyAdmin() {
         }
     }
 
-    // 3) SHA-256 해시 검증 (settings/admin 차단 시에도 동작하며 평문 노출 원천 차단)
+    // 2) SHA-256 해시 검증 (settings/admin 차단 시에도 동작하며 평문 노출 원천 차단)
     const inputHash = await sha256Hex(raw);
     let targetHash = DEFAULT_ADMIN_PW_HASH;
     try {
@@ -1990,7 +1973,7 @@ function renderStatsTerminalRanking(totalDoc, todayDoc) {
 }
 async function openVisitorStats() {
     try {
-        if (!(await verifyAdmin())) return;
+        if (!(await verifyAdmin(true))) return;
         await trackVisitorSession();
         const modal = document.getElementById("visitorStatsModal");
         modal.style.display = "flex";
