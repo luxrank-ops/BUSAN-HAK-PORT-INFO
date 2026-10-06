@@ -1,5 +1,6 @@
-import { readFile, access } from 'node:fs/promises';
+import { readFile, access, readdir } from 'node:fs/promises';
 import vm from 'node:vm';
+import yaml from 'js-yaml';
 
 const requiredFiles = [
   '.firebaserc',
@@ -64,10 +65,63 @@ if (firebaseConfig.hosting?.public !== 'public') {
   errors.push('firebase.json의 hosting.public은 "public"이어야 합니다.');
 }
 
+const DEPLOY_SECRET = 'FIREBASE_SERVICE_ACCOUNT_BUSAN_HAK_PORT';
+const workflowDir = '.github/workflows';
+
+let workflowFiles = [];
+try {
+  workflowFiles = (await readdir(workflowDir)).filter((file) => /\.ya?ml$/.test(file)).sort();
+} catch {
+  errors.push(`워크플로 디렉터리를 읽을 수 없습니다: ${workflowDir}`);
+}
+
+if (!workflowFiles.length) {
+  errors.push(`${workflowDir}에 워크플로 파일이 없습니다.`);
+}
+
+const workflows = new Map();
+for (const file of workflowFiles) {
+  const path = `${workflowDir}/${file}`;
+  try {
+    workflows.set(file, yaml.load(await readFile(path, 'utf8')));
+  } catch (error) {
+    errors.push(`${path} YAML 오류: ${error.message}`);
+  }
+}
+
+// Firebase 배포 시크릿을 읽는 모든 작업은 반드시 동일한 environment 범위여야 합니다.
+// 범위가 갈리면 가드 작업과 배포 작업이 서로 다른 시크릿 값을 읽어,
+// 자격 확인은 통과했는데 배포만 실패하거나 반대로 배포가 조용히 건너뛰어집니다.
+const deployWorkflow = workflows.get('deploy-firebase.yml');
+if (!deployWorkflow?.jobs) {
+  errors.push('deploy-firebase.yml을 파싱하지 못했거나 jobs가 없습니다.');
+} else {
+  const scopes = new Map();
+  // 안내 문구에 시크릿 이름만 적힌 작업은 제외하고, 실제 secrets 참조만 대상으로 합니다.
+  const secretRef = new RegExp(`secrets\\.\\s*${DEPLOY_SECRET}\\b`);
+  for (const [jobId, job] of Object.entries(deployWorkflow.jobs)) {
+    if (!secretRef.test(JSON.stringify(job ?? {}))) continue;
+    const environment = job?.environment;
+    const scope = typeof environment === 'string' ? environment : environment?.name ?? '(환경 미지정)';
+    scopes.set(jobId, scope);
+  }
+
+  if (scopes.size < 2) {
+    errors.push(`deploy-firebase.yml: 시크릿 ${DEPLOY_SECRET}을 읽는 작업이 2개보다 적습니다.`);
+  } else if (new Set(scopes.values()).size !== 1) {
+    const detail = [...scopes].map(([jobId, scope]) => `${jobId}=${scope}`).join(', ');
+    errors.push(`deploy-firebase.yml: 시크릿 ${DEPLOY_SECRET}을 읽는 작업의 environment 범위가 다릅니다 (${detail})`);
+  }
+}
+
 if (errors.length) {
   console.error(`검증 실패 (${errors.length}건)`);
   for (const error of errors) console.error(`- ${error}`);
   process.exit(1);
 }
 
-console.log(`검증 완료: 필수 파일 ${requiredFiles.length}개, JSON ${jsonFiles.length}개, HTML ${htmlFiles.length}개`);
+console.log(
+  `검증 완료: 필수 파일 ${requiredFiles.length}개, JSON ${jsonFiles.length}개, ` +
+  `HTML ${htmlFiles.length}개, 워크플로 ${workflowFiles.length}개`
+);
+
