@@ -730,16 +730,59 @@
             transform: scale(0.98);
         }
         .daily-field-english-card {
-            grid-column: 1 / -1;
-            border: 1.5px solid #bfdbfe;
-            border-radius: 12px;
-            background: linear-gradient(135deg, #ffffff 0%, #eff6ff 100%);
-            box-shadow: 0 3px 10px rgba(37, 99, 235, 0.08);
+            position: relative;
+            border-color: #7dd3fc;
             overflow: hidden;
+            animation: dailyFieldEnglishGlow 2.8s ease-in-out infinite;
+        }
+        .daily-field-english-card::after {
+            content: "";
+            position: absolute;
+            z-index: 2;
+            top: -45%;
+            left: -80%;
+            width: 36%;
+            height: 190%;
+            background: linear-gradient(
+                115deg,
+                transparent 5%,
+                rgba(255, 255, 255, 0.04) 30%,
+                rgba(255, 255, 255, 0.48) 50%,
+                rgba(255, 255, 255, 0.04) 70%,
+                transparent 95%
+            );
+            transform: skewX(-24deg);
+            pointer-events: none;
+            animation: dailyFieldEnglishShine 3.5s ease-in-out infinite;
         }
         body.dark-mode .daily-field-english-card {
-            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
-            border-color: #3b82f6;
+            border-color: #38bdf8;
+        }
+        @keyframes dailyFieldEnglishShine {
+            0%, 68% { left: -80%; opacity: 0; }
+            74% { opacity: 0.85; }
+            100% { left: 145%; opacity: 0; }
+        }
+        @keyframes dailyFieldEnglishGlow {
+            0%, 100% {
+                border-color: #7dd3fc;
+                box-shadow: 0 2px 6px rgba(15, 23, 42, 0.04),
+                            0 0 0 rgba(14, 165, 233, 0);
+            }
+            50% {
+                border-color: #38bdf8;
+                box-shadow: 0 2px 8px rgba(14, 165, 233, 0.1),
+                            0 0 13px rgba(14, 165, 233, 0.28);
+            }
+        }
+        @media (prefers-reduced-motion: reduce) {
+            .daily-field-english-card,
+            .daily-field-english-card::after {
+                animation: none !important;
+            }
+            .daily-field-english-card::after {
+                display: none;
+            }
         }
         .daily-field-english-header {
             display: flex;
@@ -1520,6 +1563,57 @@
             </div>
         </div>
 
+        <div id="daily-field-english-card" class="dash-card daily-field-english-card"
+             aria-labelledby="dailyFieldEnglishTitle">
+            <div class="dash-header tap-effect"
+                 onclick="toggleDashItem('daily-field-english-card')"
+                 style="flex-direction: row !important; justify-content: flex-start !important; padding: 14px 12px; gap: 10px; min-height: auto;">
+                <span class="dash-icon-badge"
+                      style="background: #e0f2fe; border: 1px solid #7dd3fc;">🔤</span>
+                <div style="flex:1; min-width:0;">
+                    <div id="dailyFieldEnglishTitle" class="dash-title"
+                         style="color: var(--primary); font-size: 0.96rem !important; font-weight: 900; margin: 0; text-align: left; line-height: 1.25;">
+                        오늘의 현장 영어 한문장
+                    </div>
+                    <div class="dash-sub-meta">
+                        항만 현장 영어 · 한국시간 매일 오전 9시 업데이트
+                    </div>
+                </div>
+            </div>
+
+            <div class="dash-content">
+                <div class="daily-field-english-lesson" aria-live="polite" aria-atomic="true">
+                    <div id="dailyFieldEnglishDate" class="daily-field-english-date">오늘의 문장</div>
+                    <p id="dailyFieldEnglishSentence" class="daily-field-english-sentence">
+                        Please wait here.
+                    </p>
+                    <p class="daily-field-english-pronunciation">
+                        <span aria-hidden="true">🔡 읽는 법: </span>
+                        <span id="dailyFieldEnglishPronunciation">플리즈 웨잇 히어</span>
+                    </p>
+                    <p class="daily-field-english-meaning">
+                        <strong>뜻:</strong>
+                        <span id="dailyFieldEnglishMeaning">여기서 기다려 주세요.</span>
+                    </p>
+                    <p class="daily-field-english-vocab">
+                        <strong>오늘의 단어:</strong>
+                        <span id="dailyFieldEnglishWord">wait = 기다리다</span>
+                    </p>
+                </div>
+
+                <div class="daily-field-english-footer">
+                    <button type="button" class="daily-field-english-listen"
+                            onclick="speakDailyFieldEnglish()"
+                            aria-label="오늘의 영어 문장을 천천히 듣기">
+                        🔊 천천히 듣기
+                    </button>
+                    <p class="daily-field-english-hint">
+                        영어를 듣고, 발음과 뜻을 함께 따라 읽어 보세요.
+                    </p>
+                </div>
+            </div>
+        </div>
+
         <div id="board-card" class="dash-card">
             <div class="dash-header tap-effect" onclick="toggleDashItem('board-card')" style="flex-direction: row !important; justify-content: flex-start !important; padding: 14px 12px; gap: 10px; min-height: auto;">
                 <span class="dash-icon-badge" style="background: #eff6ff; border: 1px solid #bfdbfe;">💬</span>
@@ -1969,57 +2063,6 @@
             </div>
         </div>
 
-        <div id="daily-field-english-card" class="dash-card"
-             aria-labelledby="dailyFieldEnglishTitle">
-            <div class="dash-header tap-effect"
-                 onclick="toggleDashItem('daily-field-english-card')"
-                 style="flex-direction: row !important; justify-content: flex-start !important; padding: 14px 12px; gap: 10px; min-height: auto;">
-                <span class="dash-icon-badge"
-                      style="background: #e0f2fe; border: 1px solid #7dd3fc;">🔤</span>
-                <div style="flex:1; min-width:0;">
-                    <div id="dailyFieldEnglishTitle" class="dash-title"
-                         style="color: var(--primary); font-size: 0.96rem !important; font-weight: 900; margin: 0; text-align: left; line-height: 1.25;">
-                        오늘의 현장 영어 한문장
-                    </div>
-                    <div class="dash-sub-meta">
-                        항만 현장 영어 · 한국시간 매일 오전 9시 업데이트
-                    </div>
-                </div>
-            </div>
-
-            <div class="dash-content">
-                <div class="daily-field-english-lesson" aria-live="polite" aria-atomic="true">
-                    <div id="dailyFieldEnglishDate" class="daily-field-english-date">오늘의 문장</div>
-                    <p id="dailyFieldEnglishSentence" class="daily-field-english-sentence">
-                        Please wait here.
-                    </p>
-                    <p class="daily-field-english-pronunciation">
-                        <span aria-hidden="true">🔡 읽는 법: </span>
-                        <span id="dailyFieldEnglishPronunciation">플리즈 웨잇 히어</span>
-                    </p>
-                    <p class="daily-field-english-meaning">
-                        <strong>뜻:</strong>
-                        <span id="dailyFieldEnglishMeaning">여기서 기다려 주세요.</span>
-                    </p>
-                    <p class="daily-field-english-vocab">
-                        <strong>오늘의 단어:</strong>
-                        <span id="dailyFieldEnglishWord">wait = 기다리다</span>
-                    </p>
-                </div>
-
-                <div class="daily-field-english-footer">
-                    <button type="button" class="daily-field-english-listen"
-                            onclick="speakDailyFieldEnglish()"
-                            aria-label="오늘의 영어 문장을 천천히 듣기">
-                        🔊 천천히 듣기
-                    </button>
-                    <p class="daily-field-english-hint">
-                        영어를 듣고, 발음과 뜻을 함께 따라 읽어 보세요.
-                    </p>
-                </div>
-            </div>
-        </div>
-
     </div>
 
     <div id="main-manual-card" class="dash-card" style="margin-bottom: 22px; border: 1.5px solid #f59e0b; border-radius: 12px; box-shadow: 0 3px 10px rgba(245, 158, 11, 0.12); background: var(--card-bg);">
@@ -2042,7 +2085,7 @@
                     <div>• <b>근무일지:</b> 달력 기록 · 월간 정산 · 목표 수입 달성률 · 엑셀 저장</div>
                     <div>• <b>1·2·3항업 통합:</b> 전 터미널 스케줄·차트·베이 플랜·식단표·셔틀 시간표</div>
                     <div>• <b>작업 선박 정보(등록및검색) & 기상:</b> 작업 난이도(★1~5)·장비 태그 도감 및 신항·북항 실시간 풍속</div>
-                    <div style="margin-top:6px; font-weight:900; color:#1d4ed8;">👉 접속 주소: <a href="https://busan-hak-port.web.app" target="_blank" style="color:#2563eb; text-decoration:underline;">https://busan-hak-port.web.app</a></div>
+                    <div style="margin-top:6px; font-weight:900; color:#1d4ed8;">👉 접속 주소: <a href="https://busan-hak-port-info.vercel.app" target="_blank" style="color:#2563eb; text-decoration:underline;">busan-hak-port-info.vercel.app</a></div>
                 </div>
                 <div style="display:grid; grid-template-columns:1fr; gap:8px; font-size:0.86rem;">
                     <div style="background:#eff6ff; border:1px solid #93c5fd; border-radius:8px; padding:10px 12px; color:#1e3a8a;">
@@ -2464,13 +2507,13 @@ const STATS_BLOCK_META = [
     { id: "t1-content", label: "⚓ 1항업 (북항)", color: "#334155" },
     { id: "ship-card", label: "🚢 작업 선박 정보(안전수칙/작업 정보 등록및검색)", color: "#0ea5e9" },
     { id: "notice-card", label: "📢 공지사항", color: "#ef4444" },
+    { id: "daily-field-english-card", label: "🔤 오늘의 현장 영어 한문장", color: "#0284c7" },
     { id: "board-card", label: "💬 스트레스 해소(톡톡)", color: "#6366f1" },
     { id: "archive-card", label: "📂 자료실 (셔틀버스 시간표 등)", color: "#eab308" },
     { id: "weather-card", label: "📡 날씨 및 도선 상황", color: "#06b6d4" },
     { id: "safety-card", label: "⛑️ 실전 통합 안전 지침", color: "#10b981" },
     { id: "guide-card", label: "📖 현장 실무 용어 가이드", color: "#8b5cf6" },
     { id: "privacy-center-card", label: "🛡️ 실전 보안 가이드", color: "#64748b" },
-    { id: "daily-field-english-card", label: "🔤 오늘의 현장 영어 한문장", color: "#0284c7" },
     { id: "main-manual-card", label: "🔅 앱 공유 · 사용 설명서", color: "#f59e0b" }
 ];
 const STATS_TERMINAL_META = [
@@ -4999,7 +5042,7 @@ async function shareOrCopyAppPromo() {
         "✅ 신항·북항 실시간 풍속·날씨 및 도선 현황까지!",
         "",
         "👇 아래 주소 누르셔서 바로 써보세요!",
-        "https://busan-hak-port.web.app",
+        "https://busan-hak-port-info.vercel.app",
         "",
         "💡 [휴대폰 바탕화면에 아이콘 만드는 법]",
         "• 갤럭시: 주소 접속 후 우측 메뉴(⋮ 또는 ≡) → [홈 화면에 추가]",
@@ -5012,7 +5055,7 @@ async function shareOrCopyAppPromo() {
             await navigator.share({
                 title: "부산항 스마트 작업 가이드 (BUSAN HAK PORT)",
                 text: promoText,
-                url: "https://busan-hak-port.web.app"
+                url: "https://busan-hak-port-info.vercel.app"
             });
             return;
         }
