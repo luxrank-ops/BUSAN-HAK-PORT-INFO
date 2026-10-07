@@ -785,38 +785,21 @@
             }
         }
         .daily-field-english-header {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            padding: 13px 14px 10px;
-            border-bottom: 1px dashed #bfdbfe;
+            display: flex !important;
+            flex-direction: row !important;
+            justify-content: flex-start !important;
+            align-items: center !important;
+            gap: 10px !important;
+            padding: 14px 12px !important;
+            min-height: auto !important;
         }
-        body.dark-mode .daily-field-english-header {
-            border-bottom-color: #334155;
-        }
-        .daily-field-english-icon {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            width: 38px;
-            height: 38px;
-            border-radius: 10px;
-            background: #dbeafe;
-            border: 1px solid #93c5fd;
-            font-size: 1.25rem;
-            flex-shrink: 0;
-        }
-        body.dark-mode .daily-field-english-icon {
-            background: rgba(30, 58, 138, 0.5);
-            border-color: #3b82f6;
-        }
-        .daily-field-english-copy {
+        .daily-field-english-header-copy {
             flex: 1;
             min-width: 0;
         }
         .daily-field-english-title {
             color: var(--primary);
-            font-size: 0.98rem !important;
+            font-size: 0.96rem !important;
             font-weight: 900;
             margin: 0;
             text-align: left;
@@ -829,27 +812,17 @@
             margin-top: 2px;
             line-height: 1.3;
         }
-        .daily-field-english-refresh {
-            font-size: 0.68rem;
-            font-weight: 900;
-            color: #1d4ed8;
-            background: #dbeafe;
-            border: 1px solid #93c5fd;
-            border-radius: 999px;
-            padding: 3px 8px;
-            white-space: nowrap;
-            flex-shrink: 0;
+        .daily-field-english-layout {
+            display: grid;
+            grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+            gap: 12px;
+            align-items: start;
         }
-        body.dark-mode .daily-field-english-refresh {
-            background: rgba(30, 58, 138, 0.55);
-            color: #bfdbfe;
-            border-color: #3b82f6;
-        }
-        .daily-field-english-content {
+        .daily-field-english-main {
             display: flex;
             flex-direction: column;
             gap: 10px;
-            padding: 12px 14px 14px;
+            min-width: 0;
         }
         .daily-field-english-lesson {
             background: var(--card-bg);
@@ -922,9 +895,178 @@
             font-weight: 700;
             color: var(--text-sub);
         }
+        .daily-field-english-calendar {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 10px;
+            min-width: 0;
+        }
+        .daily-field-english-calendar-header {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            margin-bottom: 8px;
+        }
+        .daily-field-english-calendar-month {
+            flex: 1;
+            text-align: center;
+            font-size: 0.86rem;
+            font-weight: 900;
+            color: var(--primary);
+        }
+        .daily-field-english-calendar-nav,
+        .daily-field-english-calendar-today {
+            border: 1px solid var(--border);
+            background: var(--bg-color);
+            color: var(--text-main);
+            border-radius: 7px;
+            padding: 4px 9px;
+            font-size: 0.76rem;
+            font-weight: 900;
+            cursor: pointer;
+            min-height: 32px;
+        }
+        .daily-field-english-calendar-today {
+            background: #eff6ff;
+            border-color: #93c5fd;
+            color: #1d4ed8;
+        }
+        body.dark-mode .daily-field-english-calendar-today {
+            background: rgba(37, 99, 235, 0.25);
+            border-color: #3b82f6;
+            color: #bfdbfe;
+        }
+        .daily-field-english-calendar-nav:disabled {
+            opacity: 0.35;
+            cursor: not-allowed;
+        }
+        .daily-field-english-weekdays {
+            display: grid;
+            grid-template-columns: repeat(7, minmax(0, 1fr));
+            gap: 4px;
+            text-align: center;
+            font-size: 0.72rem;
+            font-weight: 900;
+            color: var(--text-sub);
+            margin-bottom: 4px;
+        }
+        .daily-field-english-weekdays span:first-child {
+            color: #ef4444;
+        }
+        .daily-field-english-weekdays span:last-child {
+            color: #3b82f6;
+        }
+        .daily-field-english-calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, minmax(0, 1fr));
+            gap: 4px;
+        }
+        .daily-field-english-calendar-day,
+        .daily-field-english-calendar-empty {
+            min-height: 34px;
+            border-radius: 7px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.78rem;
+            font-weight: 800;
+        }
+        .daily-field-english-calendar-day {
+            border: 1px solid var(--border);
+            background: var(--bg-color);
+            color: var(--text-main);
+            cursor: pointer;
+            padding: 0;
+            transition: all 0.12s ease;
+        }
+        .daily-field-english-calendar-day:hover:not(:disabled) {
+            border-color: #38bdf8;
+            background: #f0f9ff;
+        }
+        body.dark-mode .daily-field-english-calendar-day:hover:not(:disabled) {
+            background: rgba(14, 165, 233, 0.2);
+        }
+        .daily-field-english-calendar-day.is-active-date {
+            border-color: #0284c7;
+            color: #0284c7;
+            font-weight: 900;
+        }
+        body.dark-mode .daily-field-english-calendar-day.is-active-date {
+            border-color: #38bdf8;
+            color: #7dd3fc;
+        }
+        .daily-field-english-calendar-day.is-selected {
+            background: var(--primary) !important;
+            border-color: var(--primary) !important;
+            color: #ffffff !important;
+            font-weight: 900;
+        }
+        .daily-field-english-calendar-day:disabled {
+            opacity: 0.32;
+            cursor: not-allowed;
+        }
+        .daily-field-english-calendar-hint {
+            margin: 8px 0 0;
+            font-size: 0.72rem;
+            font-weight: 700;
+            color: var(--text-sub);
+            text-align: center;
+            line-height: 1.35;
+        }
         @media (max-width: 680px) {
             .wage-extra-tools-grid {
                 grid-template-columns: minmax(0, 1fr);
+            }
+            .daily-field-english-layout {
+                grid-template-columns: minmax(0, 1fr);
+            }
+            .daily-field-english-main,
+            .daily-field-english-calendar {
+                min-width: 0;
+                width: 100%;
+            }
+            .daily-field-english-calendar-day,
+            .daily-field-english-calendar-empty {
+                min-height: 42px;
+            }
+        }
+        @media (max-width: 480px) {
+            .container { padding: 10px; }
+            .dash-grid { gap: 8px; }
+            .dash-content { padding: 10px 8px; }
+
+            .daily-field-english-header {
+                padding: 10px 8px !important;
+                gap: 7px !important;
+            }
+
+            .daily-field-english-title {
+                font-size: 0.88rem !important;
+                line-height: 1.2;
+            }
+
+            .daily-field-english-calendar-day,
+            .daily-field-english-calendar-nav,
+            .daily-field-english-calendar-today {
+                min-height: 42px;
+            }
+
+            .input-field {
+                min-height: 42px;
+                height: 42px !important;
+                font-size: 16px !important;
+            }
+
+            .board-table td {
+                padding: 9px 3px;
+                line-height: 1.35;
+                overflow-wrap: anywhere;
+            }
+
+            .modal-content {
+                max-height: calc(100vh - 32px);
+                max-height: calc(100dvh - 32px);
             }
         }
     </style>
@@ -1563,53 +1705,99 @@
             </div>
         </div>
 
-        <div id="daily-field-english-card" class="dash-card daily-field-english-card"
+        <div id="daily-field-english-card"
+             class="dash-card daily-field-english-card"
              aria-labelledby="dailyFieldEnglishTitle">
-            <div class="dash-header tap-effect"
-                 onclick="toggleDashItem('daily-field-english-card')"
-                 style="flex-direction: row !important; justify-content: flex-start !important; padding: 14px 12px; gap: 10px; min-height: auto;">
-                <span class="dash-icon-badge"
-                      style="background: #e0f2fe; border: 1px solid #7dd3fc;">🔤</span>
-                <div style="flex:1; min-width:0;">
-                    <div id="dailyFieldEnglishTitle" class="dash-title"
-                         style="color: var(--primary); font-size: 0.96rem !important; font-weight: 900; margin: 0; text-align: left; line-height: 1.25;">
+
+            <div class="dash-header tap-effect daily-field-english-header"
+                 onclick="toggleDashItem('daily-field-english-card')">
+                <span class="dash-icon-badge daily-field-english-icon"
+                      style="background:#e0f2fe; border:1px solid #7dd3fc;">🔤</span>
+                <div class="daily-field-english-header-copy">
+                    <div id="dailyFieldEnglishTitle"
+                         class="dash-title daily-field-english-title">
                         오늘의 현장 영어 한문장
                     </div>
-                    <div class="dash-sub-meta">
-                        항만 현장 영어 · 한국시간 매일 오전 9시 업데이트
+                    <div class="dash-sub-meta daily-field-english-subtitle">
+                        매일 09:00 업데이트 (한국시간)
                     </div>
                 </div>
             </div>
 
             <div class="dash-content">
-                <div class="daily-field-english-lesson" aria-live="polite" aria-atomic="true">
-                    <div id="dailyFieldEnglishDate" class="daily-field-english-date">오늘의 문장</div>
-                    <p id="dailyFieldEnglishSentence" class="daily-field-english-sentence">
-                        Please wait here.
-                    </p>
-                    <p class="daily-field-english-pronunciation">
-                        <span aria-hidden="true">🔡 읽는 법: </span>
-                        <span id="dailyFieldEnglishPronunciation">플리즈 웨잇 히어</span>
-                    </p>
-                    <p class="daily-field-english-meaning">
-                        <strong>뜻:</strong>
-                        <span id="dailyFieldEnglishMeaning">여기서 기다려 주세요.</span>
-                    </p>
-                    <p class="daily-field-english-vocab">
-                        <strong>오늘의 단어:</strong>
-                        <span id="dailyFieldEnglishWord">wait = 기다리다</span>
-                    </p>
-                </div>
+                <div class="daily-field-english-layout">
+                    <div class="daily-field-english-main">
+                        <div class="daily-field-english-lesson"
+                             aria-live="polite"
+                             aria-atomic="true">
+                            <div id="dailyFieldEnglishDate"
+                                 class="daily-field-english-date">오늘의 문장</div>
+                            <p id="dailyFieldEnglishSentence"
+                               class="daily-field-english-sentence">Please wait here.</p>
+                            <p class="daily-field-english-pronunciation">
+                                <span aria-hidden="true">🔡 읽는 법: </span>
+                                <span id="dailyFieldEnglishPronunciation">플리즈 웨잇 히어</span>
+                            </p>
+                            <p class="daily-field-english-meaning">
+                                <strong>뜻:</strong>
+                                <span id="dailyFieldEnglishMeaning">여기서 기다려 주세요.</span>
+                            </p>
+                            <p class="daily-field-english-vocab">
+                                <strong>오늘의 단어:</strong>
+                                <span id="dailyFieldEnglishWord">wait = 기다리다</span>
+                            </p>
+                        </div>
 
-                <div class="daily-field-english-footer">
-                    <button type="button" class="daily-field-english-listen"
-                            onclick="speakDailyFieldEnglish()"
-                            aria-label="오늘의 영어 문장을 천천히 듣기">
-                        🔊 천천히 듣기
-                    </button>
-                    <p class="daily-field-english-hint">
-                        영어를 듣고, 발음과 뜻을 함께 따라 읽어 보세요.
-                    </p>
+                        <div class="daily-field-english-footer">
+                            <button type="button"
+                                    class="daily-field-english-listen"
+                                    onclick="speakDailyFieldEnglish()"
+                                    aria-label="선택한 영어 문장을 천천히 듣기">
+                                🔊 천천히 듣기
+                            </button>
+                            <p class="daily-field-english-hint">
+                                영어를 듣고, 발음과 뜻을 함께 따라 읽어 보세요.
+                            </p>
+                        </div>
+                    </div>
+
+                    <section class="daily-field-english-calendar"
+                             aria-label="날짜별 현장 영어 문장 복습">
+                        <div class="daily-field-english-calendar-header">
+                            <button type="button"
+                                    id="dailyFieldEnglishPrevMonth"
+                                    class="daily-field-english-calendar-nav"
+                                    onclick="changeDailyFieldEnglishMonth(-1)"
+                                    aria-label="이전 달">‹</button>
+
+                            <div id="dailyFieldEnglishCalendarMonth"
+                                 class="daily-field-english-calendar-month">2026년 10월</div>
+
+                            <button type="button"
+                                    class="daily-field-english-calendar-today"
+                                    onclick="showDailyFieldEnglishToday()">오늘</button>
+
+                            <button type="button"
+                                    id="dailyFieldEnglishNextMonth"
+                                    class="daily-field-english-calendar-nav"
+                                    onclick="changeDailyFieldEnglishMonth(1)"
+                                    aria-label="다음 달">›</button>
+                        </div>
+
+                        <div class="daily-field-english-weekdays" aria-hidden="true">
+                            <span>일</span><span>월</span><span>화</span><span>수</span>
+                            <span>목</span><span>금</span><span>토</span>
+                        </div>
+
+                        <div id="dailyFieldEnglishCalendarGrid"
+                             class="daily-field-english-calendar-grid"
+                             aria-label="날짜를 선택해 문장 복습"></div>
+
+                        <p id="dailyFieldEnglishCalendarHint"
+                           class="daily-field-english-calendar-hint">
+                            날짜를 누르면 해당 날짜의 문장을 확인할 수 있습니다.
+                        </p>
+                    </section>
                 </div>
             </div>
         </div>
@@ -6961,6 +7149,12 @@ const DAILY_FIELD_ENGLISH_PHRASES = [
 const DAILY_FIELD_ENGLISH_TIME_ZONE = "Asia/Seoul";
 const DAILY_FIELD_ENGLISH_UPDATE_HOUR = 9;
 const DAILY_FIELD_ENGLISH_CYCLE_START = Date.UTC(2026, 0, 1);
+const DAILY_FIELD_ENGLISH_FIRST_DATE_KEY = "2026-01-01";
+
+let dailyFieldEnglishSelectedDateKey = "";
+let dailyFieldEnglishActiveDateKey = "";
+let dailyFieldEnglishCalendarYear = null;
+let dailyFieldEnglishCalendarMonth = null;
 let dailyFieldEnglishUpdateTimer = null;
 let dailyFieldEnglishInitialized = false;
 
@@ -6983,40 +7177,68 @@ function getKoreaDateTimeParts(date = new Date()) {
     return values;
 }
 
-function getDailyFieldEnglishSnapshot(date = new Date()) {
-    const koreaTime = getKoreaDateTimeParts(date);
-    const effectiveDate = new Date(Date.UTC(
-        koreaTime.year,
-        koreaTime.month - 1,
-        koreaTime.day
-    ));
+function formatDailyFieldEnglishDateKey(year, month, day) {
+    return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+}
 
-    // 오전 9시 전에는 이전 날짜의 문장을 유지합니다.
-    if (koreaTime.hour < DAILY_FIELD_ENGLISH_UPDATE_HOUR) {
-        effectiveDate.setUTCDate(effectiveDate.getUTCDate() - 1);
-    }
+function getDailyFieldEnglishSnapshotForDateKey(dateKey) {
+    const [year, month, day] = String(dateKey || "").split("-").map(Number);
+    if (
+        !Number.isInteger(year) ||
+        !Number.isInteger(month) ||
+        !Number.isInteger(day) ||
+        month < 1 || month > 12 ||
+        day < 1 || day > 31
+    ) return null;
+
+    const effectiveDate = new Date(Date.UTC(year, month - 1, day));
+    if (
+        effectiveDate.getUTCFullYear() !== year ||
+        effectiveDate.getUTCMonth() + 1 !== month ||
+        effectiveDate.getUTCDate() !== day
+    ) return null;
 
     const daysSinceCycleStart = Math.floor(
         (effectiveDate.getTime() - DAILY_FIELD_ENGLISH_CYCLE_START) / 86400000
     );
     const phraseIndex =
-        ((daysSinceCycleStart % DAILY_FIELD_ENGLISH_PHRASES.length)
-        + DAILY_FIELD_ENGLISH_PHRASES.length)
-        % DAILY_FIELD_ENGLISH_PHRASES.length;
+        ((daysSinceCycleStart % DAILY_FIELD_ENGLISH_PHRASES.length) +
+            DAILY_FIELD_ENGLISH_PHRASES.length) %
+        DAILY_FIELD_ENGLISH_PHRASES.length;
 
     return {
-        year: effectiveDate.getUTCFullYear(),
-        month: effectiveDate.getUTCMonth() + 1,
-        day: effectiveDate.getUTCDate(),
+        dateKey: formatDailyFieldEnglishDateKey(year, month, day),
+        year,
+        month,
+        day,
         phrase: DAILY_FIELD_ENGLISH_PHRASES[phraseIndex]
     };
 }
 
-function renderDailyFieldEnglish(date = new Date()) {
+function getDailyFieldEnglishSnapshot(date = new Date()) {
+    const koreaTime = getKoreaDateTimeParts(date);
+    const effectiveDate = new Date(
+        Date.UTC(koreaTime.year, koreaTime.month - 1, koreaTime.day)
+    );
+
+    if (koreaTime.hour < DAILY_FIELD_ENGLISH_UPDATE_HOUR) {
+        effectiveDate.setUTCDate(effectiveDate.getUTCDate() - 1);
+    }
+
+    const dateKey = formatDailyFieldEnglishDateKey(
+        effectiveDate.getUTCFullYear(),
+        effectiveDate.getUTCMonth() + 1,
+        effectiveDate.getUTCDate()
+    );
+
+    return getDailyFieldEnglishSnapshotForDateKey(dateKey);
+}
+
+function updateDailyFieldEnglishLesson(snapshot) {
+    if (!snapshot) return;
+
     const sentenceEl = document.getElementById("dailyFieldEnglishSentence");
-    if (!sentenceEl) return;
-    const snapshot = getDailyFieldEnglishSnapshot(date);
-    sentenceEl.textContent = snapshot.phrase.sentence;
+    if (sentenceEl) sentenceEl.textContent = snapshot.phrase.sentence;
     const pronEl = document.getElementById("dailyFieldEnglishPronunciation");
     if (pronEl) pronEl.textContent = snapshot.phrase.pronunciation;
     const meanEl = document.getElementById("dailyFieldEnglishMeaning");
@@ -7025,6 +7247,154 @@ function renderDailyFieldEnglish(date = new Date()) {
     if (wordEl) wordEl.textContent = snapshot.phrase.word;
     const dateEl = document.getElementById("dailyFieldEnglishDate");
     if (dateEl) dateEl.textContent = `${snapshot.year}년 ${snapshot.month}월 ${snapshot.day}일 문장`;
+
+    const hintEl = document.getElementById("dailyFieldEnglishCalendarHint");
+    if (hintEl) {
+        hintEl.innerHTML = snapshot.dateKey === dailyFieldEnglishActiveDateKey
+            ? "<strong>현재 문장</strong> · 날짜를 눌러 지난 문장을 복습하세요."
+            : `${snapshot.month}월 ${snapshot.day}일 문장을 복습 중입니다.`;
+    }
+}
+
+function renderDailyFieldEnglishCalendar() {
+    const grid = document.getElementById("dailyFieldEnglishCalendarGrid");
+    const monthLabel = document.getElementById("dailyFieldEnglishCalendarMonth");
+    if (!grid || !monthLabel || !dailyFieldEnglishActiveDateKey) return;
+
+    const activeSnapshot = getDailyFieldEnglishSnapshotForDateKey(
+        dailyFieldEnglishActiveDateKey
+    );
+    if (!activeSnapshot) return;
+
+    const year = dailyFieldEnglishCalendarYear;
+    const month = dailyFieldEnglishCalendarMonth;
+    const firstWeekday = new Date(Date.UTC(year, month - 1, 1)).getUTCDay();
+    const daysInMonth = new Date(Date.UTC(year, month, 0)).getUTCDate();
+    const activeMonth = Date.UTC(activeSnapshot.year, activeSnapshot.month - 1, 1);
+    const visibleMonth = Date.UTC(year, month - 1, 1);
+
+    monthLabel.textContent = `${year}년 ${month}월`;
+    const prevBtn = document.getElementById("dailyFieldEnglishPrevMonth");
+    if (prevBtn) prevBtn.disabled = visibleMonth <= Date.UTC(2026, 0, 1);
+    const nextBtn = document.getElementById("dailyFieldEnglishNextMonth");
+    if (nextBtn) nextBtn.disabled = visibleMonth >= activeMonth;
+
+    const cells = [];
+    for (let blank = 0; blank < firstWeekday; blank++) {
+        cells.push('<span class="daily-field-english-calendar-empty" aria-hidden="true"></span>');
+    }
+
+    for (let day = 1; day <= daysInMonth; day++) {
+        const dateKey = formatDailyFieldEnglishDateKey(year, month, day);
+        const isSelected = dateKey === dailyFieldEnglishSelectedDateKey;
+        const isActiveDate = dateKey === dailyFieldEnglishActiveDateKey;
+        const isDisabled =
+            dateKey < DAILY_FIELD_ENGLISH_FIRST_DATE_KEY ||
+            dateKey > dailyFieldEnglishActiveDateKey;
+
+        const classes = ["daily-field-english-calendar-day"];
+        if (isSelected) classes.push("is-selected");
+        if (isActiveDate) classes.push("is-active-date");
+
+        cells.push(
+            `<button type="button"
+                class="${classes.join(" ")}"
+                onclick="selectDailyFieldEnglishDate('${dateKey}')"
+                aria-pressed="${isSelected ? "true" : "false"}"
+                ${isDisabled ? "disabled" : ""}>${day}</button>`
+        );
+    }
+
+    while (cells.length % 7 !== 0) {
+        cells.push('<span class="daily-field-english-calendar-empty" aria-hidden="true"></span>');
+    }
+
+    grid.innerHTML = cells.join("");
+}
+
+function selectDailyFieldEnglishDate(dateKey) {
+    if (
+        !dateKey ||
+        dateKey < DAILY_FIELD_ENGLISH_FIRST_DATE_KEY ||
+        dateKey > dailyFieldEnglishActiveDateKey
+    ) return;
+
+    const snapshot = getDailyFieldEnglishSnapshotForDateKey(dateKey);
+    if (!snapshot) return;
+
+    dailyFieldEnglishSelectedDateKey = dateKey;
+    if (window.speechSynthesis) window.speechSynthesis.cancel();
+
+    updateDailyFieldEnglishLesson(snapshot);
+    renderDailyFieldEnglishCalendar();
+}
+
+function changeDailyFieldEnglishMonth(offset) {
+    const target = new Date(Date.UTC(
+        dailyFieldEnglishCalendarYear,
+        dailyFieldEnglishCalendarMonth - 1 + offset,
+        1
+    ));
+
+    const targetMonth = Date.UTC(target.getUTCFullYear(), target.getUTCMonth(), 1);
+    const activeSnapshot = getDailyFieldEnglishSnapshotForDateKey(
+        dailyFieldEnglishActiveDateKey
+    );
+    if (!activeSnapshot) return;
+    const activeMonth = Date.UTC(
+        activeSnapshot.year,
+        activeSnapshot.month - 1,
+        1
+    );
+
+    if (targetMonth < Date.UTC(2026, 0, 1) || targetMonth > activeMonth) return;
+
+    dailyFieldEnglishCalendarYear = target.getUTCFullYear();
+    dailyFieldEnglishCalendarMonth = target.getUTCMonth() + 1;
+    renderDailyFieldEnglishCalendar();
+}
+
+function showDailyFieldEnglishToday() {
+    const currentSnapshot = getDailyFieldEnglishSnapshot();
+    if (!currentSnapshot) return;
+
+    dailyFieldEnglishActiveDateKey = currentSnapshot.dateKey;
+    dailyFieldEnglishSelectedDateKey = currentSnapshot.dateKey;
+    dailyFieldEnglishCalendarYear = currentSnapshot.year;
+    dailyFieldEnglishCalendarMonth = currentSnapshot.month;
+
+    updateDailyFieldEnglishLesson(currentSnapshot);
+    renderDailyFieldEnglishCalendar();
+}
+
+function renderDailyFieldEnglish(date = new Date()) {
+    const currentSnapshot = getDailyFieldEnglishSnapshot(date);
+    if (!currentSnapshot) return;
+
+    const previousActiveDateKey = dailyFieldEnglishActiveDateKey;
+    dailyFieldEnglishActiveDateKey = currentSnapshot.dateKey;
+
+    if (
+        !dailyFieldEnglishSelectedDateKey ||
+        dailyFieldEnglishSelectedDateKey === previousActiveDateKey ||
+        dailyFieldEnglishSelectedDateKey > currentSnapshot.dateKey
+    ) {
+        dailyFieldEnglishSelectedDateKey = currentSnapshot.dateKey;
+        dailyFieldEnglishCalendarYear = currentSnapshot.year;
+        dailyFieldEnglishCalendarMonth = currentSnapshot.month;
+    }
+
+    if (!dailyFieldEnglishCalendarYear || !dailyFieldEnglishCalendarMonth) {
+        dailyFieldEnglishCalendarYear = currentSnapshot.year;
+        dailyFieldEnglishCalendarMonth = currentSnapshot.month;
+    }
+
+    const selectedSnapshot =
+        getDailyFieldEnglishSnapshotForDateKey(dailyFieldEnglishSelectedDateKey) ||
+        currentSnapshot;
+
+    updateDailyFieldEnglishLesson(selectedSnapshot);
+    renderDailyFieldEnglishCalendar();
 }
 
 function scheduleDailyFieldEnglishUpdate() {
