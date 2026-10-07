@@ -119,6 +119,12 @@
 
         .input-field { width: 100%; padding: 0 12px; margin-bottom: 0; border: 1.5px solid var(--border); border-radius: 8px; background: var(--card-bg); color: var(--text-main); font-size: clamp(0.95rem, 3.4vw, 1.05rem); height: 44px; text-align: right; font-weight: 800; font-variant-numeric: tabular-nums; display: flex; align-items: center; box-sizing: border-box; appearance: none; transition: border-color 0.15s ease, box-shadow 0.15s ease; }
         .input-field:focus { outline: none; border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15); }
+        .board-nickname-row { display: flex; align-items: stretch; gap: 6px; min-width: 0; }
+        #boardForm .board-nickname-row .input-field { width: auto !important; min-width: 0; }
+        .board-nickname-random-btn { flex: 0 0 auto; border: 1px solid #bfdbfe; border-radius: 8px; padding: 0 11px; background: #eff6ff; color: #1d4ed8; font-size: 0.82rem; font-weight: 900; cursor: pointer; white-space: nowrap; touch-action: manipulation; }
+        .board-nickname-random-btn:hover, .board-nickname-random-btn:focus-visible { background: #dbeafe; outline: 2px solid rgba(37, 99, 235, 0.25); }
+        .board-nickname-hint { margin: 5px 2px 8px; color: var(--text-sub); font-size: 0.75rem; font-weight: 700; line-height: 1.4; }
+        body.dark-mode .board-nickname-random-btn { background: #1e3a8a; border-color: #3b82f6; color: #dbeafe; }
         input[type="date"].input-field { position: relative; cursor: pointer; text-align: center !important; display: inline-flex; justify-content: center; -webkit-appearance: none; appearance: none; }
         input[type="date"].input-field::-webkit-calendar-picker-indicator { position: absolute; top: 0; left: 0; right: 0; bottom: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; margin: 0; padding: 0; z-index: 2; }
         .date-touch-block { cursor: pointer; padding: 6px 8px; border-radius: 8px; background: rgba(255, 255, 255, 0.65); border: 1.5px solid rgba(59, 130, 246, 0.28); transition: background 0.15s ease, border-color 0.15s ease, transform 0.1s ease; user-select: none; }
@@ -1927,12 +1933,14 @@
                     <tbody id="boardList"></tbody>
                 </table>
                 <div id="pagination" style="display:flex; justify-content:center; gap:5px; margin-top:10px; margin-bottom: 15px;"></div>
-                <button class="action-btn" style="background:var(--text-sub); margin-bottom:10px;" onclick="toggleHidden('boardForm')">✍️ 글쓰기</button>
+                <button class="action-btn" style="background:var(--text-sub); margin-bottom:10px;" onclick="toggleBoardForm()">✍️ 글쓰기</button>
                 <div id="boardForm" class="hidden">
-                    <div style="display:flex; gap:5px;">
-                        <input type="text" id="inputNick" class="input-field" placeholder="닉네임" style="flex:1;">
-                        <input type="password" id="inputPw" class="input-field" placeholder="비밀번호" style="flex:1;">
+                    <div class="board-nickname-row">
+                        <input type="text" id="inputNick" class="input-field" placeholder="닉네임 (직접 입력 가능)" maxlength="50" autocomplete="nickname" style="flex:1; text-align:left;">
+                        <button type="button" class="board-nickname-random-btn" onclick="refreshBoardNickname()" aria-label="항만용어 닉네임 다시 뽑기" title="항만용어 닉네임 다시 뽑기">🎲 새 닉네임</button>
                     </div>
+                    <p class="board-nickname-hint">⚓ 항만용어 닉네임이 자동 입력됩니다. 원하면 직접 수정할 수 있어요.</p>
+                    <input type="password" id="inputPw" class="input-field" placeholder="비밀번호">
                     <input type="text" id="inputTitle" class="input-field" placeholder="제목">
                     <textarea id="inputContent" class="input-field textarea-field" placeholder="내용"></textarea>
                     <button class="action-btn bg-submit" onclick="addPost()">등록</button>
@@ -6509,7 +6517,106 @@ function resetWageForm() {
 }
 let currentEditNoticeId = null; let currentEditNoticeImg = null; function autoLink(text) { if (!text) return ""; const urlRegex = /(https?:\/\/[^\s]+)/g; return text.replace(urlRegex, function(url) { return `<a href="${url}" target="_blank" style="color:#2563eb; text-decoration:underline; font-weight:bold;">${url}</a>`; }); } async function startEditNotice(id, title, content, imgUrl, e) { e.stopPropagation(); if (!(await verifyAdmin())) return; currentEditNoticeId = id; currentEditNoticeImg = imgUrl; document.getElementById('noticeTitle').value = title; document.getElementById('noticeContent').value = content.replace(/\\n/g, '\n'); document.getElementById('noticeFileInput').value = ''; document.getElementById('noticeForm').classList.remove('hidden'); document.getElementById('noticeSubmitBtn').innerText = "수정 완료"; document.getElementById('noticeSubmitBtn').style.background = "var(--primary)"; document.getElementById('noticeCancelBtn').style.display = "block"; document.getElementById('noticeForm').scrollIntoView({behavior: 'smooth', block: 'center'}); } function cancelEditNotice() { currentEditNoticeId = null; currentEditNoticeImg = null; document.getElementById('noticeTitle').value = ''; document.getElementById('noticeContent').value = ''; document.getElementById('noticeFileInput').value = ''; document.getElementById('noticeSubmitBtn').innerText = "등록 완료"; document.getElementById('noticeSubmitBtn').style.background = "var(--success)"; document.getElementById('noticeCancelBtn').style.display = "none"; document.getElementById('noticeForm').classList.add('hidden'); } async function saveNotice() { if (!(await verifyAdmin())) return; const t = document.getElementById('noticeTitle').value.trim(); const c = document.getElementById('noticeContent').value.trim(); const f = document.getElementById('noticeFileInput').files[0]; const btn = document.getElementById('noticeSubmitBtn'); if (!t || !c) { alert("공지 제목과 내용을 입력해 주세요."); return; } btn.innerText = "서버 기록 중..."; btn.disabled = true; const finalize = (url) => { const data = { title: t, content: c, timestamp: firebase.firestore.FieldValue.serverTimestamp() }; if (url) { data.imageUrl = url; } else if (currentEditNoticeId && currentEditNoticeImg) { data.imageUrl = currentEditNoticeImg; } else { data.imageUrl = null; } let req; if (currentEditNoticeId) { req = db.collection("notices").doc(currentEditNoticeId).update(data); } else { req = db.collection("notices").add(data); } req.then(() => { const isEdit = !!currentEditNoticeId; cancelEditNotice(); showToast(isEdit ? "공지가 수정되었습니다." : "공지가 등록되었습니다."); }).catch(err => { alert("저장 실패: " + err.message); btn.innerText = currentEditNoticeId ? "수정 완료" : "등록 완료"; btn.disabled = false; }); }; if (f) { const storageRef = storage.ref(`notices/${Date.now()}_${f.name}`); const uploadTask = storageRef.put(f); uploadTask.on('state_changed', (snap) => { const percent = Math.round((snap.bytesTransferred / snap.totalBytes) * 100); btn.innerText = `사진 업로드 중... ${percent}%`; }, (err) => { alert("사진 업로드 실패: " + err.message); btn.disabled = false; btn.innerText = currentEditNoticeId ? "수정 완료" : "등록 완료"; }, () => { uploadTask.snapshot.ref.getDownloadURL().then(url => finalize(url)); }); } else { finalize(null); } } function delNotice(id,e){ e.stopPropagation(); verifyAdmin().then(r=>{ if(r) db.collection("notices").doc(id).delete(); }); }
 
-async function addPost() { const nickVal = document.getElementById('inputNick').value.trim(); const titleVal = document.getElementById('inputTitle').value.trim(); const pwVal = document.getElementById('inputPw').value.trim(); const contentVal = document.getElementById('inputContent').value.trim(); const btnEl = document.querySelector('#boardForm .bg-submit'); if (nickVal && titleVal && pwVal && contentVal) { btnEl.innerText = "처리 중..."; btnEl.disabled = true; const pwHash = (/^[a-f0-9]{64}$/i.test(pwVal)) ? pwVal.toLowerCase() : (await sha256Hex(pwVal)); const postData = { nick: nickVal, title: titleVal, password: pwHash, content: contentVal, timestamp: firebase.firestore.FieldValue.serverTimestamp() }; if (currentEditPostId) { db.collection("posts").doc(currentEditPostId).update(postData).then(() => { resetBoardForm(); showToast("게시글이 수정되었습니다."); }).catch((e) => { alert("수정 실패"); btnEl.innerText = "수정 완료"; btnEl.disabled = false; }); } else { db.collection("posts").add(postData).then(() => { resetBoardForm(); showToast("게시글이 등록되었습니다."); }).catch((e) => { alert("등록 실패"); btnEl.innerText = "등록"; btnEl.disabled = false; }); } } else alert("모든 항목을 입력해 주세요."); }
+const PORT_NICKNAME_STORAGE_KEY = "busanHakPortBoardNickname";
+const PORT_NICKNAME_OPTIONS = [
+    "부산항 도선사", "신항 도선사", "북항 예선장", "선석 지킴이",
+    "컨테이너 포맨", "야드 검수원", "라싱 반장", "크레인 운전원",
+    "샤시 기사", "부두 하역반장", "접안 안내원", "갠트리 크레인 기사",
+    "RTGC 조종수", "리치스태커 기사", "본선 작업자", "화물 고박 담당",
+    "터미널 배차원", "적재 검수원", "양하 작업자", "항만 안전요원",
+    "신항 장비반장", "북항 포맨", "벌크 하역 작업자", "갑판 작업자",
+    "야드 트랙터 기사", "선석 배정 담당", "컨테이너 기사", "하역 작업반장"
+];
+
+function pickPortNickname(previousNickname = "") {
+    const options = PORT_NICKNAME_OPTIONS.filter(nickname => nickname !== previousNickname);
+    const availableOptions = options.length ? options : PORT_NICKNAME_OPTIONS;
+    return availableOptions[Math.floor(Math.random() * availableOptions.length)];
+}
+
+function getPortNickname(forceNew = false) {
+    let savedNickname = "";
+    try {
+        savedNickname = localStorage.getItem(PORT_NICKNAME_STORAGE_KEY) || "";
+    } catch (error) {
+        // Private browsing settings may block localStorage; generation still works for this visit.
+    }
+
+    if (!forceNew && PORT_NICKNAME_OPTIONS.includes(savedNickname)) return savedNickname;
+
+    const nickname = pickPortNickname(savedNickname);
+    try {
+        localStorage.setItem(PORT_NICKNAME_STORAGE_KEY, nickname);
+    } catch (error) {
+        // Keep the generated nickname in the current form even when it cannot be persisted.
+    }
+    return nickname;
+}
+
+function toggleBoardForm() {
+    const form = document.getElementById("boardForm");
+    if (!form) return;
+
+    const isOpening = form.classList.contains("hidden");
+    if (isOpening && !currentEditPostId) {
+        const nicknameInput = document.getElementById("inputNick");
+        if (nicknameInput && !nicknameInput.value.trim()) {
+            nicknameInput.value = getPortNickname();
+        }
+    }
+    form.classList.toggle("hidden");
+}
+
+function refreshBoardNickname() {
+    const nicknameInput = document.getElementById("inputNick");
+    if (!nicknameInput) return;
+    nicknameInput.value = getPortNickname(true);
+    nicknameInput.focus();
+}
+
+async function addPost() {
+    const nickVal = document.getElementById("inputNick").value.trim();
+    const titleVal = document.getElementById("inputTitle").value.trim();
+    const pwVal = document.getElementById("inputPw").value.trim();
+    const contentVal = document.getElementById("inputContent").value.trim();
+    const btnEl = document.querySelector("#boardForm .bg-submit");
+
+    if (!nickVal || !titleVal || !pwVal || !contentVal) {
+        alert("모든 항목을 입력해 주세요.");
+        return;
+    }
+
+    btnEl.innerText = "처리 중...";
+    btnEl.disabled = true;
+    const pwHash = (/^[a-f0-9]{64}$/i.test(pwVal)) ? pwVal.toLowerCase() : (await sha256Hex(pwVal));
+    const postData = {
+        nick: nickVal,
+        title: titleVal,
+        password: pwHash,
+        content: contentVal,
+        timestamp: firebase.firestore.FieldValue.serverTimestamp()
+    };
+
+    if (currentEditPostId) {
+        db.collection("posts").doc(currentEditPostId).update(postData).then(() => {
+            resetBoardForm();
+            showToast("게시글이 수정되었습니다.");
+        }).catch(() => {
+            alert("수정 실패");
+            btnEl.innerText = "수정 완료";
+            btnEl.disabled = false;
+        });
+    } else {
+        db.collection("posts").add(postData).then(() => {
+            resetBoardForm();
+            showToast("게시글이 등록되었습니다.");
+        }).catch(() => {
+            alert("등록 실패");
+            btnEl.innerText = "등록";
+            btnEl.disabled = false;
+        });
+    }
+}
 function resetBoardForm() { document.getElementById('inputNick').value = ''; document.getElementById('inputTitle').value = ''; document.getElementById('inputPw').value = ''; document.getElementById('inputContent').value = ''; document.getElementById('boardForm').classList.add('hidden'); const btnEl = document.querySelector('#boardForm .bg-submit'); if(btnEl) { btnEl.innerText = "등록"; btnEl.disabled = false; } currentEditPostId = null; }
 async function tryEditPost(id, savedPw, nick, title, content, e) { e.stopPropagation(); const inputPw = prompt("게시글 비밀번호를 입력하세요:"); if (inputPw === null) return; if (await verifyPasswordMatch(inputPw, savedPw)) { currentEditPostId = id; document.getElementById('inputNick').value = nick; document.getElementById('inputPw').value = inputPw.trim(); document.getElementById('inputTitle').value = title; document.getElementById('inputContent').value = content; document.getElementById('boardForm').classList.remove('hidden'); document.querySelector('#boardForm .bg-submit').innerText = "수정 완료"; document.getElementById('boardForm').scrollIntoView({behavior: 'smooth', block: 'center'}); showToast("수정 모드로 전환되었습니다."); } else alert("⚠️ 비밀번호가 일치하지 않습니다."); }
 async function deletePost(id,pw,e){ e.stopPropagation(); const inputPw = prompt("게시글 비밀번호를 입력하세요:"); if (inputPw === null) return; if(await verifyPasswordMatch(inputPw, pw) || await verifyAdmin()) db.collection("posts").doc(id).delete(); } 
@@ -7057,7 +7164,7 @@ function filterShips() {
 }
 function addArchive() { const t = document.getElementById('archiveTitle').value.trim(); const f = document.getElementById('archiveFile').files[0]; const btn = document.getElementById('archiveSubmitBtn'); if(!t || !f) return alert("파일 설명과 파일을 모두 선택해 주세요."); btn.innerText = "서버 연결 중..."; btn.disabled = true; const ref = storage.ref(`archives/${Date.now()}_${f.name}`); const task = ref.put(f); task.on('state_changed', (s) => { const p = Math.round((s.bytesTransferred / s.totalBytes) * 100); btn.innerText = `업로드 중... ${p}%`; }, (e) => { alert("업로드 실패: " + e.message); btn.disabled = false; btn.innerText = "업로드 완료"; }, () => { task.snapshot.ref.getDownloadURL().then(url => { db.collection("archives").add({ title: t, url: url, timestamp: firebase.firestore.FieldValue.serverTimestamp() }).then(() => { document.getElementById('archiveTitle').value = ""; document.getElementById('archiveFile').value = ""; toggleHidden('archiveForm'); btn.innerText = "업로드 완료"; btn.disabled = false; showToast("파일이 성공적으로 등록되었습니다!"); }); }); } ); } async function deleteShip(id,e){e.stopPropagation(); if(await verifyAdmin()) db.collection("ships").doc(id).delete();} function delArchive(id,e){ e.stopPropagation(); verifyAdmin().then(r=>{ if(r) db.collection("archives").doc(id).delete(); }); } 
 
-function renderBoardPage(p){ currentBoardPage = p; const l = document.getElementById("boardList"); Object.values(commentUnsubscribes).forEach(unsub => { if (typeof unsub === "function") unsub(); }); commentUnsubscribes = {}; l.innerHTML = ""; const start = (p-1) * postsPerPage; const end = start + postsPerPage; const pageData = allPostsData.slice(start, end); if(pageData.length === 0) { l.innerHTML = "<tr><td colspan='4' style='text-align:center; padding:20px; color:var(--text-sub); font-weight:700;'>게시글이 없습니다.</td></tr>"; document.getElementById("pagination").innerHTML = ""; return; } const rowsHtml = []; pageData.forEach((x, i) => { let dateStr = ""; if(x.timestamp) { const d = x.timestamp.toDate(); const month = String(d.getMonth() + 1).padStart(2, '0'); const day = String(d.getDate()).padStart(2, '0'); const hour = String(d.getHours()).padStart(2, '0'); const min = String(d.getMinutes()).padStart(2, '0'); dateStr = `${month}/${day} ${hour}:${min}`; } const rowId = `p-${x.id}`; const authorName = x.nick || '익명'; const postNum = allPostsData.length - ((currentBoardPage - 1) * postsPerPage) - i; const safeTitle = (x.title || '').replace(/'/g, "\\'").replace(/"/g, "&quot;"); const safeContent = (x.content || '').replace(/'/g, "\\'").replace(/"/g, "&quot;").replace(/\n/g, "\\n"); rowsHtml.push(`<tr onclick="toggleBoardRow('${rowId}')" style="cursor:pointer;"> <td class="board-no">${postNum}</td> <td class="board-title">${x.title} <span id="cmt-badge-${x.id}" class="cmt-count-pill hidden"></span> <span style="font-size:0.75rem; color:var(--primary); margin-left:4px;">▼</span></td> <td class="board-date">${dateStr}</td> <td class="board-nick">${authorName}</td> </tr> <tr id="${rowId}" class="board-content-row"> <td colspan="4" class="board-content-box"> <div style="margin-bottom:15px; font-weight:600; background:var(--card-bg); padding:12px; border-radius:8px; border:1px solid var(--border);">${x.content}</div> <div style="text-align:right; border-bottom:1px dashed var(--border); padding-bottom:10px; margin-bottom:10px;"> <button class="mini-btn" style="background:var(--primary-light) !important; color:white !important;" onclick="tryEditPost('${x.id}', '${x.password}', '${authorName}', '${safeTitle}', '${safeContent}', event)">✏️ 수정</button> <button class="mini-btn btn-del" onclick="deletePost('${x.id}','${x.password}',event)">🗑️ 삭제</button> </div> <div id="cmt-list-${x.id}" class="comment-section"></div> <div class="comment-form"> <input id="cmt-name-${x.id}" class="comment-input-sm" placeholder="닉네임"> <input id="cmt-pw-${x.id}" class="comment-input-sm" type="password" placeholder="비밀번호"> <input id="cmt-txt-${x.id}" class="comment-input-lg" placeholder="따뜻한 댓글을 남겨주세요..."> <button class="comment-submit" onclick="addComment('${x.id}')">댓글 등록</button> </div> </td> </tr>`); }); l.innerHTML = rowsHtml.join(""); pageData.forEach(x => loadComments(x.id)); renderPagination(p); } 
+function renderBoardPage(p){ currentBoardPage = p; const l = document.getElementById("boardList"); Object.values(commentUnsubscribes).forEach(unsub => { if (typeof unsub === "function") unsub(); }); commentUnsubscribes = {}; l.innerHTML = ""; const start = (p-1) * postsPerPage; const end = start + postsPerPage; const pageData = allPostsData.slice(start, end); if(pageData.length === 0) { l.innerHTML = "<tr><td colspan='4' style='text-align:center; padding:20px; color:var(--text-sub); font-weight:700;'>게시글이 없습니다.</td></tr>"; document.getElementById("pagination").innerHTML = ""; return; } const rowsHtml = []; pageData.forEach((x, i) => { let dateStr = ""; if(x.timestamp) { const d = x.timestamp.toDate(); const month = String(d.getMonth() + 1).padStart(2, '0'); const day = String(d.getDate()).padStart(2, '0'); const hour = String(d.getHours()).padStart(2, '0'); const min = String(d.getMinutes()).padStart(2, '0'); dateStr = `${month}/${day} ${hour}:${min}`; } const rowId = `p-${x.id}`; const authorName = x.nick || '익명'; const postNum = allPostsData.length - ((currentBoardPage - 1) * postsPerPage) - i; const safeTitle = (x.title || '').replace(/'/g, "\\'").replace(/"/g, "&quot;"); const safeContent = (x.content || '').replace(/'/g, "\\'").replace(/"/g, "&quot;").replace(/\n/g, "\\n"); rowsHtml.push(`<tr onclick="toggleBoardRow('${rowId}')" style="cursor:pointer;"> <td class="board-no">${postNum}</td> <td class="board-title">${x.title} <span id="cmt-badge-${x.id}" class="cmt-count-pill hidden"></span> <span style="font-size:0.75rem; color:var(--primary); margin-left:4px;">▼</span></td> <td class="board-date">${dateStr}</td> <td class="board-nick">${authorName}</td> </tr> <tr id="${rowId}" class="board-content-row"> <td colspan="4" class="board-content-box"> <div style="margin-bottom:15px; font-weight:600; background:var(--card-bg); padding:12px; border-radius:8px; border:1px solid var(--border);">${x.content}</div> <div style="text-align:right; border-bottom:1px dashed var(--border); padding-bottom:10px; margin-bottom:10px;"> <button class="mini-btn" style="background:var(--primary-light) !important; color:white !important;" onclick="tryEditPost('${x.id}', '${x.password}', '${authorName}', '${safeTitle}', '${safeContent}', event)">✏️ 수정</button> <button class="mini-btn btn-del" onclick="deletePost('${x.id}','${x.password}',event)">🗑️ 삭제</button> </div> <div id="cmt-list-${x.id}" class="comment-section"></div> <div class="comment-form"> <input id="cmt-name-${x.id}" class="comment-input-sm board-comment-nickname" placeholder="항만용어 닉네임" aria-label="댓글 닉네임 (직접 수정 가능)" maxlength="50"> <input id="cmt-pw-${x.id}" class="comment-input-sm" type="password" placeholder="비밀번호"> <input id="cmt-txt-${x.id}" class="comment-input-lg" placeholder="따뜻한 댓글을 남겨주세요..."> <button class="comment-submit" onclick="addComment('${x.id}')">댓글 등록</button> </div> </td> </tr>`); }); l.innerHTML = rowsHtml.join(""); pageData.forEach(x => { const nicknameInput = document.getElementById(`cmt-name-${x.id}`); if (nicknameInput && !nicknameInput.value.trim()) nicknameInput.value = getPortNickname(); loadComments(x.id); }); renderPagination(p); }
 function renderShipPage(p) {
     const list = document.getElementById("shipList");
     const pagination = document.getElementById("shipPagination");
