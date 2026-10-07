@@ -729,6 +729,156 @@
         .wage-terminal-link:active {
             transform: scale(0.98);
         }
+        .daily-field-english-card {
+            grid-column: 1 / -1;
+            border: 1.5px solid #bfdbfe;
+            border-radius: 12px;
+            background: linear-gradient(135deg, #ffffff 0%, #eff6ff 100%);
+            box-shadow: 0 3px 10px rgba(37, 99, 235, 0.08);
+            overflow: hidden;
+        }
+        body.dark-mode .daily-field-english-card {
+            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+            border-color: #3b82f6;
+        }
+        .daily-field-english-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 13px 14px 10px;
+            border-bottom: 1px dashed #bfdbfe;
+        }
+        body.dark-mode .daily-field-english-header {
+            border-bottom-color: #334155;
+        }
+        .daily-field-english-icon {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 38px;
+            height: 38px;
+            border-radius: 10px;
+            background: #dbeafe;
+            border: 1px solid #93c5fd;
+            font-size: 1.25rem;
+            flex-shrink: 0;
+        }
+        body.dark-mode .daily-field-english-icon {
+            background: rgba(30, 58, 138, 0.5);
+            border-color: #3b82f6;
+        }
+        .daily-field-english-copy {
+            flex: 1;
+            min-width: 0;
+        }
+        .daily-field-english-title {
+            color: var(--primary);
+            font-size: 0.98rem !important;
+            font-weight: 900;
+            margin: 0;
+            text-align: left;
+            line-height: 1.25;
+        }
+        .daily-field-english-subtitle {
+            font-size: 0.72rem;
+            font-weight: 700;
+            color: var(--text-sub);
+            margin-top: 2px;
+            line-height: 1.3;
+        }
+        .daily-field-english-refresh {
+            font-size: 0.68rem;
+            font-weight: 900;
+            color: #1d4ed8;
+            background: #dbeafe;
+            border: 1px solid #93c5fd;
+            border-radius: 999px;
+            padding: 3px 8px;
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+        body.dark-mode .daily-field-english-refresh {
+            background: rgba(30, 58, 138, 0.55);
+            color: #bfdbfe;
+            border-color: #3b82f6;
+        }
+        .daily-field-english-content {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            padding: 12px 14px 14px;
+        }
+        .daily-field-english-lesson {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 12px;
+        }
+        .daily-field-english-date {
+            display: inline-block;
+            font-size: 0.72rem;
+            font-weight: 900;
+            color: #0369a1;
+            background: #e0f2fe;
+            border-radius: 6px;
+            padding: 2px 8px;
+            margin-bottom: 6px;
+        }
+        body.dark-mode .daily-field-english-date {
+            background: rgba(2, 132, 199, 0.25);
+            color: #7dd3fc;
+        }
+        .daily-field-english-sentence {
+            margin: 2px 0 8px;
+            font-size: 1.22rem;
+            font-weight: 900;
+            color: var(--primary);
+            letter-spacing: -0.2px;
+            line-height: 1.35;
+        }
+        .daily-field-english-pronunciation,
+        .daily-field-english-meaning,
+        .daily-field-english-vocab {
+            margin: 4px 0;
+            font-size: 0.86rem;
+            font-weight: 700;
+            color: var(--text-main);
+            line-height: 1.45;
+        }
+        .daily-field-english-pronunciation {
+            color: #ea580c;
+            font-weight: 900;
+        }
+        body.dark-mode .daily-field-english-pronunciation {
+            color: #fb923c;
+        }
+        .daily-field-english-footer {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        .daily-field-english-listen {
+            background: var(--primary);
+            color: #ffffff;
+            border: none;
+            border-radius: 8px;
+            padding: 8px 14px;
+            font-size: 0.84rem;
+            font-weight: 900;
+            cursor: pointer;
+            transition: transform 0.12s ease, filter 0.15s ease;
+        }
+        .daily-field-english-listen:active {
+            transform: scale(0.97);
+        }
+        .daily-field-english-hint {
+            margin: 0;
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: var(--text-sub);
+        }
         @media (max-width: 680px) {
             .wage-extra-tools-grid {
                 grid-template-columns: minmax(0, 1fr);
@@ -1815,6 +1965,52 @@
                         <p style="margin: 0;"><b>이메일:</b> <a href="mailto:luxrank@gmail.com" style="color: var(--primary-light); text-decoration: none;">luxrank@gmail.com</a></p>
                         <p style="margin: 0;"><b>주소:</b> 부산광역시 강서구 명지동</p>
                     </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="daily-field-english-card" class="dash-card daily-field-english-card"
+             aria-labelledby="dailyFieldEnglishTitle">
+            <div class="daily-field-english-header">
+                <span class="daily-field-english-icon" aria-hidden="true">🔤</span>
+                <div class="daily-field-english-copy">
+                    <div id="dailyFieldEnglishTitle" class="dash-title daily-field-english-title">
+                        오늘의 현장 영어 한문장
+                    </div>
+                    <div class="daily-field-english-subtitle">
+                        초등 저학년 수준의 쉬운 문장 · 한국시간 매일 오전 9시 업데이트
+                    </div>
+                </div>
+                <span class="daily-field-english-refresh">KST 09:00</span>
+            </div>
+
+            <div class="daily-field-english-content" aria-live="polite" aria-atomic="true">
+                <div class="daily-field-english-lesson">
+                    <div id="dailyFieldEnglishDate" class="daily-field-english-date">오늘의 문장</div>
+                    <p id="dailyFieldEnglishSentence" class="daily-field-english-sentence">
+                        Please wait here.
+                    </p>
+                    <p class="daily-field-english-pronunciation">
+                        <span aria-hidden="true">🔡 읽는 법: </span>
+                        <span id="dailyFieldEnglishPronunciation">플리즈 웨잇 히어</span>
+                    </p>
+                    <p class="daily-field-english-meaning">
+                        <strong>뜻:</strong> <span id="dailyFieldEnglishMeaning">여기서 기다려 주세요.</span>
+                    </p>
+                    <p class="daily-field-english-vocab">
+                        <strong>오늘의 단어:</strong> <span id="dailyFieldEnglishWord">wait = 기다리다</span>
+                    </p>
+                </div>
+
+                <div class="daily-field-english-footer">
+                    <button type="button" class="daily-field-english-listen"
+                            onclick="speakDailyFieldEnglish()"
+                            aria-label="오늘의 영어 문장을 천천히 듣기">
+                        🔊 천천히 듣기
+                    </button>
+                    <p class="daily-field-english-hint">
+                        영어를 듣고, 발음과 뜻을 함께 따라 읽어 보세요.
+                    </p>
                 </div>
             </div>
         </div>
@@ -6664,7 +6860,163 @@ async function ensureTodayUpdateNotice() {
     }
 }
 
+const DAILY_FIELD_ENGLISH_PHRASES = [
+    { sentence: "Please wait here.", pronunciation: "플리즈 웨잇 히어", meaning: "여기서 기다려 주세요.", word: "wait = 기다리다" },
+    { sentence: "Watch your step.", pronunciation: "와치 유어 스텝", meaning: "발밑을 조심하세요.", word: "step = 발걸음, 계단" },
+    { sentence: "Please wear a helmet.", pronunciation: "플리즈 웨어 어 헬멧", meaning: "안전모를 써 주세요.", word: "wear = 착용하다" },
+    { sentence: "The ship is here.", pronunciation: "더 쉽 이즈 히어", meaning: "배가 여기에 있어요.", word: "ship = 배" },
+    { sentence: "The crane is moving.", pronunciation: "더 크레인 이즈 무빙", meaning: "크레인이 움직이고 있어요.", word: "moving = 움직이는 중" },
+    { sentence: "Stay behind the line.", pronunciation: "스테이 비하인드 더 라인", meaning: "선 뒤에 서 주세요.", word: "behind = 뒤에" },
+    { sentence: "Walk slowly, please.", pronunciation: "워크 슬로울리, 플리즈", meaning: "천천히 걸어 주세요.", word: "slowly = 천천히" },
+    { sentence: "The floor is wet.", pronunciation: "더 플로어 이즈 웻", meaning: "바닥이 젖어 있어요.", word: "wet = 젖은" },
+    { sentence: "Hold the handrail, please.", pronunciation: "홀드 더 핸드레일, 플리즈", meaning: "손잡이를 잡아 주세요.", word: "hold = 잡다" },
+    { sentence: "Stay with your team.", pronunciation: "스테이 위드 유어 팀", meaning: "작업조와 함께 있어 주세요.", word: "team = 팀, 작업조" },
+    { sentence: "Let's check the tools.", pronunciation: "렛츠 체크 더 툴즈", meaning: "도구를 함께 확인해요.", word: "check = 확인하다" },
+    { sentence: "I need a safety vest.", pronunciation: "아이 니드 어 세이프티 베스트", meaning: "안전 조끼가 필요해요.", word: "need = 필요하다" },
+    { sentence: "The truck is coming.", pronunciation: "더 트럭 이즈 커밍", meaning: "트럭이 오고 있어요.", word: "coming = 오는 중" },
+    { sentence: "Do not run here.", pronunciation: "두 낫 런 히어", meaning: "여기서 뛰지 마세요.", word: "run = 뛰다" },
+    { sentence: "Please stand back.", pronunciation: "플리즈 스탠드 백", meaning: "뒤로 물러나 주세요.", word: "stand back = 뒤로 물러서다" },
+    { sentence: "Can you help me?", pronunciation: "캔 유 헬프 미?", meaning: "저를 도와주실 수 있나요?", word: "help = 돕다" },
+    { sentence: "I am ready to work.", pronunciation: "아이 앰 레디 투 워크", meaning: "저는 일할 준비가 됐어요.", word: "ready = 준비된" },
+    { sentence: "Please follow me.", pronunciation: "플리즈 팔로우 미", meaning: "저를 따라오세요.", word: "follow = 따라오다" },
+    { sentence: "Put the tools here.", pronunciation: "풋 더 툴즈 히어", meaning: "도구를 여기에 놓아 주세요.", word: "put = 놓다" },
+    { sentence: "Be careful near the crane.", pronunciation: "비 케어풀 니어 더 크레인", meaning: "크레인 근처에서는 조심하세요.", word: "careful = 조심하는" },
+    { sentence: "The container is heavy.", pronunciation: "더 컨테이너 이즈 헤비", meaning: "컨테이너가 무거워요.", word: "heavy = 무거운" },
+    { sentence: "Let's work together.", pronunciation: "렛츠 워크 투게더", meaning: "함께 일해요.", word: "together = 함께" },
+    { sentence: "Is this the right place?", pronunciation: "이즈 디스 더 라이트 플레이스?", meaning: "여기가 맞는 장소인가요?", word: "right = 맞는" },
+    { sentence: "Where is the meeting point?", pronunciation: "웨어 이즈 더 미팅 포인트?", meaning: "모이는 장소가 어디인가요?", word: "where = 어디" },
+    { sentence: "Please look at the sign.", pronunciation: "플리즈 룩 앳 더 사인", meaning: "표지판을 봐 주세요.", word: "sign = 표지판" },
+    { sentence: "Wait for the green light.", pronunciation: "웨잇 포 더 그린 라이트", meaning: "초록불을 기다려 주세요.", word: "green light = 초록불" },
+    { sentence: "Keep a safe distance.", pronunciation: "킵 어 세이프 디스턴스", meaning: "안전거리를 유지해 주세요.", word: "safe = 안전한" },
+    { sentence: "The work is finished.", pronunciation: "더 워크 이즈 피니시트", meaning: "작업이 끝났어요.", word: "finished = 끝난" },
+    { sentence: "Thank you for your help.", pronunciation: "땡큐 포 유어 헬프", meaning: "도와주셔서 고맙습니다.", word: "thank you = 고맙습니다" },
+    { sentence: "Use the safe path.", pronunciation: "유즈 더 세이프 패스", meaning: "안전한 길을 이용하세요.", word: "path = 길" }
+];
+
+const DAILY_FIELD_ENGLISH_TIME_ZONE = "Asia/Seoul";
+const DAILY_FIELD_ENGLISH_UPDATE_HOUR = 9;
+const DAILY_FIELD_ENGLISH_CYCLE_START = Date.UTC(2026, 0, 1);
+let dailyFieldEnglishTimerId = null;
+
+function getKoreaDateTimeParts(date = new Date()) {
+    const parts = new Intl.DateTimeFormat("en-US", {
+        timeZone: DAILY_FIELD_ENGLISH_TIME_ZONE,
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+        hourCycle: "h23"
+    }).formatToParts(date);
+
+    const values = {};
+    parts.forEach(part => {
+        if (part.type !== "literal") values[part.type] = Number(part.value);
+    });
+    return values;
+}
+
+function getDailyFieldEnglishSnapshot(date = new Date()) {
+    const koreaTime = getKoreaDateTimeParts(date);
+    const effectiveDate = new Date(Date.UTC(
+        koreaTime.year,
+        koreaTime.month - 1,
+        koreaTime.day
+    ));
+
+    // 오전 9시 전에는 이전 날짜의 문장을 유지합니다.
+    if (koreaTime.hour < DAILY_FIELD_ENGLISH_UPDATE_HOUR) {
+        effectiveDate.setUTCDate(effectiveDate.getUTCDate() - 1);
+    }
+
+    const daysSinceCycleStart = Math.floor(
+        (effectiveDate.getTime() - DAILY_FIELD_ENGLISH_CYCLE_START) / 86400000
+    );
+    const phraseIndex =
+        ((daysSinceCycleStart % DAILY_FIELD_ENGLISH_PHRASES.length)
+        + DAILY_FIELD_ENGLISH_PHRASES.length)
+        % DAILY_FIELD_ENGLISH_PHRASES.length;
+
+    return {
+        year: effectiveDate.getUTCFullYear(),
+        month: effectiveDate.getUTCMonth() + 1,
+        day: effectiveDate.getUTCDate(),
+        phrase: DAILY_FIELD_ENGLISH_PHRASES[phraseIndex]
+    };
+}
+
+function renderDailyFieldEnglish(date = new Date()) {
+    const sentenceEl = document.getElementById("dailyFieldEnglishSentence");
+    if (!sentenceEl) return;
+    const snapshot = getDailyFieldEnglishSnapshot(date);
+    sentenceEl.textContent = snapshot.phrase.sentence;
+    const pronEl = document.getElementById("dailyFieldEnglishPronunciation");
+    if (pronEl) pronEl.textContent = snapshot.phrase.pronunciation;
+    const meanEl = document.getElementById("dailyFieldEnglishMeaning");
+    if (meanEl) meanEl.textContent = snapshot.phrase.meaning;
+    const wordEl = document.getElementById("dailyFieldEnglishWord");
+    if (wordEl) wordEl.textContent = snapshot.phrase.word;
+    const dateEl = document.getElementById("dailyFieldEnglishDate");
+    if (dateEl) dateEl.textContent = `${snapshot.year}년 ${snapshot.month}월 ${snapshot.day}일 문장`;
+}
+
+function scheduleDailyFieldEnglishUpdate() {
+    if (dailyFieldEnglishTimerId) {
+        clearTimeout(dailyFieldEnglishTimerId);
+        dailyFieldEnglishTimerId = null;
+    }
+    const now = new Date();
+    const koreaTime = getKoreaDateTimeParts(now);
+    const nextKoreaDate = new Date(Date.UTC(
+        koreaTime.year,
+        koreaTime.month - 1,
+        koreaTime.day
+    ));
+
+    if (koreaTime.hour >= DAILY_FIELD_ENGLISH_UPDATE_HOUR) {
+        nextKoreaDate.setUTCDate(nextKoreaDate.getUTCDate() + 1);
+    }
+
+    // 한국시간은 UTC+9이므로 다음 오전 9시에 맞춰 렌더링합니다.
+    const nextUpdateUtc = Date.UTC(
+        nextKoreaDate.getUTCFullYear(),
+        nextKoreaDate.getUTCMonth(),
+        nextKoreaDate.getUTCDate(),
+        DAILY_FIELD_ENGLISH_UPDATE_HOUR
+    ) - (9 * 60 * 60 * 1000);
+
+    dailyFieldEnglishTimerId = setTimeout(() => {
+        renderDailyFieldEnglish();
+        scheduleDailyFieldEnglishUpdate();
+    }, Math.max(100, nextUpdateUtc - now.getTime() + 50));
+}
+
+function initializeDailyFieldEnglish() {
+    renderDailyFieldEnglish();
+    scheduleDailyFieldEnglishUpdate();
+}
+
+function speakDailyFieldEnglish() {
+    const sentence = document.getElementById("dailyFieldEnglishSentence")
+        ?.textContent?.trim();
+
+    if (!sentence) return;
+    if (!window.speechSynthesis ||
+        typeof window.SpeechSynthesisUtterance !== "function") {
+        showToast("이 브라우저에서는 영어 듣기를 사용할 수 없습니다.");
+        return;
+    }
+
+    window.speechSynthesis.cancel();
+    const utterance = new window.SpeechSynthesisUtterance(sentence);
+    utterance.lang = "en-US";
+    utterance.rate = 0.78;
+    window.speechSynthesis.speak(utterance);
+}
+
 window.onload = async () => { 
+    initializeDailyFieldEnglish();
     applyOfficialTerminalNames();
     appendTerminalMealBlocks();
     renderTerminalScheduleTabBar();
