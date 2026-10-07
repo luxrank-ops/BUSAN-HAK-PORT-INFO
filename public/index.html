@@ -72,7 +72,6 @@
         .today-visitor-badge .tvb-label { font-size: 0.58rem; font-weight: 900; letter-spacing: 0.2px; opacity: 0.88; white-space: nowrap; }
         .today-visitor-badge .tvb-value { display: flex; align-items: center; gap: 3px; font-size: 0.6rem; font-weight: 900; color: #1e40af; white-space: nowrap; }
         .today-visitor-badge .tvb-value b { font-size: 0.88rem; font-variant-numeric: tabular-nums; letter-spacing: -0.2px; }
-        .today-visitor-badge .tvb-label-full { display: none; }
         .today-visitor-badge.is-loading { opacity: 0.6; }
         .today-visitor-badge.is-error { background: var(--bg-color); border-color: var(--border); color: var(--text-sub); box-shadow: none; cursor: default; }
         .today-visitor-badge.is-error .tvb-value { color: var(--text-sub); }
@@ -89,8 +88,6 @@
             .today-visitor-badge .tvb-label { font-size: 0.64rem; }
             .today-visitor-badge .tvb-value { font-size: 0.64rem; }
             .today-visitor-badge .tvb-value b { font-size: 0.98rem; }
-            .today-visitor-badge .tvb-label-short { display: none; }
-            .today-visitor-badge .tvb-label-full { display: inline; }
         }
 
         .ticker-container { background: var(--primary); color: #ffffff; font-weight: 900; height: 45px; display: flex; align-items: center; overflow: visible; position: relative; font-size: clamp(0.9rem, 3vw, 1rem); width: 100%; z-index: 999; }
@@ -1211,7 +1208,6 @@
          onclick="onTodayVisitorBadgeClick()"
          onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();onTodayVisitorBadgeClick();}"
          title="오늘 방문자(세션 기준) 실시간 집계">
-        <span class="tvb-label tvb-label-short">오늘</span>
         <span class="tvb-label tvb-label-full">오늘 방문자</span>
         <span class="tvb-value"><span aria-hidden="true">👥</span><b id="todayVisitorBadgeCount">-</b><span class="tvb-unit">명</span></span>
     </div>
