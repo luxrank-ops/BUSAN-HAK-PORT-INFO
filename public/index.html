@@ -417,6 +417,235 @@
         .stats-7day-bar.is-today { background: linear-gradient(180deg, #f59e0b, #d97706); }
         .stats-mini-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; }
         .stats-mini-item { background: var(--bg-color); border: 1px solid var(--border); border-radius: 8px; padding: 7px 9px; display: flex; justify-content: space-between; align-items: center; font-size: 0.76rem; font-weight: 800; }
+
+        /* 🧮 임금계산기 추가 수당 & 터미널 선택 UI 스타일 */
+        .wage-extra-tools-grid {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+            gap: 10px;
+            align-items: stretch;
+            margin: 15px 0 8px;
+            padding-top: 15px;
+            border-top: 2px dashed #94a3b8;
+        }
+        .wage-allowance-card {
+            min-width: 0;
+            padding: 10px;
+            border: 1.5px solid var(--border);
+            border-radius: 10px;
+            background: var(--card-bg);
+        }
+        .wage-tools-title-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 6px;
+            margin-bottom: 8px;
+            flex-wrap: wrap;
+        }
+        .wage-tools-title {
+            margin: 0;
+            font-size: 0.9rem;
+            font-weight: 900;
+            color: var(--primary);
+            line-height: 1.25;
+            display: block;
+        }
+        .wage-tools-subtitle {
+            display: block;
+            font-size: 0.72rem;
+            font-weight: 700;
+            color: var(--text-sub);
+            margin-top: 2px;
+        }
+        .wage-unit-badge {
+            font-size: 0.68rem;
+            font-weight: 800;
+            color: #1d4ed8;
+            background: #eff6ff;
+            border: 1px solid #bfdbfe;
+            border-radius: 999px;
+            padding: 2px 7px;
+            white-space: nowrap;
+        }
+        .wage-allowance-grid {
+            display: grid !important;
+            grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+            gap: 7px !important;
+        }
+        .wage-allowance-controls {
+            display: grid;
+            grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+            gap: 8px;
+            align-items: end;
+            margin-bottom: 8px;
+        }
+        .wage-allowance-control {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            min-width: 0;
+            font-size: 0.76rem;
+            font-weight: 800;
+            color: var(--text-main);
+        }
+        .wage-allowance-type-select {
+            height: 38px !important;
+            padding: 0 8px !important;
+            font-size: 0.85rem !important;
+            font-weight: 800 !important;
+            border: 2px solid #cbd5e1 !important;
+            cursor: pointer;
+        }
+        .wage-allowance-summary-wrap {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            padding: 7px 8px;
+            border-radius: 8px;
+            background: var(--bg-color);
+            border: 1px dashed var(--border);
+        }
+        .wage-allowance-summary-title {
+            font-size: 0.7rem;
+            font-weight: 800;
+            color: var(--text-sub);
+        }
+        .wage-allowance-summary {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+            min-height: 22px;
+            align-items: center;
+        }
+        .wage-allowance-empty {
+            font-size: 0.72rem;
+            font-weight: 700;
+            color: var(--text-sub);
+        }
+        .wage-allowance-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 3px 8px;
+            border-radius: 999px;
+            background: #eff6ff;
+            border: 1px solid #bfdbfe;
+            color: #1e3a8a;
+            font-size: 0.72rem;
+            font-weight: 800;
+        }
+        body.dark-mode .wage-allowance-chip {
+            background: rgba(30, 58, 138, 0.4);
+            border-color: #3b82f6;
+            color: #dbeafe;
+        }
+        .wage-allowance-field {
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+            min-width: 0;
+            cursor: pointer;
+        }
+        .wage-allowance-name {
+            font-size: 0.78rem;
+            font-weight: 800;
+            color: var(--text-main);
+            line-height: 1.2;
+        }
+        .wage-allowance-input-wrap {
+            position: relative;
+            display: flex;
+            align-items: center;
+            width: 100%;
+        }
+        .wage-allowance-input-wrap .input-field {
+            padding-right: 34px !important;
+            border: 2px solid #cbd5e1;
+            height: 38px !important;
+            font-size: 0.9rem !important;
+        }
+        .wage-allowance-unit {
+            position: absolute;
+            right: 8px;
+            font-size: 0.72rem;
+            font-weight: 800;
+            color: var(--text-sub);
+            pointer-events: none;
+        }
+        .wage-terminal-picker {
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+            margin: 0;
+        }
+        .wage-terminal-picker-heading {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 6px;
+            margin-bottom: 6px;
+            flex-wrap: wrap;
+        }
+        .wage-terminal-active-label {
+            display: block;
+            font-size: 0.72rem;
+            font-weight: 800;
+            color: #c2410c;
+            margin-top: 2px;
+        }
+        body.dark-mode .wage-terminal-active-label {
+            color: #fdba74;
+        }
+        .wage-terminal-hint {
+            font-size: 0.68rem;
+            font-weight: 800;
+            color: #9a3412;
+            background: rgba(255, 255, 255, 0.75);
+            border: 1px solid #fdba74;
+            border-radius: 999px;
+            padding: 2px 7px;
+            white-space: nowrap;
+        }
+        body.dark-mode .wage-terminal-hint {
+            background: rgba(15, 23, 42, 0.6);
+            color: #fed7aa;
+            border-color: #ea580c;
+        }
+        .wage-terminal-picker-links {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 6px;
+            margin-top: auto;
+        }
+        .wage-terminal-link {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 38px;
+            padding: 6px 7px;
+            border-radius: 7px;
+            color: #fff;
+            font-size: 0.74rem;
+            font-weight: 900;
+            text-align: center;
+            text-decoration: none;
+            transition: filter 0.15s ease, transform 0.1s ease;
+        }
+        .wage-terminal-link.schedule {
+            background: #ea580c;
+        }
+        .wage-terminal-link.chart {
+            background: #1e3a8a;
+        }
+        .wage-terminal-link:active {
+            transform: scale(0.98);
+        }
+        @media (max-width: 680px) {
+            .wage-extra-tools-grid {
+                grid-template-columns: minmax(0, 1fr);
+            }
+        }
     </style>
     <link rel="apple-touch-icon" href="./icon-192.png">
 </head>
@@ -510,14 +739,78 @@
                         </table>
                     </div>
                 </div>
-                <div style="border-top: 2px dashed #94a3b8; margin:15px 0; padding-top:15px;">
-                    <p style="font-size:0.95rem; color:var(--primary); font-weight:900; margin-bottom:10px;">✅ 추가 수당 시간 입력</p>
-                    <div class="allowance-grid" style="display: grid !important; grid-template-columns: repeat(2, 1fr) !important; gap: 8px !important;">
-                        <div class="wage-row" style="margin-bottom: 0 !important;"><label style="margin-bottom:2px;">지게차</label><input type="number" id="wageHoliday" class="input-field" placeholder="H" style="border: 2px solid #cbd5e1;"></div>
-                        <div class="wage-row" style="margin-bottom: 0 !important;"><label style="margin-bottom:2px;">특별 수당</label><input type="number" id="wageWeekend" class="input-field" placeholder="H" style="border: 2px solid #cbd5e1;"></div>
-                        <div class="wage-row" style="margin-bottom: 0 !important;"><label style="margin-bottom:2px;">우천</label><input type="number" id="wageRain" class="input-field" placeholder="H" style="border: 2px solid #cbd5e1;"></div>
-                        <div class="wage-row" style="margin-bottom: 0 !important;"><label style="margin-bottom:2px;">혹서기(30%)</label><input type="number" id="wageHotTime" class="input-field" placeholder="H" style="border: 2px solid #cbd5e1;"></div>
-                    </div>
+                <div class="wage-extra-tools-grid">
+                    <section class="wage-allowance-card" aria-labelledby="wageAllowanceTitle">
+                        <div class="wage-tools-title-row">
+                            <div>
+                                <p id="wageAllowanceTitle" class="wage-tools-title">✅ 추가 수당 시간 입력</p>
+                                <span class="wage-tools-subtitle">수당 종류를 선택해 시간을 입력하세요.</span>
+                            </div>
+                            <span class="wage-unit-badge">단위 · 시간</span>
+                        </div>
+
+                        <div class="wage-allowance-controls">
+                            <label class="wage-allowance-control" for="wageAllowanceType">
+                                <span>수당 종류</span>
+                                <select id="wageAllowanceType"
+                                        class="input-field wage-allowance-type-select"
+                                        onchange="changeWageAllowanceType()">
+                                    <option value="wageHoliday">🚜 지게차</option>
+                                    <option value="wageWeekend">🎈 특별 수당</option>
+                                    <option value="wageRain">☔ 우천</option>
+                                    <option value="wageHotTime">☀️ 혹서기 (30%)</option>
+                                </select>
+                            </label>
+
+                            <label class="wage-allowance-control" for="wageAllowanceHours">
+                                <span>적용 시간</span>
+                                <span class="wage-allowance-input-wrap">
+                                    <input type="number"
+                                           id="wageAllowanceHours"
+                                           class="input-field"
+                                           placeholder="0"
+                                           min="0"
+                                           step="any"
+                                           inputmode="decimal"
+                                           aria-label="선택한 추가 수당 시간"
+                                           oninput="updateSelectedWageAllowanceHours(this.value)">
+                                    <span class="wage-allowance-unit">시간</span>
+                                </span>
+                            </label>
+                        </div>
+
+                        <div class="wage-allowance-summary-wrap">
+                            <span class="wage-allowance-summary-title">입력된 수당</span>
+                            <div id="wageAllowanceSummary"
+                                 class="wage-allowance-summary"
+                                 aria-live="polite">
+                                <span class="wage-allowance-empty">수당 종류를 선택하고 시간을 입력하세요.</span>
+                            </div>
+                        </div>
+
+                        <!-- 계산 로직에서 사용하던 항목별 값 저장용 -->
+                        <input type="hidden" id="wageHoliday" value="">
+                        <input type="hidden" id="wageWeekend" value="">
+                        <input type="hidden" id="wageRain" value="">
+                        <input type="hidden" id="wageHotTime" value="">
+                    </section>
+
+                    <section class="wage-terminal-picker hjnc-schedule-box" aria-labelledby="wageTerminalPickerTitle">
+                        <div class="wage-terminal-picker-heading">
+                            <div>
+                                <span id="wageTerminalPickerTitle" class="wage-tools-title">⚓ 터미널별 스케줄 · 차트</span>
+                                <span id="wageTerminalActiveLabel" class="wage-terminal-active-label">한진(HJNC) 선택됨</span>
+                            </div>
+                            <span class="wage-terminal-hint">터미널 선택</span>
+                        </div>
+
+                        <div id="wageTerminalScheduleTabBar" class="term-sched-tab-bar" aria-label="터미널 선택"></div>
+
+                        <div class="wage-terminal-picker-links">
+                            <a id="wageTerminalScheduleOrigLink" class="wage-terminal-link schedule" href="https://www.hjnc.co.kr/esvc/vessel/berthScheduleT" target="_blank" rel="noopener noreferrer">🗓️ 스케줄 열기 ↗</a>
+                            <a id="wageTerminalChartOrigLink" class="wage-terminal-link chart" href="https://www.hjnc.co.kr/esvc/vessel/berthScheduleG" target="_blank" rel="noopener noreferrer">📊 차트 열기 ↗</a>
+                        </div>
+                    </section>
                 </div>
                 <select id="wageTaxType" class="input-field" style="margin-top:8px; text-align:center; border: 2px solid #cbd5e1; font-weight: 900;">
                     <option value="0">공제 없음 (0%)</option>
@@ -2555,6 +2848,7 @@ function toggleDashItem(id){
             }
         } else if(id === 'ship-card' || id === 'wage-card') {
             syncWorkLogExtraUnlockUI();
+            if (id === 'wage-card') renderTerminalScheduleTabBar();
         } else if(id === 'weather-card') {
             fetchBusanPortLiveWeather(false);
         }
@@ -3000,7 +3294,10 @@ function getTerminalMeta(tid) {
     return TERMINAL_SCHEDULE_LIST.find(t => t.id === tid) || TERMINAL_SCHEDULE_LIST[0];
 }
 function updateTerminalScheduleLinksUI() {
-    const cfg = terminalQuickConfig[selectedScheduleTerminal] || terminalQuickConfig.hjnc;
+    const cfg =
+        terminalQuickConfig[selectedScheduleTerminal] || terminalQuickConfig.hjnc;
+    const meta = getTerminalMeta(selectedScheduleTerminal);
+
     const schedLink = document.getElementById("terminalScheduleOrigLink");
     const chartLink = document.getElementById("terminalChartOrigLink");
     if (schedLink && cfg) schedLink.href = cfg.schedule;
@@ -3009,16 +3306,55 @@ function updateTerminalScheduleLinksUI() {
     const shipChartLink = document.getElementById("shipFormChartOrigLink");
     if (shipSchedLink && cfg) shipSchedLink.href = cfg.schedule;
     if (shipChartLink && cfg) shipChartLink.href = cfg.chart;
+
+    const wageSchedLink =
+        document.getElementById("wageTerminalScheduleOrigLink");
+    const wageChartLink =
+        document.getElementById("wageTerminalChartOrigLink");
+    const wageTerminalLabel =
+        document.getElementById("wageTerminalActiveLabel");
+
+    if (wageSchedLink && cfg) {
+        wageSchedLink.href = cfg.schedule;
+        wageSchedLink.textContent = `🗓️ ${meta.badge} 스케줄 열기 ↗`;
+        wageSchedLink.style.background = meta.color;
+        wageSchedLink.onclick = () =>
+            trackAppEvent("terminals", selectedScheduleTerminal);
+    }
+
+    if (wageChartLink && cfg) {
+        wageChartLink.href = cfg.chart;
+        wageChartLink.textContent = `📊 ${meta.badge} 차트 열기 ↗`;
+        wageChartLink.onclick = () =>
+            trackAppEvent("terminals", selectedScheduleTerminal);
+    }
+
+    if (wageTerminalLabel) {
+        wageTerminalLabel.textContent = `현재 선택: ${meta.label}`;
+    }
 }
 function renderTerminalScheduleTabBar() {
     const html = TERMINAL_SCHEDULE_LIST.map(t => {
         const isActive = t.id === selectedScheduleTerminal;
-        return `<button type="button" class="term-sched-tab-btn ${isActive ? 'active' : ''}" style="${isActive ? `background:${t.color}; border-color:${t.color};` : ''}" onclick="selectScheduleTerminal('${t.id}')">${t.label}</button>`;
+        return `<button type="button"
+            class="term-sched-tab-btn ${isActive ? 'active' : ''}"
+            aria-pressed="${isActive}"
+            title="${t.label} 스케줄·차트 선택"
+            style="${isActive ? `background:${t.color}; border-color:${t.color};` : ''}"
+            onclick="selectScheduleTerminal('${t.id}')">
+            ${t.label}
+        </button>`;
     }).join("");
+
     const bar = document.getElementById("terminalScheduleTabBar");
     if (bar) bar.innerHTML = html;
+
     const shipBar = document.getElementById("shipFormScheduleTabBar");
     if (shipBar) shipBar.innerHTML = html;
+
+    const wageBar = document.getElementById("wageTerminalScheduleTabBar");
+    if (wageBar) wageBar.innerHTML = html;
+
     updateTerminalScheduleLinksUI();
 }
 function selectScheduleTerminal(terminalId) {
@@ -4781,6 +5117,59 @@ function calcTimeAndFill() {
 function autoFillWeekendHoliday() {
     // 추가 수당 시간 입력(지게차, 특별수당, 우천, 혹서기)은 사용자가 직접 입력할 때만 반영되도록 자동 입력 비활성화
 }
+const WAGE_ALLOWANCE_OPTIONS = [
+    { id: "wageHoliday", label: "지게차", icon: "🚜" },
+    { id: "wageWeekend", label: "특별 수당", icon: "🎈" },
+    { id: "wageRain", label: "우천", icon: "☔" },
+    { id: "wageHotTime", label: "혹서기 (30%)", icon: "☀️" }
+];
+
+function changeWageAllowanceType() {
+    const typeSelect = document.getElementById("wageAllowanceType");
+    const hoursInput = document.getElementById("wageAllowanceHours");
+    const storedInput = typeSelect
+        ? document.getElementById(typeSelect.value)
+        : null;
+
+    if (hoursInput) hoursInput.value = storedInput?.value || "";
+    renderWageAllowanceSummary();
+}
+
+function updateSelectedWageAllowanceHours(hours) {
+    const typeSelect = document.getElementById("wageAllowanceType");
+    const storedInput = typeSelect
+        ? document.getElementById(typeSelect.value)
+        : null;
+
+    if (storedInput) storedInput.value = hours;
+    renderWageAllowanceSummary();
+}
+
+function renderWageAllowanceSummary() {
+    const summary = document.getElementById("wageAllowanceSummary");
+    if (!summary) return;
+
+    const entries = WAGE_ALLOWANCE_OPTIONS.map(option => {
+        const input = document.getElementById(option.id);
+        const rawValue = String(input?.value || "").trim();
+        const hours = rawValue ? Number(rawValue) : 0;
+
+        return Number.isFinite(hours) && hours !== 0
+            ? `<span class="wage-allowance-chip">
+                   ${option.icon} ${option.label}:
+                   <b>${hours.toLocaleString("ko-KR", {
+                       maximumFractionDigits: 2
+                   })}시간</b>
+               </span>`
+            : "";
+    }).filter(Boolean);
+
+    summary.innerHTML = entries.length
+        ? entries.join("")
+        : `<span class="wage-allowance-empty">
+               수당 종류를 선택하고 시간을 입력하세요.
+           </span>`;
+}
 function calculateWage() {
     try {
         const totalHours = parseFloat(document.getElementById('wageTotalHours').value) || 0;
@@ -4867,10 +5256,13 @@ function resetWageForm() {
         const now = new Date();
         now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
         const todayStr = now.toISOString().split('T')[0];
-        ['wageTotalHours', 'wageHoliday', 'wageWeekend', 'wageRain', 'wageHotTime'].forEach(id => {
+        ['wageTotalHours', 'wageAllowanceHours', 'wageHoliday', 'wageWeekend', 'wageRain', 'wageHotTime'].forEach(id => {
             const el = document.getElementById(id);
             if (el) el.value = '';
         });
+        const allowanceType = document.getElementById('wageAllowanceType');
+        if (allowanceType) allowanceType.value = 'wageHoliday';
+        renderWageAllowanceSummary();
         const sDate = document.getElementById('wageStartDate');
         const eDate = document.getElementById('wageEndDate');
         const sHour = document.getElementById('wageStartHour');
@@ -5287,6 +5679,7 @@ async function ensureTodayUpdateNotice() {
 window.onload = async () => { 
     applyOfficialTerminalNames();
     appendTerminalMealBlocks();
+    renderTerminalScheduleTabBar();
     await ensureAnonymousAuth();
     ["t1", "t2", "t3"].forEach(loadSectionTicker);
     trackVisitorSession();
