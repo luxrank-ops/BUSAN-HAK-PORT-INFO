@@ -1969,23 +1969,26 @@
             </div>
         </div>
 
-        <div id="daily-field-english-card" class="dash-card daily-field-english-card"
+        <div id="daily-field-english-card" class="dash-card"
              aria-labelledby="dailyFieldEnglishTitle">
-            <div class="daily-field-english-header">
-                <span class="daily-field-english-icon" aria-hidden="true">🔤</span>
-                <div class="daily-field-english-copy">
-                    <div id="dailyFieldEnglishTitle" class="dash-title daily-field-english-title">
+            <div class="dash-header tap-effect"
+                 onclick="toggleDashItem('daily-field-english-card')"
+                 style="flex-direction: row !important; justify-content: flex-start !important; padding: 14px 12px; gap: 10px; min-height: auto;">
+                <span class="dash-icon-badge"
+                      style="background: #e0f2fe; border: 1px solid #7dd3fc;">🔤</span>
+                <div style="flex:1; min-width:0;">
+                    <div id="dailyFieldEnglishTitle" class="dash-title"
+                         style="color: var(--primary); font-size: 0.96rem !important; font-weight: 900; margin: 0; text-align: left; line-height: 1.25;">
                         오늘의 현장 영어 한문장
                     </div>
-                    <div class="daily-field-english-subtitle">
-                        초등 저학년 수준의 쉬운 문장 · 한국시간 매일 오전 9시 업데이트
+                    <div class="dash-sub-meta">
+                        항만 현장 영어 · 한국시간 매일 오전 9시 업데이트
                     </div>
                 </div>
-                <span class="daily-field-english-refresh">KST 09:00</span>
             </div>
 
-            <div class="daily-field-english-content" aria-live="polite" aria-atomic="true">
-                <div class="daily-field-english-lesson">
+            <div class="dash-content">
+                <div class="daily-field-english-lesson" aria-live="polite" aria-atomic="true">
                     <div id="dailyFieldEnglishDate" class="daily-field-english-date">오늘의 문장</div>
                     <p id="dailyFieldEnglishSentence" class="daily-field-english-sentence">
                         Please wait here.
@@ -1995,10 +1998,12 @@
                         <span id="dailyFieldEnglishPronunciation">플리즈 웨잇 히어</span>
                     </p>
                     <p class="daily-field-english-meaning">
-                        <strong>뜻:</strong> <span id="dailyFieldEnglishMeaning">여기서 기다려 주세요.</span>
+                        <strong>뜻:</strong>
+                        <span id="dailyFieldEnglishMeaning">여기서 기다려 주세요.</span>
                     </p>
                     <p class="daily-field-english-vocab">
-                        <strong>오늘의 단어:</strong> <span id="dailyFieldEnglishWord">wait = 기다리다</span>
+                        <strong>오늘의 단어:</strong>
+                        <span id="dailyFieldEnglishWord">wait = 기다리다</span>
                     </p>
                 </div>
 
@@ -2465,6 +2470,7 @@ const STATS_BLOCK_META = [
     { id: "safety-card", label: "⛑️ 실전 통합 안전 지침", color: "#10b981" },
     { id: "guide-card", label: "📖 현장 실무 용어 가이드", color: "#8b5cf6" },
     { id: "privacy-center-card", label: "🛡️ 실전 보안 가이드", color: "#64748b" },
+    { id: "daily-field-english-card", label: "🔤 오늘의 현장 영어 한문장", color: "#0284c7" },
     { id: "main-manual-card", label: "🔅 앱 공유 · 사용 설명서", color: "#f59e0b" }
 ];
 const STATS_TERMINAL_META = [
@@ -3215,47 +3221,63 @@ document.addEventListener('click', () => {
         menu.style.display = '';
     }
 });
-function toggleDashItem(id){
-    const c = document.getElementById(id);
-    if(!c) return;
-    const e = c.classList.contains('expanded');
-    document.querySelectorAll('.dash-card').forEach(x=>{
-        x.classList.remove('expanded');
-        const content = x.querySelector('.dash-content');
-        if(content) content.style.display='none';
+function toggleDashItem(id) {
+    const card = document.getElementById(id);
+    if (!card) return;
+
+    const isExpanded = card.classList.contains("expanded");
+
+    document.querySelectorAll(".dash-card").forEach(item => {
+        if (
+            item.id === "daily-field-english-card" &&
+            item.classList.contains("expanded")
+        ) {
+            pauseDailyFieldEnglish();
+        }
+
+        item.classList.remove("expanded");
+
+        const content = item.querySelector(".dash-content");
+        if (content) content.style.display = "none";
     });
-    if(!e){
-        c.classList.add('expanded');
-        const content = c.querySelector('.dash-content');
-        if(content) content.style.display='block';
-        trackAppEvent('blocks', id);
+
+    if (!isExpanded) {
+        card.classList.add("expanded");
+
+        const content = card.querySelector(".dash-content");
+        if (content) content.style.display = "block";
+
+        trackAppEvent("blocks", id);
         syncBottomNavActive(id);
-        if(id === 'log-card') {
+
+        if (id === "daily-field-english-card") {
+            initializeDailyFieldEnglish();
+        } else if (id === "log-card") {
             syncWorkLogExtraUnlockUI();
             renderCalendar(currentDate.getFullYear(), currentDate.getMonth());
-            const formEl = document.getElementById('dailyLogForm');
-            if (formEl && !formEl.getAttribute('data-date')) {
+            const formEl = document.getElementById("dailyLogForm");
+            if (formEl && !formEl.getAttribute("data-date")) {
                 const nowObj = new Date();
-                const todayStr = `${nowObj.getFullYear()}-${String(nowObj.getMonth()+1).padStart(2,'0')}-${String(nowObj.getDate()).padStart(2,'0')}`;
+                const todayStr = `${nowObj.getFullYear()}-${String(nowObj.getMonth() + 1).padStart(2, "0")}-${String(nowObj.getDate()).padStart(2, "0")}`;
                 clickDate(todayStr);
             }
-        } else if(id === 'ship-card' || id === 'wage-card') {
+        } else if (id === "ship-card" || id === "wage-card") {
             syncWorkLogExtraUnlockUI();
-            if (id === 'wage-card') {
+            if (id === "wage-card") {
                 renderTerminalScheduleTabBar();
-                const wageDate = document.getElementById('wageStartDate')?.value;
-                if (wageDate && typeof loadWageScheduledShipsForDate === 'function') {
+                const wageDate = document.getElementById("wageStartDate")?.value;
+                if (wageDate && typeof loadWageScheduledShipsForDate === "function") {
                     loadWageScheduledShipsForDate(wageDate, false);
                 }
             }
-        } else if(id === 'weather-card') {
+        } else if (id === "weather-card") {
             fetchBusanPortLiveWeather(false);
         }
-        if (['board-card', 'ship-card', 'archive-card'].includes(id)) {
-            setTimeout(() => c.scrollIntoView({ behavior: 'smooth', block: 'start' }), 60);
+        if (["board-card", "ship-card", "archive-card"].includes(id)) {
+            setTimeout(() => card.scrollIntoView({ behavior: "smooth", block: "start" }), 60);
         }
     } else {
-        syncBottomNavActive('nav-home');
+        syncBottomNavActive("nav-home");
     }
 }
 function toggleSection(id){
@@ -6896,7 +6918,8 @@ const DAILY_FIELD_ENGLISH_PHRASES = [
 const DAILY_FIELD_ENGLISH_TIME_ZONE = "Asia/Seoul";
 const DAILY_FIELD_ENGLISH_UPDATE_HOUR = 9;
 const DAILY_FIELD_ENGLISH_CYCLE_START = Date.UTC(2026, 0, 1);
-let dailyFieldEnglishTimerId = null;
+let dailyFieldEnglishUpdateTimer = null;
+let dailyFieldEnglishInitialized = false;
 
 function getKoreaDateTimeParts(date = new Date()) {
     const parts = new Intl.DateTimeFormat("en-US", {
@@ -6962,10 +6985,7 @@ function renderDailyFieldEnglish(date = new Date()) {
 }
 
 function scheduleDailyFieldEnglishUpdate() {
-    if (dailyFieldEnglishTimerId) {
-        clearTimeout(dailyFieldEnglishTimerId);
-        dailyFieldEnglishTimerId = null;
-    }
+    pauseDailyFieldEnglish();
     const now = new Date();
     const koreaTime = getKoreaDateTimeParts(now);
     const nextKoreaDate = new Date(Date.UTC(
@@ -6986,13 +7006,33 @@ function scheduleDailyFieldEnglishUpdate() {
         DAILY_FIELD_ENGLISH_UPDATE_HOUR
     ) - (9 * 60 * 60 * 1000);
 
-    dailyFieldEnglishTimerId = setTimeout(() => {
+    dailyFieldEnglishUpdateTimer = setTimeout(() => {
         renderDailyFieldEnglish();
         scheduleDailyFieldEnglishUpdate();
     }, Math.max(100, nextUpdateUtc - now.getTime() + 50));
 }
 
+function pauseDailyFieldEnglish() {
+    if (dailyFieldEnglishUpdateTimer) {
+        clearTimeout(dailyFieldEnglishUpdateTimer);
+    }
+    dailyFieldEnglishUpdateTimer = null;
+}
+
 function initializeDailyFieldEnglish() {
+    if (!dailyFieldEnglishInitialized) {
+        dailyFieldEnglishInitialized = true;
+
+        document.addEventListener("visibilitychange", () => {
+            const card = document.getElementById("daily-field-english-card");
+
+            if (!document.hidden && card?.classList.contains("expanded")) {
+                renderDailyFieldEnglish();
+                scheduleDailyFieldEnglishUpdate();
+            }
+        });
+    }
+
     renderDailyFieldEnglish();
     scheduleDailyFieldEnglishUpdate();
 }
@@ -7016,7 +7056,6 @@ function speakDailyFieldEnglish() {
 }
 
 window.onload = async () => { 
-    initializeDailyFieldEnglish();
     applyOfficialTerminalNames();
     appendTerminalMealBlocks();
     renderTerminalScheduleTabBar();
