@@ -1015,12 +1015,31 @@
             padding: 0;
             transition: all 0.12s ease;
         }
-        .daily-field-english-calendar-day:hover:not(:disabled) {
-            border-color: #38bdf8;
-            background: #f0f9ff;
+        /* 근무일지·조장 근무표 달력 */
+        .calendar-grid .cal-day:hover,
+        .calendar-grid .cal-day:focus-visible,
+        .calendar-grid .cal-day:active {
+            background-color: #bfdbfe !important;
+            border-color: #3b82f6 !important;
         }
-        body.dark-mode .daily-field-english-calendar-day:hover:not(:disabled) {
-            background: rgba(14, 165, 233, 0.2);
+        body.dark-mode .calendar-grid .cal-day:hover,
+        body.dark-mode .calendar-grid .cal-day:focus-visible,
+        body.dark-mode .calendar-grid .cal-day:active {
+            background-color: #1e40af !important;
+            border-color: #60a5fa !important;
+        }
+        /* 영어 복습 달력 — 비활성·이미 선택된 날짜는 기존 강조 유지 */
+        .daily-field-english-calendar-day:not(:disabled):not(.is-selected):hover,
+        .daily-field-english-calendar-day:not(:disabled):not(.is-selected):focus-visible,
+        .daily-field-english-calendar-day:not(:disabled):not(.is-selected):active {
+            background: #bfdbfe !important;
+            border-color: #3b82f6;
+        }
+        body.dark-mode .daily-field-english-calendar-day:not(:disabled):not(.is-selected):hover,
+        body.dark-mode .daily-field-english-calendar-day:not(:disabled):not(.is-selected):focus-visible,
+        body.dark-mode .daily-field-english-calendar-day:not(:disabled):not(.is-selected):active {
+            background: #1e40af !important;
+            border-color: #60a5fa;
         }
         .daily-field-english-calendar-day.is-active-date {
             border-color: #0284c7;
