@@ -828,11 +828,89 @@
                     </div>
                 </div>
                 <div class="wage-extra-tools-grid">
-                    <section class="wage-allowance-card" aria-labelledby="wageAllowanceTitle">
+                    <section class="wage-terminal-picker hjnc-schedule-box"
+                             aria-labelledby="wageTerminalPickerTitle">
+                        <div class="wage-terminal-picker-heading">
+                            <div>
+                                <span id="wageTerminalPickerTitle" class="wage-tools-title">
+                                    ⚓ 당일 입·출항 선박 선택(선박선택시 스케줄상 시간으로 자동입력)
+                                </span>
+                                <span id="wageTerminalActiveLabel"
+                                      class="wage-terminal-active-label">
+                                    현재 선택: 한진(HJNC)
+                                </span>
+                            </div>
+                            <button type="button"
+                                    class="wage-schedule-refresh-btn"
+                                    onclick="refreshWageScheduleForSelectedDate()">
+                                🔄 갱신
+                            </button>
+                        </div>
+
+                        <div class="wage-row"
+                             style="flex-direction:row !important; align-items:center !important; gap:6px; margin:6px 0 8px;">
+                            <label for="wageShipName"
+                                   style="min-width:68px; margin:0; font-size:0.8rem; font-weight:900; color:var(--primary);">
+                                🚢 작업 선박
+                            </label>
+                            <input type="text"
+                                   id="wageShipName"
+                                   class="input-field"
+                                   placeholder="스케줄 선택 또는 선박명 입력"
+                                   style="flex:1; min-width:0; margin:0; text-align:left;"
+                                   oninput="onWageShipNameChange(this.value)">
+                            <button type="button"
+                                    class="mini-btn"
+                                    style="flex:0 0 auto; padding:7px 9px;"
+                                    onclick="startVesselInfoFollowUp('wage', { force:true })">
+                                정보 연동
+                            </button>
+                        </div>
+
+                        <div id="wageTerminalScheduleTabBar"
+                             class="term-sched-tab-bar"
+                             aria-label="터미널 선택"></div>
+
+                        <div class="wage-terminal-picker-links">
+                            <a id="wageTerminalScheduleOrigLink"
+                               class="wage-terminal-link schedule"
+                               href="https://www.hjnc.co.kr/esvc/vessel/berthScheduleT"
+                               target="_blank"
+                               rel="noopener noreferrer">
+                                🗓️ 스케줄 열기 ↗
+                            </a>
+                            <a id="wageTerminalChartOrigLink"
+                               class="wage-terminal-link chart"
+                               href="https://www.hjnc.co.kr/esvc/vessel/berthScheduleG"
+                               target="_blank"
+                               rel="noopener noreferrer">
+                                📊 차트 열기 ↗
+                            </a>
+                        </div>
+
+                        <div id="wageTerminalScheduleTitle"
+                             class="wage-terminal-schedule-title">
+                            시작 날짜 기준 입·출항 선박
+                        </div>
+                        <div id="wageTerminalScheduledShipList"
+                             class="wage-terminal-scheduled-list"
+                             aria-live="polite">
+                            <span class="wage-terminal-schedule-message">
+                                시작 날짜의 스케줄입니다. 선박을 선택하면 입·출항 일시를 시작·종료 입력에 반영합니다.
+                            </span>
+                        </div>
+                    </section>
+
+                    <section class="wage-allowance-card"
+                             aria-labelledby="wageAllowanceTitle">
                         <div class="wage-tools-title-row">
                             <div>
-                                <p id="wageAllowanceTitle" class="wage-tools-title">✅ 추가 수당 시간 입력</p>
-                                <span class="wage-tools-subtitle">수당 종류를 선택해 시간을 입력하세요.</span>
+                                <p id="wageAllowanceTitle" class="wage-tools-title">
+                                    ✅ 추가 수당 시간 입력
+                                </p>
+                                <span class="wage-tools-subtitle">
+                                    해당 수당이 있는 항목만 입력하세요.
+                                </span>
                             </div>
                             <span class="wage-unit-badge">단위 · 시간</span>
                         </div>
@@ -872,66 +950,16 @@
                             <div id="wageAllowanceSummary"
                                  class="wage-allowance-summary"
                                  aria-live="polite">
-                                <span class="wage-allowance-empty">수당 종류를 선택하고 시간을 입력하세요.</span>
+                                <span class="wage-allowance-empty">
+                                    수당 종류를 선택하고 시간을 입력하세요.
+                                </span>
                             </div>
                         </div>
 
-                        <!-- 계산 로직에서 사용하던 항목별 값 저장용 -->
                         <input type="hidden" id="wageHoliday" value="">
                         <input type="hidden" id="wageWeekend" value="">
                         <input type="hidden" id="wageRain" value="">
                         <input type="hidden" id="wageHotTime" value="">
-                    </section>
-
-                    <section class="wage-terminal-picker hjnc-schedule-box"
-                             aria-labelledby="wageTerminalPickerTitle">
-                        <div class="wage-terminal-picker-heading">
-                            <div>
-                                <span id="wageTerminalPickerTitle" class="wage-tools-title">
-                                    ⚓ 당일 입·출항 선박 선택
-                                </span>
-                                <span id="wageTerminalActiveLabel"
-                                      class="wage-terminal-active-label">
-                                    현재 선택: 한진(HJNC)
-                                </span>
-                            </div>
-                            <button type="button"
-                                    class="wage-schedule-refresh-btn"
-                                    onclick="refreshWageScheduleForSelectedDate()">
-                                🔄 갱신
-                            </button>
-                        </div>
-
-                        <div id="wageTerminalScheduleTabBar"
-                             class="term-sched-tab-bar"
-                             aria-label="터미널 선택"></div>
-
-                        <div class="wage-terminal-picker-links">
-                            <a id="wageTerminalScheduleOrigLink"
-                               class="wage-terminal-link schedule"
-                               href="https://www.hjnc.co.kr/esvc/vessel/berthScheduleT"
-                               target="_blank" rel="noopener noreferrer">
-                                🗓️ 스케줄 열기 ↗
-                            </a>
-                            <a id="wageTerminalChartOrigLink"
-                               class="wage-terminal-link chart"
-                               href="https://www.hjnc.co.kr/esvc/vessel/berthScheduleG"
-                               target="_blank" rel="noopener noreferrer">
-                                📊 차트 열기 ↗
-                            </a>
-                        </div>
-
-                        <div id="wageTerminalScheduleTitle"
-                             class="wage-terminal-schedule-title">
-                            시작 날짜 기준 입·출항 선박
-                        </div>
-                        <div id="wageTerminalScheduledShipList"
-                             class="wage-terminal-scheduled-list"
-                             aria-live="polite">
-                            <span class="wage-terminal-schedule-message">
-                                시작 날짜의 스케줄입니다. 선박을 선택하면 입·출항 일시를 시작·종료 입력에 반영합니다.
-                            </span>
-                        </div>
                     </section>
                 </div>
                 <select id="wageTaxType" class="input-field" style="margin-top:8px; text-align:center; border: 2px solid #cbd5e1; font-weight: 900;">
@@ -948,6 +976,7 @@
                     <table class="spec-table"><tbody id="wageSpecBody"></tbody></table>
                     <div id="wageTotal" class="wage-total" style="border-top: 2px solid var(--primary);">0원</div>
                     <button type="button" class="action-btn bg-submit send-log-sparkle-btn" style="margin-top:12px; padding:12px; font-size:0.95rem;" onclick="sendCalculatedWageToLog()">✨ 📅 이 계산 결과를 근무일지로 보내기 ✨</button>
+                    <button type="button" class="action-btn" style="margin-top:8px; padding:10px; font-size:0.9rem; background:#0f172a;" onclick="startVesselInfoFollowUp('wage', { force:true })">🚢 선박 정보 확인 · 신규 등록 · 댓글</button>
                     <div id="wageReceiptLockBanner" onclick="openWorkLogPinModal()" style="cursor:pointer; margin-top:8px; background:linear-gradient(135deg, #f5f3ff, #ede9fe); border:1.5px solid #c4b5fd; border-radius:8px; padding:9px 11px; display:flex; justify-content:space-between; align-items:center;">
                         <span style="font-size:0.8rem; font-weight:900; color:#5b21b6;">🔒 🧾 임금 산정 내역서 이미지 저장 · 공유 (잠김)</span>
                         <span style="background:#6d28d9; color:white; font-size:0.72rem; font-weight:800; padding:3px 9px; border-radius:6px;">비밀번호 해제</span>
@@ -1007,7 +1036,25 @@
                 <button class="action-btn" style="background:#10b981; margin-top:20px; margin-bottom:10px;" onclick="downloadWorkLogsExcel()">📊 한 달 기록 엑셀 저장 (CSV)</button>
                 <div id="dailyLogForm" class="hidden" style="margin-top:20px; padding:15px; background:rgba(0,0,0,0.03); border-radius:12px; border:1px solid var(--border);">
                     <h4 id="selectedDateText" style="margin:0 0 10px 0; color:var(--primary); text-align:center; font-size:1.15rem; font-weight:900;"></h4>
-                    <div class="wage-row" style="margin-bottom:4px;"><label>배 이름</label><input type="text" id="logShipName" class="input-field" placeholder="작업 선박명"></div>
+                    <div class="wage-row" style="margin-bottom:4px;">
+                        <label for="logShipName">배 이름</label>
+                        <input type="text"
+                               id="logShipName"
+                               class="input-field"
+                               placeholder="작업 선박명">
+                    </div>
+                    <div style="display:flex; gap:6px; margin:-1px 0 8px;">
+                        <button type="button"
+                                class="mini-btn"
+                                onclick="startVesselInfoFollowUp('workLog', { force:true })">
+                            🔎 선박 정보 연동
+                        </button>
+                        <button type="button"
+                                class="mini-btn"
+                                onclick="sendWorkLogShipToWage()">
+                            ↗ 임금계산기로 보내기
+                        </button>
+                    </div>
                     <div id="hjncScheduledShipBox" class="hjnc-schedule-box">
                         <div class="hjnc-schedule-header">
                             <span id="hjncScheduleBoxTitle" style="font-size:0.76rem; font-weight:900; color:#c2410c;">⚓ 터미널별 당일 입항·접안 선박</span>
@@ -1882,6 +1929,27 @@
 <div id="tickerManageModal" class="modal-overlay" onclick="document.getElementById('tickerManageModal').style.display='none'"><div class="modal-content" onclick="event.stopPropagation()"><h3 style="margin-top:0; font-weight:900;">⚙️ 알림글 삭제</h3><div id="tickerListContainer"></div><button class="action-btn bg-cancel" onclick="document.getElementById('tickerManageModal').style.display='none'" style="margin-top:10px;">닫기</button></div></div>
 <div id="loginModal" class="modal-overlay" style="display:none;" onclick="closeLoginModal()"><div class="modal-content" onclick="event.stopPropagation()"><h3 style="font-weight:900;">🔐 근무일지 로그인/가입</h3><p style="font-weight:600;">닉네임과 비밀번호를 입력하세요.</p><input type="text" id="loginNick" class="input-field" placeholder="닉네임 (ID)"><input type="password" id="loginPw" class="input-field" placeholder="비밀번호"><button id="confirmLoginBtn" class="action-btn" onclick="confirmLoginAndSave(event)">확인 및 저장</button><button class="action-btn bg-cancel" onclick="closeLoginModal()">취소</button></div></div>
 <div id="workLogPinModal" class="modal-overlay" style="display:none;" onclick="closeWorkLogPinModal()"><div class="modal-content" onclick="event.stopPropagation()" style="max-width:380px;"><h3 style="margin-top:0; text-align:center; color:var(--primary); font-weight:900;">🔒 근무일지 보안 잠금</h3><p style="text-align:center; font-size:0.9rem; color:var(--text-sub); font-weight:700; margin-bottom:12px;">근무일지 열람 및 기록을 위해<br>보안 비밀번호(4자리)를 입력해 주세요.</p><input type="password" id="workLogPinInput" class="input-field" placeholder="비밀번호 입력" inputmode="numeric" maxlength="8" style="text-align:center; font-size:1.3rem; letter-spacing:6px; height:48px; border:2px solid var(--primary); margin-bottom:10px;" onkeydown="if(event.key==='Enter'){event.preventDefault();submitWorkLogPin();}"><div style="display:flex; gap:8px;"><button type="button" class="action-btn bg-submit" style="flex:2; margin-top:0;" onclick="submitWorkLogPin()">잠금 해제</button><button type="button" class="action-btn bg-cancel" style="flex:1; margin-top:0;" onclick="closeWorkLogPinModal()">취소</button></div></div></div>
+<div id="vesselInfoLinkModal" class="modal-overlay" style="display:none;" onclick="closeVesselInfoLinkModal()">
+    <div class="modal-content" onclick="event.stopPropagation()" style="max-width:440px;">
+        <h3 id="vesselInfoLinkTitle" style="margin:0 0 8px; color:var(--primary); font-weight:900;">🔎 선박 정보 확인</h3>
+        <div id="vesselInfoLinkMeta" style="font-size:0.76rem; font-weight:800; color:var(--text-sub); margin-bottom:8px;"></div>
+        <p id="vesselInfoLinkMessage" style="margin:0 0 12px; font-size:0.9rem; font-weight:700; color:var(--text-main); line-height:1.5;"></p>
+        <div id="vesselInfoLinkActions" style="display:flex; flex-direction:column; gap:8px;">
+            <button type="button" id="vesselInfoRegisterBtn" class="action-btn bg-submit" style="margin:0; display:none;" onclick="openVesselRegistrationFromLink()">📝 신규 선박 등록 화면으로 이동</button>
+            <button type="button" id="vesselInfoCommentBtn" class="action-btn" style="margin:0; background:#2563eb; display:none;" onclick="toggleVesselInfoCommentForm()">💬 이 선박에 추가사항 댓글 남기기</button>
+            <button type="button" id="vesselInfoViewBtn" class="action-btn" style="margin:0; background:#0f172a; display:none;" onclick="openVesselInfoViewFromLink()">🚢 등록된 선박 정보 열람하기</button>
+        </div>
+        <div id="vesselInfoCommentForm" class="hidden" style="margin-top:12px; padding-top:12px; border-top:1.5px dashed var(--border);">
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px; margin-bottom:6px;">
+                <input type="text" id="vesselInfoCommentName" class="input-field" placeholder="닉네임" style="margin:0;">
+                <input type="password" id="vesselInfoCommentPassword" class="input-field" placeholder="댓글 비밀번호" style="margin:0;">
+            </div>
+            <textarea id="vesselInfoCommentText" class="input-field" rows="3" placeholder="작업 장비, 라싱 구조, 주의사항 등을 남겨주세요." style="margin:0 0 8px; height:auto; padding:8px; text-align:left;"></textarea>
+            <button type="button" class="action-btn bg-submit" style="margin:0;" onclick="submitVesselInfoComment()">댓글 등록</button>
+        </div>
+        <button type="button" class="action-btn bg-cancel" style="margin-top:10px;" onclick="closeVesselInfoLinkModal()">닫기</button>
+    </div>
+</div>
 <div id="visitorStatsModal" class="modal-overlay" style="display:none;" onclick="closeVisitorStats()">
     <div class="modal-content" onclick="event.stopPropagation()" style="max-width:560px; padding:16px;">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; gap:8px; flex-wrap:wrap; border-bottom:2px solid var(--primary); padding-bottom:10px;">
@@ -3740,6 +3808,12 @@ function applyWageScheduleShip(
     if (month >= 1 && month <= 12) highlightSeasonRow(month);
 
     selectedWageScheduleShipName = name;
+
+    const wageShipNameInput = document.getElementById("wageShipName");
+    if (wageShipNameInput) wageShipNameInput.value = name;
+
+    lastCalculatedWageData = null;
+    document.getElementById("wageResultBox")?.classList.add("hidden");
     if (totalHoursInput) totalHoursInput.value = "";
 
     let calculatedHours = false;
@@ -5408,12 +5482,23 @@ function saveWorkLog(){
     btn.disabled = true; 
 
     const shipNameInfo = document.getElementById('logShipName').value.trim(); 
+    const previousWorkLog = adminWorkLogs[dStr] || {};
+    const previousShipName = previousWorkLog.shipName || "";
     const w1 = parseFloat(document.getElementById('logWage1').value) || 0; 
     const w2 = parseFloat(document.getElementById('logWage2').value) || 0; 
     const coworkersInfo = document.getElementById('logCoworkers').value.trim(); 
     const memo = document.getElementById('logMemo').value; 
     const file = document.getElementById('logImageInput').files[0]; 
     const pay = w1 + w2; 
+
+    const shouldOfferVesselInfoFollowUp =
+        !!normalizeVesselInfoName(shipNameInfo) &&
+        (
+            normalizeVesselInfoName(shipNameInfo) !==
+                normalizeVesselInfoName(previousShipName) ||
+            String(memo || "").trim() !==
+                String(previousWorkLog.memo || "").trim()
+        );
     
     // 문서 ID 생성 (닉네임_날짜 형식)
     const docId = `${currentWorkerId}_${dStr}`; 
@@ -5442,6 +5527,13 @@ function saveWorkLog(){
             // 데이터 즉시 갱신
             adminWorkLogs[dStr] = logData; 
             renderCalendar(currentDate.getFullYear(), currentDate.getMonth()); 
+
+            if (shouldOfferVesselInfoFollowUp) {
+                setTimeout(() => startVesselInfoFollowUp("workLog", {
+                    vesselName: shipNameInfo,
+                    date: dStr
+                }), 350);
+            } 
 
             setTimeout(() => { 
                 btn.innerText = "저장하기"; 
@@ -5632,7 +5724,28 @@ function calculateWage() {
         const subTotal = dayAmt + nightAmt + skilledAmt + holidayAmt + weekendAmt + otherAmt;
         const taxAmt = Math.floor(subTotal * taxRate);
         const finalTotal = Math.round(subTotal - taxAmt);
-        lastCalculatedWageData = { date: sd, totalPay: finalTotal, summary: `[${roleLabel}] 총 ${totalHours}H (주간 ${dayHours}H / 야간 ${nightHours}H)` };
+        const wageShipName =
+            document.getElementById("wageShipName")?.value.trim() ||
+            selectedWageScheduleShipName ||
+            "";
+        const wageEndDate = document.getElementById("wageEndDate").value;
+        const wageEndHour =
+            parseInt(document.getElementById("wageEndHour").value, 10) || 0;
+
+        lastCalculatedWageData = {
+            date: sd,
+            endDate: wageEndDate,
+            startHour: sh,
+            endHour: wageEndHour,
+            totalHours,
+            totalPay: finalTotal,
+            shipName: wageShipName,
+            terminalId: selectedScheduleTerminal,
+            summary:
+                `[${roleLabel}] ${sd} ${String(sh).padStart(2, "0")}시~` +
+                `${wageEndDate} ${String(wageEndHour).padStart(2, "0")}시 · ` +
+                `총 ${totalHours}H (주간 ${dayHours}H / 야간 ${nightHours}H)`
+        };
         let extraHtml = "";
         if (holidayAmt > 0) extraHtml += renderRow("🚜 지게차 수당 (" + holidayH + "H)", holidayAmt, "#ea580c");
         if (weekendAmt > 0) extraHtml += renderRow("🎈 특별 수당 (" + weekendH + "H)", weekendAmt, "#3b82f6");
@@ -5645,34 +5758,112 @@ function calculateWage() {
         document.getElementById('wageResultBox').classList.remove('hidden');
         trackAppEvent('actions', 'wage_calc');
         showToast("상세 계산서가 생성되었습니다!");
+        if (wageShipName) {
+            setTimeout(() => startVesselInfoFollowUp("wage", {
+                vesselName: wageShipName,
+                date: sd,
+                terminalId: selectedScheduleTerminal
+            }), 0);
+        }
     } catch (e) {
         console.error(e);
         alert("계산 오류: 입력창 값을 확인해 주세요.");
     }
 }
+function onWageShipNameChange(value) {
+    const trimmed = String(value || "").trim();
+    selectedWageScheduleShipName = trimmed;
+    const dateStr = document.getElementById("wageStartDate")?.value;
+    if (dateStr) {
+        const cacheKey = `${selectedScheduleTerminal}_${dateStr.slice(0, 7)}`;
+        if (hjncScheduleMonthCache[cacheKey]) {
+            renderWageScheduledShipsUI(dateStr, hjncScheduleMonthCache[cacheKey], selectedScheduleTerminal);
+        }
+    }
+}
 function sendCalculatedWageToLog() {
     if (!lastCalculatedWageData) return;
-    trackAppEvent('actions', 'wage_to_log');
+
+    trackAppEvent("actions", "wage_to_log");
     const { date, totalPay, summary } = lastCalculatedWageData;
-    const logCard = document.getElementById('log-card');
-    if (logCard && !logCard.classList.contains('expanded')) {
-        toggleDashItem('log-card');
+
+    const logCard = document.getElementById("log-card");
+    if (logCard && !logCard.classList.contains("expanded")) {
+        toggleDashItem("log-card");
     }
+
     jumpToLogDate(date);
-    const wage1Input = document.getElementById('logWage1');
-    const memoInput = document.getElementById('logMemo');
+
+    const wage1Input = document.getElementById("logWage1");
+    const memoInput = document.getElementById("logMemo");
+    const logShipInput = document.getElementById("logShipName");
+    const shipName =
+        document.getElementById("wageShipName")?.value.trim() ||
+        lastCalculatedWageData.shipName ||
+        "";
+
     if (wage1Input) wage1Input.value = totalPay;
+    if (logShipInput && shipName) logShipInput.value = shipName;
+
     if (memoInput && !memoInput.value.includes(summary)) {
-        memoInput.value = memoInput.value ? `${memoInput.value}\n${summary}` : summary;
+        memoInput.value = memoInput.value
+            ? `${memoInput.value}\n${summary}`
+            : summary;
     }
-    showToast("📅 근무일지 입력창에 계산된 임금이 자동 입력되었습니다!");
+
+    showToast(shipName
+        ? `📅 ${shipName} 선박명과 계산 임금을 근무일지에 입력했습니다. 저장을 눌러 기록하세요.`
+        : "📅 계산 임금을 근무일지에 입력했습니다. 저장을 눌러 기록하세요.");
+}
+function sendWorkLogShipToWage() {
+    const name =
+        document.getElementById("logShipName")?.value.trim() || "";
+    if (!name) {
+        return showToast("근무일지에 선박명을 먼저 입력해 주세요.");
+    }
+
+    const card = document.getElementById("wage-card");
+    if (card && !card.classList.contains("expanded")) {
+        toggleDashItem("wage-card");
+    }
+
+    lastCalculatedWageData = null;
+    document.getElementById("wageResultBox")?.classList.add("hidden");
+
+    const totalHoursInput = document.getElementById("wageTotalHours");
+    if (totalHoursInput) totalHoursInput.value = "";
+
+    const input = document.getElementById("wageShipName");
+    if (input) input.value = name;
+    onWageShipNameChange(name);
+
+    const logDate =
+        document.getElementById("dailyLogForm")?.getAttribute("data-date") || "";
+
+    if (logDate) {
+        const startDate = document.getElementById("wageStartDate");
+        const endDate = document.getElementById("wageEndDate");
+
+        if (startDate) startDate.value = logDate;
+        if (endDate) endDate.value = logDate;
+
+        highlightSeasonRow(parseInt(logDate.split("-")[1], 10));
+        loadWageScheduledShipsForDate(logDate, false);
+    }
+
+    document.getElementById("wage-card")
+        ?.scrollIntoView({ behavior: "smooth", block: "start" });
+
+    showToast(
+        `🚢 ${name} 선박과 근무일자를 임금계산기로 보냈습니다. 근무 시간은 확인해 주세요.`
+    );
 }
 function resetWageForm() {
     try {
         const now = new Date();
         now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
         const todayStr = now.toISOString().split('T')[0];
-        ['wageTotalHours', 'wageAllowanceHours', 'wageHoliday', 'wageWeekend', 'wageRain', 'wageHotTime'].forEach(id => {
+        ['wageTotalHours', 'wageShipName', 'wageAllowanceHours', 'wageHoliday', 'wageWeekend', 'wageRain', 'wageHotTime'].forEach(id => {
             const el = document.getElementById(id);
             if (el) el.value = '';
         });
@@ -5711,6 +5902,368 @@ async function deleteComment(pid,cid,pw){const inputPw = prompt("댓글 비밀�
 let currentEditShipId = null;
 let selectedShipFormTags = [];
 let activeShipFilterTags = [];
+let shipDirectorySnapshotLoaded = false;
+let pendingVesselInfoLink = null;
+let pendingShipInfoRegistration = null;
+const handledVesselInfoFollowUps = new Set();
+
+function getAppLocalDateString() {
+    const now = new Date();
+    now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+    return now.toISOString().split("T")[0];
+}
+
+function normalizeVesselInfoName(value) {
+    return String(value || "")
+        .normalize("NFKC")
+        .replace(/^\s*\[[^\]]+\]\s*/, "")
+        .replace(/[\s\u200B]+/g, "")
+        .toLocaleUpperCase("ko-KR");
+}
+
+function getVesselInfoFollowUpKey(name, date) {
+    return `${normalizeVesselInfoName(name)}|${date || "no-date"}`;
+}
+
+async function lookupVesselInfoRecord(vesselName) {
+    const normalized = normalizeVesselInfoName(vesselName);
+    const localMatch = (allShipsData || []).find(ship =>
+        normalizeVesselInfoName(ship.shipName || ship.name || ship.vesselName) === normalized
+    );
+
+    if (localMatch) return { status: "found", ship: localMatch };
+
+    // 실시간 목록에서 찾지 못하면 레거시 문서를 포함해 다시 확인
+    try {
+        const snapshot = await db.collection("ships").get();
+        const records = [];
+        snapshot.forEach(doc => records.push({ ...doc.data(), id: doc.id }));
+
+        const found = records.find(ship =>
+            normalizeVesselInfoName(ship.shipName || ship.name || ship.vesselName) === normalized
+        );
+
+        if (!shipDirectorySnapshotLoaded) {
+            allShipsData = records;
+            filteredShips = records;
+        }
+
+        return found
+            ? { status: "found", ship: found }
+            : { status: "missing", ship: null };
+    } catch (error) {
+        console.error("선박 정보 확인 실패:", error);
+        return { status: "error", error };
+    }
+}
+
+function getVesselInfoFollowUpContext(source, overrides = {}) {
+    const isWage = source === "wage";
+    const vesselName = String(
+        overrides.vesselName ??
+        (isWage
+            ? (document.getElementById("wageShipName")?.value || selectedWageScheduleShipName || "")
+            : (document.getElementById("logShipName")?.value || ""))
+    ).trim();
+    const date = String(
+        overrides.date ??
+        (isWage
+            ? (document.getElementById("wageStartDate")?.value || "")
+            : (document.getElementById("dailyLogForm")?.getAttribute("data-date") || ""))
+    ).trim();
+    const terminalId = overrides.terminalId || selectedScheduleTerminal;
+    const sourceLabel = isWage ? "임금계산기" : "근무일지";
+    const force = Boolean(overrides.force);
+    const key = getVesselInfoFollowUpKey(vesselName, date);
+    return { source, sourceLabel, vesselName, date, terminalId, force, key };
+}
+
+function setVesselLinkButtonVisible(id, visible) {
+    const btn = document.getElementById(id);
+    if (btn) btn.style.display = visible ? "block" : "none";
+}
+
+function closeVesselInfoLinkModal() {
+    const modal = document.getElementById("vesselInfoLinkModal");
+    if (modal) modal.style.display = "none";
+    document.getElementById("vesselInfoCommentForm")?.classList.add("hidden");
+    pendingVesselInfoLink = null;
+}
+
+function toggleVesselInfoCommentForm() {
+    const form = document.getElementById("vesselInfoCommentForm");
+    if (!form) return;
+    form.classList.toggle("hidden");
+    if (!form.classList.contains("hidden")) {
+        const nameInput = document.getElementById("vesselInfoCommentName");
+        if (nameInput && !nameInput.value && currentWorkerId) {
+            nameInput.value = currentWorkerId;
+        }
+        document.getElementById("vesselInfoCommentText")?.focus();
+    }
+}
+
+function openVesselInfoViewFromLink() {
+    const context = pendingVesselInfoLink;
+    if (!context?.ship?.id) return;
+    const shipId = context.ship.id;
+    closeVesselInfoLinkModal();
+    const card = document.getElementById("ship-card");
+    if (card && !card.classList.contains("expanded")) {
+        toggleDashItem("ship-card");
+    }
+    openShipDetailView(shipId);
+}
+
+async function startVesselInfoFollowUp(source, overrides = {}) {
+    const context = getVesselInfoFollowUpContext(source, overrides);
+
+    if (!normalizeVesselInfoName(context.vesselName)) {
+        showToast("선박명을 먼저 입력하거나 스케줄에서 선택해 주세요.");
+        return;
+    }
+
+    if (!context.force && handledVesselInfoFollowUps.has(context.key)) return;
+
+    const modal = document.getElementById("vesselInfoLinkModal");
+    const title = document.getElementById("vesselInfoLinkTitle");
+    const message = document.getElementById("vesselInfoLinkMessage");
+    const meta = document.getElementById("vesselInfoLinkMeta");
+    const actions = document.getElementById("vesselInfoLinkActions");
+    const commentForm = document.getElementById("vesselInfoCommentForm");
+    if (!modal || !title || !message || !actions) return;
+
+    const pending = { ...context, ship: null, status: "checking" };
+    pendingVesselInfoLink = pending;
+
+    commentForm?.classList.add("hidden");
+    setVesselLinkButtonVisible("vesselInfoRegisterBtn", false);
+    setVesselLinkButtonVisible("vesselInfoCommentBtn", false);
+    setVesselLinkButtonVisible("vesselInfoViewBtn", false);
+
+    title.textContent = "🔎 선박 정보 확인";
+    message.textContent =
+        `‘${context.vesselName}’ 선박이 선박 정보에 등록되어 있는지 확인하고 있습니다...`;
+    meta.textContent = context.date
+        ? `${context.sourceLabel} · ${context.date}`
+        : context.sourceLabel;
+    modal.style.display = "flex";
+
+    const result = await lookupVesselInfoRecord(context.vesselName);
+    if (pendingVesselInfoLink !== pending) return;
+    pending.status = result.status;
+
+    if (result.status === "error") {
+        title.textContent = "⚠️ 선박 정보를 확인하지 못했습니다";
+        message.textContent =
+            "네트워크 또는 데이터베이스 연결을 확인한 뒤 다시 시도해 주세요. " +
+            "등록 여부를 확인하지 못했으므로 신규 등록은 아직 시작하지 않았습니다.";
+        meta.textContent = "연동 확인에 실패했습니다.";
+        return;
+    }
+
+    if (result.status === "missing") {
+        title.textContent = "📝 신규 선박 등록";
+        message.textContent =
+            `‘${context.vesselName}’ 선박은 선박 정보에 없습니다. 신규 등록 화면에 선박명을 넣어드릴까요?`;
+        setVesselLinkButtonVisible("vesselInfoRegisterBtn", true);
+        return;
+    }
+
+    pending.ship = result.ship;
+    title.textContent = "🚢 기존 선박 정보 확인";
+    message.textContent =
+        `‘${result.ship.shipName || context.vesselName}’ 선박이 이미 등록되어 있습니다. ` +
+        "추가 장비·작업 난이도·주의사항을 댓글로 남기시겠습니까?";
+
+    const tags = extractShipTags(result.ship);
+    const details = [];
+    if (Number(result.ship.difficulty)) {
+        details.push(`작업 난이도 ★${Number(result.ship.difficulty)}`);
+    }
+    if (tags.length) details.push(tags.join(" · "));
+
+    meta.textContent = [
+        context.sourceLabel,
+        context.date,
+        details.join(" · ")
+    ].filter(Boolean).join(" · ");
+
+    setVesselLinkButtonVisible("vesselInfoCommentBtn", true);
+    setVesselLinkButtonVisible("vesselInfoViewBtn", true);
+}
+
+function openVesselRegistrationFromLink() {
+    const context = pendingVesselInfoLink;
+    if (!context || context.status !== "missing") return;
+
+    const existingForm = document.getElementById("shipForm");
+    const hasUnsavedShipDraft = !!currentEditShipId || !!(
+        existingForm &&
+        !existingForm.classList.contains("hidden") &&
+        (
+            document.getElementById("shipName")?.value.trim() ||
+            document.getElementById("shipOnboard")?.value.trim() ||
+            document.getElementById("shipPw")?.value.trim() ||
+            document.getElementById("shipFileInput")?.files?.length
+        )
+    );
+
+    if (hasUnsavedShipDraft &&
+        !confirm("현재 선박 등록·수정 입력 내용이 있습니다. 이를 초기화하고 신규 선박 등록을 시작할까요?")) {
+        return;
+    }
+
+    const registrationContext = {
+        vesselName: context.vesselName,
+        key: context.key
+    };
+
+    closeVesselInfoLinkModal();
+
+    const card = document.getElementById("ship-card");
+    if (card && !card.classList.contains("expanded")) {
+        toggleDashItem("ship-card");
+    }
+
+    if (typeof resetShipForm === "function") resetShipForm();
+    pendingShipInfoRegistration = registrationContext;
+
+    const form = document.getElementById("shipForm");
+    const nameInput = document.getElementById("shipName");
+    const passwordInput = document.getElementById("shipPw");
+
+    if (form) form.classList.remove("hidden");
+    if (nameInput) nameInput.value = context.vesselName;
+    if (passwordInput) passwordInput.value = "";
+    initShipFormSchedulePicker();
+
+    form?.scrollIntoView({ behavior: "smooth", block: "center" });
+    showToast("신규 등록 양식에 선박명을 입력했습니다. 특징·장비와 비밀번호를 작성해 저장하세요.");
+}
+
+async function submitVesselInfoComment() {
+    const context = pendingVesselInfoLink;
+    if (!context?.ship?.id) return;
+
+    const name =
+        document.getElementById("vesselInfoCommentName")?.value.trim() || "";
+    const password =
+        document.getElementById("vesselInfoCommentPassword")?.value.trim() || "";
+    const text =
+        document.getElementById("vesselInfoCommentText")?.value.trim() || "";
+
+    if (!name || !password || !text) {
+        alert("닉네임, 댓글 비밀번호, 추가사항을 모두 입력해 주세요.");
+        return;
+    }
+
+    const button = document.querySelector("#vesselInfoCommentForm .bg-submit");
+    if (button) {
+        button.disabled = true;
+        button.innerText = "댓글 저장 중...";
+    }
+
+    const sourcePrefix =
+        `[${context.sourceLabel}${context.date ? ` · ${context.date}` : ""}]`;
+
+    try {
+        const commentData = {
+            name,
+            password: await sha256Hex(password),
+            text: `${sourcePrefix}\n${text}`,
+            timestamp: firebase.firestore.FieldValue.serverTimestamp()
+        };
+
+        await db.collection("ships")
+            .doc(context.ship.id)
+            .collection("comments")
+            .add(commentData);
+
+        handledVesselInfoFollowUps.add(context.key);
+        document.getElementById("vesselInfoCommentText").value = "";
+        closeVesselInfoLinkModal();
+        showToast(
+            `💬 ${context.ship.shipName || context.vesselName} 선박 정보에 추가 댓글을 등록했습니다.`
+        );
+    } catch (error) {
+        console.error("선박 정보 댓글 등록 실패:", error);
+        alert("댓글 저장에 실패했습니다: " + error.message);
+    } finally {
+        if (button) {
+            button.disabled = false;
+            button.innerText = "댓글 등록";
+        }
+    }
+}
+
+async function loadShipRecordById(shipId) {
+    if (!shipId) return null;
+    const local = (allShipsData || []).find(s => s.id === shipId);
+    if (local) return local;
+    try {
+        const snap = await db.collection("ships").doc(shipId).get();
+        if (snap.exists) return { ...snap.data(), id: snap.id };
+    } catch (e) {}
+    return null;
+}
+
+async function sendShipInfoToWage(shipId, event) {
+    if (event) event.stopPropagation();
+
+    const ship = await loadShipRecordById(shipId);
+    if (!ship) return showToast("선박 정보를 다시 불러와 주세요.");
+
+    const card = document.getElementById("wage-card");
+    if (card && !card.classList.contains("expanded")) {
+        toggleDashItem("wage-card");
+    }
+
+    const name = ship.shipName || ship.name || ship.vesselName || "";
+    const input = document.getElementById("wageShipName");
+
+    if (input) input.value = name;
+    onWageShipNameChange(name);
+
+    const date = document.getElementById("wageStartDate")?.value;
+    if (date) loadWageScheduledShipsForDate(date, false);
+
+    document.getElementById("wage-card")
+        ?.scrollIntoView({ behavior: "smooth", block: "start" });
+    input?.focus();
+
+    showToast(`🚢 ${name} 선박을 임금계산기로 보냈습니다.`);
+}
+
+async function sendShipInfoToWorkLog(shipId, event) {
+    if (event) event.stopPropagation();
+
+    const ship = await loadShipRecordById(shipId);
+    if (!ship) return showToast("선박 정보를 다시 불러와 주세요.");
+
+    const card = document.getElementById("log-card");
+    if (card && !card.classList.contains("expanded")) {
+        toggleDashItem("log-card");
+    }
+
+    const form = document.getElementById("dailyLogForm");
+    const date = form?.getAttribute("data-date") || getAppLocalDateString();
+
+    if (form?.classList.contains("hidden")) {
+        jumpToLogDate(date);
+    }
+
+    const name = ship.shipName || ship.name || ship.vesselName || "";
+    const input = document.getElementById("logShipName");
+
+    if (input) input.value = name;
+
+    document.getElementById("log-card")
+        ?.scrollIntoView({ behavior: "smooth", block: "start" });
+    input?.focus();
+
+    showToast(`🚢 ${name} 선박을 근무일지 입력창으로 보냈습니다.`);
+}
 const shipDifficultyDescriptions = {
     1: "★☆☆☆☆ (매우 수월·1점)",
     2: "★★☆☆☆ (수월함·2점)",
@@ -5789,7 +6342,20 @@ async function addShipInfo() {
         if (url) shipData.imageUrl = url;
         let task = currentEditShipId ? db.collection("ships").doc(currentEditShipId).update(shipData) : db.collection("ships").add(shipData);
         task.then(() => {
-            showToast("성공적으로 기록되었습니다.");
+            const linkedRegistration = pendingShipInfoRegistration;
+            const linkedByVesselFlow =
+                linkedRegistration &&
+                normalizeVesselInfoName(linkedRegistration.vesselName) ===
+                    normalizeVesselInfoName(n);
+
+            if (linkedByVesselFlow) {
+                handledVesselInfoFollowUps.add(linkedRegistration.key);
+                pendingShipInfoRegistration = null;
+            }
+
+            showToast(linkedByVesselFlow
+                ? "🚢 선박 정보 신규 등록 및 임금계산기·근무일지 연동이 완료되었습니다."
+                : "성공적으로 기록되었습니다.");
             resetShipForm();
             btn.innerText = "등록/수정";
             btn.disabled = false;
@@ -5918,7 +6484,7 @@ function renderShipPage(p) {
             : "";
         const rowId = `s-${ship.id}`;
         const postNum = filteredShips.length - ((p - 1) * postsPerPage) - index;
-        rowsHtml.push(`<tr onclick="toggleBoardRow('${rowId}')" style="cursor:pointer;"><td class="board-no">${postNum}</td><td class="board-title" style="white-space:normal; line-height:1.35;"><div>🚢 ${ship.shipName || "선박명 없음"} ${starBadge} <span style="font-size:0.75rem; color:var(--primary); margin-left:4px;">▼</span></div>${tagsInlineHtml}</td><td class="board-date">${dateStr}</td></tr><tr id="${rowId}" class="board-content-row"><td colspan="3" class="board-content-box">${detailMetaHtml}<div style="margin-bottom:12px; white-space:pre-wrap;">${ship.onboardFeat || ""}</div>${imageHtml}<div style="text-align:right; border-bottom:1px dashed var(--border); padding-bottom:10px; margin-bottom:10px;"><button class="mini-btn" style="background:var(--primary-light) !important; color:white !important;" onclick="tryEditShip('${ship.id}', '${safeName}', '${safeFeat}', '${savedPw}')">✏️ 수정</button><button class="mini-btn btn-del" onclick="deleteShip('${ship.id}',event)">🗑️ 삭제</button></div>${renderShipCommentMarkup(ship.id)}</td></tr>`);
+        rowsHtml.push(`<tr onclick="toggleBoardRow('${rowId}')" style="cursor:pointer;"><td class="board-no">${postNum}</td><td class="board-title" style="white-space:normal; line-height:1.35;"><div>🚢 ${ship.shipName || "선박명 없음"} ${starBadge} <span style="font-size:0.75rem; color:var(--primary); margin-left:4px;">▼</span></div>${tagsInlineHtml}</td><td class="board-date">${dateStr}</td></tr><tr id="${rowId}" class="board-content-row"><td colspan="3" class="board-content-box">${detailMetaHtml}<div style="margin-bottom:12px; white-space:pre-wrap;">${ship.onboardFeat || ""}</div>${imageHtml}<div style="display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:6px; border-bottom:1px dashed var(--border); padding-bottom:10px; margin-bottom:10px;"><div style="display:flex; flex-wrap:wrap; gap:5px;"><button type="button" class="mini-btn" onclick="sendShipInfoToWage('${ship.id}', event)">🧮 임금계산기로</button><button type="button" class="mini-btn" onclick="sendShipInfoToWorkLog('${ship.id}', event)">📅 근무일지로</button></div><div style="display:flex; gap:5px; margin-left:auto;"><button class="mini-btn" style="background:var(--primary-light) !important; color:white !important;" onclick="tryEditShip('${ship.id}', '${safeName}', '${safeFeat}', '${savedPw}')">✏️ 수정</button><button class="mini-btn btn-del" onclick="deleteShip('${ship.id}',event)">🗑️ 삭제</button></div></div>${renderShipCommentMarkup(ship.id)}</td></tr>`);
     });
     list.innerHTML = rowsHtml.join("");
     const totalPages = Math.ceil(filteredShips.length / postsPerPage);
@@ -6109,7 +6675,7 @@ window.onload = async () => {
     try { 
         db.collection("notices").orderBy("timestamp","desc").onSnapshot(s => { const l = document.getElementById("noticeList"); const badge = document.getElementById("noticeBadge"); const subMeta = document.getElementById("noticeCardSubMeta"); if (subMeta) subMeta.innerText = s.empty ? "운영 안내 및 주요 소식" : `등록된 공지 ${s.size}건`; if (s.empty) { l.innerHTML = "<tr><td colspan='3' style='text-align:center; padding:20px; color:var(--text-sub); font-weight:700;'>등록된 공지가 없습니다.</td></tr>"; if(badge) badge.classList.add("hidden"); return; } let isNew = false; const now = new Date(); let index = 0; const rowsHtml = []; s.forEach(d => { const x = d.data(); let dateStr = ""; if(x.timestamp) { const dt = x.timestamp.toDate(); dateStr = `${dt.getFullYear()}/${String(dt.getMonth()+1).padStart(2,'0')}/${String(dt.getDate()).padStart(2,'0')}`; if (index === 0) { const diffTime = now.getTime() - dt.getTime(); if (diffTime < 24 * 60 * 60 * 1000) isNew = true; } } const linkedContent = autoLink(x.content); const imageHtml = x.imageUrl ? `<img src="${x.imageUrl}" loading="lazy" alt="공지사항 이미지" style="max-width:100%; border-radius:8px; margin-top:10px; border:1px solid rgba(0,0,0,0.1);" onclick="document.getElementById('imageModal').style.display='flex'; document.getElementById('modalImage').src=this.src;">` : ''; const safeTitle = (x.title || '').replace(/'/g, "\\'").replace(/"/g, "&quot;"); const safeContent = (x.content || '').replace(/'/g, "\\'").replace(/"/g, "&quot;").replace(/\n/g, "\\n"); const imgParam = x.imageUrl ? `'${x.imageUrl}'` : `null`; const rowId = `n-${d.id}`; rowsHtml.push(`<tr onclick="toggleBoardRow('${rowId}')" style="cursor:pointer; background:${index === 0 ? 'rgba(239,68,68,0.06)' : 'rgba(239,68,68,0.02)'};"> <td class="board-no" style="color:var(--danger); font-weight:900;">${index === 0 ? '📌 필독' : '공지'}</td> <td class="board-title">📢 ${x.title} <span style="font-size:0.75rem; color:var(--primary); margin-left:4px;">▼</span></td> <td class="board-date">${dateStr}</td> </tr> <tr id="${rowId}" class="board-content-row"> <td colspan="3" class="board-content-box" style="border-left: 3px solid var(--danger);"> <div style="margin-bottom:15px; white-space:pre-wrap; font-weight:600; background:var(--card-bg); padding:12px; border-radius:8px; border:1px solid var(--border);">${linkedContent}</div> ${imageHtml} <div style="text-align:right; margin-top:10px;"> <button class="mini-btn" style="background:var(--primary) !important; margin-right:5px; color:white !important;" onclick="startEditNotice('${d.id}', '${safeTitle}', '${safeContent}', ${imgParam}, event)">✏️ 수정(Admin)</button> <button class="mini-btn btn-del" onclick="delNotice('${d.id}',event)">🗑️ 삭제(Admin)</button> </div> </td> </tr>`); index++; }); l.innerHTML = rowsHtml.join(""); if(badge) { if(isNew) badge.classList.remove("hidden"); else badge.classList.add("hidden"); } }); 
         db.collection("posts").orderBy("timestamp","desc").onSnapshot(s => { allPostsData = []; s.forEach(d => { allPostsData.push({...d.data(), id:d.id}) }); const subMeta = document.getElementById("boardCardSubMeta"); if (subMeta) subMeta.innerText = allPostsData.length > 0 ? `자유 게시글 ${allPostsData.length}건` : "현장 동료 자유 소통방"; const badge = document.getElementById("boardBadge"); if (badge) { if (allPostsData.length > 0 && allPostsData[0].timestamp) { const now = new Date(); const dt = allPostsData[0].timestamp.toDate(); const diffTime = now.getTime() - dt.getTime(); if (diffTime < 24 * 60 * 60 * 1000) badge.classList.remove("hidden"); else badge.classList.add("hidden"); } else badge.classList.add("hidden"); } renderBoardPage(1); }); 
-        db.collection("ships").orderBy("timestamp","desc").onSnapshot(s=>{allShipsData=[]; s.forEach(d=>{allShipsData.push({...d.data(), id:d.id})}); const subMeta = document.getElementById("shipCardSubMeta"); if (subMeta) subMeta.innerText = allShipsData.length > 0 ? `등록 선박 ${allShipsData.length}척 · 장비 도감` : "난이도 · 필수 장비 도감"; filteredShips=allShipsData; renderShipPage(1); if(typeof loadAndSearchAllShips==="function") loadAndSearchAllShips(document.getElementById('shipSearch')?.value || '');}); 
+        db.collection("ships").orderBy("timestamp","desc").onSnapshot(s=>{shipDirectorySnapshotLoaded = true; allShipsData=[]; s.forEach(d=>{allShipsData.push({...d.data(), id:d.id})}); const subMeta = document.getElementById("shipCardSubMeta"); if (subMeta) subMeta.innerText = allShipsData.length > 0 ? `등록 선박 ${allShipsData.length}척 · 장비 도감` : "난이도 · 필수 장비 도감"; filteredShips=allShipsData; renderShipPage(1); if(typeof loadAndSearchAllShips==="function") loadAndSearchAllShips(document.getElementById('shipSearch')?.value || '');}); 
         db.collection("archives").orderBy("timestamp","desc").onSnapshot(s=>{const l=document.getElementById("fileList"); const subMeta = document.getElementById("archiveCardSubMeta"); if (subMeta) subMeta.innerText = s.size > 0 ? `등록 자료 ${s.size}건 · 시간표` : "터미널 셔틀 시간표 · 서식"; const rowsHtml=[]; s.forEach(d=>{const x=d.data(); rowsHtml.push(`<tr><td class="board-title" style="width: 75%; padding-left: 10px;"><a href="${x.url}" target="_blank" style="text-decoration:none; color:var(--primary); font-weight:800;">💾 ${x.title}</a></td><td style="width: 25%; text-align:center;"><button class="mini-btn btn-del" onclick="delArchive('${d.id}',event)">삭제</button></td></tr>`);}); l.innerHTML=rowsHtml.join("");}); 
     } catch(err) { console.warn("실시간 연결 오류:", err); } 
     if(localStorage.getItem('myWorkerId')) { currentWorkerId = localStorage.getItem('myWorkerId'); updateUserBar(); } 
