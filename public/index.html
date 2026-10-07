@@ -635,8 +635,8 @@
             flex: 0 0 auto;
             align-items: center;
             justify-content: center;
-            min-width: 96px;
-            min-height: 38px;
+            min-width: 78px;
+            min-height: 36px;
             box-sizing: border-box;
             padding: 6px 9px;
             border: 1px solid #fb923c;
@@ -664,28 +664,59 @@
             color: #fed7aa;
             border-color: #ea580c;
         }
-        .wage-schedule-date-control {
-            overflow: hidden;
-        }
-        .wage-schedule-date-control input {
-            position: absolute;
-            inset: 0;
-            z-index: 1;
-            width: 100%;
-            height: 100%;
-            box-sizing: border-box;
-            opacity: 0;
-            cursor: pointer;
+        .wage-terminal-schedule-heading {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-between;
+            gap: 6px;
+            margin: 2px 0 6px;
         }
         .wage-terminal-schedule-title {
+            flex: 1 1 180px;
+            min-width: 0;
             font-size: 0.74rem;
             font-weight: 900;
             color: #9a3412;
-            margin: 2px 0 5px;
+            margin: 0;
             line-height: 1.3;
         }
         body.dark-mode .wage-terminal-schedule-title {
             color: #fdba74;
+        }
+        .wage-schedule-date-input {
+            flex: 0 0 auto;
+            width: auto;
+            min-width: 132px;
+            height: 32px;
+            padding: 0 8px;
+            border: 1.5px solid #fb923c;
+            border-radius: 7px;
+            background: #ffffff;
+            color: #9a3412;
+            font-family: inherit;
+            font-size: 0.75rem;
+            font-weight: 900;
+            font-variant-numeric: tabular-nums;
+            cursor: pointer;
+            box-sizing: border-box;
+            transition: border-color 0.14s ease, box-shadow 0.14s ease;
+        }
+        .wage-schedule-date-input:hover,
+        .wage-schedule-date-input:focus {
+            outline: none;
+            border-color: #ea580c;
+            box-shadow: 0 0 0 2px rgba(234, 88, 12, 0.15);
+        }
+        .wage-schedule-date-input::-webkit-calendar-picker-indicator {
+            cursor: pointer;
+            opacity: 0.85;
+        }
+        body.dark-mode .wage-schedule-date-input {
+            background: rgba(15, 23, 42, 0.75);
+            color: #fed7aa;
+            border-color: #ea580c;
+            color-scheme: dark;
         }
         .wage-terminal-scheduled-list {
             display: flex;
@@ -1091,20 +1122,17 @@
             .dash-content { padding: 10px 8px; }
 
             .wage-terminal-picker-heading-copy {
-                flex: 1 0 100%;
-            }
-
-            .wage-terminal-picker-actions {
-                display: grid;
-                grid-template-columns: repeat(2, minmax(0, 1fr));
-                width: 100%;
+                flex: 1 1 160px;
             }
 
             .wage-schedule-refresh-btn {
-                width: 100%;
-                min-width: 0;
-                min-height: 42px;
+                min-height: 38px;
                 font-size: 0.75rem;
+            }
+
+            .wage-schedule-date-input {
+                min-height: 36px;
+                font-size: 0.78rem;
             }
 
             .daily-field-english-header {
@@ -1254,15 +1282,6 @@
                                         aria-label="오늘 날짜로 초기화하고 선박 스케줄 갱신">
                                     🔄 갱신
                                 </button>
-
-                                <label class="wage-schedule-refresh-btn wage-schedule-date-control"
-                                       title="달력에서 스케줄 날짜 선택">
-                                    <span>📅 날짜 이동</span>
-                                    <input type="date"
-                                           id="wageScheduleDatePicker"
-                                           aria-label="선박 스케줄 날짜 선택"
-                                           onchange="onWageScheduleDateChange(this.value)">
-                                </label>
                             </div>
                         </div>
 
@@ -1307,9 +1326,16 @@
                             </a>
                         </div>
 
-                        <div id="wageTerminalScheduleTitle"
-                             class="wage-terminal-schedule-title">
-                            오늘 날짜 기준 입·출항 선박
+                        <div class="wage-terminal-schedule-heading">
+                            <div id="wageTerminalScheduleTitle" class="wage-terminal-schedule-title">
+                                오늘 날짜 기준 입·출항 선박
+                            </div>
+                            <input type="date"
+                                   id="wageScheduleDatePicker"
+                                   class="wage-schedule-date-input"
+                                   aria-label="선박 스케줄 날짜 선택"
+                                   onclick="openWageScheduleDatePicker()"
+                                   onchange="onWageScheduleDateChange(this.value)">
                         </div>
                         <div id="wageTerminalScheduledShipList"
                              class="wage-terminal-scheduled-list"
@@ -4147,10 +4173,29 @@ function setWageScheduleDate(dateStr) {
     return true;
 }
 
+function openWageScheduleDatePicker() {
+    const dateInput = document.getElementById("wageScheduleDatePicker");
+    if (!dateInput) return;
+    if (!dateInput.value) {
+        dateInput.value = getAppLocalDateString();
+    }
+    if (typeof dateInput.showPicker === "function") {
+        try {
+            dateInput.showPicker();
+        } catch (e) {}
+    }
+}
+
 function onWageScheduleDateChange(dateStr) {
     if (!setWageScheduleDate(dateStr)) return;
 
     const meta = getTerminalMeta(selectedScheduleTerminal);
+    const titleEl = document.getElementById("wageTerminalScheduleTitle");
+    if (titleEl) {
+        titleEl.textContent =
+            `⚓ ${dateStr} ${meta.label} 입항·작업 선박 조회 중...`;
+    }
+
     showToast(`📅 ${dateStr} ${meta.label} 스케줄로 이동합니다.`);
     loadWageScheduledShipsForDate(dateStr, false);
 }
