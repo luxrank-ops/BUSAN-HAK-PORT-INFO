@@ -1754,7 +1754,8 @@
                     </div>
                     <div id="hjncScheduledShipBox" class="hjnc-schedule-box">
                         <div class="hjnc-schedule-header">
-                            <span id="hjncScheduleBoxTitle" style="font-size:0.76rem; font-weight:900; color:#c2410c;">⚓ 터미널별 당일 입항·접안 선박</span>
+                            <span id="hjncScheduleBoxTitle" style="font-size:0.76rem; font-weight:900; color:#c2410c; line-height:1.35; white-space:pre-line;">⚓ 터미널별 당일
+입항·접안 선박</span>
                             <div style="display:flex; align-items:center; gap:5px;">
                                 <button type="button" onclick="refreshHjncScheduleForSelectedDate()" class="mini-refresh-btn" style="background:#ffffff; border:1px solid #fb923c; color:#ea580c; border-radius:6px; padding:4px 9px; font-size:0.72rem; font-weight:800; cursor:pointer;">🔄 갱신</button>
                                 <a id="terminalScheduleOrigLink" href="https://www.hjnc.co.kr/esvc/vessel/berthScheduleT" target="_blank" style="font-size:0.68rem; font-weight:800; color:#ea580c; text-decoration:underline;">스케줄 ↗</a>
@@ -5613,7 +5614,7 @@ function renderHjncScheduledShipsUI(dateStr, allVessels, terminalId = selectedSc
         uniqueMatched.push(v);
     });
 
-    titleEl.innerText = `⚓ ${dateStr} ${meta.label} 입항·작업 선박 (${uniqueMatched.length}척) — 터치 시 자동 입력`;
+    titleEl.innerText = `⚓ ${dateStr} ${meta.label}\n입항·작업 선박 (${uniqueMatched.length}척) — 터치 시 자동 입력`;
 
     if (uniqueMatched.length === 0) {
         if (!meta.live) {
@@ -5672,7 +5673,7 @@ async function loadHjncScheduledShipsForDate(dateStr, forceRefresh = false) {
         return;
     }
 
-    titleEl.innerText = `⚓ ${dateStr} ${meta.label} 입항·접안 예정 선박 조회 중...`;
+    titleEl.innerText = `⚓ ${dateStr} ${meta.label}\n입항·접안 예정 선박 조회 중...`;
     listEl.innerHTML = `<span style="font-size:0.74rem; color:var(--text-sub); font-weight:700;">${meta.label} 선석 배정 현황 데이터를 불러오는 중입니다...</span>`;
 
     const allVessels = await fetchHjncScheduleForMonth(yearMonth, forceRefresh, tid);
