@@ -509,7 +509,8 @@
             grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
             gap: 8px;
             align-items: end;
-            margin-bottom: 8px;
+            /* 수당 요약 블럭 제거로 카드 하단 여백을 조입니다. */
+            margin-bottom: 0;
         }
         .wage-allowance-control {
             display: flex;
@@ -527,49 +528,6 @@
             font-weight: 800 !important;
             border: 2px solid #cbd5e1 !important;
             cursor: pointer;
-        }
-        .wage-allowance-summary-wrap {
-            display: flex;
-            flex-direction: column;
-            gap: 4px;
-            padding: 7px 8px;
-            border-radius: 8px;
-            background: var(--bg-color);
-            border: 1px dashed var(--border);
-        }
-        .wage-allowance-summary-title {
-            font-size: 0.7rem;
-            font-weight: 800;
-            color: var(--text-sub);
-        }
-        .wage-allowance-summary {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 5px;
-            min-height: 22px;
-            align-items: center;
-        }
-        .wage-allowance-empty {
-            font-size: 0.72rem;
-            font-weight: 700;
-            color: var(--text-sub);
-        }
-        .wage-allowance-chip {
-            display: inline-flex;
-            align-items: center;
-            gap: 4px;
-            padding: 3px 8px;
-            border-radius: 999px;
-            background: #eff6ff;
-            border: 1px solid #bfdbfe;
-            color: #1e3a8a;
-            font-size: 0.72rem;
-            font-weight: 800;
-        }
-        body.dark-mode .wage-allowance-chip {
-            background: rgba(30, 58, 138, 0.4);
-            border-color: #3b82f6;
-            color: #dbeafe;
         }
         .wage-allowance-field {
             display: flex;
@@ -1659,17 +1617,6 @@
                                     <span class="wage-allowance-unit">시간</span>
                                 </span>
                             </label>
-                        </div>
-
-                        <div class="wage-allowance-summary-wrap">
-                            <span class="wage-allowance-summary-title">입력된 수당</span>
-                            <div id="wageAllowanceSummary"
-                                 class="wage-allowance-summary"
-                                 aria-live="polite">
-                                <span class="wage-allowance-empty">
-                                    수당 종류를 선택하고 시간을 입력하세요.
-                                </span>
-                            </div>
                         </div>
 
                         <input type="hidden" id="wageHoliday" value="">
@@ -6628,12 +6575,6 @@ function calcTimeAndFill() {
 function autoFillWeekendHoliday() {
     // 추가 수당 시간 입력(지게차, 특별수당, 우천, 혹서기)은 사용자가 직접 입력할 때만 반영되도록 자동 입력 비활성화
 }
-const WAGE_ALLOWANCE_OPTIONS = [
-    { id: "wageHoliday", label: "지게차", icon: "🚜" },
-    { id: "wageWeekend", label: "특별 수당", icon: "🎈" },
-    { id: "wageRain", label: "우천", icon: "☔" },
-    { id: "wageHotTime", label: "혹서기 (30%)", icon: "☀️" }
-];
 
 function changeWageAllowanceType() {
     const typeSelect = document.getElementById("wageAllowanceType");
@@ -6643,7 +6584,6 @@ function changeWageAllowanceType() {
         : null;
 
     if (hoursInput) hoursInput.value = storedInput?.value || "";
-    renderWageAllowanceSummary();
 }
 
 function updateSelectedWageAllowanceHours(hours) {
@@ -6653,34 +6593,8 @@ function updateSelectedWageAllowanceHours(hours) {
         : null;
 
     if (storedInput) storedInput.value = hours;
-    renderWageAllowanceSummary();
 }
 
-function renderWageAllowanceSummary() {
-    const summary = document.getElementById("wageAllowanceSummary");
-    if (!summary) return;
-
-    const entries = WAGE_ALLOWANCE_OPTIONS.map(option => {
-        const input = document.getElementById(option.id);
-        const rawValue = String(input?.value || "").trim();
-        const hours = rawValue ? Number(rawValue) : 0;
-
-        return Number.isFinite(hours) && hours !== 0
-            ? `<span class="wage-allowance-chip">
-                   ${option.icon} ${option.label}:
-                   <b>${hours.toLocaleString("ko-KR", {
-                       maximumFractionDigits: 2
-                   })}시간</b>
-               </span>`
-            : "";
-    }).filter(Boolean);
-
-    summary.innerHTML = entries.length
-        ? entries.join("")
-        : `<span class="wage-allowance-empty">
-               수당 종류를 선택하고 시간을 입력하세요.
-           </span>`;
-}
 function calculateWage() {
     try {
         const totalHours = parseFloat(document.getElementById('wageTotalHours').value) || 0;
@@ -6875,7 +6789,6 @@ function resetWageForm() {
         });
         const allowanceType = document.getElementById('wageAllowanceType');
         if (allowanceType) allowanceType.value = 'wageHoliday';
-        renderWageAllowanceSummary();
         const sDate = document.getElementById('wageStartDate');
         const eDate = document.getElementById('wageEndDate');
         const sHour = document.getElementById('wageStartHour');
