@@ -1199,6 +1199,163 @@
                 max-height: calc(100dvh - 32px);
             }
         }
+
+        /* ================================================================
+           📱 Galaxy S24 Ultra (세로 412×915 / 가로 915×412) 자동 최적화
+           ================================================================ */
+
+        /* [A] 빠른 실행바(터미널) 버튼: 래퍼를 풀고 3열 그리드로 균형 배치 (가로/세로 공통) */
+        .terminal-body .terminal-actions > div { display: contents !important; }
+        .terminal-body .terminal-actions {
+            display: grid !important;
+            grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+            gap: 6px !important;
+            width: 100% !important;
+        }
+        .terminal-body .terminal-actions .terminal-btn.terminal-btn {
+            width: auto !important;
+            margin: 0 !important;
+            flex: none !important;
+            min-width: 0 !important;
+            min-height: 48px !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            padding: 4px 3px !important;
+            border-radius: 8px !important;
+            white-space: normal !important;
+            word-break: keep-all !important;
+            text-align: center !important;
+            overflow: hidden !important;
+            letter-spacing: -0.3px !important;
+            font-size: clamp(0.8rem, 3.3vw, 0.98rem) !important;
+            line-height: 1.2 !important;
+            box-sizing: border-box !important;
+        }
+        .terminal-body .terminal-actions .terminal-btn.hjnc-meal-button { grid-column: 1 / -1 !important; }
+
+        /* [B] 임금계산기 - 본선/기능공/육상 선택 블록: 한 줄 고정, 부제만 작게 */
+        .role-sub { display: block; font-size: 0.68em; font-weight: 700; opacity: 0.9; line-height: 1.2; }
+        #wage-card .role-selector label { white-space: nowrap; min-width: 0 !important; }
+
+        @media (orientation: portrait) and (max-width: 600px) {
+            /* 카드 헤더 높이 축소 (필요 이상 커지지 않게) */
+            #wage-card > .dash-header, #log-card > .dash-header { min-height: 0 !important; padding: 12px 8px !important; }
+
+            /* 본선 · 기능공 · 육상: 3등분 균등, 글자 자동 축소 */
+            #wage-card .role-selector {
+                display: grid !important;
+                grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+                gap: 4px !important;
+                padding: 4px !important;
+                margin-bottom: 10px !important;
+            }
+            #wage-card .role-selector label {
+                display: flex !important;
+                flex-direction: column !important;
+                align-items: center !important;
+                justify-content: center !important;
+                padding: 7px 2px !important;
+                font-size: clamp(0.8rem, 3.8vw, 0.98rem) !important;
+                line-height: 1.2 !important;
+                text-align: center !important;
+            }
+            #wage-card .role-selector .role-sub { font-size: 0.66rem !important; white-space: nowrap !important; }
+
+            /* 세로: 계산 영역을 한 줄 흐름으로 재배치
+               시급 → 월/주간/야간 표(가로 전치) → 시작·종료 블록(가로로 길게) → 총 근무 */
+            #wage-card .calc-layout {
+                display: flex !important;
+                flex-direction: column !important;
+                gap: 8px !important;
+                width: 100% !important;
+            }
+            #wage-card .calc-layout > .calc-left { display: contents !important; }
+            #wage-card .calc-layout > .calc-left > .wage-row:nth-child(1) { order: 1; }
+            #wage-card .calc-layout > .calc-right { order: 2; flex: none !important; width: 100% !important; max-width: 100% !important; min-width: 0 !important; }
+            #wage-card .calc-layout > .calc-left > div:nth-child(2) { order: 3; }
+            #wage-card .calc-layout > .calc-left > .wage-row:nth-child(3) { order: 4; }
+
+            #wage-card .calc-layout > .calc-left > .wage-row {
+                flex-direction: row !important;
+                align-items: center !important;
+                flex-wrap: nowrap !important;
+                margin-bottom: 0 !important;
+                gap: 8px !important;
+            }
+            #wage-card .calc-layout > .calc-left > .wage-row > label { font-size: 0.95rem !important; min-width: 84px !important; }
+            #wage-card .calc-layout > .calc-left > .wage-row > input { height: 42px !important; font-size: 1.1rem !important; }
+
+            /* 시작·종료 날짜 블록: 가로로 길게 */
+            #wage-card .calc-layout > .calc-left > div:nth-child(2) { width: 100% !important; padding: 8px !important; margin-bottom: 0 !important; }
+            #wage-card .calc-left .date-touch-block {
+                flex-direction: column !important;
+                align-items: stretch !important;
+                gap: 4px !important;
+                margin-bottom: 6px !important;
+                width: 100% !important;
+            }
+            #wage-card .calc-left .date-touch-block > label { font-size: 0.92rem !important; }
+            #wage-card .calc-left .date-touch-block > div {
+                display: flex !important;
+                gap: 6px !important;
+                width: 100% !important;
+                align-items: center !important;
+            }
+            #wage-card .calc-left .date-touch-block input[type="date"] {
+                flex: 1 1 auto !important;
+                min-width: 0 !important;
+                height: 42px !important;
+                font-size: 1rem !important;
+                margin: 0 !important;
+            }
+            #wage-card .calc-left .date-touch-block select {
+                flex: 0 0 36% !important;
+                height: 42px !important;
+                font-size: 1rem !important;
+                margin: 0 !important;
+            }
+            #wage-card .calc-left > div:nth-child(2) > .action-btn { width: 100% !important; height: 44px !important; font-size: 1rem !important; margin-top: 2px !important; }
+
+            /* 월(Month)/주간/야간 표: 세로에서 행·열 전치 (CSS 그리드) */
+            #wage-card .calc-right > table.ref-table {
+                display: grid !important;
+                width: 100% !important;
+                height: auto !important;
+                grid-template-columns: minmax(0, 1.1fr) repeat(3, minmax(0, 1fr)) !important;
+                grid-template-rows: repeat(3, auto) !important;
+                grid-auto-flow: column !important;
+                table-layout: auto !important;
+                border-collapse: separate !important;
+                border-spacing: 0 !important;
+                font-size: 0.95rem !important;
+                border-radius: 10px !important;
+                overflow: hidden !important;
+            }
+            #wage-card .calc-right > table.ref-table thead,
+            #wage-card .calc-right > table.ref-table tbody,
+            #wage-card .calc-right > table.ref-table tr { display: contents !important; }
+            #wage-card .calc-right > table.ref-table th,
+            #wage-card .calc-right > table.ref-table td {
+                display: flex !important;
+                align-items: center !important;
+                justify-content: center !important;
+                min-height: 44px !important;
+                padding: 6px 2px !important;
+                margin: 0 !important;
+                letter-spacing: -0.3px !important;
+                white-space: nowrap !important;
+                font-size: 0.95rem !important;
+                font-weight: 800 !important;
+            }
+            #wage-card .calc-right > table.ref-table th { background: var(--primary) !important; color: #fff !important; }
+            #wage-card .calc-right > table.ref-table td:first-child { background: var(--primary) !important; color: #fff !important; }
+            #wage-card .calc-right > table.ref-table td:not(:first-child) { background: var(--card-bg) !important; color: var(--text-main) !important; }
+        }
+
+        /* 계절 행 강조 (JS: classList 'is-season-active') - 가로/세로 공통 */
+        .ref-table tr.is-season-active > td,
+        #wage-card .calc-right > table.ref-table tr.is-season-active > td { background: #fde68a !important; color: #0f172a !important; }
     </style>
     <link rel="apple-touch-icon" href="./icon-192.png">
 </head>
@@ -1248,7 +1405,7 @@
                     <input type="radio" id="role-main" name="workRole" value="main" checked>
                     <label for="role-main" style="font-size: 1.15rem; font-weight: 900; padding: 14px 4px; border-radius: 8px;">🚢 본선</label>
                     <input type="radio" id="role-skilled" name="workRole" value="skilled">
-                    <label for="role-skilled" style="font-size: 1.15rem; font-weight: 900; padding: 14px 4px; border-radius: 8px;">🔧 기능공 (수당 자동 적용)</label>
+                    <label for="role-skilled" style="font-size: 1.15rem; font-weight: 900; padding: 14px 4px; border-radius: 8px;">🔧 기능공<small class="role-sub">수당 자동 적용</small></label>
                     <input type="radio" id="role-onshore" name="workRole" value="onshore">
                     <label for="role-onshore" style="font-size: 1.15rem; font-weight: 900; padding: 14px 4px; border-radius: 8px;">🚛 육상</label>
                 </div>
@@ -6355,11 +6512,11 @@ let lastCalculatedWageData = null;
 function highlightSeasonRow(month) {
     ['row-jan', 'row-apr', 'row-oct'].forEach(id => {
         const el = document.getElementById(id);
-        if (el) el.style.background = '';
+        if (el) el.classList.remove('is-season-active');
     });
     const activeId = (month >= 4 && month <= 9) ? 'row-apr' : (month >= 10 ? 'row-oct' : 'row-jan');
     const activeEl = document.getElementById(activeId);
-    if (activeEl) activeEl.style.background = 'rgba(59, 130, 246, 0.15)';
+    if (activeEl) activeEl.classList.add('is-season-active');
 }
 function calcTimeAndFill() {
     try {
