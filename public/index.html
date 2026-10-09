@@ -1364,12 +1364,17 @@
            · 작은 컨트롤 터치 영역 하한, 오늘 방문자 배지 글자 크기 상향
            ================================================================ */
 
-        /* [C-0] 임금계산기 히어로 헤더: 인라인 !important 스타일을 클래스로 이동 (같은 모양, 이제 미디어 쿼리로 제어 가능) */
-        #wage-card > .dash-header.wage-hero-header { flex-direction: column; justify-content: center; align-items: center; padding: 18px 8px; min-height: 120px; gap: 6px; }
-        #wage-card > .dash-header.wage-hero-header .dash-icon-badge.hero { background: linear-gradient(135deg, #eff6ff, #dbeafe); border: 1.5px solid #93c5fd; }
-        .wage-hero-copy { display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; width: 100%; }
-        .wage-hero-copy .dash-title { color: var(--primary); font-size: 1.15rem; font-weight: 900; text-align: center; flex: none; margin: 0; letter-spacing: -0.5px; }
-        .wage-hero-copy .dash-sub-meta { text-align: center; }
+        /* [C-0] 임금계산기·근무일지 히어로 헤더: 인라인 !important 스타일을 클래스로 이동 (같은 모양, 이제 미디어 쿼리로 제어 가능)
+           · 세로 ≤480px 공통 규칙 `.dash-header { flex-direction: row !important; }` 를 이기도록 ID 선택자 + !important 유지
+             (빠지면 세로 화면에서 아이콘·제목이 가로로 눕고 카드 아래가 비어 보임)
+           · 두 카드는 같은 행에 놓이므로 반드시 함께 바꿔야 행 높이가 실제로 줄어듦 */
+        #wage-card > .dash-header.hero-header,
+        #log-card > .dash-header.hero-header { flex-direction: column !important; justify-content: center !important; align-items: center !important; padding: 18px 8px !important; min-height: 120px; gap: 6px !important; }
+        #wage-card > .dash-header.hero-header .dash-icon-badge.hero { background: linear-gradient(135deg, #eff6ff, #dbeafe); border: 1.5px solid #93c5fd; }
+        #log-card > .dash-header.hero-header .dash-icon-badge.hero { background: linear-gradient(135deg, #ecfdf5, #d1fae5); border: 1.5px solid #6ee7b7; }
+        .hero-copy { display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; width: 100%; }
+        .hero-copy .dash-title { color: var(--primary); font-size: 1.15rem; font-weight: 900; text-align: center; flex: none; margin: 0; letter-spacing: -0.5px; }
+        .hero-copy .dash-sub-meta { text-align: center; }
 
         /* [C-1] 작은 컨트롤 터치 영역 하한 (모든 화면 공통) */
         .compact-touch-btn { display: inline-flex; align-items: center; justify-content: center; min-height: 34px; }
@@ -1405,19 +1410,22 @@
             .bottom-nav { height: max(52px, env(safe-area-inset-bottom) + 44px); }
             .nav-item { font-size: 0.72rem; gap: 1px; }
 
-            /* 임금계산기 히어로 헤더: 120px 더미 높이 제거 후 한 줄 배치 */
-            #wage-card > .dash-header.wage-hero-header { flex-direction: row; justify-content: flex-start; align-items: center; min-height: 0; padding: 8px 10px; gap: 10px; }
-            #wage-card > .dash-header.wage-hero-header .dash-icon-badge.hero { width: 40px; height: 40px; font-size: 1.4rem; border-radius: 11px; margin-bottom: 0; }
-            .wage-hero-copy { flex-direction: row; align-items: center; justify-content: flex-start; text-align: left; width: auto; flex: 1 1 auto; gap: 8px; min-width: 0; }
-            .wage-hero-copy .dash-title { font-size: 1.02rem; }
-            .wage-hero-copy .dash-sub-meta { margin-top: 0; }
+            /* 임금계산기·근무일지 히어로 헤더: 120px 더미 높이 제거 후 한 줄 배치 (두 카드 함께 → 같은 행 높이 141px → 약 60px) */
+            #wage-card > .dash-header.hero-header,
+            #log-card > .dash-header.hero-header { flex-direction: row !important; justify-content: flex-start !important; align-items: center !important; min-height: 0 !important; padding: 8px 10px !important; gap: 10px !important; }
+            #wage-card > .dash-header.hero-header .dash-icon-badge.hero,
+            #log-card > .dash-header.hero-header .dash-icon-badge.hero { width: 40px; height: 40px; font-size: 1.4rem; border-radius: 11px; margin-bottom: 0; }
+            .hero-copy { flex-direction: row; align-items: center; justify-content: flex-start; text-align: left; width: auto; flex: 1 1 auto; gap: 8px; min-width: 0; }
+            .hero-copy .dash-title { font-size: 1.02rem; }
+            .hero-copy .dash-sub-meta { margin-top: 0; }
 
-            /* 빠른 실행바: 넓은 폭을 활용해 2열 배치 + 버튼 확대 */
+            /* 빠른 실행바: 넓은 폭을 활용해 2열 배치
+               · 버튼 글자는 줄바꿈 금지(🧩/베이처럼 두 줄로 찌그러지지 않게), 폭이 모자라면 버튼째 다음 줄로 */
             .fav-quick-bar { padding: 8px 10px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px 8px; align-items: start; }
             .fav-quick-header { grid-column: 1 / -1; margin-bottom: 2px; }
             .fav-quick-item { padding: 5px 8px; margin-bottom: 0; gap: 4px 6px; }
-            .fav-quick-actions { gap: 4px; flex-wrap: nowrap; }
-            .fav-quick-btn { padding: 6px 11px; font-size: 0.82rem; }
+            .fav-quick-actions { gap: 4px; flex-wrap: wrap; }
+            .fav-quick-btn { padding: 6px 8px; font-size: 0.8rem; white-space: nowrap; }
 
             /* 터미널 빠른 버튼: 3열 → 6열로 줄 수 절반, 식단은 한 칸에 함께 */
             .terminal-body .terminal-actions { grid-template-columns: repeat(6, minmax(0, 1fr)) !important; gap: 5px !important; }
@@ -1457,9 +1465,9 @@
 
     <div class="dash-grid" style="margin-bottom: 12px;">
         <div id="wage-card" class="dash-card" style="border: 2px solid var(--primary); border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.06);">
-            <div class="dash-header tap-effect wage-hero-header" onclick="toggleDashItem('wage-card')">
+            <div class="dash-header tap-effect hero-header" onclick="toggleDashItem('wage-card')">
                 <span class="dash-icon-badge hero">🧮</span>
-                <div class="wage-hero-copy">
+                <div class="hero-copy">
                     <span class="dash-title">임금계산기</span>
                     <span id="wageCardSubMeta" class="dash-sub-meta">주·야간 자동 분리 및 일지 연동</span>
                 </div>
@@ -1698,11 +1706,11 @@
         </div>
 
         <div id="log-card" class="dash-card" style="border: 2px solid var(--primary); border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.06);">
-            <div class="dash-header tap-effect" onclick="toggleDashItem('log-card')" style="flex-direction: column !important; justify-content: center !important; align-items: center !important; padding: 18px 8px !important; min-height: 120px; gap: 6px !important;">
-                <span class="dash-icon-badge hero" style="background: linear-gradient(135deg, #ecfdf5, #d1fae5); border: 1.5px solid #6ee7b7;">📅</span>
-                <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; width: 100%;">
-                    <span class="dash-title" style="color:var(--primary); font-size: 1.15rem !important; font-weight: 900 !important; margin: 0 !important; letter-spacing: -0.5px; text-align: center !important;">근무일지</span>
-                    <span id="logCardSubMeta" class="dash-sub-meta" style="text-align: center !important;">날짜 클릭 기록 · 월간 정산 관리</span>
+            <div class="dash-header tap-effect hero-header" onclick="toggleDashItem('log-card')">
+                <span class="dash-icon-badge hero">📅</span>
+                <div class="hero-copy">
+                    <span class="dash-title">근무일지</span>
+                    <span id="logCardSubMeta" class="dash-sub-meta">날짜 클릭 기록 · 월간 정산 관리</span>
                 </div>
             </div>
             <div id="workLogArea" class="dash-content" style="display:none; border-top: 2px dashed var(--primary);">
