@@ -419,7 +419,7 @@
         .port-chip-group { display: flex; flex-wrap: wrap; gap: 4px; margin-left: auto; align-items: center; justify-content: flex-end; }
         .port-mini-chip { background: rgba(255,255,255,0.16); color: #ffffff; border: 1px solid rgba(255,255,255,0.28); border-radius: 6px; padding: 2px 6px; font-size: 0.68rem; font-weight: 800; letter-spacing: 0.2px; }
         .cal-day.is-today { border: 2px solid #2563eb !important; background: rgba(37, 99, 235, 0.08) !important; box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.12); position: relative; }
-        .cal-today-tag { font-size: 0.58rem; font-weight: 900; color: #ffffff; background: #2563eb; border-radius: 4px; padding: 0 4px; line-height: 1.25; margin-left: 2px; display: inline-block; vertical-align: middle; }
+        .cal-today-tag { font-size: max(0.66rem, 10px); font-weight: 900; color: #ffffff; background: #2563eb; border-radius: 4px; padding: 0 4px; line-height: 1.25; margin-left: 2px; display: inline-block; vertical-align: middle; }
         .cal-pay-tag { font-size: clamp(0.6rem, 2.3vw, 0.72rem); font-weight: 900; color: #047857; background: rgba(16, 185, 129, 0.16); border-radius: 4px; padding: 1px 3px; margin-top: 2px; line-height: 1.1; width: 96%; text-align: center; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         body.dark-mode .cal-pay-tag { color: #6ee7b7; background: rgba(16, 185, 129, 0.24); }
         .calc-layout.wide-mode { flex-direction: column !important; gap: 10px !important; }
@@ -1356,6 +1356,74 @@
         /* 계절 행 강조 (JS: classList 'is-season-active') - 가로/세로 공통 */
         .ref-table tr.is-season-active > td,
         #wage-card .calc-right > table.ref-table tr.is-season-active > td { background: #fde68a !important; color: #0f172a !important; }
+
+        /* ================================================================
+           [C] 후속 모바일 최적화 (2026-10-09)
+           Galaxy S24 Ultra 실측 기준: 세로 412×915 · 가로 915×412
+           · 가로(짧은 높이) 화면: 고정 UI·히어로 헤더 압축, 빠른 실행바 폭 활용
+           · 작은 컨트롤 터치 영역 하한, 오늘 방문자 배지 글자 크기 상향
+           ================================================================ */
+
+        /* [C-0] 임금계산기 히어로 헤더: 인라인 !important 스타일을 클래스로 이동 (같은 모양, 이제 미디어 쿼리로 제어 가능) */
+        #wage-card > .dash-header.wage-hero-header { flex-direction: column; justify-content: center; align-items: center; padding: 18px 8px; min-height: 120px; gap: 6px; }
+        #wage-card > .dash-header.wage-hero-header .dash-icon-badge.hero { background: linear-gradient(135deg, #eff6ff, #dbeafe); border: 1.5px solid #93c5fd; }
+        .wage-hero-copy { display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; width: 100%; }
+        .wage-hero-copy .dash-title { color: var(--primary); font-size: 1.15rem; font-weight: 900; text-align: center; flex: none; margin: 0; letter-spacing: -0.5px; }
+        .wage-hero-copy .dash-sub-meta { text-align: center; }
+
+        /* [C-1] 작은 컨트롤 터치 영역 하한 (모든 화면 공통) */
+        .compact-touch-btn { display: inline-flex; align-items: center; justify-content: center; min-height: 34px; }
+        .term-sched-tab-btn { min-height: 34px; padding-top: 5px; padding-bottom: 5px; }
+        .term-sched-source-link { display: inline-flex; align-items: center; justify-content: center; min-height: 32px; padding-top: 5px !important; padding-bottom: 5px !important; }
+        .fav-quick-btn { min-height: 34px; }
+        .fav-star-btn { min-width: 34px; min-height: 34px; padding: 0 6px; display: inline-flex; align-items: center; justify-content: center; }
+        .dash-content .mini-btn, .dash-content .mini-btn-old, .modal-content .mini-btn-old { min-height: 34px; display: inline-flex; align-items: center; justify-content: center; }
+        .daily-field-english-calendar-nav, .daily-field-english-calendar-today { min-height: 36px; min-width: 36px; }
+        .wage-schedule-date-input { height: 38px; }
+        .mini-refresh-btn { min-height: 32px; }
+        .page-num { display: inline-flex; align-items: center; justify-content: center; min-height: 34px; min-width: 34px; }
+        .daily-field-english-listen { min-height: 36px; }
+
+        /* 오늘 방문자 배지·극소 라벨: 화면이 작아도 10px 아래로 내려가지 않게 (루트 글자는 15~17px 사이에서 변동) */
+        .today-visitor-badge .tvb-label { font-size: max(0.63rem, 10px); }
+        .today-visitor-badge .tvb-value { font-size: max(0.66rem, 10px); }
+        #wage-card .role-selector .role-sub { font-size: max(0.66rem, 10px) !important; }
+
+        /* [C-2] 가로(짧은 높이) 화면: 위·아래 고정 UI를 눌러 콘텐츠 높이 확보 */
+        @media screen and (orientation: landscape) and (max-height: 560px) {
+            html, body { padding-bottom: 66px; }
+            header { padding: 6px 12px; }
+            header h1 { font-size: 1.12rem; letter-spacing: 0.2px; }
+            .theme-toggle { width: 34px; height: 34px; font-size: 1.05rem; right: 10px; }
+            .today-visitor-badge { min-width: 64px; padding: 2px 7px; border-radius: 9px; }
+            .today-visitor-badge .tvb-value b { font-size: 0.86rem; }
+
+            .ticker-container, .ticker-wrap { height: 30px; }
+            .ticker-container { font-size: 0.84rem; }
+            .ticker-item span { line-height: 30px; padding-right: 36px; }
+            .setting-icon { font-size: 1.05rem; }
+            .bottom-nav { height: max(52px, env(safe-area-inset-bottom) + 44px); }
+            .nav-item { font-size: 0.72rem; gap: 1px; }
+
+            /* 임금계산기 히어로 헤더: 120px 더미 높이 제거 후 한 줄 배치 */
+            #wage-card > .dash-header.wage-hero-header { flex-direction: row; justify-content: flex-start; align-items: center; min-height: 0; padding: 8px 10px; gap: 10px; }
+            #wage-card > .dash-header.wage-hero-header .dash-icon-badge.hero { width: 40px; height: 40px; font-size: 1.4rem; border-radius: 11px; margin-bottom: 0; }
+            .wage-hero-copy { flex-direction: row; align-items: center; justify-content: flex-start; text-align: left; width: auto; flex: 1 1 auto; gap: 8px; min-width: 0; }
+            .wage-hero-copy .dash-title { font-size: 1.02rem; }
+            .wage-hero-copy .dash-sub-meta { margin-top: 0; }
+
+            /* 빠른 실행바: 넓은 폭을 활용해 2열 배치 + 버튼 확대 */
+            .fav-quick-bar { padding: 8px 10px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px 8px; align-items: start; }
+            .fav-quick-header { grid-column: 1 / -1; margin-bottom: 2px; }
+            .fav-quick-item { padding: 5px 8px; margin-bottom: 0; gap: 4px 6px; }
+            .fav-quick-actions { gap: 4px; flex-wrap: nowrap; }
+            .fav-quick-btn { padding: 6px 11px; font-size: 0.82rem; }
+
+            /* 터미널 빠른 버튼: 3열 → 6열로 줄 수 절반, 식단은 한 칸에 함께 */
+            .terminal-body .terminal-actions { grid-template-columns: repeat(6, minmax(0, 1fr)) !important; gap: 5px !important; }
+            .terminal-body .terminal-actions .terminal-btn.terminal-btn { min-height: 40px !important; font-size: 0.86rem !important; }
+            .terminal-body .terminal-actions .terminal-btn.hjnc-meal-button { grid-column: auto !important; }
+        }
     </style>
     <link rel="apple-touch-icon" href="./icon-192.png">
 </head>
@@ -1389,17 +1457,17 @@
 
     <div class="dash-grid" style="margin-bottom: 12px;">
         <div id="wage-card" class="dash-card" style="border: 2px solid var(--primary); border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.06);">
-            <div class="dash-header tap-effect" onclick="toggleDashItem('wage-card')" style="flex-direction: column !important; justify-content: center !important; align-items: center !important; padding: 18px 8px !important; min-height: 120px; gap: 6px !important;">
-                <span class="dash-icon-badge hero" style="background: linear-gradient(135deg, #eff6ff, #dbeafe); border: 1.5px solid #93c5fd;">🧮</span>
-                <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; width: 100%;">
-                    <span class="dash-title" style="color:var(--primary); font-size: 1.15rem !important; font-weight: 900 !important; text-align: center !important; flex: none !important; margin: 0 !important; letter-spacing: -0.5px;">임금계산기</span>
-                    <span id="wageCardSubMeta" class="dash-sub-meta" style="text-align: center !important;">주·야간 자동 분리 및 일지 연동</span>
+            <div class="dash-header tap-effect wage-hero-header" onclick="toggleDashItem('wage-card')">
+                <span class="dash-icon-badge hero">🧮</span>
+                <div class="wage-hero-copy">
+                    <span class="dash-title">임금계산기</span>
+                    <span id="wageCardSubMeta" class="dash-sub-meta">주·야간 자동 분리 및 일지 연동</span>
                 </div>
             </div>
             <div class="dash-content" style="display:none; border-top: 2px dashed var(--primary);">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; gap:6px; flex-wrap:wrap;">
                     <span style="font-size:0.78rem; font-weight:800; color:var(--text-sub);">💡 직종 선택 후 시작·종료 블록을 터치해 날짜·시간을 설정하세요.</span>
-                    <button type="button" id="wageLayoutToggleBtn" onclick="toggleWageLayoutMode()" style="background:#eff6ff; color:#1d4ed8; border:1.5px solid #93c5fd; border-radius:8px; padding:4px 10px; font-size:0.75rem; font-weight:900; cursor:pointer;">📐 입력창 넓게 보기</button>
+                    <button type="button" id="wageLayoutToggleBtn" class="compact-touch-btn" onclick="toggleWageLayoutMode()" style="background:#eff6ff; color:#1d4ed8; border:1.5px solid #93c5fd; border-radius:8px; padding:4px 10px; font-size:0.75rem; font-weight:900; cursor:pointer;">📐 입력창 넓게 보기</button>
                 </div>
                 <div class="role-selector" style="border: 2px solid #cbd5e1; padding: 6px; background: rgba(10,27,63,0.03); border-radius: 12px; margin-bottom: 15px;">
                     <input type="radio" id="role-main" name="workRole" value="main" checked>
@@ -1699,7 +1767,7 @@
                         <div class="hjnc-schedule-header">
                             <span id="hjncScheduleBoxTitle" style="font-size:0.76rem; font-weight:900; color:#c2410c;">⚓ 터미널별 당일 입항·접안 선박</span>
                             <div style="display:flex; align-items:center; gap:5px;">
-                                <button type="button" onclick="refreshHjncScheduleForSelectedDate()" style="background:#ffffff; border:1px solid #fb923c; color:#ea580c; border-radius:5px; padding:1px 6px; font-size:0.66rem; font-weight:800; cursor:pointer;">🔄 갱신</button>
+                                <button type="button" onclick="refreshHjncScheduleForSelectedDate()" class="mini-refresh-btn" style="background:#ffffff; border:1px solid #fb923c; color:#ea580c; border-radius:6px; padding:4px 9px; font-size:0.72rem; font-weight:800; cursor:pointer;">🔄 갱신</button>
                                 <a id="terminalScheduleOrigLink" href="https://www.hjnc.co.kr/esvc/vessel/berthScheduleT" target="_blank" style="font-size:0.68rem; font-weight:800; color:#ea580c; text-decoration:underline;">스케줄 ↗</a>
                                 <a id="terminalChartOrigLink" href="https://www.hjnc.co.kr/esvc/vessel/berthScheduleG" target="_blank" style="font-size:0.68rem; font-weight:800; color:#2563eb; text-decoration:underline;">차트 ↗</a>
                             </div>
@@ -1923,7 +1991,7 @@
                             <input type="date" id="shipFormScheduleDate" onclick="openDatePicker('shipFormScheduleDate', event)" onchange="onShipFormScheduleDateChange(this.value)" style="border:1.2px solid #fb923c; border-radius:6px; padding:1px 5px; font-size:0.71rem; font-weight:800; color:#9a3412; background:#fff; cursor:pointer; height:24px;">
                         </div>
                         <div style="display:flex; align-items:center; gap:5px;">
-                            <button type="button" onclick="refreshShipFormScheduleForSelectedDate()" style="background:#ffffff; border:1px solid #fb923c; color:#ea580c; border-radius:5px; padding:1px 6px; font-size:0.66rem; font-weight:800; cursor:pointer;">🔄 갱신</button>
+                            <button type="button" onclick="refreshShipFormScheduleForSelectedDate()" class="mini-refresh-btn" style="background:#ffffff; border:1px solid #fb923c; color:#ea580c; border-radius:6px; padding:4px 9px; font-size:0.72rem; font-weight:800; cursor:pointer;">🔄 갱신</button>
                             <a id="shipFormScheduleOrigLink" href="https://www.hjnc.co.kr/esvc/vessel/berthScheduleT" target="_blank" style="font-size:0.68rem; font-weight:800; color:#ea580c; text-decoration:underline;">스케줄 ↗</a>
                             <a id="shipFormChartOrigLink" href="https://www.hjnc.co.kr/esvc/vessel/berthScheduleG" target="_blank" style="font-size:0.68rem; font-weight:800; color:#2563eb; text-decoration:underline;">차트 ↗</a>
                         </div>
@@ -2173,7 +2241,7 @@
                 <div class="weather-live-board">
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; gap:6px; flex-wrap:wrap;">
                         <span style="font-size:0.86rem; font-weight:900; color:#93c5fd;">🌬️ 부산항 실시간 기상 · 작업 안전 전광판</span>
-                        <button type="button" onclick="fetchBusanPortLiveWeather(true)" style="background:rgba(255,255,255,0.15); color:#fff; border:1px solid rgba(255,255,255,0.3); border-radius:6px; padding:3px 8px; font-size:0.72rem; font-weight:800; cursor:pointer;">🔄 기상 갱신</button>
+                        <button type="button" class="compact-touch-btn" onclick="fetchBusanPortLiveWeather(true)" style="background:rgba(255,255,255,0.15); color:#fff; border:1px solid rgba(255,255,255,0.3); border-radius:6px; padding:3px 8px; font-size:0.72rem; font-weight:800; cursor:pointer;">🔄 기상 갱신</button>
                     </div>
                     <div id="busanLiveWeatherGrid" style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:8px;">
                         <div style="background:rgba(255,255,255,0.08); border-radius:8px; padding:8px; border:1px solid rgba(255,255,255,0.15);">
@@ -2316,11 +2384,11 @@
                 </div>
                 
                 <div style="display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px;">
-                    <span onclick="filterGuideByCategory('')" style="cursor:pointer; background:var(--primary); color:#ffffff; padding:4px 8px; border-radius:6px; font-size:0.75rem; font-weight:800;">전체 보기</span>
-                    <span onclick="filterGuideByCategory('작업·도구')" style="cursor:pointer; background:#e0f2fe; color:#0369a1; padding:4px 8px; border-radius:6px; font-size:0.75rem; font-weight:800;">#작업·도구</span>
-                    <span onclick="filterGuideByCategory('중장비')" style="cursor:pointer; background:#f3e8ff; color:#6b21a8; padding:4px 8px; border-radius:6px; font-size:0.75rem; font-weight:800;">#중장비</span>
-                    <span onclick="filterGuideByCategory('선박 구조')" style="cursor:pointer; background:#dcfce7; color:#15803d; padding:4px 8px; border-radius:6px; font-size:0.75rem; font-weight:800;">#선박 구조</span>
-                    <span onclick="filterGuideByCategory('현장 실무')" style="cursor:pointer; background:#ffedd5; color:#c2410c; padding:4px 8px; border-radius:6px; font-size:0.75rem; font-weight:800;">#현장 실무</span>
+                    <span class="compact-touch-btn" onclick="filterGuideByCategory('')" style="cursor:pointer; background:var(--primary); color:#ffffff; padding:4px 8px; border-radius:6px; font-size:0.75rem; font-weight:800;">전체 보기</span>
+                    <span class="compact-touch-btn" onclick="filterGuideByCategory('작업·도구')" style="cursor:pointer; background:#e0f2fe; color:#0369a1; padding:4px 8px; border-radius:6px; font-size:0.75rem; font-weight:800;">#작업·도구</span>
+                    <span class="compact-touch-btn" onclick="filterGuideByCategory('중장비')" style="cursor:pointer; background:#f3e8ff; color:#6b21a8; padding:4px 8px; border-radius:6px; font-size:0.75rem; font-weight:800;">#중장비</span>
+                    <span class="compact-touch-btn" onclick="filterGuideByCategory('선박 구조')" style="cursor:pointer; background:#dcfce7; color:#15803d; padding:4px 8px; border-radius:6px; font-size:0.75rem; font-weight:800;">#선박 구조</span>
+                    <span class="compact-touch-btn" onclick="filterGuideByCategory('현장 실무')" style="cursor:pointer; background:#ffedd5; color:#c2410c; padding:4px 8px; border-radius:6px; font-size:0.75rem; font-weight:800;">#현장 실무</span>
                 </div>
 
                 <div class="guide-container" style="max-height: 550px; overflow-y: auto; background: #fff; border-radius: 8px; border: 1px solid var(--border); box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);">
@@ -2572,7 +2640,7 @@
             <div style="margin-bottom: 22px; background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%); border: 2px solid #f59e0b; border-radius: 12px; padding: 15px; box-shadow: 0 2px 8px rgba(245, 158, 11, 0.12);">
                 <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:10px; border-bottom:1.5px dashed #f59e0b; padding-bottom:8px;">
                     <span style="font-size:1.05rem; font-weight:900; color:#b45309;">📲 동료에게 앱 공유하기 & 휴대폰 아이콘 생성 방법</span>
-                    <button type="button" onclick="shareOrCopyAppPromo()" style="background:#d97706; color:#ffffff; border:none; border-radius:8px; padding:6px 12px; font-size:0.82rem; font-weight:900; cursor:pointer; box-shadow:0 2px 4px rgba(217,119,6,0.3);">📤 홍보글 · 주소 원클릭 복사/공유</button>
+                    <button type="button" class="compact-touch-btn" onclick="shareOrCopyAppPromo()" style="background:#d97706; color:#ffffff; border:none; border-radius:8px; padding:6px 12px; font-size:0.82rem; font-weight:900; cursor:pointer; box-shadow:0 2px 4px rgba(217,119,6,0.3);">📤 홍보글 · 주소 원클릭 복사/공유</button>
                 </div>
                 <div style="background:#ffffff; border:1px solid #fcd34d; border-radius:8px; padding:12px; font-size:0.88rem; color:#1e293b; line-height:1.6; margin-bottom:10px;">
                     <div style="font-weight:900; color:#0a1b3f; font-size:0.95rem; margin-bottom:4px;">🚢 [부산항 항만 근로자 필수 앱 - BUSAN HAK PORT]</div>
@@ -4845,7 +4913,7 @@ function renderShipFormScheduledShipsUI(dateStr, allVessels, terminalId = select
         }
         listEl.innerHTML = `<div style="display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:6px; width:100%;">
             <span style="font-size:0.74rem; color:var(--text-sub); font-weight:700;">해당 날짜(${dateStr})에 조회된 ${meta.label} 입항·접안 선박이 없습니다.</span>
-            <a href="${cfg.schedule}" target="_blank" onclick="trackAppEvent('terminals','${terminalId}')" style="background:${meta.color}; color:#fff; padding:3px 8px; border-radius:6px; font-size:0.7rem; font-weight:800; text-decoration:none;">🔗 ${meta.label} 스케줄 원본 열기 ↗</a>
+            <a href="${cfg.schedule}" target="_blank" class="term-sched-source-link" onclick="trackAppEvent('terminals','${terminalId}')" style="background:${meta.color}; color:#fff; padding:3px 8px; border-radius:6px; font-size:0.7rem; font-weight:800; text-decoration:none;">🔗 ${meta.label} 스케줄 원본 열기 ↗</a>
         </div>`;
         return;
     }
@@ -5106,7 +5174,7 @@ function renderHjncScheduledShipsUI(dateStr, allVessels, terminalId = selectedSc
         }
         listEl.innerHTML = `<div style="display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:6px; width:100%;">
             <span style="font-size:0.74rem; color:var(--text-sub); font-weight:700;">해당 날짜(${dateStr})에 조회된 ${meta.label} 입항·접안 선박이 없습니다.</span>
-            <a href="${cfg.schedule}" target="_blank" onclick="trackAppEvent('terminals','${terminalId}')" style="background:${meta.color}; color:#fff; padding:3px 8px; border-radius:6px; font-size:0.7rem; font-weight:800; text-decoration:none;">🔗 ${meta.label} 스케줄 원본 열기 ↗</a>
+            <a href="${cfg.schedule}" target="_blank" class="term-sched-source-link" onclick="trackAppEvent('terminals','${terminalId}')" style="background:${meta.color}; color:#fff; padding:3px 8px; border-radius:6px; font-size:0.7rem; font-weight:800; text-decoration:none;">🔗 ${meta.label} 스케줄 원본 열기 ↗</a>
         </div>`;
         return;
     }
