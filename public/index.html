@@ -1756,10 +1756,10 @@
                         <div class="hjnc-schedule-header">
                             <span id="hjncScheduleBoxTitle" style="font-size:0.76rem; font-weight:900; color:#c2410c; line-height:1.35; white-space:pre-line;">⚓ 터미널별 당일
 입항·접안 선박</span>
-                            <div style="display:flex; align-items:center; gap:5px;">
-                                <button type="button" onclick="refreshHjncScheduleForSelectedDate()" class="mini-refresh-btn" style="background:#ffffff; border:1px solid #fb923c; color:#ea580c; border-radius:6px; padding:4px 9px; font-size:0.72rem; font-weight:800; cursor:pointer;">🔄 갱신</button>
-                                <a id="terminalScheduleOrigLink" href="https://www.hjnc.co.kr/esvc/vessel/berthScheduleT" target="_blank" style="font-size:0.68rem; font-weight:800; color:#ea580c; text-decoration:underline;">스케줄 ↗</a>
-                                <a id="terminalChartOrigLink" href="https://www.hjnc.co.kr/esvc/vessel/berthScheduleG" target="_blank" style="font-size:0.68rem; font-weight:800; color:#2563eb; text-decoration:underline;">차트 ↗</a>
+                            <div style="display:flex; align-items:center; gap:4px; flex-shrink:0;">
+                                <button type="button" onclick="refreshHjncScheduleForSelectedDate()" class="mini-refresh-btn tap-effect" style="display:inline-flex; align-items:center; justify-content:center; height:26px; padding:0 8px; background:#ffffff; border:1.5px solid #fb923c; color:#ea580c; border-radius:6px; font-size:0.7rem; font-weight:900; line-height:1; white-space:nowrap; box-shadow:0 1px 2px rgba(234,88,12,0.12); cursor:pointer;">🔄 갱신</button>
+                                <a id="terminalScheduleOrigLink" href="https://www.hjnc.co.kr/esvc/vessel/berthScheduleT" target="_blank" class="tap-effect" style="display:inline-flex; align-items:center; justify-content:center; height:26px; padding:0 8px; background:#fff7ed; border:1.5px solid #fb923c; color:#c2410c; border-radius:6px; font-size:0.7rem; font-weight:900; line-height:1; text-decoration:none; white-space:nowrap; box-shadow:0 1px 2px rgba(234,88,12,0.12);">스케줄 ↗</a>
+                                <a id="terminalChartOrigLink" href="https://www.hjnc.co.kr/esvc/vessel/berthScheduleG" target="_blank" class="tap-effect" style="display:inline-flex; align-items:center; justify-content:center; height:26px; padding:0 8px; background:#eff6ff; border:1.5px solid #60a5fa; color:#1d4ed8; border-radius:6px; font-size:0.7rem; font-weight:900; line-height:1; text-decoration:none; white-space:nowrap; box-shadow:0 1px 2px rgba(37,99,235,0.12);">차트 ↗</a>
                             </div>
                         </div>
                         <div id="terminalScheduleTabBar" class="term-sched-tab-bar"></div>
