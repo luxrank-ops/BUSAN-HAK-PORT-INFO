@@ -1807,12 +1807,11 @@
                     <div style="background:rgba(16,185,129,0.08); padding:8px 4px; border-radius:8px; border:1px solid var(--border);"><div style="font-size:0.72rem; color:var(--text-sub); font-weight:800;">임금 1 / 임금 2</div><div id="monthlySplitPay" style="font-size:0.78rem; font-weight:900; color:#047857; margin-top:4px;">0 / 0</div></div>
                 </div>
                 <div id="monthlyTotalDisplay" style="text-align:center; margin-top:10px; font-weight:900; color:var(--primary); font-size:1.25rem; background:rgba(10,27,63,0.03); padding:12px; border-radius:10px; border:1.5px solid var(--primary);">이번 달 총액: 0원</div>
-                <div id="d3ChartLockBanner" onclick="openWorkLogPinModal()" style="cursor:pointer; margin-top:12px; background:linear-gradient(135deg, #eff6ff, #dcfce7); border:1.5px solid #60a5fa; border-radius:10px; padding:11px 12px; display:flex; justify-content:space-between; align-items:center; gap:8px;">
-                    <div style="display:flex; flex-direction:column; gap:3px; min-width:0;">
-                        <span style="font-size:0.86rem; font-weight:900; color:var(--primary);">🔒 📊 스마트 수입·정산 통합 분석 리포트 (잠김)</span>
-                        <span style="font-size:0.73rem; font-weight:800; color:#1e40af;">목표 수입 달성 게이지 · 정산 요약표 캡처/공유 · 월별 수입/근로일수 그래프</span>
+                <div id="d3ChartLockBanner" onclick="openWorkLogPinModal()" style="cursor:pointer; margin-top:12px; background:linear-gradient(135deg, #eff6ff, #dcfce7); border:1.5px solid #60a5fa; border-radius:10px; padding:10px 10px; display:flex; justify-content:space-between; align-items:center; gap:6px; flex-wrap:nowrap;">
+                    <div style="display:flex; align-items:center; min-width:0; flex:1;">
+                        <span style="font-size:clamp(0.74rem, 2.8vw, 0.86rem); font-weight:900; color:var(--primary); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; min-width:0; letter-spacing:-0.3px;">🔒 📊 스마트 수입·정산 통합 분석 리포트 (잠김)</span>
                     </div>
-                    <span style="background:var(--primary); color:white; font-size:0.74rem; font-weight:800; padding:5px 10px; border-radius:6px; flex-shrink:0;">비밀번호 해제</span>
+                    <span style="background:var(--primary); color:white; font-size:0.74rem; font-weight:800; padding:5px 9px; border-radius:6px; white-space:nowrap; flex-shrink:0;">비번해제</span>
                 </div>
                 <div id="monthlyD3ChartSection" class="hidden" style="margin-top:12px; background:var(--card-bg); border:2px solid var(--primary); border-radius:12px; padding:14px 12px; box-shadow:0 3px 10px rgba(10,27,63,0.08);">
                     <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:6px; padding-bottom:10px; margin-bottom:12px; border-bottom:2px solid var(--primary);">
