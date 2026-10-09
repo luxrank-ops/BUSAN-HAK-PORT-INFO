@@ -223,11 +223,14 @@
         body.dark-mode .fav-quick-bar { background: rgba(30, 41, 59, 0.95); border-color: #fbbf24; }
         .fav-quick-header { display: flex; justify-content: space-between; align-items: center; font-size: 0.88rem; font-weight: 900; color: #b45309; margin-bottom: 8px; }
         body.dark-mode .fav-quick-header { color: #fbbf24; }
-        .fav-quick-item { background: var(--card-bg); border: 1.5px solid #fcd34d; border-radius: 10px; padding: 8px 10px; margin-bottom: 6px; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px; }
+        .fav-quick-item { background: var(--card-bg); border: 1.5px solid #fcd34d; border-radius: 10px; padding: 8px 8px; margin-bottom: 8px; display: flex; flex-direction: row; flex-wrap: nowrap; align-items: stretch; justify-content: space-between; gap: 6px; }
         .fav-quick-item:last-child { margin-bottom: 0; }
-        .fav-quick-name { font-weight: 900; font-size: 0.95rem; color: var(--primary); display: flex; align-items: center; gap: 4px; min-width: max-content; }
-        .fav-quick-actions { display: flex; flex-wrap: wrap; gap: 4px; flex: 1; justify-content: flex-end; }
-        .fav-quick-btn { padding: 6px 9px; border-radius: 6px; border: 1.5px solid var(--primary); background: var(--card-bg); color: var(--text-main); font-size: 0.78rem; font-weight: 800; text-decoration: none; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; line-height: 1.1; }
+        .fav-quick-name { font-weight: 900; font-size: clamp(0.78rem, 2.5vw, 0.9rem); color: var(--primary); display: flex; align-items: center; gap: 2px; flex-shrink: 0; }
+        .fav-quick-name-text { display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1.15; text-align: center; white-space: nowrap; }
+        .fav-quick-name-main { font-size: clamp(0.84rem, 2.7vw, 0.96rem); font-weight: 900; letter-spacing: -0.3px; }
+        .fav-quick-name-sub { font-size: clamp(0.68rem, 2.1vw, 0.78rem); font-weight: 800; opacity: 0.88; letter-spacing: -0.3px; }
+        .fav-quick-actions { display: flex; flex-direction: row; flex-wrap: nowrap; gap: 4px; flex: 1 1 auto; min-width: 0; align-items: stretch; justify-content: space-between; }
+        .fav-quick-btn { flex: 1 1 0; min-width: 0; min-height: 46px; padding: 8px 3px; border-radius: 8px; border: 1.5px solid var(--primary); background: var(--card-bg); color: var(--text-main); font-size: clamp(0.76rem, 2.35vw, 0.9rem); font-weight: 900; text-decoration: none; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; text-align: center; line-height: 1.15; white-space: nowrap; letter-spacing: -0.5px; box-sizing: border-box; }
         .fav-quick-btn.meal { background: linear-gradient(135deg, #fff7ed, #fed7aa); border-color: #ea580c; color: #9a3412; }
         .fav-quick-btn.extra { background: #eff6ff; border-color: #0284c7; color: #0369a1; }
         .terminal-block.active-block .terminal-header { color: var(--primary); background: rgba(10, 27, 63, 0.04); }
@@ -1367,8 +1370,8 @@
         .compact-touch-btn { display: inline-flex; align-items: center; justify-content: center; min-height: 34px; }
         .term-sched-tab-btn { min-height: 34px; padding-top: 5px; padding-bottom: 5px; }
         .term-sched-source-link { display: inline-flex; align-items: center; justify-content: center; min-height: 32px; padding-top: 5px !important; padding-bottom: 5px !important; }
-        .fav-quick-btn { min-height: 34px; }
-        .fav-star-btn { min-width: 34px; min-height: 34px; padding: 0 6px; display: inline-flex; align-items: center; justify-content: center; }
+        .fav-quick-btn { min-height: 46px; }
+        .fav-star-btn { min-width: 28px; min-height: 34px; padding: 0 2px; display: inline-flex; align-items: center; justify-content: center; }
         .dash-content .mini-btn, .dash-content .mini-btn-old, .modal-content .mini-btn-old { min-height: 34px; display: inline-flex; align-items: center; justify-content: center; }
         .daily-field-english-calendar-nav, .daily-field-english-calendar-today { min-height: 36px; min-width: 36px; }
         .wage-schedule-date-input { height: 38px; }
@@ -1407,12 +1410,12 @@
             .hero-copy .dash-sub-meta { margin-top: 0; }
 
             /* 빠른 실행바: 넓은 폭을 활용해 2열 배치
-               · 버튼 글자는 줄바꿈 금지(🧩/베이처럼 두 줄로 찌그러지지 않게), 폭이 모자라면 버튼째 다음 줄로 */
+               · 터미널명과 버튼들 전체를 가로 1줄 배치 유지 */
             .fav-quick-bar { padding: 8px 10px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px 8px; align-items: start; }
             .fav-quick-header { grid-column: 1 / -1; margin-bottom: 2px; }
-            .fav-quick-item { padding: 5px 8px; margin-bottom: 0; gap: 4px 6px; }
-            .fav-quick-actions { gap: 4px; flex-wrap: wrap; }
-            .fav-quick-btn { padding: 6px 8px; font-size: 0.8rem; white-space: nowrap; }
+            .fav-quick-item { padding: 7px 8px; margin-bottom: 0; gap: 5px; flex-direction: row; flex-wrap: nowrap; align-items: stretch; }
+            .fav-quick-actions { gap: 4px; flex-wrap: nowrap; flex: 1 1 auto; min-width: 0; }
+            .fav-quick-btn { flex: 1 1 0; min-height: 42px; padding: 6px 3px; font-size: 0.8rem; white-space: nowrap; }
 
             /* 터미널 빠른 버튼: 3열 → 6열로 줄 수 절반, 식단은 한 칸에 함께 */
             .terminal-body .terminal-actions { grid-template-columns: repeat(6, minmax(0, 1fr)) !important; gap: 5px !important; }
@@ -4716,10 +4719,14 @@ function renderFavoriteQuickBar() {
         if (cfg.bus) {
             extraBtns.push(`<button type="button" class="fav-quick-btn extra" onclick="openBusSchedule()">🚌 셔틀</button>`);
         }
+        const nameMatch = cfg.short.match(/^(.+?)(\(.+\))$/);
+        const nameHtml = nameMatch
+            ? `<span class="fav-quick-name-text"><span class="fav-quick-name-main">${nameMatch[1]}</span><span class="fav-quick-name-sub">${nameMatch[2]}</span></span>`
+            : `<span class="fav-quick-name-text"><span class="fav-quick-name-main">${cfg.short}</span></span>`;
         return `<div class="fav-quick-item">
             <div class="fav-quick-name">
                 <button type="button" class="fav-star-btn is-fav" title="즐겨찾기 해제" onclick="toggleFavoriteTerminal('${id}', event)">⭐</button>
-                <span>${cfg.short}</span>
+                ${nameHtml}
             </div>
             <div class="fav-quick-actions">
                 <a href="${cfg.schedule}" target="_blank" class="fav-quick-btn" onclick="trackAppEvent('terminals','${id}')">스케줄</a>
