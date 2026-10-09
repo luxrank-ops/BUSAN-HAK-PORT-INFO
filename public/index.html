@@ -1738,14 +1738,16 @@
                                class="input-field"
                                placeholder="작업 선박명">
                     </div>
-                    <div style="display:flex; gap:6px; margin:-1px 0 8px;">
+                    <div style="display:flex; gap:6px; margin:4px 0 10px;">
                         <button type="button"
-                                class="mini-btn"
+                                class="mini-btn tap-effect"
+                                style="flex:1; height:38px; padding:0 10px; border-radius:8px; border:1.5px solid var(--primary); background:var(--primary); color:#ffffff; font-size:clamp(0.78rem, 2.7vw, 0.88rem); font-weight:900; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; gap:4px; white-space:nowrap; box-shadow:0 2px 5px rgba(10, 27, 63, 0.14); transition:transform 0.12s ease, filter 0.15s ease;"
                                 onclick="startVesselInfoFollowUp('workLog', { force:true })">
                             🔎 선박 정보 연동
                         </button>
                         <button type="button"
-                                class="mini-btn"
+                                class="mini-btn tap-effect"
+                                style="flex:1; height:38px; padding:0 10px; border-radius:8px; border:1.5px solid #3b82f6; background:linear-gradient(135deg, #eff6ff, #dbeafe); color:#1d4ed8; font-size:clamp(0.78rem, 2.7vw, 0.88rem); font-weight:900; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; gap:4px; white-space:nowrap; box-shadow:0 2px 5px rgba(37, 99, 235, 0.12); transition:transform 0.12s ease, filter 0.15s ease;"
                                 onclick="sendWorkLogShipToWage()">
                             ↗ 임금계산기로 보내기
                         </button>
