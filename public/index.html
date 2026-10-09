@@ -14,6 +14,7 @@
     <meta property="og:image" content="https://busan-hak-port.web.app/icon-512.png">
     <link rel="canonical" href="https://busan-hak-port.web.app/">
     <meta name="theme-color" content="#0a1b3f">
+    <meta name="mj-ga-id" content="G-QQ728TDFJ2">
 
     <link rel="preconnect" href="https://www.gstatic.com" crossorigin>
     <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
@@ -23,6 +24,7 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-storage.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"></script>
+    <script src="/js/analytics.js" defer></script>
     <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6024353303588422" crossorigin="anonymous"></script>
 
     <link rel="icon" href="./favicon.ico">
@@ -2709,7 +2711,7 @@
         <p style="margin: 2px 0;">운영관리자: 이춘학 | 이메일: luxrank@gmail.com</p>
         <p style="margin: 2px 0;">주소: 부산광역시 강서구 명지오션시티</p>
         <p style="margin: 2px 0;">문의(문자): 010-2846-8906</p>
-        <p style="margin: 15px 0; font-size: 0.8rem; color: var(--text-sub);">© 2026 BUSAN HAK PORT. All rights reserved.</p>
+        <p style="margin: 15px 0; font-size: 0.8rem; color: var(--text-sub);">© 2026 BUSAN HAK PORT. All rights reserved. · <a href="#" data-mj-consent-open style="color:var(--primary); font-weight:800; text-decoration:underline;">분석 설정</a></p>
     </div>
 </footer>
 
@@ -3121,6 +3123,15 @@ function detectVisitorHourSlot(date = new Date()) {
 function trackAppEvent(category, key) {
     if (!category || !key || typeof db === "undefined") return;
     try {
+        if (window.MJAnalytics && typeof window.MJAnalytics.track === "function") {
+            if (category === "blocks") {
+                window.MJAnalytics.track("page_view", { page: key });
+            } else if (category === "terminals") {
+                window.MJAnalytics.track("terminal_open", { page: "terminal", item: key });
+            } else if (category === "actions") {
+                window.MJAnalytics.track("feature_use", { feature: key });
+            }
+        }
         const dateKey = getVisitorDateKey();
         const inc = firebase.firestore.FieldValue.increment(1);
         const ts = firebase.firestore.FieldValue.serverTimestamp();
