@@ -270,7 +270,7 @@
         .wage-vessel-hours > strong,
         .wage-hours-total > label {
             display: block;
-            font-size: 0.78rem;
+            font-size: clamp(0.9rem, 3vw, 1rem);
             font-weight: 900;
             color: var(--primary);
             margin: 0 0 4px;
@@ -1570,6 +1570,8 @@
                 gap: 8px !important;
             }
             #wage-card .calc-layout > .calc-left > .wage-row > label { font-size: 0.95rem !important; min-width: 84px !important; }
+            #wage-card .wage-vessel-hours > strong,
+            #wage-card .wage-hours-total > label { font-size: 0.95rem !important; }
             #wage-card .calc-layout > .calc-left > .wage-row > input { height: 42px !important; font-size: 1.1rem !important; }
 
             /* 시작·종료 날짜 블록: 가로로 길게 */
