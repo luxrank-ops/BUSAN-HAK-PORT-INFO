@@ -175,15 +175,16 @@ function calculateWageSegment(period, options) {
         hours = 0
     } = period || {};
     const {
+        baseRate = 10320,
+        skilled: skilledOpt,
         isSkilled = false,
         roleLabel = "본선",
-        baseRate = 10320,
-        taxRate = 0,
         holidayH = 0,
         rainH = 0,
         hotH = 0,
         weekendH = null
     } = options || {};
+    const skilled = Boolean(skilledOpt ?? isSkilled);
 
     const SKILLED_DAY_ADD = 2557;
     const SKILLED_NIGHT_ADD = 3836;
@@ -211,18 +212,17 @@ function calculateWageSegment(period, options) {
         : autoWeekendHolidayHours;
 
     const dayAmt = dayHours * baseRate;
-    const nightAmt = nightHours * (baseRate * 1.5);
-    const holidayAmt = holidayH * (baseRate * 0.5);
-    const weekendAmt = effectiveWeekendH * (baseRate * 0.5);
-    const rainAmt = rainH * (baseRate * 0.5);
-    const hotAmt = hotH * (baseRate * 0.3);
-    const otherAmt = rainAmt + hotAmt;
-    const skilledAmt = isSkilled
-        ? (dayHours * SKILLED_DAY_ADD) + (nightHours * SKILLED_NIGHT_ADD)
-        : 0;
-    const subTotal = dayAmt + nightAmt + skilledAmt + holidayAmt + weekendAmt + otherAmt;
-    const taxAmt = Math.floor(subTotal * taxRate);
-    const totalPay = Math.round(subTotal - taxAmt);
+    const nightAmt = nightHours * baseRate * 1.5;
+    const skilledAmt = skilled ? dayHours * SKILLED_DAY_ADD + nightHours * SKILLED_NIGHT_ADD : 0;
+    const holidayAmt = holidayH * baseRate * 0.5;
+    const weekendAmt = effectiveWeekendH * baseRate * 0.5;
+    const rainAmt = rainH * baseRate * 0.5;
+    const hotAmt = hotH * baseRate * 0.3;
+
+    const subTotal =
+        dayAmt + nightAmt + skilledAmt +
+        holidayAmt + weekendAmt + rainAmt + hotAmt;
+    const totalPay = Math.round(subTotal);
 
     let extraHtml = "";
     if (holidayAmt > 0) extraHtml += renderRow("🚜 지게차 수당 (" + holidayH + "H)", holidayAmt, "#ea580c");
@@ -234,16 +234,16 @@ function calculateWageSegment(period, options) {
     }
     if (rainAmt > 0) extraHtml += renderRow("☔ 우천 수당 (" + rainH + "H)", rainAmt, "#0284c7");
     if (hotAmt > 0) extraHtml += renderRow("☀️ 혹서기(30%) 수당 (" + hotH + "H)", hotAmt, "#d97706");
-    if (holidayAmt === 0 && weekendAmt === 0 && otherAmt === 0) {
+    if (holidayAmt === 0 && weekendAmt === 0 && rainAmt === 0 && hotAmt === 0) {
         extraHtml += renderRow("➕ 추가 가산 수당", 0);
     }
 
-    const rowsHtml =
+    // 내역서에 원천징수 행을 추가하지 않음
+    const rows =
         ` ${renderRow("☀️ 주간 기본 (" + dayHours + "H)", dayAmt)}` +
         ` ${renderRow("🌙 야간 할증 (" + nightHours + "H)", nightAmt)}` +
         ` ${renderRow("🔧 기능공 수당 추가", skilledAmt, "var(--primary)")}` +
-        ` ${extraHtml}` +
-        ` ${taxAmt > 0 ? renderRow("💸 공제액 (세금/보험)", -taxAmt, "var(--danger)") : ""} `;
+        ` ${extraHtml}`;
 
     const summary =
         `[${roleLabel}] ${startDate} ${String(startHour).padStart(2, "0")}시~` +
@@ -267,9 +267,9 @@ function calculateWageSegment(period, options) {
         weekendAmt,
         rainAmt,
         hotAmt,
-        taxAmt,
         totalPay,
-        rowsHtml,
+        rows,
+        rowsHtml: rows,
         summary
     };
 }
@@ -309,27 +309,22 @@ function calculateWage() {
             return;
         }
 
-        const isSkilled = document.getElementById('role-skilled').checked;
-        const roleLabel = isSkilled ? '기능공' : (document.getElementById('role-onshore').checked ? '육상' : '본선');
-        const holidayH = parseFloat(document.getElementById('wageHoliday').value) || 0;
+        const isSkilled = Boolean(document.getElementById('role-skilled')?.checked);
+        const roleLabel = isSkilled ? '기능공' : (document.getElementById('role-onshore')?.checked ? '육상' : '본선');
         const weekendInputEl = document.getElementById('wageWeekend');
         const manualWeekendH = parseFloat(weekendInputEl?.value);
-        const rainH = parseFloat(document.getElementById('wageRain').value) || 0;
-        const hotH = parseFloat(document.getElementById('wageHotTime').value) || 0;
-        const taxRate = parseFloat(document.getElementById('wageTaxType').value) || 0;
-        const BASE_RATE = parseFloat(document.getElementById('wageHourly').value) || 10320;
+        const baseRate = parseFloat(document.getElementById('wageHourly')?.value) || 10320;
 
         const month = parseInt(sd.split('-')[1], 10) || (new Date(sd).getMonth() + 1);
         highlightSeasonRow(month);
 
         const common = {
-            isSkilled,
+            baseRate,
+            skilled: isSkilled,
             roleLabel,
-            baseRate: BASE_RATE,
-            taxRate,
-            holidayH,
-            rainH,
-            hotH,
+            holidayH: Number(document.getElementById('wageHoliday')?.value) || 0,
+            rainH: Number(document.getElementById('wageRain')?.value) || 0,
+            hotH: Number(document.getElementById('wageHotTime')?.value) || 0,
             weekendH: (weekendInputEl?.dataset.userModified && !isNaN(manualWeekendH))
                 ? manualWeekendH
                 : null
@@ -684,7 +679,6 @@ function resetWageForm() {
         if (allowanceType) allowanceType.value = 'wageHoliday';
         const sDate = document.getElementById('wageStartDate');
         const eDate = document.getElementById('wageEndDate');
-        const taxType = document.getElementById('wageTaxType');
         selectedWageScheduleShipName = "";
         selectedWageVessels = [];
         if (sDate) sDate.value = todayStr;
@@ -693,7 +687,6 @@ function resetWageForm() {
         const curMonth = parseInt(todayStr.split('-')[1], 10) || (now.getMonth() + 1);
         highlightSeasonRow(curMonth);
         applySeasonDefaultHours(curMonth, true);
-        if (taxType) taxType.value = '0.033';
         const doubleOrder = document.getElementById('wageDoubleOrder');
         if (doubleOrder) doubleOrder.checked = false;
         invalidateCalculatedWage();
