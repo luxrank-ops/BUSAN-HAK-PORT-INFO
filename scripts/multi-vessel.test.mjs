@@ -102,7 +102,7 @@ test('no freelancer/insurance selector or withholding is applied to calculated w
     assert.equal(elements.wageTotal.innerText, '20,640원');
 });
 
-test('double-order block has flashing red hint and wage allowance card is collapsible <details>', () => {
+test('double-order block has flashing red hint and wage allowance / season table are collapsible <details>', () => {
     assert.match(html, /class="wage-action-grid"/);
     assert.match(html, /class="wage-double-card"/);
     assert.match(html, /class="wage-double-hint"[^>]*>\(2번째 작업선박 체크\)/);
@@ -110,6 +110,9 @@ test('double-order block has flashing red hint and wage allowance card is collap
     assert.match(html, /<details class="wage-allowance-card" aria-labelledby="wageAllowanceTitle">/);
     assert.match(html, /<summary class="wage-allowance-toggle">/);
     assert.match(html, /class="wage-allowance-chevron"[^>]*>▼<\/span>/);
+    assert.match(html, /<details class="calc-right wage-season-details">/);
+    assert.match(html, /<summary class="wage-season-toggle">[\s\S]*?📅 월 · 주간 · 야간/);
+    assert.match(html, /class="wage-season-chevron"[^>]*>▼<\/span>/);
 });
 
 test('2. wage hours grid includes 7:3 per-vessel breakdown cards and square total hours block', () => {

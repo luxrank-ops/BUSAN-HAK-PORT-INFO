@@ -353,6 +353,42 @@
         .ref-table th { background: var(--primary); color: white; padding: 8px 4px; word-break: keep-all; font-weight: 800; }
         .ref-table td { border: 1px solid var(--border); padding: 8px 4px; color: var(--text-main); word-break: keep-all; font-weight: 600; }
 
+        .wage-season-details {
+            align-self: flex-start;
+        }
+        .wage-season-toggle {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 6px;
+            min-height: 42px;
+            box-sizing: border-box;
+            padding: 7px 10px;
+            border: 2px solid #94a3b8;
+            border-radius: 8px;
+            background: var(--card-bg);
+            color: var(--primary);
+            font-size: 0.9rem;
+            font-weight: 900;
+            cursor: pointer;
+            touch-action: manipulation;
+            list-style: none;
+        }
+        .wage-season-toggle::-webkit-details-marker {
+            display: none;
+        }
+        .wage-season-chevron {
+            font-size: 0.75rem;
+            transition: transform 0.15s ease;
+        }
+        .wage-season-details[open] .wage-season-chevron {
+            transform: rotate(180deg);
+        }
+        .wage-season-details > .ref-table {
+            margin-top: 4px;
+            height: auto;
+        }
+
         .calendar-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)) !important; gap: clamp(2px, 1vw, 4px); text-align: center; width: 100%; box-sizing: border-box; }
         .cal-day { padding: 8px 2px; border-radius: 6px; background: rgba(255,255,255,0.5); border: 1px solid var(--border); font-weight: 800; font-size: clamp(0.9rem, 3.5vw, 1.05rem); cursor: pointer; min-height: 50px; display: flex; flex-direction: column; justify-content: center; align-items: center; box-sizing: border-box; touch-action: manipulation; overflow: hidden; }
         .cal-day.has-data { border: 2px solid var(--success); background: rgba(16, 185, 129, 0.1); }
