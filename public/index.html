@@ -1488,7 +1488,7 @@
                                 </label>
                                 <div style="width:100%;">
                                     <input type="date" id="wageStartDate" class="input-field" style="font-size:0.85rem; padding:0 4px; border: 2px solid #cbd5e1; cursor:pointer;" onclick="openDatePicker('wageStartDate', event)" onchange="onWageDateChange('start')">
-                                    <select id="wageStartHour" class="input-field" style="font-size:0.95rem; padding:0 4px; margin-left:4px; text-align:center; border: 2px solid #cbd5e1;" onclick="event.stopPropagation()">
+                                    <select id="wageStartHour" class="input-field" style="font-size:0.95rem; padding:0 4px; margin-left:4px; text-align:center; border: 2px solid #cbd5e1;" onclick="event.stopPropagation()" onchange="this.dataset.userModified='1'">
                                         <option value="0">00시</option><option value="1">01시</option><option value="2">02시</option><option value="3">03시</option><option value="4">04시</option><option value="5">05시</option><option value="6">06시</option><option value="7">07시</option><option value="8" selected>08시</option><option value="9">09시</option><option value="10">10시</option><option value="11">11시</option><option value="12">12시</option><option value="13">13시</option><option value="14">14시</option><option value="15">15시</option><option value="16">16시</option><option value="17">17시</option><option value="18">18시</option><option value="19">19시</option><option value="20">20시</option><option value="21">21시</option><option value="22">22시</option><option value="23">23시</option>
                                     </select>
                                 </div>
@@ -1499,7 +1499,7 @@
                                 </label>
                                 <div style="width:100%;">
                                     <input type="date" id="wageEndDate" class="input-field" style="font-size:0.85rem; padding:0 4px; border: 2px solid #cbd5e1; cursor:pointer;" onclick="openDatePicker('wageEndDate', event)" onchange="onWageDateChange('end')">
-                                    <select id="wageEndHour" class="input-field" style="font-size:0.95rem; padding:0 4px; margin-left:4px; text-align:center; border: 2px solid #cbd5e1;" onclick="event.stopPropagation()">
+                                    <select id="wageEndHour" class="input-field" style="font-size:0.95rem; padding:0 4px; margin-left:4px; text-align:center; border: 2px solid #cbd5e1;" onclick="event.stopPropagation()" onchange="this.dataset.userModified='1'">
                                         <option value="0">00시</option><option value="1">01시</option><option value="2">02시</option><option value="3">03시</option><option value="4">04시</option><option value="5">05시</option><option value="6">06시</option><option value="7">07시</option><option value="8">08시</option><option value="9">09시</option><option value="10">10시</option><option value="11">11시</option><option value="12">12시</option><option value="13">13시</option><option value="14">14시</option><option value="15">15시</option><option value="16">16시</option><option value="17" selected>17시</option><option value="18">18시</option><option value="19">19시</option><option value="20">20시</option><option value="21">21시</option><option value="22">22시</option><option value="23">23시</option>
                                     </select>
                                 </div>
@@ -1628,7 +1628,7 @@
                                         class="input-field wage-allowance-type-select"
                                         onchange="changeWageAllowanceType()">
                                     <option value="wageHoliday">🚜 지게차</option>
-                                    <option value="wageWeekend">🎈 특별 수당</option>
+                                    <option value="wageWeekend">🎈 특별·주말·공휴일 수당</option>
                                     <option value="wageRain">☔ 우천</option>
                                     <option value="wageHotTime">☀️ 혹서기 (30%)</option>
                                 </select>
@@ -4357,7 +4357,12 @@ function onWageDateChange(which) {
     if (!sdEl || !edEl) return;
     if (sdEl.value) {
         const m = parseInt(sdEl.value.split('-')[1], 10);
-        if (m >= 1 && m <= 12) highlightSeasonRow(m);
+        if (m >= 1 && m <= 12) {
+            highlightSeasonRow(m);
+            if (which === 'start') {
+                applySeasonDefaultHours(m, false);
+            }
+        }
         if (which === 'start') {
             if (!edEl.value || edEl.value < sdEl.value) {
                 edEl.value = sdEl.value;
@@ -4369,6 +4374,7 @@ function onWageDateChange(which) {
                 loadWageScheduledShipsForDate(sdEl.value, false);
             }
         }
+        autoFillWeekendHoliday();
     }
 }
 function filterGuide() {
@@ -7029,17 +7035,46 @@ function changeMonth(s){ currentDate.setMonth(currentDate.getMonth()+s); renderC
 function previewLogImage(input){ if(input.files&&input.files[0]){ const r=new FileReader(); r.onload=e=>{const i=document.getElementById('logImagePreview'); i.src=e.target.result; i.style.display='block';}; r.readAsDataURL(input.files[0]); } }
 function renderRow(label, amt, color = "inherit") { return `<tr><td style="padding: 8px 0; color: var(--text-sub); font-weight:700;">${label}</td><td style="text-align: right; font-weight: 900; color: ${color};">${amt.toLocaleString()}원</td></tr>`; }
 const publicHolidays = [
-    '2026-01-01', '2026-02-16', '2026-02-17', '2026-02-18', '2026-03-01', '2026-03-02', '2026-05-05', '2026-05-24', '2026-05-25', '2026-06-06', '2026-08-15', '2026-09-24', '2026-09-25', '2026-09-26', '2026-09-28', '2026-10-03', '2026-10-09', '2026-12-25',
+    '2025-01-01', '2025-01-28', '2025-01-29', '2025-01-30', '2025-03-01', '2025-03-03', '2025-05-05', '2025-05-06', '2025-06-06', '2025-08-15', '2025-10-03', '2025-10-05', '2025-10-06', '2025-10-07', '2025-10-08', '2025-10-09', '2025-12-25',
+    '2026-01-01', '2026-02-16', '2026-02-17', '2026-02-18', '2026-03-01', '2026-03-02', '2026-05-05', '2026-05-24', '2026-05-25', '2026-06-06', '2026-08-15', '2026-08-17', '2026-09-24', '2026-09-25', '2026-09-26', '2026-09-28', '2026-10-03', '2026-10-05', '2026-10-09', '2026-12-25',
     '2027-01-01', '2027-02-06', '2027-02-07', '2027-02-08', '2027-02-09', '2027-03-01', '2027-05-05', '2027-05-13', '2027-06-06', '2027-08-15', '2027-08-16', '2027-09-14', '2027-09-15', '2027-09-16', '2027-10-03', '2027-10-04', '2027-10-09', '2027-10-11', '2027-12-25'
 ];
 let lastCalculatedWageData = null;
+function getSeasonScheduleByMonth(month) {
+    const m = Number(month) || 1;
+    if (m >= 4 && m <= 9) return { dayStart: 6, dayEnd: 19, rowId: 'row-apr', label: '4~9월 (06~19시)' };
+    if (m >= 10 && m <= 12) return { dayStart: 7, dayEnd: 17, rowId: 'row-oct', label: '10~12월 (07~17시)' };
+    return { dayStart: 8, dayEnd: 18, rowId: 'row-jan', label: '1~3월 (08~18시)' };
+}
+function applySeasonDefaultHours(month, force = false) {
+    const { dayStart, dayEnd } = getSeasonScheduleByMonth(month);
+    const sHour = document.getElementById('wageStartHour');
+    const eHour = document.getElementById('wageEndHour');
+    if (sHour && (force || !sHour.dataset.userModified)) {
+        sHour.value = String(dayStart);
+        if (force) delete sHour.dataset.userModified;
+    }
+    if (eHour && (force || !eHour.dataset.userModified)) {
+        eHour.value = String(dayEnd);
+        if (force) delete eHour.dataset.userModified;
+    }
+}
+function isWeekendOrPublicHolidayDate(dateObj) {
+    if (!dateObj || isNaN(dateObj.getTime())) return false;
+    const dayOfWeek = dateObj.getDay();
+    const y = dateObj.getFullYear();
+    const m = String(dateObj.getMonth() + 1).padStart(2, '0');
+    const d = String(dateObj.getDate()).padStart(2, '0');
+    const dateKey = `${y}-${m}-${d}`;
+    return dayOfWeek === 0 || dayOfWeek === 6 || publicHolidays.includes(dateKey);
+}
 function highlightSeasonRow(month) {
     ['row-jan', 'row-apr', 'row-oct'].forEach(id => {
         const el = document.getElementById(id);
         if (el) el.classList.remove('is-season-active');
     });
-    const activeId = (month >= 4 && month <= 9) ? 'row-apr' : (month >= 10 ? 'row-oct' : 'row-jan');
-    const activeEl = document.getElementById(activeId);
+    const { rowId } = getSeasonScheduleByMonth(month);
+    const activeEl = document.getElementById(rowId);
     if (activeEl) activeEl.classList.add('is-season-active');
 }
 function calcTimeAndFill() {
@@ -7060,7 +7095,12 @@ function calcTimeAndFill() {
         if (diffMs > 0) {
             const hours = Math.floor(diffMs / (1000 * 60 * 60));
             document.getElementById('wageTotalHours').value = hours;
-            showToast(`⏱️ 총 근무 시간 ${hours}시간이 설정되었습니다.`);
+            const autoWeekendHours = autoFillWeekendHoliday(startD, hours);
+            if (autoWeekendHours > 0) {
+                showToast(`⏱️ 총 근무 ${hours}시간 (주말·공휴일 ${autoWeekendHours}시간 자동 반영)`);
+            } else {
+                showToast(`⏱️ 총 근무 시간 ${hours}시간이 설정되었습니다.`);
+            }
         } else {
             document.getElementById('wageTotalHours').value = '';
             if (sd !== ed || sh !== eh) {
@@ -7073,8 +7113,53 @@ function calcTimeAndFill() {
         console.error(e);
     }
 }
-function autoFillWeekendHoliday() {
-    // 추가 수당 시간 입력(지게차, 특별수당, 우천, 혹서기)은 사용자가 직접 입력할 때만 반영되도록 자동 입력 비활성화
+function autoFillWeekendHoliday(startDateObj, totalHoursArg) {
+    try {
+        const sd = document.getElementById('wageStartDate')?.value;
+        const sh = parseInt(document.getElementById('wageStartHour')?.value, 10) || 0;
+        const ed = document.getElementById('wageEndDate')?.value;
+        const eh = parseInt(document.getElementById('wageEndHour')?.value, 10) || 0;
+        if (!sd) return 0;
+
+        const startD = startDateObj instanceof Date && !isNaN(startDateObj.getTime())
+            ? startDateObj
+            : new Date(`${sd}T${String(sh).padStart(2, '0')}:00:00`);
+
+        let hours = Number(totalHoursArg);
+        if (!hours || hours <= 0) {
+            const totalInput = parseFloat(document.getElementById('wageTotalHours')?.value) || 0;
+            if (totalInput > 0) {
+                hours = totalInput;
+            } else if (ed) {
+                const endD = new Date(`${ed}T${String(eh).padStart(2, '0')}:00:00`);
+                const diff = Math.floor((endD.getTime() - startD.getTime()) / (1000 * 60 * 60));
+                if (diff > 0) hours = diff;
+            }
+        }
+
+        let weekendHolidayHours = 0;
+        if (hours > 0) {
+            for (let i = 0; i < hours; i++) {
+                const slotDate = new Date(startD.getTime() + i * 60 * 60 * 1000);
+                if (isWeekendOrPublicHolidayDate(slotDate)) {
+                    weekendHolidayHours++;
+                }
+            }
+        }
+
+        const weekendEl = document.getElementById('wageWeekend');
+        if (weekendEl && !weekendEl.dataset.userModified) {
+            weekendEl.value = weekendHolidayHours > 0 ? String(weekendHolidayHours) : '';
+            const typeSelect = document.getElementById('wageAllowanceType');
+            const hoursInput = document.getElementById('wageAllowanceHours');
+            if (typeSelect && hoursInput && typeSelect.value === 'wageWeekend') {
+                hoursInput.value = weekendEl.value;
+            }
+        }
+        return weekendHolidayHours;
+    } catch (e) {
+        return 0;
+    }
 }
 
 function changeWageAllowanceType() {
@@ -7093,7 +7178,14 @@ function updateSelectedWageAllowanceHours(hours) {
         ? document.getElementById(typeSelect.value)
         : null;
 
-    if (storedInput) storedInput.value = hours;
+    if (storedInput) {
+        storedInput.value = hours;
+        if (String(hours).trim() !== "") {
+            storedInput.dataset.userModified = "1";
+        } else {
+            delete storedInput.dataset.userModified;
+        }
+    }
 }
 
 function calculateWage() {
@@ -7110,27 +7202,49 @@ function calculateWage() {
             return;
         }
         const startTime = sh;
+        const startD = new Date(`${sd}T${String(sh).padStart(2, '0')}:00:00`);
         const isSkilled = document.getElementById('role-skilled').checked;
         const roleLabel = isSkilled ? '기능공' : (document.getElementById('role-onshore').checked ? '육상' : '본선');
+
+        // 시작~종료 시간 중 주말(토·일) 및 법정 공휴일 시간 자동 계산 및 월별 주·야간 시간대 판별
+        let dayHours = 0, nightHours = 0, autoWeekendHolidayHours = 0;
+        for (let i = 0; i < totalHours; i++) {
+            const slotDate = new Date(startD.getTime() + i * 60 * 60 * 1000);
+            const slotMonth = slotDate.getMonth() + 1;
+            const { dayStart, dayEnd } = getSeasonScheduleByMonth(slotMonth);
+            const currentHour = slotDate.getHours();
+            if (currentHour >= dayStart && currentHour < dayEnd) dayHours++;
+            else nightHours++;
+
+            if (isWeekendOrPublicHolidayDate(slotDate)) {
+                autoWeekendHolidayHours++;
+            }
+        }
+
         const holidayH = parseFloat(document.getElementById('wageHoliday').value) || 0;
-        const weekendH = parseFloat(document.getElementById('wageWeekend').value) || 0;
+        const weekendInputEl = document.getElementById('wageWeekend');
+        if (weekendInputEl && !weekendInputEl.dataset.userModified) {
+            weekendInputEl.value = autoWeekendHolidayHours > 0 ? String(autoWeekendHolidayHours) : '';
+            const typeSelect = document.getElementById('wageAllowanceType');
+            const hoursInput = document.getElementById('wageAllowanceHours');
+            if (typeSelect && hoursInput && typeSelect.value === 'wageWeekend') {
+                hoursInput.value = weekendInputEl.value;
+            }
+        }
+        const manualWeekendH = parseFloat(weekendInputEl?.value);
+        const weekendH = (weekendInputEl?.dataset.userModified && !isNaN(manualWeekendH))
+            ? manualWeekendH
+            : (autoWeekendHolidayHours > 0 ? autoWeekendHolidayHours : (manualWeekendH || 0));
+
         const rainH = parseFloat(document.getElementById('wageRain').value) || 0;
         const hotH = parseFloat(document.getElementById('wageHotTime').value) || 0;
         const taxRate = parseFloat(document.getElementById('wageTaxType').value) || 0;
         const BASE_RATE = parseFloat(document.getElementById('wageHourly').value) || 10320;
         const SKILLED_DAY_ADD = 2557;
         const SKILLED_NIGHT_ADD = 3836;
-        const month = parseInt(sd.split('-')[1], 10) || (new Date(sd).getMonth() + 1);
+        const month = parseInt(sd.split('-')[1], 10) || (startD.getMonth() + 1);
         highlightSeasonRow(month);
-        let dayStart = 8, dayEnd = 18;
-        if (month >= 4 && month <= 9) { dayStart = 6; dayEnd = 19; }
-        else if (month >= 10) { dayStart = 7; dayEnd = 17; }
-        let dayHours = 0, nightHours = 0;
-        for (let i = 0; i < totalHours; i++) {
-            let currentHour = (startTime + i) % 24;
-            if (currentHour >= dayStart && currentHour < dayEnd) dayHours++;
-            else nightHours++;
-        }
+
         const dayAmt = dayHours * BASE_RATE;
         const nightAmt = nightHours * (BASE_RATE * 1.5);
         const holidayAmt = holidayH * (BASE_RATE * 0.5);
@@ -7162,11 +7276,16 @@ function calculateWage() {
             summary:
                 `[${roleLabel}] ${sd} ${String(sh).padStart(2, "0")}시~` +
                 `${wageEndDate} ${String(wageEndHour).padStart(2, "0")}시 · ` +
-                `총 ${totalHours}H (주간 ${dayHours}H / 야간 ${nightHours}H)`
+                `총 ${totalHours}H (주간 ${dayHours}H / 야간 ${nightHours}H${weekendH > 0 ? ` / 주말·공휴일 ${weekendH}H` : ''})`
         };
         let extraHtml = "";
         if (holidayAmt > 0) extraHtml += renderRow("🚜 지게차 수당 (" + holidayH + "H)", holidayAmt, "#ea580c");
-        if (weekendAmt > 0) extraHtml += renderRow("🎈 특별 수당 (" + weekendH + "H)", weekendAmt, "#3b82f6");
+        if (weekendAmt > 0) {
+            const weekendLabel = autoWeekendHolidayHours > 0
+                ? "🗓️ 주말·공휴일 수당 (" + weekendH + "H)"
+                : "🎈 특별·주말 수당 (" + weekendH + "H)";
+            extraHtml += renderRow(weekendLabel, weekendAmt, "#3b82f6");
+        }
         if (rainAmt > 0) extraHtml += renderRow("☔ 우천 수당 (" + rainH + "H)", rainAmt, "#0284c7");
         if (hotAmt > 0) extraHtml += renderRow("☀️ 혹서기(30%) 수당 (" + hotH + "H)", hotAmt, "#d97706");
         if (holidayAmt === 0 && weekendAmt === 0 && otherAmt === 0) extraHtml += renderRow("➕ 추가 가산 수당", 0);
@@ -7268,7 +7387,10 @@ function sendWorkLogShipToWage() {
         if (endDate) endDate.value = logDate;
         if (typeof setWageScheduleDate === "function") setWageScheduleDate(logDate);
 
-        highlightSeasonRow(parseInt(logDate.split("-")[1], 10));
+        const logMonth = parseInt(logDate.split("-")[1], 10);
+        highlightSeasonRow(logMonth);
+        applySeasonDefaultHours(logMonth, false);
+        autoFillWeekendHoliday();
         loadWageScheduledShipsForDate(logDate, false);
     }
 
@@ -7286,21 +7408,23 @@ function resetWageForm() {
         const todayStr = now.toISOString().split('T')[0];
         ['wageTotalHours', 'wageShipName', 'wageAllowanceHours', 'wageHoliday', 'wageWeekend', 'wageRain', 'wageHotTime'].forEach(id => {
             const el = document.getElementById(id);
-            if (el) el.value = '';
+            if (el) {
+                el.value = '';
+                delete el.dataset.userModified;
+            }
         });
         const allowanceType = document.getElementById('wageAllowanceType');
         if (allowanceType) allowanceType.value = 'wageHoliday';
         const sDate = document.getElementById('wageStartDate');
         const eDate = document.getElementById('wageEndDate');
-        const sHour = document.getElementById('wageStartHour');
-        const eHour = document.getElementById('wageEndHour');
         const taxType = document.getElementById('wageTaxType');
         selectedWageScheduleShipName = "";
         if (sDate) sDate.value = todayStr;
         if (eDate) eDate.value = todayStr;
         if (typeof setWageScheduleDate === 'function') setWageScheduleDate(todayStr);
-        if (sHour) sHour.value = '8';
-        if (eHour) eHour.value = '17';
+        const curMonth = parseInt(todayStr.split('-')[1], 10) || (now.getMonth() + 1);
+        highlightSeasonRow(curMonth);
+        applySeasonDefaultHours(curMonth, true);
         if (taxType) taxType.value = '0';
         if (typeof loadWageScheduledShipsForDate === 'function') {
             loadWageScheduledShipsForDate(todayStr, false);
@@ -8549,7 +8673,7 @@ window.onload = async () => {
     trackVisitorSession();
     initTodayVisitorBadge();
     ensureTodayUpdateNotice();
-    try { const now = new Date(); now.setMinutes(now.getMinutes() - now.getTimezoneOffset()); const todayStr = now.toISOString().split('T')[0]; const sDate = document.getElementById('wageStartDate'); const eDate = document.getElementById('wageEndDate'); if(sDate) sDate.value = todayStr; if(eDate) eDate.value = todayStr; if (typeof loadWageScheduledShipsForDate === 'function') loadWageScheduledShipsForDate(todayStr, false); } catch(e) { console.error("날짜 초기화 오류", e); } 
+    try { const now = new Date(); now.setMinutes(now.getMinutes() - now.getTimezoneOffset()); const todayStr = now.toISOString().split('T')[0]; const sDate = document.getElementById('wageStartDate'); const eDate = document.getElementById('wageEndDate'); if(sDate) sDate.value = todayStr; if(eDate) eDate.value = todayStr; const initMonth = parseInt(todayStr.split('-')[1], 10) || (now.getMonth() + 1); highlightSeasonRow(initMonth); applySeasonDefaultHours(initMonth, true); if (typeof loadWageScheduledShipsForDate === 'function') loadWageScheduledShipsForDate(todayStr, false); } catch(e) { console.error("날짜 초기화 오류", e); } 
     loadBanner(); 
     try { 
         db.collection("notices").orderBy("timestamp","desc").onSnapshot(s => { const l = document.getElementById("noticeList"); const badge = document.getElementById("noticeBadge"); const subMeta = document.getElementById("noticeCardSubMeta"); if (subMeta) subMeta.innerText = s.empty ? "운영 안내 및 주요 소식" : `등록된 공지 ${s.size}건`; if (s.empty) { l.innerHTML = "<tr><td colspan='3' style='text-align:center; padding:20px; color:var(--text-sub); font-weight:700;'>등록된 공지가 없습니다.</td></tr>"; if(badge) badge.classList.add("hidden"); return; } let isNew = false; const now = new Date(); let index = 0; const rowsHtml = []; s.forEach(d => { const x = d.data(); let dateStr = ""; let isRowNew = false; if(x.timestamp) { const dt = x.timestamp.toDate(); dateStr = `${dt.getFullYear()}/${String(dt.getMonth()+1).padStart(2,'0')}/${String(dt.getDate()).padStart(2,'0')}`; const diffTime = now.getTime() - dt.getTime(); if (diffTime < 24 * 60 * 60 * 1000) { isRowNew = true; isNew = true; } } const rowNewBadge = isRowNew ? `<span class="badge-new">NEW</span>` : ""; const linkedContent = autoLink(x.content); const imageHtml = x.imageUrl ? `<img src="${x.imageUrl}" loading="lazy" alt="공지사항 이미지" style="max-width:100%; border-radius:8px; margin-top:10px; border:1px solid rgba(0,0,0,0.1);" onclick="document.getElementById('imageModal').style.display='flex'; document.getElementById('modalImage').src=this.src;">` : ''; const safeTitle = (x.title || '').replace(/'/g, "\\'").replace(/"/g, "&quot;"); const safeContent = (x.content || '').replace(/'/g, "\\'").replace(/"/g, "&quot;").replace(/\n/g, "\\n"); const imgParam = x.imageUrl ? `'${x.imageUrl}'` : `null`; const rowId = `n-${d.id}`; rowsHtml.push(`<tr onclick="toggleBoardRow('${rowId}')" style="cursor:pointer; background:${index === 0 ? 'rgba(239,68,68,0.06)' : 'rgba(239,68,68,0.02)'};"> <td class="board-no" style="color:var(--danger); font-weight:900;">${index === 0 ? '📌 필독' : '공지'}</td> <td class="board-title">📢 ${x.title}${rowNewBadge} <span style="font-size:0.75rem; color:var(--primary); margin-left:4px;">▼</span></td> <td class="board-date">${dateStr}</td> </tr> <tr id="${rowId}" class="board-content-row"> <td colspan="3" class="board-content-box" style="border-left: 3px solid var(--danger);"> <div style="margin-bottom:15px; white-space:pre-wrap; font-weight:600; background:var(--card-bg); padding:12px; border-radius:8px; border:1px solid var(--border);">${linkedContent}</div> ${imageHtml} <div style="text-align:right; margin-top:10px;"> <button class="mini-btn" style="background:var(--primary) !important; margin-right:5px; color:white !important;" onclick="startEditNotice('${d.id}', '${safeTitle}', '${safeContent}', ${imgParam}, event)">✏️ 수정(Admin)</button> <button class="mini-btn btn-del" onclick="delNotice('${d.id}',event)">🗑️ 삭제(Admin)</button> </div> </td> </tr>`); index++; }); l.innerHTML = rowsHtml.join(""); if(badge) { if(isNew) badge.classList.remove("hidden"); else badge.classList.add("hidden"); } }); 
