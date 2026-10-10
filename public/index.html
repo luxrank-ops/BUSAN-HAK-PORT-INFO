@@ -1973,7 +1973,8 @@
             </div>
             <div id="shipForm" class="hidden" style="background:rgba(10,27,63,0.03); padding:12px; border-radius:10px; border:1px solid var(--border); margin-bottom:12px;">
                 <input type="password" id="shipPw" class="input-field" placeholder="비밀번호" style="text-align:left; margin-bottom:8px;">
-                <input type="text" id="shipName" class="input-field" placeholder="선박명" style="text-align:left; margin-bottom:6px;">
+                <input type="text" id="shipName" class="input-field" placeholder="선박명" oninput="checkShipDuplicateInline(this.value)" style="text-align:left; margin-bottom:6px;">
+                <div id="shipDuplicateNotice" class="hidden" style="margin-bottom:8px; padding:8px 10px; border-radius:8px; background:#fef2f2; border:1.5px solid #fca5a5; color:#b91c1c; font-size:0.78rem; font-weight:800; line-height:1.4;"></div>
                 <div id="shipFormScheduledBox" class="hjnc-schedule-box" style="margin-bottom:10px;">
                     <div class="hjnc-schedule-header">
                         <div style="display:flex; align-items:center; gap:5px; flex-wrap:wrap;">
@@ -5846,6 +5847,7 @@ function applyShipFormQuickChip(shipName, berthNo = "", ptnrCode = "", termBadge
     const input = document.getElementById("shipName");
     if (!input) return;
     input.value = shipName;
+    if (typeof checkShipDuplicateInline === "function") checkShipDuplicateInline(shipName);
     if (shipName.endsWith(" ")) input.focus();
     const shipDate = document.getElementById("shipFormScheduleDate")?.value;
     if (shipDate) {
@@ -8578,6 +8580,48 @@ function extractShipTags(ship) {
     const known = ["#오토콘", "#수동콘", "#브릿지주의", "#라싱바무거움", "#턴버클뻑뻑함", "#통로협소"];
     return known.filter(t => text.includes(t) || text.includes(t.slice(1)));
 }
+function findDuplicateShipRecord(shipName, excludeId = null) {
+    const normalized = normalizeVesselInfoName(shipName);
+    if (!normalized) return null;
+    return (allShipsData || []).find(ship => {
+        if (excludeId && ship.id === excludeId) return false;
+        return normalizeVesselInfoName(ship.shipName || ship.name || ship.vesselName) === normalized;
+    }) || null;
+}
+function checkShipDuplicateInline(val) {
+    const noticeEl = document.getElementById("shipDuplicateNotice");
+    if (!noticeEl) return null;
+    const dup = findDuplicateShipRecord(val, currentEditShipId);
+    if (dup) {
+        const dupName = escapeShipCommentHtml(dup.shipName || dup.name || val);
+        const dupId = String(dup.id || "").replace(/\\/g, "\\\\").replace(/'/g, "\\'");
+        noticeEl.innerHTML = `⚠️ <strong>‘${dupName}’</strong> 선박은 이미 등록되어 있습니다. (중복 등록 불가)<div style="margin-top:5px; display:flex; gap:6px; flex-wrap:wrap;"><button type="button" class="mini-btn" style="background:var(--primary) !important; color:#fff !important;" onclick="jumpToExistingShipFromForm('${dupId}')">🔎 등록된 선박 보기 · 댓글 달기</button><button type="button" class="mini-btn" style="background:var(--primary-light) !important; color:#fff !important;" onclick="tryEditShip('${dupId}', '', '', '')">✏️ 기존 정보 수정</button></div>`;
+        noticeEl.classList.remove("hidden");
+    } else {
+        noticeEl.innerHTML = "";
+        noticeEl.classList.add("hidden");
+    }
+    return dup;
+}
+function jumpToExistingShipFromForm(shipId) {
+    if (!shipId) return;
+    resetShipForm();
+    resetShipFilters();
+    const idx = filteredShips.findIndex(s => s.id === shipId);
+    if (idx >= 0) {
+        const targetPage = Math.floor(idx / postsPerPage) + 1;
+        renderShipPage(targetPage);
+        setTimeout(() => {
+            const row = document.getElementById(`s-${shipId}`);
+            if (row && !row.classList.contains("show")) {
+                toggleBoardRow(`s-${shipId}`);
+            }
+            row?.scrollIntoView({ behavior: "smooth", block: "center" });
+        }, 60);
+    } else {
+        openShipDetailView(shipId);
+    }
+}
 async function addShipInfo() {
     const n = document.getElementById('shipName').value.trim();
     const c = document.getElementById('shipOnboard').value.trim();
@@ -8587,8 +8631,37 @@ async function addShipInfo() {
     const f = document.getElementById('shipFileInput').files[0];
     const btn = document.getElementById('shipSubmitBtn');
     if (!n || !p) return alert("선박명과 비밀번호는 필수입니다!");
-    btn.innerText = "서버 기록 중...";
+    if (!normalizeVesselInfoName(n)) return alert("유효한 선박명을 입력해 주세요.");
+
+    btn.innerText = "중복 확인 중...";
     btn.disabled = true;
+
+    let duplicateShip = findDuplicateShipRecord(n, currentEditShipId);
+    if (!duplicateShip) {
+        try {
+            const snapshot = await db.collection("ships").get();
+            snapshot.forEach(doc => {
+                if (currentEditShipId && doc.id === currentEditShipId) return;
+                const d = doc.data() || {};
+                if (normalizeVesselInfoName(d.shipName || d.name || d.vesselName) === normalizeVesselInfoName(n)) {
+                    duplicateShip = { ...d, id: doc.id };
+                }
+            });
+        } catch (err) {
+            console.warn("선박 중복 조회 중 오류:", err);
+        }
+    }
+
+    if (duplicateShip) {
+        checkShipDuplicateInline(n);
+        btn.innerText = currentEditShipId ? "수정 완료" : "등록/수정";
+        btn.disabled = false;
+        const existingTitle = duplicateShip.shipName || duplicateShip.name || n;
+        alert(`⚠️ 이미 등록된 선박입니다: ‘${existingTitle}’\n\n동일한 선박명은 중복 등록할 수 없습니다.\n기존 선박 게시글을 열어 정보를 수정하거나 댓글을 남겨 주세요.`);
+        return;
+    }
+
+    btn.innerText = "서버 기록 중...";
     const pwHash = (/^[a-f0-9]{64}$/i.test(p)) ? p.toLowerCase() : (await sha256Hex(p));
     const finalizeSave = (url) => {
         const shipData = {
@@ -8671,6 +8744,7 @@ function startEditShip(id, name, feat, verifiedPw = "") {
     setShipDifficulty(shipObj.difficulty || 3);
     selectedShipFormTags = Array.isArray(shipObj.tags) ? [...shipObj.tags] : extractShipTags(shipObj);
     syncShipFormTagUI();
+    checkShipDuplicateInline(document.getElementById('shipName').value);
     const form = document.getElementById('shipForm');
     if (form.classList.contains('hidden')) form.classList.remove('hidden');
     const submitBtn = document.getElementById('shipSubmitBtn');
@@ -8689,6 +8763,8 @@ function resetShipForm() {
     setShipDifficulty(3);
     selectedShipFormTags = [];
     syncShipFormTagUI();
+    const dupNotice = document.getElementById('shipDuplicateNotice');
+    if (dupNotice) { dupNotice.innerHTML = ''; dupNotice.classList.add('hidden'); }
     document.getElementById('shipForm').classList.add('hidden');
     const submitBtn = document.getElementById('shipSubmitBtn');
     if (submitBtn) { submitBtn.innerText = "등록/수정"; submitBtn.disabled = false; }
