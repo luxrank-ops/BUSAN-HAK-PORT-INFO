@@ -1688,10 +1688,14 @@
                 </select>
                 <div style="display:flex; gap:10px; margin-top:15px;">
                     <button class="action-btn bg-calc" style="flex:2; border: 2px solid var(--primary);" onclick="calculateWage()">내역서 생성 및 계산</button>
+                    <label for="wageDoubleOrder" title="같은 날짜의 두 번째 선박 금액을 임금 2에 입력합니다. 근무일지에서 저장해 주세요." style="display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px; cursor:pointer; font-size:0.8rem; font-weight:900; color:var(--primary); white-space:nowrap;">
+                        <input type="checkbox" id="wageDoubleOrder" style="width:20px; height:20px; margin:0; accent-color:var(--primary);" onchange="lastCalculatedWageData = null; document.getElementById('wageResultBox').classList.add('hidden')">
+                        더블오더
+                    </label>
                     <button class="action-btn bg-cancel" style="flex:1; border: 2px solid #475569;" onclick="resetWageForm()">초기화</button>
                 </div>
                 <div id="wageResultBox" class="hidden wage-result-box" style="border: 3px solid var(--primary);">
-                    <h4 style="margin:0; text-align:center; color:var(--primary); font-size:1.15rem; font-weight:900;">📋 임금 산정 내역서</h4>
+                    <h4 id="wageResultTitle" style="margin:0; text-align:center; color:var(--primary); font-size:1.15rem; font-weight:900;">📋 임금 산정 내역서</h4>
                     <table class="spec-table"><tbody id="wageSpecBody"></tbody></table>
                     <div id="wageTotal" class="wage-total" style="border-top: 2px solid var(--primary);">0원</div>
                     <button type="button" class="action-btn bg-submit send-log-sparkle-btn" style="margin-top:12px; padding:12px; font-size:0.95rem;" onclick="sendCalculatedWageToLog()">✨ 📅 이 계산 결과를 근무일지로 보내기 ✨</button>
@@ -6578,7 +6582,12 @@ function generateReceiptCanvas(mode) {
     let highlightTotal = "";
 
     if (mode === "wage") {
-        title = "🧾 부산항 임금 산정 명세서";
+        title = lastCalculatedWageData?.isDoubleOrder
+            ? "🧾 부산항 더블오더 임금 2 명세서"
+            : "🧾 부산항 임금 산정 명세서";
+        if (lastCalculatedWageData?.isDoubleOrder) {
+            lines.push({ label: "🚢 더블오더 선박", value: lastCalculatedWageData.shipName || "미입력" });
+        }
         const sd = document.getElementById("wageStartDate")?.value || "-";
         const ed = document.getElementById("wageEndDate")?.value || "-";
         subTitle = `근무 일자: ${sd} ~ ${ed}`;
@@ -7779,8 +7788,10 @@ function calculateWage() {
         const wageEndDate = document.getElementById("wageEndDate").value;
         const wageEndHour =
             parseInt(document.getElementById("wageEndHour").value, 10) || 0;
+        const isDoubleOrder = Boolean(document.getElementById("wageDoubleOrder")?.checked);
 
         lastCalculatedWageData = {
+            isDoubleOrder,
             date: sd,
             endDate: wageEndDate,
             startHour: sh,
@@ -7807,11 +7818,19 @@ function calculateWage() {
         if (holidayAmt === 0 && weekendAmt === 0 && otherAmt === 0) extraHtml += renderRow("➕ 추가 가산 수당", 0);
         const specBody = document.getElementById('wageSpecBody');
         specBody.innerHTML = ` ${renderRow("☀️ 주간 기본 ("+dayHours+"H)", dayAmt)} ${renderRow("🌙 야간 할증 ("+nightHours+"H)", nightAmt)} ${renderRow("🔧 기능공 수당 추가", skilledAmt, "var(--primary)")} ${extraHtml} ${taxAmt > 0 ? renderRow("💸 공제액 (세금/보험)", -taxAmt, "var(--danger)") : ""} `;
+        document.getElementById('wageResultTitle').innerText = isDoubleOrder
+            ? '📋 더블오더 임금 산정 내역서 (임금 2)'
+            : '📋 임금 산정 내역서';
         document.getElementById('wageTotal').innerText = finalTotal.toLocaleString() + "원";
         document.getElementById('wageResultBox').classList.remove('hidden');
         trackAppEvent('actions', 'wage_calc');
-        showToast("상세 계산서가 생성되었습니다!");
-        if (wageShipName) {
+        if (isDoubleOrder) {
+            // 같은 날짜의 첫 번째 작업은 보존하고, 두 번째 작업만 임금 2로 전송한다.
+            void sendCalculatedWageToLog();
+        } else {
+            showToast("상세 계산서가 생성되었습니다!");
+        }
+        if (wageShipName && !isDoubleOrder) {
             setTimeout(() => startVesselInfoFollowUp("wage", {
                 vesselName: wageShipName,
                 date: sd,
@@ -7836,39 +7855,67 @@ function onWageShipNameChange(value) {
         }
     }
 }
-function sendCalculatedWageToLog() {
-    if (!lastCalculatedWageData) return;
+let wageToLogTransferPending = false;
+async function sendCalculatedWageToLog() {
+    if (!lastCalculatedWageData || wageToLogTransferPending) return;
+    wageToLogTransferPending = true;
+    // 체크박스나 선박 입력을 나중에 바꿔도 이미 계산한 내역의 대상이 바뀌지 않도록 고정한다.
+    const calculatedData = lastCalculatedWageData;
+    const { date, totalPay, summary, shipName, isDoubleOrder } = calculatedData;
+    try {
+        const form = document.getElementById("dailyLogForm");
+        const sameDateDraft = form?.getAttribute("data-date") === date && !form.classList.contains("hidden");
+        if (isDoubleOrder && !sameDateDraft && currentWorkerId) {
+            // 달력을 다른 달로 이동한 경우에도 저장된 첫 선박/임금을 읽어 덮어쓰지 않는다.
+            const doc = await db.collection('work_logs').doc(`${currentWorkerId}_${date}`).get();
+            if (lastCalculatedWageData !== calculatedData) return;
+            if (doc.exists) adminWorkLogs[date] = doc.data();
+            else delete adminWorkLogs[date];
+        }
 
-    trackAppEvent("actions", "wage_to_log");
-    const { date, totalPay, summary } = lastCalculatedWageData;
+        const logCard = document.getElementById("log-card");
+        if (logCard && !logCard.classList.contains("expanded")) toggleDashItem("log-card");
+        if (!sameDateDraft) jumpToLogDate(date);
 
-    const logCard = document.getElementById("log-card");
-    if (logCard && !logCard.classList.contains("expanded")) {
-        toggleDashItem("log-card");
-    }
+        const wageInput = document.getElementById(isDoubleOrder ? "logWage2" : "logWage1");
+        const memoInput = document.getElementById("logMemo");
+        const logShipInput = document.getElementById("logShipName");
+        if (wageInput) wageInput.value = totalPay;
+        if (logShipInput && shipName) {
+            if (isDoubleOrder) {
+                const ships = logShipInput.value.trim().split(' / ').filter(Boolean);
+                if (!ships.includes(shipName)) ships.push(shipName);
+                logShipInput.value = ships.join(' / ');
+            } else {
+                logShipInput.value = shipName;
+            }
+        }
 
-    jumpToLogDate(date);
-
-    const wage1Input = document.getElementById("logWage1");
-    const memoInput = document.getElementById("logMemo");
-    const logShipInput = document.getElementById("logShipName");
-    const shipName =
-        document.getElementById("wageShipName")?.value.trim() ||
-        lastCalculatedWageData.shipName ||
-        "";
-
-    if (wage1Input) wage1Input.value = totalPay;
-    if (logShipInput && shipName) logShipInput.value = shipName;
-
-    if (memoInput && !memoInput.value.includes(summary)) {
-        memoInput.value = memoInput.value
-            ? `${memoInput.value}\n${summary}`
+        const logSummary = isDoubleOrder
+            ? `[더블오더 · 임금 2${shipName ? ` · ${shipName}` : ''}] ${summary}`
             : summary;
-    }
+        if (memoInput && !memoInput.value.includes(logSummary)) {
+            memoInput.value = memoInput.value
+                ? `${memoInput.value}\n${logSummary}`
+                : logSummary;
+        }
 
-    showToast(shipName
-        ? `📅 ${shipName} 선박명과 계산 임금을 근무일지에 입력했습니다. 저장을 눌러 기록하세요.`
-        : "📅 계산 임금을 근무일지에 입력했습니다. 저장을 눌러 기록하세요.");
+        trackAppEvent("actions", "wage_to_log");
+        showToast(isDoubleOrder
+            ? `📅 더블오더 금액을 임금 2에 입력했습니다. 기존 임금 1을 확인하고 근무일지를 저장하세요.`
+            : (shipName
+                ? `📅 ${shipName} 선박명과 계산 임금을 근무일지에 입력했습니다. 저장을 눌러 기록하세요.`
+                : "📅 계산 임금을 근무일지에 입력했습니다. 저장을 눌러 기록하세요."));
+    } catch (error) {
+        console.error("근무일지 불러오기 실패:", error);
+        showToast("⚠️ 기존 근무일지를 불러오지 못했습니다. 다시 시도해 주세요.");
+    } finally {
+        wageToLogTransferPending = false;
+        // 저장된 내역을 읽는 동안 다시 계산했다면 가장 최근 더블오더를 전송한다.
+        if (lastCalculatedWageData && lastCalculatedWageData !== calculatedData && lastCalculatedWageData.isDoubleOrder) {
+            void sendCalculatedWageToLog();
+        }
+    }
 }
 function sendWorkLogShipToWage() {
     const name =
@@ -7942,6 +7989,9 @@ function resetWageForm() {
         highlightSeasonRow(curMonth);
         applySeasonDefaultHours(curMonth, true);
         if (taxType) taxType.value = '0';
+        const doubleOrder = document.getElementById('wageDoubleOrder');
+        if (doubleOrder) doubleOrder.checked = false;
+        lastCalculatedWageData = null;
         if (typeof loadWageScheduledShipsForDate === 'function') {
             loadWageScheduledShipsForDate(todayStr, false);
         }
