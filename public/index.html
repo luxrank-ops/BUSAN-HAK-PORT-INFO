@@ -410,40 +410,62 @@
         .ref-table th { background: var(--primary); color: white; padding: 8px 4px; word-break: keep-all; font-weight: 800; }
         .ref-table td { border: 1px solid var(--border); padding: 8px 4px; color: var(--text-main); word-break: keep-all; font-weight: 600; }
 
-        .wage-season-details {
-            align-self: flex-start;
-        }
-        .wage-season-toggle {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 6px;
-            min-height: 42px;
-            box-sizing: border-box;
-            padding: 7px 10px;
-            border: 2px solid #94a3b8;
-            border-radius: 8px;
-            background: var(--card-bg);
-            color: var(--primary);
-            font-size: 0.9rem;
-            font-weight: 900;
-            cursor: pointer;
-            touch-action: manipulation;
-            list-style: none;
-        }
-        .wage-season-toggle::-webkit-details-marker {
+        /* 카드가 닫혀 있을 때는 좁은 헤더에 표를 억지로 넣지 않음 */
+        .wage-header-schedule {
             display: none;
         }
-        .wage-season-chevron {
-            font-size: 0.75rem;
-            transition: transform 0.15s ease;
+
+        /* 임금계산기 카드를 열면 제목 왼쪽, 펼쳐진 표 오른쪽 */
+        #wage-card.expanded > .dash-header.hero-header {
+            flex-direction: row !important;
+            justify-content: space-between !important;
+            align-items: center !important;
+            min-height: 0 !important;
+            padding: 10px 12px !important;
+            gap: 8px !important;
         }
-        .wage-season-details[open] .wage-season-chevron {
-            transform: rotate(180deg);
+
+        #wage-card.expanded > .dash-header.hero-header .hero-copy {
+            flex: 1 1 auto;
+            flex-direction: column;
+            align-items: flex-start;
+            width: auto;
+            min-width: 0;
+            text-align: left;
         }
-        .wage-season-details > .ref-table {
-            margin-top: 4px;
-            height: auto;
+
+        #wage-card.expanded .wage-header-schedule {
+            display: block;
+            flex: 0 0 clamp(130px, 40%, 280px);
+            min-width: 0;
+            cursor: default;
+        }
+
+        .wage-header-schedule .ref-table {
+            height: auto !important;
+            font-size: clamp(0.65rem, 1.8vw, 0.78rem) !important;
+            background: var(--card-bg);
+            margin: 0;
+        }
+
+        .wage-header-schedule .ref-table th,
+        .wage-header-schedule .ref-table td {
+            padding: 3px 1px !important;
+            font-size: inherit !important;
+            line-height: 1.2;
+            white-space: nowrap;
+            word-break: normal;
+        }
+
+        /* 매우 좁은 화면에서는 표를 제목 아래로 내려 잘림 방지 */
+        @media (max-width: 370px) {
+            #wage-card.expanded > .dash-header.hero-header {
+                flex-wrap: wrap;
+            }
+
+            #wage-card.expanded .wage-header-schedule {
+                flex: 1 1 100%;
+            }
         }
 
         .calendar-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)) !important; gap: clamp(2px, 1vw, 4px); text-align: center; width: 100%; box-sizing: border-box; }
@@ -1757,11 +1779,38 @@
                     <span class="dash-title">임금계산기</span>
                     <span id="wageCardSubMeta" class="dash-sub-meta">주·야간 자동 분리 및 일지 연동</span>
                 </div>
+                <div class="wage-header-schedule" onclick="event.stopPropagation()">
+                    <table class="ref-table" aria-label="월별 주간·야간 시간표" style="border: 2px solid #94a3b8;">
+                        <thead>
+                            <tr>
+                                <th style="border: 2px solid #94a3b8;">월</th>
+                                <th style="border: 2px solid #94a3b8;">주간</th>
+                                <th style="border: 2px solid #94a3b8;">야간</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr id="row-jan">
+                                <td style="border: 2px solid #94a3b8;">1~3월</td>
+                                <td style="border: 2px solid #94a3b8;">08~18</td>
+                                <td style="border: 2px solid #94a3b8;">18~08</td>
+                            </tr>
+                            <tr id="row-apr">
+                                <td style="border: 2px solid #94a3b8;">4~9월</td>
+                                <td style="border: 2px solid #94a3b8;">06~19</td>
+                                <td style="border: 2px solid #94a3b8;">19~06</td>
+                            </tr>
+                            <tr id="row-oct">
+                                <td style="border: 2px solid #94a3b8;">10~12월</td>
+                                <td style="border: 2px solid #94a3b8;">07~17</td>
+                                <td style="border: 2px solid #94a3b8;">17~07</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
             </div>
             <div class="dash-content" style="display:none; border-top: 2px dashed var(--primary);">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; gap:6px; flex-wrap:wrap;">
                     <span style="font-size:0.78rem; font-weight:800; color:var(--text-sub);">💡 직종 선택 후 시작·종료 블록을 터치해 날짜·시간을 설정하세요.</span>
-                    <button type="button" id="wageLayoutToggleBtn" class="compact-touch-btn" onclick="toggleWageLayoutMode()" style="background:#eff6ff; color:#1d4ed8; border:1.5px solid #93c5fd; border-radius:8px; padding:4px 10px; font-size:0.75rem; font-weight:900; cursor:pointer;">📐 입력창 넓게 보기</button>
                 </div>
                 <div class="role-selector" style="border: 2px solid #cbd5e1; padding: 6px; background: rgba(10,27,63,0.03); border-radius: 12px; margin-bottom: 15px;">
                     <input type="radio" id="role-main" name="workRole" value="main" checked>
@@ -1826,39 +1875,6 @@
                             </div>
                         </div>
                     </div>
-                    <details class="calc-right wage-season-details">
-                        <summary class="wage-season-toggle">
-                            📅 월 · 주간 · 야간
-                            <span class="wage-season-chevron" aria-hidden="true">▼</span>
-                        </summary>
-
-                        <table class="ref-table" style="border: 2px solid #94a3b8;">
-                            <thead>
-                                <tr>
-                                    <th style="border: 2px solid #94a3b8;">월(Month)</th>
-                                    <th style="border: 2px solid #94a3b8;">주간</th>
-                                    <th style="border: 2px solid #94a3b8;">야간</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr id="row-jan">
-                                    <td style="border: 2px solid #94a3b8;">1~3월</td>
-                                    <td style="border: 2px solid #94a3b8;">08~18</td>
-                                    <td style="border: 2px solid #94a3b8;">18~08</td>
-                                </tr>
-                                <tr id="row-apr">
-                                    <td style="border: 2px solid #94a3b8;">4~9월</td>
-                                    <td style="border: 2px solid #94a3b8;">06~19</td>
-                                    <td style="border: 2px solid #94a3b8;">19~06</td>
-                                </tr>
-                                <tr id="row-oct">
-                                    <td style="border: 2px solid #94a3b8;">10~12월</td>
-                                    <td style="border: 2px solid #94a3b8;">07~17</td>
-                                    <td style="border: 2px solid #94a3b8;">17~07</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </details>
                 </div>
                 <div class="wage-extra-tools-grid">
                     <section class="wage-terminal-picker hjnc-schedule-box"
