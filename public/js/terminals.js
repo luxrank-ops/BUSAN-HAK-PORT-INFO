@@ -156,9 +156,44 @@ function getSelectedVesselPeriod(vessel, fallbackDate = "") {
     };
 }
 
+function syncWageHoursBlockSize() {
+    if (typeof document === "undefined" || typeof document.querySelector !== "function") return;
+    const dateInput = document.getElementById("wageStartDate");
+    const grid = document.querySelector("#wage-card .wage-hours-grid");
+    if (!dateInput || !grid || typeof dateInput.getBoundingClientRect !== "function") return;
+
+    const rect = dateInput.getBoundingClientRect();
+    if (!rect.width || !rect.height) return;
+
+    // 정사각형의 최소 한 변: 날짜칸 높이 2개 + 선박 블록 사이 간격
+    const minimumSide = rect.height * 2 + 4;
+    const available = grid.getBoundingClientRect?.().width ||
+        grid.parentElement?.getBoundingClientRect?.().width ||
+        grid.closest?.(".calc-layout")?.getBoundingClientRect?.().width ||
+        rect.width + minimumSide + 6;
+
+    // 기본은 가로폭의 30%. 좁으면 날짜칸 기준 최소 높이를 우선
+    const side = Math.max(minimumSide, (available - 6) * 0.3);
+    grid.style?.setProperty("--wage-date-height", `${rect.height}px`);
+    grid.style?.setProperty("--wage-total-side", `${side}px`);
+
+    const timeButton = document.querySelector("#wage-card .calc-left .action-btn");
+    if (timeButton && typeof getComputedStyle === "function") {
+        grid.style?.setProperty("--wage-hours-font", getComputedStyle(timeButton).fontSize);
+    }
+}
+
+if (typeof window !== "undefined" && typeof window.addEventListener === "function") {
+    window.addEventListener("resize", syncWageHoursBlockSize);
+}
+
 function updateWageHoursBreakdown() {
+    syncWageHoursBlockSize();
     const breakdownEl = document.getElementById("wageHoursBreakdown");
-    if (!breakdownEl) return;
+    const v1NameEl = document.getElementById("wageVessel1Name");
+    const v1HoursEl = document.getElementById("wageVessel1Hours");
+    const v2NameEl = document.getElementById("wageVessel2Name");
+    const v2HoursEl = document.getElementById("wageVessel2Hours");
 
     const firstHours = periodHours(
         document.getElementById("wageStartDate")?.value,
@@ -168,36 +203,67 @@ function updateWageHoursBreakdown() {
     );
     const manualTotal = parseFloat(document.getElementById("wageTotalHours")?.value) || 0;
 
+    if (v1NameEl && v1HoursEl && v2NameEl && v2HoursEl) {
+        if (selectedWageVessels.length > 1) {
+            const firstItem = selectedWageVessels[0];
+            const secondItem = selectedWageVessels[1];
+            const secondPeriod = getSelectedVesselPeriod(secondItem.vessel, secondItem.date);
+            v1NameEl.textContent = firstItem.name || "1번 선박";
+            v1HoursEl.textContent = firstHours > 0 ? `${firstHours}시간` : "확인 필요";
+            v2NameEl.textContent = secondItem.name || "2번 선박";
+            v2HoursEl.textContent = secondPeriod.hours > 0 ? `${secondPeriod.hours}시간` : "확인 필요";
+            return;
+        }
+
+        if (selectedWageVessels.length === 1) {
+            const firstItem = selectedWageVessels[0];
+            const displayHours = manualTotal || firstHours;
+            v1NameEl.textContent = firstItem.name || "1번 선박";
+            v1HoursEl.textContent = displayHours > 0 ? `${displayHours}시간` : "확인 필요";
+            v2NameEl.textContent = "미선택";
+            v2HoursEl.textContent = "-";
+            return;
+        }
+
+        const shipInputVal = document.getElementById("wageShipName")?.value.trim() || "";
+        const displayHours = manualTotal || firstHours;
+        v1NameEl.textContent = shipInputVal || "미선택";
+        v1HoursEl.textContent = displayHours > 0 ? `${displayHours}시간` : "확인 필요";
+        v2NameEl.textContent = "미선택";
+        v2HoursEl.textContent = "-";
+        return;
+    }
+
+    if (!breakdownEl) return;
+
     if (selectedWageVessels.length > 1) {
         const firstItem = selectedWageVessels[0];
         const secondItem = selectedWageVessels[1];
         const secondPeriod = getSelectedVesselPeriod(secondItem.vessel, secondItem.date);
-        const h1 = firstHours > 0 ? `${firstHours}시간` : "시간 확인 필요";
-        const h2 = secondPeriod.hours > 0 ? `${secondPeriod.hours}시간` : "시간 확인 필요";
+        const h1 = firstHours > 0 ? `${firstHours}시간` : "확인 필요";
+        const h2 = secondPeriod.hours > 0 ? `${secondPeriod.hours}시간` : "확인 필요";
         breakdownEl.innerHTML =
-            `<div>1️⃣ ${escapeShipCommentHtml(firstItem.name)}: <strong>${h1}</strong></div>` +
-            `<div>2️⃣ ${escapeShipCommentHtml(secondItem.name)}: <strong>${h2}</strong></div>`;
+            `<div class="wage-vessel-hours-card"><span class="vessel-order">1번 선박</span><span id="wageVessel1Name" class="vessel-name">${escapeShipCommentHtml(firstItem.name)}</span><span id="wageVessel1Hours" class="vessel-hours">${h1}</span></div>` +
+            `<div class="wage-vessel-hours-card"><span class="vessel-order">2번 선박</span><span id="wageVessel2Name" class="vessel-name">${escapeShipCommentHtml(secondItem.name)}</span><span id="wageVessel2Hours" class="vessel-hours">${h2}</span></div>`;
         return;
     }
 
     if (selectedWageVessels.length === 1) {
         const firstItem = selectedWageVessels[0];
         const displayHours = manualTotal || firstHours;
-        breakdownEl.innerHTML = displayHours > 0
-            ? `1️⃣ ${escapeShipCommentHtml(firstItem.name)}: <strong>${displayHours}시간</strong>`
-            : `1️⃣ ${escapeShipCommentHtml(firstItem.name)}: 시간 확인 필요`;
+        const h1 = displayHours > 0 ? `${displayHours}시간` : "확인 필요";
+        breakdownEl.innerHTML =
+            `<div class="wage-vessel-hours-card"><span class="vessel-order">1번 선박</span><span id="wageVessel1Name" class="vessel-name">${escapeShipCommentHtml(firstItem.name)}</span><span id="wageVessel1Hours" class="vessel-hours">${h1}</span></div>` +
+            `<div class="wage-vessel-hours-card"><span class="vessel-order">2번 선박</span><span id="wageVessel2Name" class="vessel-name">미선택</span><span id="wageVessel2Hours" class="vessel-hours">-</span></div>`;
         return;
     }
 
     const shipInputVal = document.getElementById("wageShipName")?.value.trim() || "";
     const displayHours = manualTotal || firstHours;
-    if (displayHours > 0) {
-        breakdownEl.textContent = shipInputVal
-            ? `${shipInputVal}: ${displayHours}시간`
-            : `설정 근무시간: ${displayHours}시간`;
-    } else {
-        breakdownEl.textContent = "선박을 선택하거나 시간을 설정하세요.";
-    }
+    const h1 = displayHours > 0 ? `${displayHours}시간` : "확인 필요";
+    breakdownEl.innerHTML =
+        `<div class="wage-vessel-hours-card"><span class="vessel-order">1번 선박</span><span id="wageVessel1Name" class="vessel-name">${escapeShipCommentHtml(shipInputVal || "미선택")}</span><span id="wageVessel1Hours" class="vessel-hours">${h1}</span></div>` +
+        `<div class="wage-vessel-hours-card"><span class="vessel-order">2번 선박</span><span id="wageVessel2Name" class="vessel-name">미선택</span><span id="wageVessel2Hours" class="vessel-hours">-</span></div>`;
 }
 
 function refreshWageWorkHours() {

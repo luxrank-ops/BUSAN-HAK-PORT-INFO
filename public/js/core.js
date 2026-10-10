@@ -811,6 +811,10 @@ async function toggleDashItem(id, options = {}) {
         } else if (id === "ship-card" || id === "wage-card") {
             syncWorkLogExtraUnlockUI();
             if (id === "wage-card" && typeof renderTerminalScheduleTabBar === "function") {
+                if (typeof syncWageHoursBlockSize === "function") {
+                    syncWageHoursBlockSize();
+                    setTimeout(syncWageHoursBlockSize, 40);
+                }
                 renderTerminalScheduleTabBar();
                 const wageDate = typeof getWageScheduleDate === "function"
                     ? getWageScheduleDate()

@@ -18,11 +18,16 @@ test('1. tax select removes 0% option and double-order block has flashing red hi
     assert.match(html, /@keyframes double-order-flash/);
 });
 
-test('2. wage hours grid includes total hours and per-vessel breakdown', () => {
+test('2. wage hours grid includes 7:3 per-vessel breakdown cards and square total hours block', () => {
     assert.match(html, /class="wage-hours-grid"/);
-    assert.match(html, /⏳ 총 근무시간 \(합산\)/);
+    assert.match(html, /class="wage-vessel-hours"/);
     assert.match(html, /⏱️ 선박별 자동계산/);
     assert.match(html, /id="wageHoursBreakdown"/);
+    assert.match(html, /id="wageVessel1Name"/);
+    assert.match(html, /id="wageVessel2Name"/);
+    assert.match(html, /class="wage-hours-total"/);
+    assert.match(html, /⏳ 총 근무시간/);
+    assert.match(html, /function syncWageHoursBlockSize\(\)/);
 });
 
 test('3. selecting up to 2 vessels auto-checks double order, sums hours, and calculates segments for logWage1 & logWage2', async () => {
