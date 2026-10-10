@@ -1445,7 +1445,7 @@
         <div id="tickerHoverMenu" class="hover-menu-box" onclick="event.stopPropagation()">
             <button class="menu-btn" onclick="writeUserTicker()">🖊️ 일반 등록</button>
             <button class="menu-btn" onclick="setAdminTicker()">📢 관리자 등록</button>
-            <button class="menu-btn btn-del-menu" onclick="openTickerManager()">⚙️ 등록 삭제</button>
+            <button class="menu-btn btn-del-menu" onclick="openTickerManager()">⚙️ 수정/삭제 관리</button>
         </div>
     </div>
 </div>
@@ -2016,7 +2016,10 @@
                 </div>
                 <textarea id="shipOnboard" class="input-field textarea-field" placeholder="작업 내용 및 준비 장비 상세 메모"></textarea>
                 <input type="file" id="shipFileInput" class="input-field">
-                <button id="shipSubmitBtn" class="action-btn bg-submit" onclick="addShipInfo()">등록/수정</button>
+                <div style="display:flex; gap:8px;">
+                    <button id="shipSubmitBtn" class="action-btn bg-submit" style="flex:2;" onclick="addShipInfo()">등록/수정</button>
+                    <button id="shipCancelBtn" type="button" class="action-btn bg-cancel" style="flex:1; display:none;" onclick="resetShipForm()">취소</button>
+                </div>
             </div>
             <table class="board-table" style="margin-top:0;">
                 <thead><tr><th style="width:10%">No.</th><th style="width:62%">선박명 · 난이도 · 장비 태그</th><th style="width:28%">등록일</th></tr></thead>
@@ -2190,7 +2193,10 @@
                     <input type="password" id="inputPw" class="input-field" placeholder="비밀번호">
                     <input type="text" id="inputTitle" class="input-field" placeholder="제목">
                     <textarea id="inputContent" class="input-field textarea-field" placeholder="내용"></textarea>
-                    <button class="action-btn bg-submit" onclick="addPost()">등록</button>
+                    <div style="display:flex; gap:8px;">
+                        <button id="boardSubmitBtn" class="action-btn bg-submit" style="flex:2;" onclick="addPost()">등록</button>
+                        <button id="boardCancelBtn" type="button" class="action-btn bg-cancel" style="flex:1; display:none;" onclick="resetBoardForm()">취소</button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -2208,12 +2214,16 @@
                     <thead><tr><th style="width: 75%;">파일명</th><th style="width: 25%;">관리</th></tr></thead>
                     <tbody id="fileList"></tbody>
                 </table>
-                <button class="action-btn" style="background:var(--text-sub); margin-top:15px; margin-bottom:10px;" onclick="toggleHidden('archiveForm')">💾 업로드</button>
+                <button class="action-btn" style="background:var(--text-sub); margin-top:15px; margin-bottom:10px;" onclick="toggleArchiveForm()">💾 업로드</button>
                 <div id="archiveForm" class="hidden">
                     <div style="margin-bottom:10px; background:rgba(59,130,246,0.05); padding:10px; border-radius:8px; border:1px solid rgba(59,130,246,0.2);">
                         <input type="text" id="archiveTitle" class="input-field" placeholder="파일 설명">
+                        <input type="password" id="archivePw" class="input-field" placeholder="비밀번호 (수정/삭제용)">
                         <input type="file" id="archiveFile" class="input-field">
-                        <button id="archiveSubmitBtn" class="action-btn bg-submit" onclick="addArchive()">업로드 완료</button>
+                        <div style="display:flex; gap:8px;">
+                            <button id="archiveSubmitBtn" class="action-btn bg-submit" style="flex:2;" onclick="addArchive()">업로드 완료</button>
+                            <button id="archiveCancelBtn" type="button" class="action-btn bg-cancel" style="flex:1; display:none;" onclick="cancelEditArchive()">취소</button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -2725,7 +2735,7 @@
 <div id="imageModal" class="modal-overlay" onclick="closeImageModal()"><div class="modal-content" onclick="event.stopPropagation()"><img id="modalImage" class="modal-img"><button class="action-btn bg-cancel" onclick="closeImageModal()">닫기</button></div></div>
 <div id="hjncMealModal" class="modal-overlay" style="display:none;" onclick="closeHjncMealModal()"><div class="modal-content" onclick="event.stopPropagation()" style="max-width:560px;"><h3 id="hjncMealTitle" style="margin:0 0 14px; text-align:center; color:var(--primary); font-weight:900;">🍱 한진 식단</h3><p id="hjncMealStatus" style="text-align:center; color:var(--text-sub); font-weight:700;">식단 이미지를 불러오는 중...</p><img id="hjncMealImage" alt="터미널 식단표" style="display:none; width:100%; max-height:65vh; object-fit:contain; border-radius:8px; background:#f1f5f9;"><input id="hjncMealFileInput" type="file" accept="image/*" style="display:none;" onchange="uploadHjncMealImage(this)"><button class="action-btn" style="margin-top:12px;" onclick="requestHjncMealUpload()">🔒 관리자 이미지 등록/변경</button><button class="action-btn bg-cancel" style="margin-top:8px;" onclick="closeHjncMealModal()">닫기</button></div></div>
 <div id="privacyModal" class="modal-overlay" onclick="document.getElementById('privacyModal').style.display='none'"><div class="modal-content"><h3 style="font-weight:900;">🛡️ 개인정보 처리방침</h3><p style="font-weight:600;">본 사이트는 구글 애드센스 광고를 게재하며 쿠키를 사용합니다.</p><button class="action-btn" onclick="document.getElementById('privacyModal').style.display='none'">닫기</button></div></div>
-<div id="tickerManageModal" class="modal-overlay" onclick="document.getElementById('tickerManageModal').style.display='none'"><div class="modal-content" onclick="event.stopPropagation()"><h3 style="margin-top:0; font-weight:900;">⚙️ 알림글 삭제</h3><div id="tickerListContainer"></div><button class="action-btn bg-cancel" onclick="document.getElementById('tickerManageModal').style.display='none'" style="margin-top:10px;">닫기</button></div></div>
+<div id="tickerManageModal" class="modal-overlay" onclick="document.getElementById('tickerManageModal').style.display='none'"><div class="modal-content" onclick="event.stopPropagation()"><h3 style="margin-top:0; font-weight:900;">⚙️ 알림글 수정/삭제</h3><div id="tickerListContainer"></div><button class="action-btn bg-cancel" onclick="document.getElementById('tickerManageModal').style.display='none'" style="margin-top:10px;">닫기</button></div></div>
 <div id="loginModal" class="modal-overlay" style="display:none;" onclick="closeLoginModal()"><div class="modal-content" onclick="event.stopPropagation()"><h3 style="font-weight:900;">🔐 근무일지 로그인/가입</h3><p style="font-weight:600;">닉네임과 비밀번호를 입력하세요.</p><input type="text" id="loginNick" class="input-field" placeholder="닉네임 (ID)"><input type="password" id="loginPw" class="input-field" placeholder="비밀번호"><button id="confirmLoginBtn" class="action-btn" onclick="confirmLoginAndSave(event)">확인 및 저장</button><button class="action-btn bg-cancel" onclick="closeLoginModal()">취소</button></div></div>
 <div id="workLogPinModal" class="modal-overlay" style="display:none;" onclick="closeWorkLogPinModal()"><div class="modal-content" onclick="event.stopPropagation()" style="max-width:380px;"><h3 style="margin-top:0; text-align:center; color:var(--primary); font-weight:900;">🔒 근무일지 보안 잠금</h3><p style="text-align:center; font-size:0.9rem; color:var(--text-sub); font-weight:700; margin-bottom:12px;">근무일지 열람 및 기록을 위해<br>보안 비밀번호(4자리)를 입력해 주세요.</p><input type="password" id="workLogPinInput" class="input-field" placeholder="비밀번호 입력" inputmode="numeric" maxlength="8" style="text-align:center; font-size:1.3rem; letter-spacing:6px; height:48px; border:2px solid var(--primary); margin-bottom:10px;" onkeydown="if(event.key==='Enter'){event.preventDefault();submitWorkLogPin();}"><div style="display:flex; gap:8px;"><button type="button" class="action-btn bg-submit" style="flex:2; margin-top:0;" onclick="submitWorkLogPin()">잠금 해제</button><button type="button" class="action-btn bg-cancel" style="flex:1; margin-top:0;" onclick="closeWorkLogPinModal()">취소</button></div></div></div>
 <div id="vesselInfoLinkModal" class="modal-overlay" style="display:none;" onclick="closeVesselInfoLinkModal()">
@@ -4521,7 +4531,28 @@ function loadBanner(){ db.collection('settings').doc('banner').onSnapshot((doc) 
 function writeUserTicker(){ const m = prompt("현장 안전 문구를 입력하세요:"); if(!m) return; let msgs = globalTickerData.userMessages || []; msgs.unshift(m); if(msgs.length > 3) msgs = msgs.slice(0, 3); db.collection('settings').doc('banner').set({ userMessages: msgs }, { merge: true }).then(() => showToast("등록되었습니다.")).catch((e) => alert("실패: " + e.message)); }
 async function setAdminTicker(){ if(await verifyAdmin()){ const m = prompt("관리자 공지 문구를 입력하세요:"); if(m) db.collection('settings').doc('banner').set({adminMessage:m}, {merge:true}); } }
 async function openTickerManager(){ if(await verifyAdmin()){ document.getElementById('tickerManageModal').style.display='flex'; renderTickerList(); } }
-function renderTickerList() { const listContainer = document.getElementById('tickerListContainer'); listContainer.innerHTML = ''; const data = globalTickerData; let hasData = false; if (data.adminMessage) { hasData = true; listContainer.innerHTML += `<div class="ticker-manage-item"><span style="color:red; flex:1; font-weight:800;">📢 [관리자] ${escapeShipCommentHtml(data.adminMessage)}</span><button onclick="deleteTickerMsg('admin', 0)" class="mini-btn btn-del-mini">삭제</button></div>`; } if (data.userMessages) { data.userMessages.forEach((m, i) => { hasData = true; listContainer.innerHTML += `<div class="ticker-manage-item"><span style="flex:1; font-weight:700;">${i + 1}. ${escapeShipCommentHtml(m)}</span><button onclick="deleteTickerMsg('user', ${i})" class="mini-btn btn-del-mini">삭제</button></div>`; }); } if (!hasData) listContainer.innerHTML = '<div style="padding:10px; text-align:center; font-weight:700;">등록된 내용이 없습니다.</div>'; }
+function renderTickerList() { const listContainer = document.getElementById('tickerListContainer'); listContainer.innerHTML = ''; const data = globalTickerData; let hasData = false; if (data.adminMessage) { hasData = true; listContainer.innerHTML += `<div class="ticker-manage-item" style="display:flex; align-items:center; gap:5px;"><span style="color:red; flex:1; font-weight:800;">📢 [관리자] ${escapeShipCommentHtml(data.adminMessage)}</span><button onclick="editTickerMsg('admin', 0)" class="mini-btn" style="background:var(--primary-light); color:white;">수정</button><button onclick="deleteTickerMsg('admin', 0)" class="mini-btn btn-del-mini">삭제</button></div>`; } if (data.userMessages) { data.userMessages.forEach((m, i) => { hasData = true; listContainer.innerHTML += `<div class="ticker-manage-item" style="display:flex; align-items:center; gap:5px;"><span style="flex:1; font-weight:700;">${i + 1}. ${escapeShipCommentHtml(m)}</span><button onclick="editTickerMsg('user', ${i})" class="mini-btn" style="background:var(--primary-light); color:white;">수정</button><button onclick="deleteTickerMsg('user', ${i})" class="mini-btn btn-del-mini">삭제</button></div>`; }); } if (!hasData) listContainer.innerHTML = '<div style="padding:10px; text-align:center; font-weight:700;">등록된 내용이 없습니다.</div>'; }
+async function editTickerMsg(type, index) {
+    if (type === 'admin') {
+        const current = globalTickerData.adminMessage || "";
+        const next = prompt("수정할 관리자 공지 문구를 입력하세요:", current);
+        if (next === null) return;
+        if (!next.trim()) return alert("문구를 입력해 주세요.");
+        globalTickerData.adminMessage = next.trim();
+        await db.collection('settings').doc('banner').set({ adminMessage: next.trim() }, { merge: true });
+        renderTickerList();
+        showToast("수정되었습니다.");
+    } else if (Array.isArray(globalTickerData.userMessages) && globalTickerData.userMessages[index] !== undefined) {
+        const current = globalTickerData.userMessages[index] || "";
+        const next = prompt("수정할 현장 안전 문구를 입력하세요:", current);
+        if (next === null) return;
+        if (!next.trim()) return alert("문구를 입력해 주세요.");
+        globalTickerData.userMessages[index] = next.trim();
+        await db.collection('settings').doc('banner').set({ userMessages: globalTickerData.userMessages }, { merge: true });
+        renderTickerList();
+        showToast("수정되었습니다.");
+    }
+}
 function openAllBayPlan() {
     trackAppEvent('actions', 'bay_plan');
     window.open("http://112.163.71.98:8080/webits/bayplan", "_blank"); 
@@ -7437,7 +7468,7 @@ function resetWageForm() {
         console.error(e);
     }
 }
-let currentEditNoticeId = null; let currentEditNoticeImg = null; function autoLink(text) { if (!text) return ""; const escaped = escapeShipCommentHtml(text); const urlRegex = /(https?:\/\/[^\s<"&']+)/g; return escaped.replace(urlRegex, function(url) { return `<a href="${url}" target="_blank" rel="noopener noreferrer" style="color:#2563eb; text-decoration:underline; font-weight:bold;">${url}</a>`; }); } async function startEditNotice(id, title, content, imgUrl, e) { if (e) e.stopPropagation(); if (!(await verifyAdmin())) return; const noticeObj = (window.allNoticesCache || []).find(n => n.id === id); const finalTitle = noticeObj ? (noticeObj.title || '') : title; const finalContent = noticeObj ? (noticeObj.content || '') : content.replace(/\\n/g, '\n'); const finalImg = noticeObj ? (noticeObj.imageUrl || null) : imgUrl; currentEditNoticeId = id; currentEditNoticeImg = finalImg; document.getElementById('noticeTitle').value = finalTitle; document.getElementById('noticeContent').value = finalContent; document.getElementById('noticeFileInput').value = ''; document.getElementById('noticeForm').classList.remove('hidden'); document.getElementById('noticeSubmitBtn').innerText = "수정 완료"; document.getElementById('noticeSubmitBtn').style.background = "var(--primary)"; document.getElementById('noticeCancelBtn').style.display = "block"; document.getElementById('noticeForm').scrollIntoView({behavior: 'smooth', block: 'center'}); } function cancelEditNotice() { currentEditNoticeId = null; currentEditNoticeImg = null; document.getElementById('noticeTitle').value = ''; document.getElementById('noticeContent').value = ''; document.getElementById('noticeFileInput').value = ''; document.getElementById('noticeSubmitBtn').innerText = "등록 완료"; document.getElementById('noticeSubmitBtn').style.background = "var(--success)"; document.getElementById('noticeCancelBtn').style.display = "none"; document.getElementById('noticeForm').classList.add('hidden'); } async function saveNotice() { if (!(await verifyAdmin())) return; const t = document.getElementById('noticeTitle').value.trim(); const c = document.getElementById('noticeContent').value.trim(); const f = document.getElementById('noticeFileInput').files[0]; const btn = document.getElementById('noticeSubmitBtn'); if (!t || !c) { alert("공지 제목과 내용을 입력해 주세요."); return; } btn.innerText = "서버 기록 중..."; btn.disabled = true; const finalize = (url) => { const data = { title: t, content: c, timestamp: firebase.firestore.FieldValue.serverTimestamp() }; if (url) { data.imageUrl = url; } else if (currentEditNoticeId && currentEditNoticeImg) { data.imageUrl = currentEditNoticeImg; } else { data.imageUrl = null; } let req; if (currentEditNoticeId) { req = db.collection("notices").doc(currentEditNoticeId).update(data); } else { req = db.collection("notices").add(data); } req.then(() => { const isEdit = !!currentEditNoticeId; cancelEditNotice(); showToast(isEdit ? "공지가 수정되었습니다." : "공지가 등록되었습니다."); }).catch(err => { alert("저장 실패: " + err.message); btn.innerText = currentEditNoticeId ? "수정 완료" : "등록 완료"; btn.disabled = false; }); }; if (f) { const storageRef = storage.ref(`notices/${Date.now()}_${f.name}`); const uploadTask = storageRef.put(f); uploadTask.on('state_changed', (snap) => { const percent = Math.round((snap.bytesTransferred / snap.totalBytes) * 100); btn.innerText = `사진 업로드 중... ${percent}%`; }, (err) => { alert("사진 업로드 실패: " + err.message); btn.disabled = false; btn.innerText = currentEditNoticeId ? "수정 완료" : "등록 완료"; }, () => { uploadTask.snapshot.ref.getDownloadURL().then(url => finalize(url)); }); } else { finalize(null); } } function delNotice(id,e){ if (e) e.stopPropagation(); verifyAdmin().then(r=>{ if(r) db.collection("notices").doc(id).delete(); }); }
+let currentEditNoticeId = null; let currentEditNoticeImg = null; function autoLink(text) { if (!text) return ""; const escaped = escapeShipCommentHtml(text); const urlRegex = /(https?:\/\/[^\s<"&']+)/g; return escaped.replace(urlRegex, function(url) { return `<a href="${url}" target="_blank" rel="noopener noreferrer" style="color:#2563eb; text-decoration:underline; font-weight:bold;">${url}</a>`; }); } async function startEditNotice(id, title, content, imgUrl, e) { if (e) e.stopPropagation(); if (!(await verifyAdmin())) return; const noticeObj = (window.allNoticesCache || []).find(n => n.id === id); const finalTitle = noticeObj ? (noticeObj.title || '') : title; const finalContent = noticeObj ? (noticeObj.content || '') : content.replace(/\\n/g, '\n'); const finalImg = noticeObj ? (noticeObj.imageUrl || null) : imgUrl; currentEditNoticeId = id; currentEditNoticeImg = finalImg; document.getElementById('noticeTitle').value = finalTitle; document.getElementById('noticeContent').value = finalContent; document.getElementById('noticeFileInput').value = ''; document.getElementById('noticeForm').classList.remove('hidden'); document.getElementById('noticeSubmitBtn').innerText = "수정 완료"; document.getElementById('noticeSubmitBtn').style.background = "var(--primary)"; document.getElementById('noticeCancelBtn').style.display = "block"; document.getElementById('noticeForm').scrollIntoView({behavior: 'smooth', block: 'center'}); } function cancelEditNotice() { currentEditNoticeId = null; currentEditNoticeImg = null; document.getElementById('noticeTitle').value = ''; document.getElementById('noticeContent').value = ''; document.getElementById('noticeFileInput').value = ''; document.getElementById('noticeSubmitBtn').innerText = "등록 완료"; document.getElementById('noticeSubmitBtn').style.background = "var(--success)"; document.getElementById('noticeCancelBtn').style.display = "none"; document.getElementById('noticeForm').classList.add('hidden'); } async function saveNotice() { if (!(await verifyAdmin())) return; const t = document.getElementById('noticeTitle').value.trim(); const c = document.getElementById('noticeContent').value.trim(); const f = document.getElementById('noticeFileInput').files[0]; const btn = document.getElementById('noticeSubmitBtn'); if (!t || !c) { alert("공지 제목과 내용을 입력해 주세요."); return; } btn.innerText = "서버 기록 중..."; btn.disabled = true; const finalize = (url) => { const data = { title: t, content: c, timestamp: firebase.firestore.FieldValue.serverTimestamp() }; if (url) { data.imageUrl = url; } else if (currentEditNoticeId && currentEditNoticeImg) { data.imageUrl = currentEditNoticeImg; } else { data.imageUrl = null; } let req; if (currentEditNoticeId) { req = db.collection("notices").doc(currentEditNoticeId).update(data); } else { req = db.collection("notices").add(data); } req.then(() => { const isEdit = !!currentEditNoticeId; cancelEditNotice(); showToast(isEdit ? "공지가 수정되었습니다." : "공지가 등록되었습니다."); }).catch(err => { alert("저장 실패: " + err.message); btn.innerText = currentEditNoticeId ? "수정 완료" : "등록 완료"; btn.disabled = false; }); }; if (f) { const storageRef = storage.ref(`notices/${Date.now()}_${f.name}`); const uploadTask = storageRef.put(f); uploadTask.on('state_changed', (snap) => { const percent = Math.round((snap.bytesTransferred / snap.totalBytes) * 100); btn.innerText = `사진 업로드 중... ${percent}%`; }, (err) => { alert("사진 업로드 실패: " + err.message); btn.disabled = false; btn.innerText = currentEditNoticeId ? "수정 완료" : "등록 완료"; }, () => { uploadTask.snapshot.ref.getDownloadURL().then(url => finalize(url)); }); } else { finalize(null); } } function delNotice(id,e){ if (e) e.stopPropagation(); verifyAdmin().then(r=>{ if(r) { if(!confirm("이 공지사항을 삭제하시겠습니까?")) return; db.collection("notices").doc(id).delete().then(() => showToast("공지가 삭제되었습니다.")).catch(err => alert("삭제 실패: " + err.message)); } }); }
 
 const PORT_NICKNAME_STORAGE_KEY = "busanHakPortBoardNickname";
 const PORT_NICKNAME_OPTIONS = [
@@ -7539,11 +7570,79 @@ async function addPost() {
         });
     }
 }
-function resetBoardForm() { document.getElementById('inputNick').value = ''; document.getElementById('inputTitle').value = ''; document.getElementById('inputPw').value = ''; document.getElementById('inputContent').value = ''; document.getElementById('boardForm').classList.add('hidden'); const btnEl = document.querySelector('#boardForm .bg-submit'); if(btnEl) { btnEl.innerText = "등록"; btnEl.disabled = false; } currentEditPostId = null; }
-async function tryEditPost(id, savedPw, nick, title, content, e) { if (e) e.stopPropagation(); const postObj = (allPostsData || []).find(p => p.id === id); const finalPw = postObj ? (postObj.password || '') : savedPw; const finalNick = postObj ? (postObj.nick || '익명') : nick; const finalTitle = postObj ? (postObj.title || '') : title; const finalContent = postObj ? (postObj.content || '') : content; const inputPw = prompt("게시글 비밀번호를 입력하세요:"); if (inputPw === null) return; if (await verifyPasswordMatch(inputPw, finalPw)) { currentEditPostId = id; document.getElementById('inputNick').value = finalNick; document.getElementById('inputPw').value = inputPw.trim(); document.getElementById('inputTitle').value = finalTitle; document.getElementById('inputContent').value = finalContent; document.getElementById('boardForm').classList.remove('hidden'); document.querySelector('#boardForm .bg-submit').innerText = "수정 완료"; document.getElementById('boardForm').scrollIntoView({behavior: 'smooth', block: 'center'}); showToast("수정 모드로 전환되었습니다."); } else alert("⚠️ 비밀번호가 일치하지 않습니다."); }
-async function deletePost(id,pw,e){ if (e) e.stopPropagation(); const postObj = (allPostsData || []).find(p => p.id === id); const finalPw = postObj ? (postObj.password || '') : pw; const inputPw = prompt("게시글 비밀번호를 입력하세요:"); if (inputPw === null) return; if(await verifyPasswordMatch(inputPw, finalPw) || await verifyAdmin()) db.collection("posts").doc(id).delete(); } 
-async function addComment(pid){const n=(document.getElementById(`cmt-name-${pid}`)?.value||"").trim(), p=(document.getElementById(`cmt-pw-${pid}`)?.value||"").trim(), t=(document.getElementById(`cmt-txt-${pid}`)?.value||"").trim(); if(!n||!p||!t){alert("닉네임, 비밀번호, 댓글 내용을 모두 입력해 주세요."); return;} const pwHash = await sha256Hex(p); db.collection('posts').doc(pid).collection('comments').add({name:n, password:pwHash, text:t, timestamp:firebase.firestore.FieldValue.serverTimestamp()}).then(()=>{const txtEl=document.getElementById(`cmt-txt-${pid}`); if(txtEl) txtEl.value=""; showToast("댓글이 등록되었습니다.");}).catch(err=>alert("댓글 등록 실패: "+err.message));} 
-async function deleteComment(pid,cid,pw){const inputPw = prompt("댓글 비밀번호를 입력하세요:"); if(inputPw === null) return; if(await verifyPasswordMatch(inputPw, pw) || await verifyAdmin()) db.collection('posts').doc(pid).collection('comments').doc(cid).delete();}
+function resetBoardForm() { document.getElementById('inputNick').value = ''; document.getElementById('inputTitle').value = ''; document.getElementById('inputPw').value = ''; document.getElementById('inputContent').value = ''; document.getElementById('boardForm').classList.add('hidden'); const btnEl = document.querySelector('#boardForm .bg-submit'); if(btnEl) { btnEl.innerText = "등록"; btnEl.disabled = false; } const cancelBtn = document.getElementById('boardCancelBtn'); if(cancelBtn) cancelBtn.style.display = "none"; currentEditPostId = null; }
+async function tryEditPost(id, savedPw, nick, title, content, e) { if (e) e.stopPropagation(); const postObj = (allPostsData || []).find(p => p.id === id); const finalPw = postObj ? (postObj.password || '') : savedPw; const finalNick = postObj ? (postObj.nick || '익명') : nick; const finalTitle = postObj ? (postObj.title || '') : title; const finalContent = postObj ? (postObj.content || '') : content; const inputPw = prompt("게시글 비밀번호를 입력하세요 (작성자 또는 관리자):"); if (inputPw === null) return; const isAuthor = await verifyPasswordMatch(inputPw, finalPw); const inputHash = await sha256Hex(inputPw); const isAdmin = isAdminSessionVerified || (inputHash === DEFAULT_ADMIN_PW_HASH); if (isAuthor || isAdmin) { currentEditPostId = id; document.getElementById('inputNick').value = finalNick; document.getElementById('inputPw').value = isAuthor ? inputPw.trim() : (finalPw || inputPw.trim()); document.getElementById('inputTitle').value = finalTitle; document.getElementById('inputContent').value = finalContent; document.getElementById('boardForm').classList.remove('hidden'); document.querySelector('#boardForm .bg-submit').innerText = "수정 완료"; const cancelBtn = document.getElementById('boardCancelBtn'); if(cancelBtn) cancelBtn.style.display = "block"; document.getElementById('boardForm').scrollIntoView({behavior: 'smooth', block: 'center'}); showToast("수정 모드로 전환되었습니다."); } else alert("⚠️ 비밀번호가 일치하지 않습니다."); }
+async function deletePost(id,pw,e){ if (e) e.stopPropagation(); const postObj = (allPostsData || []).find(p => p.id === id); const finalPw = postObj ? (postObj.password || '') : pw; const inputPw = prompt("게시글 비밀번호를 입력하세요 (작성자 또는 관리자):"); if (inputPw === null) return; const isAuthor = await verifyPasswordMatch(inputPw, finalPw); const inputHash = await sha256Hex(inputPw); const isAdmin = isAdminSessionVerified || (inputHash === DEFAULT_ADMIN_PW_HASH); if(isAuthor || isAdmin) { if(!confirm("이 게시글을 삭제하시겠습니까?")) return; db.collection("posts").doc(id).delete().then(() => showToast("게시글이 삭제되었습니다.")).catch(err => alert("삭제 실패: " + err.message)); } else { alert("⚠️ 비밀번호가 일치하지 않습니다."); } } 
+let boardCommentsById = {};
+let editingBoardComment = null;
+async function verifyBoardCommentPassword(comment) {
+    const enteredPassword = prompt("댓글 비밀번호를 입력하세요 (작성자 또는 관리자):");
+    if (enteredPassword === null) return false;
+    if (await verifyPasswordMatch(enteredPassword, comment.password)) return true;
+    const enteredHash = await sha256Hex(enteredPassword);
+    if (isAdminSessionVerified || enteredHash === DEFAULT_ADMIN_PW_HASH) return true;
+    alert("⚠️ 비밀번호가 일치하지 않습니다.");
+    return false;
+}
+async function editComment(pid, cid) {
+    const comment = (boardCommentsById[pid] || []).find(item => item.id === cid);
+    if (!comment || !(await verifyBoardCommentPassword(comment))) return;
+    const nameEl = document.getElementById(`cmt-name-${pid}`);
+    const pwEl = document.getElementById(`cmt-pw-${pid}`);
+    const txtEl = document.getElementById(`cmt-txt-${pid}`);
+    const submitBtn = document.getElementById(`cmt-submit-${pid}`);
+    const cancelBtn = document.getElementById(`cmt-cancel-${pid}`);
+    if (nameEl) nameEl.value = comment.name || "";
+    if (pwEl) pwEl.value = "";
+    if (txtEl) { txtEl.value = comment.text || ""; txtEl.focus(); }
+    editingBoardComment = { pid, cid };
+    if (submitBtn) submitBtn.innerText = "수정 완료";
+    if (cancelBtn) cancelBtn.style.display = "block";
+    showToast("댓글 수정 모드로 전환되었습니다.");
+}
+function cancelBoardCommentEdit(pid) {
+    const nameEl = document.getElementById(`cmt-name-${pid}`);
+    const pwEl = document.getElementById(`cmt-pw-${pid}`);
+    const txtEl = document.getElementById(`cmt-txt-${pid}`);
+    const submitBtn = document.getElementById(`cmt-submit-${pid}`);
+    const cancelBtn = document.getElementById(`cmt-cancel-${pid}`);
+    if (nameEl) nameEl.value = getPortNickname();
+    if (pwEl) pwEl.value = "";
+    if (txtEl) txtEl.value = "";
+    if (submitBtn) submitBtn.innerText = "댓글 등록";
+    if (cancelBtn) cancelBtn.style.display = "none";
+    editingBoardComment = null;
+}
+async function addComment(pid){
+    const n=(document.getElementById(`cmt-name-${pid}`)?.value||"").trim(), p=(document.getElementById(`cmt-pw-${pid}`)?.value||"").trim(), t=(document.getElementById(`cmt-txt-${pid}`)?.value||"").trim();
+    if(!n||!p||!t){alert("닉네임, 비밀번호, 댓글 내용을 모두 입력해 주세요."); return;}
+    const pwHash = (/^[a-f0-9]{64}$/i.test(p)) ? p.toLowerCase() : (await sha256Hex(p));
+    const commentsRef = db.collection('posts').doc(pid).collection('comments');
+    const commentData = {name:n, password:pwHash, text:t, timestamp:firebase.firestore.FieldValue.serverTimestamp()};
+    const isEditing = editingBoardComment && editingBoardComment.pid === pid;
+    const req = isEditing ? commentsRef.doc(editingBoardComment.cid).update(commentData) : commentsRef.add(commentData);
+    req.then(()=>{
+        if (isEditing) {
+            cancelBoardCommentEdit(pid);
+            showToast("댓글이 수정되었습니다.");
+        } else {
+            const txtEl=document.getElementById(`cmt-txt-${pid}`);
+            if(txtEl) txtEl.value="";
+            showToast("댓글이 등록되었습니다.");
+        }
+    }).catch(err=>alert("댓글 저장 실패: "+err.message));
+} 
+async function deleteComment(pid,cid,pw){
+    const comment = (boardCommentsById[pid] || []).find(item => item.id === cid) || { password: pw };
+    if (!(await verifyBoardCommentPassword(comment))) return;
+    if (!confirm("이 댓글을 삭제하시겠습니까?")) return;
+    db.collection('posts').doc(pid).collection('comments').doc(cid).delete().then(() => {
+        if (editingBoardComment && editingBoardComment.pid === pid && editingBoardComment.cid === cid) {
+            cancelBoardCommentEdit(pid);
+        }
+        showToast("댓글이 삭제되었습니다.");
+    }).catch(err => alert("댓글 삭제 실패: " + err.message));
+}
 
 let currentEditShipId = null;
 let selectedShipFormTags = [];
@@ -8042,21 +8141,27 @@ async function tryEditShip(id, name, feat, savedPw) {
     const inputHash = await sha256Hex(inputPw);
     const isAdmin = isAdminSessionVerified || (inputHash === DEFAULT_ADMIN_PW_HASH);
     if (isAuthor || isAdmin) {
-        startEditShip(id, finalName, finalFeat);
+        startEditShip(id, finalName, finalFeat, isAuthor ? inputPw.trim() : (finalPw || inputPw.trim()));
     } else {
         alert("⚠️ 권한이 없습니다. 비밀번호를 확인하세요.");
     }
 }
-function startEditShip(id, name, feat) {
+function startEditShip(id, name, feat, verifiedPw = "") {
     currentEditShipId = id;
     const shipObj = allShipsData.find(s => s.id === id) || {};
     document.getElementById('shipName').value = name !== undefined ? name : (shipObj.shipName || '');
     document.getElementById('shipOnboard').value = feat !== undefined ? feat : (shipObj.onboardFeat || '');
+    const pwEl = document.getElementById('shipPw');
+    if (pwEl && verifiedPw) pwEl.value = verifiedPw;
     setShipDifficulty(shipObj.difficulty || 3);
     selectedShipFormTags = Array.isArray(shipObj.tags) ? [...shipObj.tags] : extractShipTags(shipObj);
     syncShipFormTagUI();
     const form = document.getElementById('shipForm');
     if (form.classList.contains('hidden')) form.classList.remove('hidden');
+    const submitBtn = document.getElementById('shipSubmitBtn');
+    if (submitBtn) submitBtn.innerText = "수정 완료";
+    const cancelBtn = document.getElementById('shipCancelBtn');
+    if (cancelBtn) cancelBtn.style.display = "block";
     initShipFormSchedulePicker();
     form.scrollIntoView({behavior: 'smooth', block: 'center'});
     showToast("수정 모드로 전환되었습니다.");
@@ -8064,11 +8169,16 @@ function startEditShip(id, name, feat) {
 function resetShipForm() {
     document.getElementById('shipName').value = '';
     document.getElementById('shipOnboard').value = '';
+    document.getElementById('shipPw').value = '';
     document.getElementById('shipFileInput').value = '';
     setShipDifficulty(3);
     selectedShipFormTags = [];
     syncShipFormTagUI();
     document.getElementById('shipForm').classList.add('hidden');
+    const submitBtn = document.getElementById('shipSubmitBtn');
+    if (submitBtn) { submitBtn.innerText = "등록/수정"; submitBtn.disabled = false; }
+    const cancelBtn = document.getElementById('shipCancelBtn');
+    if (cancelBtn) cancelBtn.style.display = "none";
     currentEditShipId = null;
 }
 function filterShips() {
@@ -8099,9 +8209,150 @@ function filterShips() {
         loadAndSearchAllShips(document.getElementById('shipSearch')?.value || '');
     }
 }
-function addArchive() { const t = document.getElementById('archiveTitle').value.trim(); const f = document.getElementById('archiveFile').files[0]; const btn = document.getElementById('archiveSubmitBtn'); if(!t || !f) return alert("파일 설명과 파일을 모두 선택해 주세요."); btn.innerText = "서버 연결 중..."; btn.disabled = true; const ref = storage.ref(`archives/${Date.now()}_${f.name}`); const task = ref.put(f); task.on('state_changed', (s) => { const p = Math.round((s.bytesTransferred / s.totalBytes) * 100); btn.innerText = `업로드 중... ${p}%`; }, (e) => { alert("업로드 실패: " + e.message); btn.disabled = false; btn.innerText = "업로드 완료"; }, () => { task.snapshot.ref.getDownloadURL().then(url => { db.collection("archives").add({ title: t, url: url, timestamp: firebase.firestore.FieldValue.serverTimestamp() }).then(() => { document.getElementById('archiveTitle').value = ""; document.getElementById('archiveFile').value = ""; toggleHidden('archiveForm'); btn.innerText = "업로드 완료"; btn.disabled = false; showToast("파일이 성공적으로 등록되었습니다!"); }); }); } ); } async function deleteShip(id,e){if(e) e.stopPropagation(); if(await verifyAdmin()) db.collection("ships").doc(id).delete();} function delArchive(id,e){ if(e) e.stopPropagation(); verifyAdmin().then(r=>{ if(r) db.collection("archives").doc(id).delete(); }); } 
+let currentEditArchiveId = null;
+let currentEditArchiveUrl = null;
+let currentEditArchivePw = null;
+function toggleArchiveForm() {
+    const form = document.getElementById('archiveForm');
+    if (!form) return;
+    if (!form.classList.contains('hidden')) {
+        cancelEditArchive();
+    } else {
+        form.classList.remove('hidden');
+    }
+}
+function cancelEditArchive() {
+    currentEditArchiveId = null;
+    currentEditArchiveUrl = null;
+    currentEditArchivePw = null;
+    const tEl = document.getElementById('archiveTitle');
+    const pEl = document.getElementById('archivePw');
+    const fEl = document.getElementById('archiveFile');
+    const btn = document.getElementById('archiveSubmitBtn');
+    const cancelBtn = document.getElementById('archiveCancelBtn');
+    if (tEl) tEl.value = '';
+    if (pEl) pEl.value = '';
+    if (fEl) fEl.value = '';
+    if (btn) { btn.innerText = "업로드 완료"; btn.disabled = false; }
+    if (cancelBtn) cancelBtn.style.display = "none";
+    document.getElementById('archiveForm')?.classList.add('hidden');
+}
+async function startEditArchive(id, e) {
+    if (e) e.stopPropagation();
+    const archObj = (window.allArchivesCache || []).find(a => a.id === id);
+    if (!archObj) return;
+    const savedPw = archObj.password || "";
+    const inputPw = prompt("자료 비밀번호를 입력하세요 (작성자 또는 관리자):");
+    if (inputPw === null) return;
+    const isAuthor = savedPw ? (await verifyPasswordMatch(inputPw, savedPw)) : false;
+    const inputHash = await sha256Hex(inputPw);
+    const isAdmin = isAdminSessionVerified || (inputHash === DEFAULT_ADMIN_PW_HASH);
+    if (!isAuthor && !isAdmin) {
+        alert("⚠️ 비밀번호가 일치하지 않습니다.");
+        return;
+    }
+    currentEditArchiveId = id;
+    currentEditArchiveUrl = archObj.url || null;
+    currentEditArchivePw = isAuthor ? inputPw.trim() : (savedPw || inputPw.trim());
+    document.getElementById('archiveTitle').value = archObj.title || '';
+    const pwEl = document.getElementById('archivePw');
+    if (pwEl) pwEl.value = currentEditArchivePw;
+    document.getElementById('archiveFile').value = '';
+    const form = document.getElementById('archiveForm');
+    if (form) form.classList.remove('hidden');
+    const btn = document.getElementById('archiveSubmitBtn');
+    if (btn) btn.innerText = "수정 완료";
+    const cancelBtn = document.getElementById('archiveCancelBtn');
+    if (cancelBtn) cancelBtn.style.display = "block";
+    form?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    showToast("자료 수정 모드로 전환되었습니다. (파일 미선택 시 기존 파일이 유지됩니다)");
+}
+async function addArchive() {
+    const t = document.getElementById('archiveTitle').value.trim();
+    const p = (document.getElementById('archivePw')?.value || '').trim();
+    const f = document.getElementById('archiveFile').files[0];
+    const btn = document.getElementById('archiveSubmitBtn');
+    const isEdit = !!currentEditArchiveId;
+    if (!t || (!isEdit && !f)) return alert(isEdit ? "파일 설명을 입력해 주세요." : "파일 설명과 파일을 모두 선택해 주세요.");
+    if (!p && !currentEditArchivePw) return alert("수정/삭제에 사용할 비밀번호를 입력해 주세요.");
+    btn.innerText = "서버 연결 중...";
+    btn.disabled = true;
+    const rawPw = p || currentEditArchivePw;
+    const pwHash = (/^[a-f0-9]{64}$/i.test(rawPw)) ? rawPw.toLowerCase() : (await sha256Hex(rawPw));
+    const finalizeArchive = (url) => {
+        const archiveData = {
+            title: t,
+            url: url || currentEditArchiveUrl,
+            password: pwHash,
+            timestamp: firebase.firestore.FieldValue.serverTimestamp()
+        };
+        const req = isEdit
+            ? db.collection("archives").doc(currentEditArchiveId).update(archiveData)
+            : db.collection("archives").add(archiveData);
+        req.then(() => {
+            cancelEditArchive();
+            showToast(isEdit ? "자료가 수정되었습니다!" : "파일이 성공적으로 등록되었습니다!");
+        }).catch(err => {
+            alert("저장 실패: " + err.message);
+            btn.disabled = false;
+            btn.innerText = isEdit ? "수정 완료" : "업로드 완료";
+        });
+    };
+    if (f) {
+        const ref = storage.ref(`archives/${Date.now()}_${f.name}`);
+        const task = ref.put(f);
+        task.on('state_changed', (s) => {
+            const prog = Math.round((s.bytesTransferred / s.totalBytes) * 100);
+            btn.innerText = `업로드 중... ${prog}%`;
+        }, (e) => {
+            alert("업로드 실패: " + e.message);
+            btn.disabled = false;
+            btn.innerText = isEdit ? "수정 완료" : "업로드 완료";
+        }, () => {
+            task.snapshot.ref.getDownloadURL().then(url => finalizeArchive(url)).catch(err => {
+                alert("파일 URL 조회 실패: " + err.message);
+                btn.disabled = false;
+                btn.innerText = isEdit ? "수정 완료" : "업로드 완료";
+            });
+        });
+    } else {
+        finalizeArchive(currentEditArchiveUrl);
+    }
+}
+async function deleteShip(id,e){
+    if(e) e.stopPropagation();
+    const shipObj = (allShipsData || []).find(s => s.id === id);
+    const savedPw = shipObj ? (shipObj.password || "") : "";
+    const inputPw = prompt("선박 정보 비밀번호를 입력하세요 (작성자 또는 관리자):");
+    if (inputPw === null) return;
+    const isAuthor = savedPw ? (await verifyPasswordMatch(inputPw, savedPw)) : false;
+    const inputHash = await sha256Hex(inputPw);
+    const isAdmin = isAdminSessionVerified || (inputHash === DEFAULT_ADMIN_PW_HASH);
+    if (isAuthor || isAdmin) {
+        if (!confirm("이 선박 정보를 삭제하시겠습니까?")) return;
+        db.collection("ships").doc(id).delete().then(() => showToast("선박 정보가 삭제되었습니다.")).catch(err => alert("삭제 실패: " + err.message));
+    } else {
+        alert("⚠️ 비밀번호가 일치하지 않습니다.");
+    }
+}
+async function delArchive(id,e){
+    if(e) e.stopPropagation();
+    const archObj = (window.allArchivesCache || []).find(a => a.id === id);
+    const savedPw = archObj ? (archObj.password || "") : "";
+    const inputPw = prompt("자료 비밀번호를 입력하세요 (작성자 또는 관리자):");
+    if (inputPw === null) return;
+    const isAuthor = savedPw ? (await verifyPasswordMatch(inputPw, savedPw)) : false;
+    const inputHash = await sha256Hex(inputPw);
+    const isAdmin = isAdminSessionVerified || (inputHash === DEFAULT_ADMIN_PW_HASH);
+    if (isAuthor || isAdmin) {
+        if (!confirm("이 자료를 삭제하시겠습니까?")) return;
+        db.collection("archives").doc(id).delete().then(() => showToast("자료가 삭제되었습니다.")).catch(err => alert("삭제 실패: " + err.message));
+    } else {
+        alert("⚠️ 비밀번호가 일치하지 않습니다.");
+    }
+} 
 
-function renderBoardPage(p){ currentBoardPage = p; const l = document.getElementById("boardList"); Object.values(commentUnsubscribes).forEach(unsub => { if (typeof unsub === "function") unsub(); }); commentUnsubscribes = {}; l.innerHTML = ""; const start = (p-1) * postsPerPage; const end = start + postsPerPage; const pageData = allPostsData.slice(start, end); if(pageData.length === 0) { l.innerHTML = "<tr><td colspan='4' style='text-align:center; padding:20px; color:var(--text-sub); font-weight:700;'>게시글이 없습니다.</td></tr>"; document.getElementById("pagination").innerHTML = ""; return; } const rowsHtml = []; const nowMs = Date.now(); pageData.forEach((x, i) => { let dateStr = ""; let isRowNew = false; if(x.timestamp) { const d = x.timestamp.toDate(); const month = String(d.getMonth() + 1).padStart(2, '0'); const day = String(d.getDate()).padStart(2, '0'); const hour = String(d.getHours()).padStart(2, '0'); const min = String(d.getMinutes()).padStart(2, '0'); dateStr = `${month}/${day} ${hour}:${min}`; if (nowMs - d.getTime() < 24 * 60 * 60 * 1000) isRowNew = true; } const newRowBadge = isRowNew ? `<span class="badge-new">NEW</span>` : ""; const rowId = `p-${x.id}`; const authorName = escapeShipCommentHtml(x.nick || '익명'); const postNum = allPostsData.length - ((currentBoardPage - 1) * postsPerPage) - i; const safeTitleHtml = escapeShipCommentHtml(x.title || ''); const safeContentHtml = escapeShipCommentHtml(x.content || ''); rowsHtml.push(`<tr onclick="toggleBoardRow('${rowId}')" style="cursor:pointer;"> <td class="board-no">${postNum}</td> <td class="board-title">${safeTitleHtml}${newRowBadge} <span id="cmt-badge-${x.id}" class="cmt-count-pill hidden"></span> <span style="font-size:0.75rem; color:var(--primary); margin-left:4px;">▼</span></td> <td class="board-date">${dateStr}</td> <td class="board-nick">${authorName}</td> </tr> <tr id="${rowId}" class="board-content-row"> <td colspan="4" class="board-content-box"> <div style="margin-bottom:15px; font-weight:600; background:var(--card-bg); padding:12px; border-radius:8px; border:1px solid var(--border); white-space:pre-wrap;">${safeContentHtml}</div> <div style="text-align:right; border-bottom:1px dashed var(--border); padding-bottom:10px; margin-bottom:10px;"> <button class="mini-btn" style="background:var(--primary-light) !important; color:white !important;" onclick="tryEditPost('${x.id}', '', '', '', '', event)">✏️ 수정</button> <button class="mini-btn btn-del" onclick="deletePost('${x.id}','',event)">🗑️ 삭제</button> </div> <div id="cmt-list-${x.id}" class="comment-section"></div> <div class="comment-form"> <input id="cmt-name-${x.id}" class="comment-input-sm board-comment-nickname" placeholder="항만용어 닉네임" aria-label="댓글 닉네임 (직접 수정 가능)" maxlength="50"> <input id="cmt-pw-${x.id}" class="comment-input-sm" type="password" placeholder="비밀번호"> <input id="cmt-txt-${x.id}" class="comment-input-lg" placeholder="따뜻한 댓글을 남겨주세요..."> <button class="comment-submit" onclick="addComment('${x.id}')">댓글 등록</button> </div> </td> </tr>`); }); l.innerHTML = rowsHtml.join(""); pageData.forEach(x => { const nicknameInput = document.getElementById(`cmt-name-${x.id}`); if (nicknameInput && !nicknameInput.value.trim()) nicknameInput.value = getPortNickname(); loadComments(x.id); }); renderPagination(p); } 
+function renderBoardPage(p){ currentBoardPage = p; const l = document.getElementById("boardList"); Object.values(commentUnsubscribes).forEach(unsub => { if (typeof unsub === "function") unsub(); }); commentUnsubscribes = {}; boardCommentsById = {}; editingBoardComment = null; l.innerHTML = ""; const start = (p-1) * postsPerPage; const end = start + postsPerPage; const pageData = allPostsData.slice(start, end); if(pageData.length === 0) { l.innerHTML = "<tr><td colspan='4' style='text-align:center; padding:20px; color:var(--text-sub); font-weight:700;'>게시글이 없습니다.</td></tr>"; document.getElementById("pagination").innerHTML = ""; return; } const rowsHtml = []; const nowMs = Date.now(); pageData.forEach((x, i) => { let dateStr = ""; let isRowNew = false; if(x.timestamp) { const d = x.timestamp.toDate(); const month = String(d.getMonth() + 1).padStart(2, '0'); const day = String(d.getDate()).padStart(2, '0'); const hour = String(d.getHours()).padStart(2, '0'); const min = String(d.getMinutes()).padStart(2, '0'); dateStr = `${month}/${day} ${hour}:${min}`; if (nowMs - d.getTime() < 24 * 60 * 60 * 1000) isRowNew = true; } const newRowBadge = isRowNew ? `<span class="badge-new">NEW</span>` : ""; const rowId = `p-${x.id}`; const authorName = escapeShipCommentHtml(x.nick || '익명'); const postNum = allPostsData.length - ((currentBoardPage - 1) * postsPerPage) - i; const safeTitleHtml = escapeShipCommentHtml(x.title || ''); const safeContentHtml = escapeShipCommentHtml(x.content || ''); rowsHtml.push(`<tr onclick="toggleBoardRow('${rowId}')" style="cursor:pointer;"> <td class="board-no">${postNum}</td> <td class="board-title">${safeTitleHtml}${newRowBadge} <span id="cmt-badge-${x.id}" class="cmt-count-pill hidden"></span> <span style="font-size:0.75rem; color:var(--primary); margin-left:4px;">▼</span></td> <td class="board-date">${dateStr}</td> <td class="board-nick">${authorName}</td> </tr> <tr id="${rowId}" class="board-content-row"> <td colspan="4" class="board-content-box"> <div style="margin-bottom:15px; font-weight:600; background:var(--card-bg); padding:12px; border-radius:8px; border:1px solid var(--border); white-space:pre-wrap;">${safeContentHtml}</div> <div style="text-align:right; border-bottom:1px dashed var(--border); padding-bottom:10px; margin-bottom:10px;"> <button class="mini-btn" style="background:var(--primary-light) !important; color:white !important;" onclick="tryEditPost('${x.id}', '', '', '', '', event)">✏️ 수정</button> <button class="mini-btn btn-del" onclick="deletePost('${x.id}','',event)">🗑️ 삭제</button> </div> <div id="cmt-list-${x.id}" class="comment-section"></div> <div class="comment-form"> <input id="cmt-name-${x.id}" class="comment-input-sm board-comment-nickname" placeholder="항만용어 닉네임" aria-label="댓글 닉네임 (직접 수정 가능)" maxlength="50"> <input id="cmt-pw-${x.id}" class="comment-input-sm" type="password" placeholder="비밀번호"> <input id="cmt-txt-${x.id}" class="comment-input-lg" placeholder="따뜻한 댓글을 남겨주세요..."> <button id="cmt-submit-${x.id}" class="comment-submit" onclick="addComment('${x.id}')">댓글 등록</button> <button id="cmt-cancel-${x.id}" type="button" class="action-btn bg-cancel" style="display:none;" onclick="cancelBoardCommentEdit('${x.id}')">취소</button> </div> </td> </tr>`); }); l.innerHTML = rowsHtml.join(""); pageData.forEach(x => { const nicknameInput = document.getElementById(`cmt-name-${x.id}`); if (nicknameInput && !nicknameInput.value.trim()) nicknameInput.value = getPortNickname(); loadComments(x.id); }); renderPagination(p); } 
 function renderShipPage(p) {
     const list = document.getElementById("shipList");
     const pagination = document.getElementById("shipPagination");
@@ -8258,7 +8509,7 @@ async function submitShipComment(shipId) {
     }).catch(error => alert("댓글 저장 실패: " + error.message));
 }
 function renderPagination(curr) { const total = Math.ceil(allPostsData.length / postsPerPage); const el = document.getElementById('pagination'); if(!el) return; const html = []; for(let i=1; i<=total; i++){ html.push(`<span class="page-num ${i===curr?'active':''}" onclick="renderBoardPage(${i})" style="cursor:pointer; padding:5px 12px; margin:2px; background:#e5e7eb; border-radius:8px; font-weight:800; font-size:0.9rem;">${i}</span>`); } el.innerHTML = html.join(""); } 
-function loadComments(pid){if(commentUnsubscribes[pid]) commentUnsubscribes[pid](); commentUnsubscribes[pid]=db.collection('posts').doc(pid).collection('comments').orderBy('timestamp','asc').onSnapshot(s=>{const el=document.getElementById(`cmt-list-${pid}`); const badgeEl=document.getElementById(`cmt-badge-${pid}`); if(badgeEl){ if(s.size>0){ badgeEl.innerText=`💬 ${s.size}`; badgeEl.classList.remove('hidden'); } else { badgeEl.classList.add('hidden'); } } if(!el) return; const items=[]; s.forEach(d=>{const c=d.data()||{}; const safeName=escapeShipCommentHtml(c.name||"익명"); const safeText=escapeShipCommentHtml(c.text||""); const safePw=String(c.password||"").replace(/\\/g,"\\\\").replace(/'/g,"\\'").replace(/"/g,"&quot;"); items.push(`<div class="comment-item"><span><span class="comment-meta">${safeName}:</span><span class="comment-text">${safeText}</span></span><button class="comment-del-btn" onclick="deleteComment('${pid}','${d.id}','${safePw}')">×</button></div>`);}); el.innerHTML=items.join("");}, err=>{console.warn("댓글 로드 오류:",err);});} 
+function loadComments(pid){if(commentUnsubscribes[pid]) commentUnsubscribes[pid](); commentUnsubscribes[pid]=db.collection('posts').doc(pid).collection('comments').orderBy('timestamp','asc').onSnapshot(s=>{const el=document.getElementById(`cmt-list-${pid}`); const badgeEl=document.getElementById(`cmt-badge-${pid}`); if(badgeEl){ if(s.size>0){ badgeEl.innerText=`💬 ${s.size}`; badgeEl.classList.remove('hidden'); } else { badgeEl.classList.add('hidden'); } } if(!el) return; boardCommentsById[pid]=[]; const items=[]; s.forEach(d=>{const c=d.data()||{}; boardCommentsById[pid].push({...c, id:d.id}); const safeName=escapeShipCommentHtml(c.name||"익명"); const safeText=escapeShipCommentHtml(c.text||""); const safePw=String(c.password||"").replace(/\\/g,"\\\\").replace(/'/g,"\\'").replace(/"/g,"&quot;"); items.push(`<div class="comment-item"><div><span class="comment-meta">${safeName}:</span> <span class="comment-text" style="white-space:pre-wrap;">${safeText}</span></div><div style="display:flex; gap:4px; flex-shrink:0;"><button class="mini-btn" onclick="editComment('${pid}','${d.id}')">수정</button><button class="mini-btn btn-del" onclick="deleteComment('${pid}','${d.id}','${safePw}')">삭제</button></div></div>`);}); el.innerHTML=items.join("");}, err=>{console.warn("댓글 로드 오류:",err);});} 
 
 function openBusSchedule(){ trackAppEvent('actions', 'bus_view'); const m=document.getElementById('imageModal'); document.getElementById('modalImage').src='https://firebasestorage.googleapis.com/v0/b/busan-hak-port.firebasestorage.app/o/KakaoTalk_20260129_001114789.jpg?alt=media'; m.style.display='flex'; } function closeImageModal(){ document.getElementById('imageModal').style.display='none'; } function openPrivacy() { toggleDashItem('privacy-center-card'); document.getElementById('privacy-center-card').scrollIntoView({behavior: 'smooth', block: 'center'}); }
 
@@ -8696,7 +8947,7 @@ window.onload = async () => {
         db.collection("notices").orderBy("timestamp","desc").onSnapshot(s => { window.allNoticesCache = []; const l = document.getElementById("noticeList"); const badge = document.getElementById("noticeBadge"); const subMeta = document.getElementById("noticeCardSubMeta"); if (subMeta) subMeta.innerText = s.empty ? "운영 안내 및 주요 소식" : `등록된 공지 ${s.size}건`; if (s.empty) { l.innerHTML = "<tr><td colspan='3' style='text-align:center; padding:20px; color:var(--text-sub); font-weight:700;'>등록된 공지가 없습니다.</td></tr>"; if(badge) badge.classList.add("hidden"); return; } let isNew = false; const now = new Date(); let index = 0; const rowsHtml = []; s.forEach(d => { const x = d.data() || {}; window.allNoticesCache.push({ ...x, id: d.id }); let dateStr = ""; let isRowNew = false; if(x.timestamp) { const dt = x.timestamp.toDate(); dateStr = `${dt.getFullYear()}/${String(dt.getMonth()+1).padStart(2,'0')}/${String(dt.getDate()).padStart(2,'0')}`; const diffTime = now.getTime() - dt.getTime(); if (diffTime < 24 * 60 * 60 * 1000) { isRowNew = true; isNew = true; } } const rowNewBadge = isRowNew ? `<span class="badge-new">NEW</span>` : ""; const safeTitleHtml = escapeShipCommentHtml(x.title || ''); const linkedContent = autoLink(x.content); const safeImgUrl = x.imageUrl ? escapeShipCommentHtml(x.imageUrl) : ''; const imageHtml = safeImgUrl ? `<img src="${safeImgUrl}" loading="lazy" alt="공지사항 이미지" style="max-width:100%; border-radius:8px; margin-top:10px; border:1px solid rgba(0,0,0,0.1);" onclick="document.getElementById('imageModal').style.display='flex'; document.getElementById('modalImage').src=this.src;">` : ''; const rowId = `n-${d.id}`; rowsHtml.push(`<tr onclick="toggleBoardRow('${rowId}')" style="cursor:pointer; background:${index === 0 ? 'rgba(239,68,68,0.06)' : 'rgba(239,68,68,0.02)'};"> <td class="board-no" style="color:var(--danger); font-weight:900;">${index === 0 ? '📌 필독' : '공지'}</td> <td class="board-title">📢 ${safeTitleHtml}${rowNewBadge} <span style="font-size:0.75rem; color:var(--primary); margin-left:4px;">▼</span></td> <td class="board-date">${dateStr}</td> </tr> <tr id="${rowId}" class="board-content-row"> <td colspan="3" class="board-content-box" style="border-left: 3px solid var(--danger);"> <div style="margin-bottom:15px; white-space:pre-wrap; font-weight:600; background:var(--card-bg); padding:12px; border-radius:8px; border:1px solid var(--border);">${linkedContent}</div> ${imageHtml} <div style="text-align:right; margin-top:10px;"> <button class="mini-btn" style="background:var(--primary) !important; margin-right:5px; color:white !important;" onclick="startEditNotice('${d.id}', '', '', null, event)">✏️ 수정(Admin)</button> <button class="mini-btn btn-del" onclick="delNotice('${d.id}',event)">🗑️ 삭제(Admin)</button> </div> </td> </tr>`); index++; }); l.innerHTML = rowsHtml.join(""); if(badge) { if(isNew) badge.classList.remove("hidden"); else badge.classList.add("hidden"); } }, err => { console.warn("공지사항 구독 오류:", err); }); 
         db.collection("posts").orderBy("timestamp","desc").onSnapshot(s => { allPostsData = []; s.forEach(d => { allPostsData.push({...d.data(), id:d.id}) }); const subMeta = document.getElementById("boardCardSubMeta"); if (subMeta) subMeta.innerText = allPostsData.length > 0 ? `자유 게시글 ${allPostsData.length}건` : "현장 동료 자유 소통방"; const badge = document.getElementById("boardBadge"); if (badge) { const nowMs = Date.now(); const hasNewPost = allPostsData.some(p => p.timestamp && (nowMs - p.timestamp.toDate().getTime() < 24 * 60 * 60 * 1000)); if (hasNewPost) badge.classList.remove("hidden"); else badge.classList.add("hidden"); } renderBoardPage(1); }, err => { console.warn("자유게시판 구독 오류:", err); }); 
         db.collection("ships").orderBy("timestamp","desc").onSnapshot(s=>{shipDirectorySnapshotLoaded = true; allShipsData=[]; s.forEach(d=>{allShipsData.push({...d.data(), id:d.id})}); const subMeta = document.getElementById("shipCardSubMeta"); if (subMeta) subMeta.innerText = allShipsData.length > 0 ? `등록 선박 ${allShipsData.length}척 · 장비 도감` : "난이도 · 필수 장비 도감"; const shipBadge = document.getElementById("shipBadge"); if (shipBadge) { const nowMs = Date.now(); const hasNewShip = allShipsData.some(item => item.timestamp && (nowMs - item.timestamp.toDate().getTime() < 24 * 60 * 60 * 1000)); if (hasNewShip) shipBadge.classList.remove("hidden"); else shipBadge.classList.add("hidden"); } filteredShips=allShipsData; renderShipPage(1); if(typeof loadAndSearchAllShips==="function") loadAndSearchAllShips(document.getElementById('shipSearch')?.value || '');}, err => { console.warn("선박도감 구독 오류:", err); }); 
-        db.collection("archives").orderBy("timestamp","desc").onSnapshot(s=>{window.allArchivesCount = s.size; const l=document.getElementById("fileList"); const archiveBadge = document.getElementById("archiveBadge"); let isArchiveNew = false; const nowMs = Date.now(); const rowsHtml=[]; s.forEach(d=>{const x=d.data()||{}; let isRowNew = false; if (x.timestamp) { const dt = x.timestamp.toDate(); if (nowMs - dt.getTime() < 24 * 60 * 60 * 1000) { isRowNew = true; isArchiveNew = true; } } const rowNewBadge = isRowNew ? `<span class="badge-new">NEW</span>` : ""; const safeUrl = escapeShipCommentHtml(x.url || "#"); const safeTitle = escapeShipCommentHtml(x.title || "파일"); rowsHtml.push(`<tr><td class="board-title" style="width: 75%; padding-left: 10px;"><a href="${safeUrl}" target="_blank" rel="noopener noreferrer" style="text-decoration:none; color:var(--primary); font-weight:800;">💾 ${safeTitle}</a>${rowNewBadge}</td><td style="width: 25%; text-align:center;"><button class="mini-btn btn-del" onclick="delArchive('${d.id}',event)">삭제</button></td></tr>`);}); l.innerHTML=rowsHtml.join(""); if (archiveBadge) { if (isArchiveNew) archiveBadge.classList.remove("hidden"); else archiveBadge.classList.add("hidden"); }}, err => { console.warn("자료실 구독 오류:", err); }); 
+        db.collection("archives").orderBy("timestamp","desc").onSnapshot(s=>{window.allArchivesCount = s.size; window.allArchivesCache = []; const l=document.getElementById("fileList"); const archiveBadge = document.getElementById("archiveBadge"); let isArchiveNew = false; const nowMs = Date.now(); const rowsHtml=[]; s.forEach(d=>{const x=d.data()||{}; window.allArchivesCache.push({...x, id:d.id}); let isRowNew = false; if (x.timestamp) { const dt = x.timestamp.toDate(); if (nowMs - dt.getTime() < 24 * 60 * 60 * 1000) { isRowNew = true; isArchiveNew = true; } } const rowNewBadge = isRowNew ? `<span class="badge-new">NEW</span>` : ""; const safeUrl = escapeShipCommentHtml(x.url || "#"); const safeTitle = escapeShipCommentHtml(x.title || "파일"); rowsHtml.push(`<tr><td class="board-title" style="width: 68%; padding-left: 10px;"><a href="${safeUrl}" target="_blank" rel="noopener noreferrer" style="text-decoration:none; color:var(--primary); font-weight:800;">💾 ${safeTitle}</a>${rowNewBadge}</td><td style="width: 32%; text-align:center;"><div style="display:inline-flex; gap:4px; justify-content:center;"><button class="mini-btn" style="background:var(--primary-light) !important; color:white !important;" onclick="startEditArchive('${d.id}',event)">수정</button><button class="mini-btn btn-del" onclick="delArchive('${d.id}',event)">삭제</button></div></td></tr>`);}); l.innerHTML=rowsHtml.join(""); if (archiveBadge) { if (isArchiveNew) archiveBadge.classList.remove("hidden"); else archiveBadge.classList.add("hidden"); }}, err => { console.warn("자료실 구독 오류:", err); }); 
     } catch(err) { console.warn("실시간 연결 오류:", err); } 
     if(localStorage.getItem('myWorkerId')) { currentWorkerId = localStorage.getItem('myWorkerId'); updateUserBar(); } 
 };
