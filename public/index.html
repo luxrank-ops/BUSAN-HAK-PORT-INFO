@@ -2196,8 +2196,9 @@
                     <input type="password" id="inputPw" class="input-field" placeholder="비밀번호">
                     <input type="text" id="inputTitle" class="input-field" placeholder="제목">
                     <textarea id="inputContent" class="input-field textarea-field" placeholder="내용"></textarea>
-                    <input type="file" id="boardFileInput" class="input-field" title="첨부파일 또는 사진 선택 (최대 10MB)" onchange="validateBoardFileSize(this)">
-                    <div style="font-size:0.75rem; color:var(--text-sub); margin-top:-4px; margin-bottom:8px; font-weight:700;">📎 첨부파일 최대 용량: 10MB</div>
+                    <input type="file" id="boardFileInput" class="input-field" multiple title="이미지 최대 10장 또는 첨부파일 선택 (총 합산 10MB 이하)" onchange="validateBoardFileSize(this)">
+                    <div id="boardSelectedFilesInfo" class="hidden" style="font-size:0.76rem; color:var(--primary); background:rgba(59,130,246,0.06); border:1px solid rgba(59,130,246,0.2); border-radius:6px; padding:6px 10px; margin-top:-2px; margin-bottom:6px; font-weight:800;"></div>
+                    <div style="font-size:0.75rem; color:var(--text-sub); margin-top:-2px; margin-bottom:8px; font-weight:700;">📎 이미지 다중 선택 최대 10장까지 가능 · 총 합산 용량 10MB 이하</div>
                     <div style="display:flex; gap:8px;">
                         <button id="boardSubmitBtn" class="action-btn bg-submit" style="flex:2;" onclick="addPost()">등록</button>
                         <button id="boardCancelBtn" type="button" class="action-btn bg-cancel" style="flex:1; display:none;" onclick="resetBoardForm()">취소</button>
@@ -7535,18 +7536,91 @@ function refreshBoardNickname() {
 let currentEditPostFileUrl = null;
 let currentEditPostFileName = null;
 let currentEditPostFileType = null;
+let currentEditPostAttachments = null;
+let currentEditPostImageUrls = null;
 const BOARD_MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024; // 10MB
+const BOARD_MAX_IMAGE_COUNT = 10;
+
+function updateBoardSelectedFilesInfo(files, existingCount = 0) {
+    const infoEl = document.getElementById("boardSelectedFilesInfo");
+    if (!infoEl) return;
+    if (files && files.length > 0) {
+        const totalBytes = Array.from(files).reduce((sum, f) => sum + (f.size || 0), 0);
+        const totalMb = (totalBytes / (1024 * 1024)).toFixed(2);
+        const names = Array.from(files).map(f => escapeShipCommentHtml(f.name)).join(", ");
+        infoEl.innerHTML = `🖼️ 선택된 파일 <strong>${files.length}개</strong> (총 ${totalMb}MB / 최대 10MB)<div style="font-weight:700; color:var(--text-sub); font-size:0.72rem; margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${names}</div>`;
+        infoEl.classList.remove("hidden");
+    } else if (existingCount > 0) {
+        infoEl.innerHTML = `📎 기존 첨부파일 <strong>${existingCount}개</strong> 유지 중 (새 파일 선택 시 교체됩니다)`;
+        infoEl.classList.remove("hidden");
+    } else {
+        infoEl.innerHTML = "";
+        infoEl.classList.add("hidden");
+    }
+}
 
 function validateBoardFileSize(inputEl) {
-    if (!inputEl || !inputEl.files || !inputEl.files[0]) return true;
-    const file = inputEl.files[0];
-    if (file.size > BOARD_MAX_FILE_SIZE_BYTES) {
-        const sizeMb = (file.size / (1024 * 1024)).toFixed(1);
-        alert(`⚠️ 첨부파일 용량은 10MB를 초과할 수 없습니다.\n(선택한 파일: ${sizeMb}MB)`);
+    if (!inputEl || !inputEl.files || inputEl.files.length === 0) {
+        updateBoardSelectedFilesInfo(null, currentEditPostAttachments ? currentEditPostAttachments.length : 0);
+        return true;
+    }
+    const files = Array.from(inputEl.files);
+    if (files.length > BOARD_MAX_IMAGE_COUNT) {
+        alert(`⚠️ 파일은 한 번에 최대 ${BOARD_MAX_IMAGE_COUNT}장(개)까지만 선택할 수 있습니다.\n(현재 선택: ${files.length}개)`);
         inputEl.value = "";
+        updateBoardSelectedFilesInfo(null, currentEditPostAttachments ? currentEditPostAttachments.length : 0);
         return false;
     }
+    if (files.length > 1) {
+        const nonImageFile = files.find(f => !(f.type && f.type.startsWith("image/")) && !/\.(jpg|jpeg|png|gif|webp|bmp|svg|heic|heif)$/i.test(f.name || ""));
+        if (nonImageFile) {
+            alert(`⚠️ 다중 선택(최대 10장)은 이미지 파일만 가능합니다.\n(일반 첨부파일은 1개씩 업로드해 주세요: ${nonImageFile.name})`);
+            inputEl.value = "";
+            updateBoardSelectedFilesInfo(null, currentEditPostAttachments ? currentEditPostAttachments.length : 0);
+            return false;
+        }
+    }
+    let totalBytes = 0;
+    for (const file of files) {
+        totalBytes += file.size || 0;
+    }
+    if (totalBytes > BOARD_MAX_FILE_SIZE_BYTES) {
+        const sizeMb = (totalBytes / (1024 * 1024)).toFixed(2);
+        alert(`⚠️ 선택한 파일의 총 합산 용량은 10MB를 초과할 수 없습니다.\n(선택한 ${files.length}개 파일 합계: ${sizeMb}MB)`);
+        inputEl.value = "";
+        updateBoardSelectedFilesInfo(null, currentEditPostAttachments ? currentEditPostAttachments.length : 0);
+        return false;
+    }
+    updateBoardSelectedFilesInfo(files);
     return true;
+}
+
+function uploadSingleBoardFile(file, index, totalCount, btnEl) {
+    return new Promise((resolve, reject) => {
+        const safeName = (file.name || `file_${index + 1}`).replace(/[^\w.\-가-힣]/g, "_");
+        const storageRef = storage.ref(`posts/${Date.now()}_${index}_${safeName}`);
+        const uploadTask = storageRef.put(file);
+        uploadTask.on('state_changed', (snap) => {
+            const pct = snap.totalBytes ? Math.round((snap.bytesTransferred / snap.totalBytes) * 100) : 0;
+            if (btnEl) {
+                btnEl.innerText = totalCount > 1
+                    ? `파일 업로드 중 (${index + 1}/${totalCount})... ${pct}%`
+                    : `파일 업로드 중... ${pct}%`;
+            }
+        }, (err) => {
+            reject(err);
+        }, () => {
+            uploadTask.snapshot.ref.getDownloadURL().then(url => {
+                const isImg = Boolean((file.type && file.type.startsWith("image/")) || /\.(jpg|jpeg|png|gif|webp|bmp|svg|heic|heif)$/i.test(file.name || ""));
+                resolve({
+                    url: url,
+                    name: file.name || `첨부파일_${index + 1}`,
+                    type: file.type || (isImg ? "image/jpeg" : ""),
+                    isImage: isImg
+                });
+            }).catch(reject);
+        });
+    });
 }
 
 async function addPost() {
@@ -7555,7 +7629,7 @@ async function addPost() {
     const pwVal = document.getElementById("inputPw").value.trim();
     const contentVal = document.getElementById("inputContent").value.trim();
     const fileInput = document.getElementById("boardFileInput");
-    const file = fileInput && fileInput.files ? fileInput.files[0] : null;
+    const files = fileInput && fileInput.files ? Array.from(fileInput.files) : [];
     const btnEl = document.querySelector("#boardForm .bg-submit");
 
     if (!nickVal || !titleVal || !pwVal || !contentVal) {
@@ -7563,10 +7637,7 @@ async function addPost() {
         return;
     }
 
-    if (file && file.size > BOARD_MAX_FILE_SIZE_BYTES) {
-        const sizeMb = (file.size / (1024 * 1024)).toFixed(1);
-        alert(`⚠️ 첨부파일 용량은 10MB 이하만 업로드할 수 있습니다.\n(선택한 파일: ${sizeMb}MB)`);
-        if (fileInput) fileInput.value = "";
+    if (files.length > 0 && !validateBoardFileSize(fileInput)) {
         return;
     }
 
@@ -7574,7 +7645,7 @@ async function addPost() {
     btnEl.disabled = true;
     const pwHash = (/^[a-f0-9]{64}$/i.test(pwVal)) ? pwVal.toLowerCase() : (await sha256Hex(pwVal));
 
-    const finalizePost = (uploadedUrl, uploadedName, uploadedType) => {
+    const finalizePost = (uploadedItems) => {
         const postData = {
             nick: nickVal,
             title: titleVal,
@@ -7582,20 +7653,22 @@ async function addPost() {
             content: contentVal,
             timestamp: firebase.firestore.FieldValue.serverTimestamp()
         };
-        if (uploadedUrl) {
-            postData.fileUrl = uploadedUrl;
-            postData.fileName = uploadedName || "첨부파일";
-            postData.fileType = uploadedType || "";
-            if ((uploadedType || "").startsWith("image/")) {
-                postData.imageUrl = uploadedUrl;
-            } else {
-                postData.imageUrl = null;
-            }
-        } else if (currentEditPostId && currentEditPostFileUrl) {
+        if (Array.isArray(uploadedItems) && uploadedItems.length > 0) {
+            const firstItem = uploadedItems[0];
+            const imageUrls = uploadedItems.filter(item => item.isImage).map(item => item.url);
+            postData.attachments = uploadedItems;
+            postData.imageUrls = imageUrls;
+            postData.fileUrl = firstItem.url;
+            postData.fileName = firstItem.name || "첨부파일";
+            postData.fileType = firstItem.type || "";
+            postData.imageUrl = imageUrls.length > 0 ? imageUrls[0] : null;
+        } else if (currentEditPostId && (currentEditPostAttachments || currentEditPostFileUrl)) {
+            postData.attachments = currentEditPostAttachments || [];
+            postData.imageUrls = currentEditPostImageUrls || (currentEditPostFileUrl && (currentEditPostFileType || "").startsWith("image/") ? [currentEditPostFileUrl] : []);
             postData.fileUrl = currentEditPostFileUrl;
             postData.fileName = currentEditPostFileName || "첨부파일";
             postData.fileType = currentEditPostFileType || "";
-            postData.imageUrl = (currentEditPostFileType || "").startsWith("image/") ? currentEditPostFileUrl : null;
+            postData.imageUrl = postData.imageUrls.length > 0 ? postData.imageUrls[0] : null;
         }
 
         if (currentEditPostId) {
@@ -7619,31 +7692,25 @@ async function addPost() {
         }
     };
 
-    if (file) {
-        const storageRef = storage.ref(`posts/${Date.now()}_${file.name}`);
-        const uploadTask = storageRef.put(file);
-        uploadTask.on('state_changed', (snap) => {
-            const pct = Math.round((snap.bytesTransferred / snap.totalBytes) * 100);
-            btnEl.innerText = `파일 업로드 중... ${pct}%`;
-        }, (err) => {
-            alert("파일 업로드 실패: " + err.message);
+    if (files.length > 0) {
+        try {
+            const uploadedItems = [];
+            for (let idx = 0; idx < files.length; idx++) {
+                const item = await uploadSingleBoardFile(files[idx], idx, files.length, btnEl);
+                uploadedItems.push(item);
+            }
+            finalizePost(uploadedItems);
+        } catch (err) {
+            alert("파일 업로드 실패: " + (err && err.message ? err.message : err));
             btnEl.innerText = currentEditPostId ? "수정 완료" : "등록";
             btnEl.disabled = false;
-        }, () => {
-            uploadTask.snapshot.ref.getDownloadURL().then(url => {
-                finalizePost(url, file.name, file.type || "");
-            }).catch(err => {
-                alert("파일 URL 확인 실패: " + err.message);
-                btnEl.innerText = currentEditPostId ? "수정 완료" : "등록";
-                btnEl.disabled = false;
-            });
-        });
+        }
     } else {
-        finalizePost(null, null, null);
+        finalizePost(null);
     }
 }
-function resetBoardForm() { document.getElementById('inputNick').value = ''; document.getElementById('inputTitle').value = ''; document.getElementById('inputPw').value = ''; document.getElementById('inputContent').value = ''; const fEl = document.getElementById('boardFileInput'); if(fEl) fEl.value = ''; document.getElementById('boardForm').classList.add('hidden'); const btnEl = document.querySelector('#boardForm .bg-submit'); if(btnEl) { btnEl.innerText = "등록"; btnEl.disabled = false; } const cancelBtn = document.getElementById('boardCancelBtn'); if(cancelBtn) cancelBtn.style.display = "none"; currentEditPostId = null; currentEditPostFileUrl = null; currentEditPostFileName = null; currentEditPostFileType = null; }
-async function tryEditPost(id, savedPw, nick, title, content, e) { if (e) e.stopPropagation(); const postObj = (allPostsData || []).find(p => p.id === id); const finalPw = postObj ? (postObj.password || '') : savedPw; const finalNick = postObj ? (postObj.nick || '익명') : nick; const finalTitle = postObj ? (postObj.title || '') : title; const finalContent = postObj ? (postObj.content || '') : content; const inputPw = prompt("게시글 비밀번호를 입력하세요 (작성자 또는 관리자):"); if (inputPw === null) return; const isAuthor = await verifyPasswordMatch(inputPw, finalPw); const inputHash = await sha256Hex(inputPw); const isAdmin = isAdminSessionVerified || (inputHash === DEFAULT_ADMIN_PW_HASH); if (isAuthor || isAdmin) { currentEditPostId = id; currentEditPostFileUrl = postObj ? (postObj.fileUrl || postObj.imageUrl || null) : null; currentEditPostFileName = postObj ? (postObj.fileName || (postObj.imageUrl ? '첨부 이미지' : null)) : null; currentEditPostFileType = postObj ? (postObj.fileType || (postObj.imageUrl ? 'image/jpeg' : '')) : ''; document.getElementById('inputNick').value = finalNick; document.getElementById('inputPw').value = isAuthor ? inputPw.trim() : (finalPw || inputPw.trim()); document.getElementById('inputTitle').value = finalTitle; document.getElementById('inputContent').value = finalContent; const fEl = document.getElementById('boardFileInput'); if(fEl) fEl.value = ''; document.getElementById('boardForm').classList.remove('hidden'); document.querySelector('#boardForm .bg-submit').innerText = "수정 완료"; const cancelBtn = document.getElementById('boardCancelBtn'); if(cancelBtn) cancelBtn.style.display = "block"; document.getElementById('boardForm').scrollIntoView({behavior: 'smooth', block: 'center'}); showToast("수정 모드로 전환되었습니다."); } else alert("⚠️ 비밀번호가 일치하지 않습니다."); }
+function resetBoardForm() { document.getElementById('inputNick').value = ''; document.getElementById('inputTitle').value = ''; document.getElementById('inputPw').value = ''; document.getElementById('inputContent').value = ''; const fEl = document.getElementById('boardFileInput'); if(fEl) fEl.value = ''; updateBoardSelectedFilesInfo(null, 0); document.getElementById('boardForm').classList.add('hidden'); const btnEl = document.querySelector('#boardForm .bg-submit'); if(btnEl) { btnEl.innerText = "등록"; btnEl.disabled = false; } const cancelBtn = document.getElementById('boardCancelBtn'); if(cancelBtn) cancelBtn.style.display = "none"; currentEditPostId = null; currentEditPostFileUrl = null; currentEditPostFileName = null; currentEditPostFileType = null; currentEditPostAttachments = null; currentEditPostImageUrls = null; }
+async function tryEditPost(id, savedPw, nick, title, content, e) { if (e) e.stopPropagation(); const postObj = (allPostsData || []).find(p => p.id === id); const finalPw = postObj ? (postObj.password || '') : savedPw; const finalNick = postObj ? (postObj.nick || '익명') : nick; const finalTitle = postObj ? (postObj.title || '') : title; const finalContent = postObj ? (postObj.content || '') : content; const inputPw = prompt("게시글 비밀번호를 입력하세요 (작성자 또는 관리자):"); if (inputPw === null) return; const isAuthor = await verifyPasswordMatch(inputPw, finalPw); const inputHash = await sha256Hex(inputPw); const isAdmin = isAdminSessionVerified || (inputHash === DEFAULT_ADMIN_PW_HASH); if (isAuthor || isAdmin) { currentEditPostId = id; currentEditPostFileUrl = postObj ? (postObj.fileUrl || postObj.imageUrl || null) : null; currentEditPostFileName = postObj ? (postObj.fileName || (postObj.imageUrl ? '첨부 이미지' : null)) : null; currentEditPostFileType = postObj ? (postObj.fileType || (postObj.imageUrl ? 'image/jpeg' : '')) : ''; currentEditPostAttachments = postObj && Array.isArray(postObj.attachments) ? postObj.attachments : (currentEditPostFileUrl ? [{ url: currentEditPostFileUrl, name: currentEditPostFileName || '첨부파일', type: currentEditPostFileType, isImage: Boolean(postObj?.imageUrl || (currentEditPostFileType || '').startsWith('image/')) }] : null); currentEditPostImageUrls = postObj && Array.isArray(postObj.imageUrls) ? postObj.imageUrls : (postObj?.imageUrl ? [postObj.imageUrl] : null); document.getElementById('inputNick').value = finalNick; document.getElementById('inputPw').value = isAuthor ? inputPw.trim() : (finalPw || inputPw.trim()); document.getElementById('inputTitle').value = finalTitle; document.getElementById('inputContent').value = finalContent; const fEl = document.getElementById('boardFileInput'); if(fEl) fEl.value = ''; updateBoardSelectedFilesInfo(null, currentEditPostAttachments ? currentEditPostAttachments.length : 0); document.getElementById('boardForm').classList.remove('hidden'); document.querySelector('#boardForm .bg-submit').innerText = "수정 완료"; const cancelBtn = document.getElementById('boardCancelBtn'); if(cancelBtn) cancelBtn.style.display = "block"; document.getElementById('boardForm').scrollIntoView({behavior: 'smooth', block: 'center'}); showToast("수정 모드로 전환되었습니다."); } else alert("⚠️ 비밀번호가 일치하지 않습니다."); }
 async function deletePost(id,pw,e){ if (e) e.stopPropagation(); const postObj = (allPostsData || []).find(p => p.id === id); const finalPw = postObj ? (postObj.password || '') : pw; const inputPw = prompt("게시글 비밀번호를 입력하세요 (작성자 또는 관리자):"); if (inputPw === null) return; const isAuthor = await verifyPasswordMatch(inputPw, finalPw); const inputHash = await sha256Hex(inputPw); const isAdmin = isAdminSessionVerified || (inputHash === DEFAULT_ADMIN_PW_HASH); if(isAuthor || isAdmin) { if(!confirm("이 게시글을 삭제하시겠습니까?")) return; db.collection("posts").doc(id).delete().then(() => showToast("게시글이 삭제되었습니다.")).catch(err => alert("삭제 실패: " + err.message)); } else { alert("⚠️ 비밀번호가 일치하지 않습니다."); } } 
 let boardCommentsById = {};
 let editingBoardComment = null;
@@ -8424,7 +8491,7 @@ async function delArchive(id,e){
     }
 } 
 
-function renderBoardPage(p){ currentBoardPage = p; const l = document.getElementById("boardList"); Object.values(commentUnsubscribes).forEach(unsub => { if (typeof unsub === "function") unsub(); }); commentUnsubscribes = {}; boardCommentsById = {}; editingBoardComment = null; l.innerHTML = ""; const start = (p-1) * postsPerPage; const end = start + postsPerPage; const pageData = allPostsData.slice(start, end); if(pageData.length === 0) { l.innerHTML = "<tr><td colspan='4' style='text-align:center; padding:20px; color:var(--text-sub); font-weight:700;'>게시글이 없습니다.</td></tr>"; document.getElementById("pagination").innerHTML = ""; return; } const rowsHtml = []; const nowMs = Date.now(); pageData.forEach((x, i) => { let dateStr = ""; let isRowNew = false; if(x.timestamp) { const d = x.timestamp.toDate(); const month = String(d.getMonth() + 1).padStart(2, '0'); const day = String(d.getDate()).padStart(2, '0'); const hour = String(d.getHours()).padStart(2, '0'); const min = String(d.getMinutes()).padStart(2, '0'); dateStr = `${month}/${day} ${hour}:${min}`; if (nowMs - d.getTime() < 24 * 60 * 60 * 1000) isRowNew = true; } const newRowBadge = isRowNew ? `<span class="badge-new">NEW</span>` : ""; const rowId = `p-${x.id}`; const authorName = escapeShipCommentHtml(x.nick || '익명'); const postNum = allPostsData.length - ((currentBoardPage - 1) * postsPerPage) - i; const safeTitleHtml = escapeShipCommentHtml(x.title || ''); const safeContentHtml = escapeShipCommentHtml(x.content || ''); const rawFileUrl = x.fileUrl || x.imageUrl || ''; const safeFileUrl = rawFileUrl ? escapeShipCommentHtml(rawFileUrl) : ''; const safeFileName = escapeShipCommentHtml(x.fileName || '첨부파일 열기/다운로드'); const isImageFile = Boolean(x.imageUrl || (x.fileType && String(x.fileType).startsWith('image/')) || /\.(jpg|jpeg|png|gif|webp|bmp|svg)(\?|$)/i.test(rawFileUrl)); const attachIconHtml = safeFileUrl ? `<span title="첨부파일 포함" style="margin-left:3px; font-size:0.82rem;">${isImageFile ? '🖼️' : '📎'}</span>` : ''; const attachmentBoxHtml = safeFileUrl ? `<div style="margin-bottom:12px;">${isImageFile ? `<img src="${safeFileUrl}" loading="lazy" alt="게시글 첨부 이미지" style="max-width:100%; border-radius:8px; margin-bottom:6px; border:1px solid var(--border); cursor:pointer; display:block;" onclick="document.getElementById('imageModal').style.display='flex'; document.getElementById('modalImage').src=this.src;">` : ''}<a href="${safeFileUrl}" target="_blank" rel="noopener noreferrer" style="display:inline-flex; align-items:center; gap:5px; padding:6px 10px; background:rgba(59,130,246,0.08); border:1px solid rgba(59,130,246,0.25); border-radius:6px; color:var(--primary); font-size:0.82rem; font-weight:800; text-decoration:none;">📎 ${safeFileName}</a></div>` : ''; rowsHtml.push(`<tr onclick="toggleBoardRow('${rowId}')" style="cursor:pointer;"> <td class="board-no">${postNum}</td> <td class="board-title">${safeTitleHtml}${attachIconHtml}${newRowBadge} <span id="cmt-badge-${x.id}" class="cmt-count-pill hidden"></span> <span style="font-size:0.75rem; color:var(--primary); margin-left:4px;">▼</span></td> <td class="board-date">${dateStr}</td> <td class="board-nick">${authorName}</td> </tr> <tr id="${rowId}" class="board-content-row"> <td colspan="4" class="board-content-box"> <div style="margin-bottom:12px; font-weight:600; background:var(--card-bg); padding:12px; border-radius:8px; border:1px solid var(--border); white-space:pre-wrap;">${safeContentHtml}</div> ${attachmentBoxHtml} <div style="text-align:right; border-bottom:1px dashed var(--border); padding-bottom:10px; margin-bottom:10px;"> <button class="mini-btn" style="background:var(--primary-light) !important; color:white !important;" onclick="tryEditPost('${x.id}', '', '', '', '', event)">✏️ 수정</button> <button class="mini-btn btn-del" onclick="deletePost('${x.id}','',event)">🗑️ 삭제</button> </div> <div id="cmt-list-${x.id}" class="comment-section"></div> <div class="comment-form"> <input id="cmt-name-${x.id}" class="comment-input-sm board-comment-nickname" placeholder="항만용어 닉네임" aria-label="댓글 닉네임 (직접 수정 가능)" maxlength="50"> <input id="cmt-pw-${x.id}" class="comment-input-sm" type="password" placeholder="비밀번호"> <input id="cmt-txt-${x.id}" class="comment-input-lg" placeholder="따뜻한 댓글을 남겨주세요..."> <button id="cmt-submit-${x.id}" class="comment-submit" onclick="addComment('${x.id}')">댓글 등록</button> <button id="cmt-cancel-${x.id}" type="button" class="action-btn bg-cancel" style="display:none;" onclick="cancelBoardCommentEdit('${x.id}')">취소</button> </div> </td> </tr>`); }); l.innerHTML = rowsHtml.join(""); pageData.forEach(x => { const nicknameInput = document.getElementById(`cmt-name-${x.id}`); if (nicknameInput && !nicknameInput.value.trim()) nicknameInput.value = getPortNickname(); loadComments(x.id); }); renderPagination(p); } 
+function renderBoardPage(p){ currentBoardPage = p; const l = document.getElementById("boardList"); Object.values(commentUnsubscribes).forEach(unsub => { if (typeof unsub === "function") unsub(); }); commentUnsubscribes = {}; boardCommentsById = {}; editingBoardComment = null; l.innerHTML = ""; const start = (p-1) * postsPerPage; const end = start + postsPerPage; const pageData = allPostsData.slice(start, end); if(pageData.length === 0) { l.innerHTML = "<tr><td colspan='4' style='text-align:center; padding:20px; color:var(--text-sub); font-weight:700;'>게시글이 없습니다.</td></tr>"; document.getElementById("pagination").innerHTML = ""; return; } const rowsHtml = []; const nowMs = Date.now(); pageData.forEach((x, i) => { let dateStr = ""; let isRowNew = false; if(x.timestamp) { const d = x.timestamp.toDate(); const month = String(d.getMonth() + 1).padStart(2, '0'); const day = String(d.getDate()).padStart(2, '0'); const hour = String(d.getHours()).padStart(2, '0'); const min = String(d.getMinutes()).padStart(2, '0'); dateStr = `${month}/${day} ${hour}:${min}`; if (nowMs - d.getTime() < 24 * 60 * 60 * 1000) isRowNew = true; } const newRowBadge = isRowNew ? `<span class="badge-new">NEW</span>` : ""; const rowId = `p-${x.id}`; const authorName = escapeShipCommentHtml(x.nick || '익명'); const postNum = allPostsData.length - ((currentBoardPage - 1) * postsPerPage) - i; const safeTitleHtml = escapeShipCommentHtml(x.title || ''); const safeContentHtml = escapeShipCommentHtml(x.content || ''); let attachmentsList = []; if (Array.isArray(x.attachments) && x.attachments.length > 0) { attachmentsList = x.attachments.filter(item => item && item.url); } else if (Array.isArray(x.imageUrls) && x.imageUrls.length > 0) { attachmentsList = x.imageUrls.filter(Boolean).map((u, idx) => ({ url: u, name: `첨부 이미지 ${idx + 1}`, type: 'image/jpeg', isImage: true })); } else { const rawFileUrl = x.fileUrl || x.imageUrl || ''; if (rawFileUrl) { const isImg = Boolean(x.imageUrl || (x.fileType && String(x.fileType).startsWith('image/')) || /\.(jpg|jpeg|png|gif|webp|bmp|svg|heic|heif)(\?|$)/i.test(rawFileUrl)); attachmentsList = [{ url: rawFileUrl, name: x.fileName || (isImg ? '첨부 이미지' : '첨부파일 열기/다운로드'), type: x.fileType || '', isImage: isImg }]; } } const imageAttachments = attachmentsList.filter(att => Boolean(att.isImage || (att.type && String(att.type).startsWith('image/')) || /\.(jpg|jpeg|png|gif|webp|bmp|svg|heic|heif)(\?|$)/i.test(att.url || ''))); const hasAnyAttachment = attachmentsList.length > 0; const attachIconHtml = hasAnyAttachment ? `<span title="첨부파일 ${attachmentsList.length}개 포함" style="margin-left:3px; font-size:0.82rem; font-weight:800; color:var(--primary);">${imageAttachments.length > 0 ? '🖼️' : '📎'}${attachmentsList.length > 1 ? `<span style="font-size:0.7rem; margin-left:1px;">+${attachmentsList.length}</span>` : ''}</span>` : ''; let attachmentBoxHtml = ''; if (hasAnyAttachment) { const imagesHtml = imageAttachments.map((imgAtt, idx) => { const safeImgUrl = escapeShipCommentHtml(imgAtt.url); return `<div style="margin-bottom:8px;"><img src="${safeImgUrl}" loading="lazy" alt="게시글 첨부 이미지 ${idx + 1}" style="max-width:100%; border-radius:8px; border:1px solid var(--border); cursor:pointer; display:block;" onclick="document.getElementById('imageModal').style.display='flex'; document.getElementById('modalImage').src=this.src;"></div>`; }).join(''); const downloadLinksHtml = attachmentsList.map((att, idx) => { const safeUrl = escapeShipCommentHtml(att.url); const safeName = escapeShipCommentHtml(att.name || `첨부파일 ${idx + 1}`); return `<a href="${safeUrl}" target="_blank" rel="noopener noreferrer" style="display:inline-flex; align-items:center; gap:5px; padding:5px 10px; background:rgba(59,130,246,0.08); border:1px solid rgba(59,130,246,0.25); border-radius:6px; color:var(--primary); font-size:0.78rem; font-weight:800; text-decoration:none;">📎 ${safeName}</a>`; }).join(''); attachmentBoxHtml = `<div style="margin-bottom:12px;">${imagesHtml}<div style="display:flex; flex-wrap:wrap; gap:6px; margin-top:4px;">${downloadLinksHtml}</div></div>`; } rowsHtml.push(`<tr onclick="toggleBoardRow('${rowId}')" style="cursor:pointer;"> <td class="board-no">${postNum}</td> <td class="board-title">${safeTitleHtml}${attachIconHtml}${newRowBadge} <span id="cmt-badge-${x.id}" class="cmt-count-pill hidden"></span> <span style="font-size:0.75rem; color:var(--primary); margin-left:4px;">▼</span></td> <td class="board-date">${dateStr}</td> <td class="board-nick">${authorName}</td> </tr> <tr id="${rowId}" class="board-content-row"> <td colspan="4" class="board-content-box"> <div style="margin-bottom:12px; font-weight:600; background:var(--card-bg); padding:12px; border-radius:8px; border:1px solid var(--border); white-space:pre-wrap;">${safeContentHtml}</div> ${attachmentBoxHtml} <div style="text-align:right; border-bottom:1px dashed var(--border); padding-bottom:10px; margin-bottom:10px;"> <button class="mini-btn" style="background:var(--primary-light) !important; color:white !important;" onclick="tryEditPost('${x.id}', '', '', '', '', event)">✏️ 수정</button> <button class="mini-btn btn-del" onclick="deletePost('${x.id}','',event)">🗑️ 삭제</button> </div> <div id="cmt-list-${x.id}" class="comment-section"></div> <div class="comment-form"> <input id="cmt-name-${x.id}" class="comment-input-sm board-comment-nickname" placeholder="항만용어 닉네임" aria-label="댓글 닉네임 (직접 수정 가능)" maxlength="50"> <input id="cmt-pw-${x.id}" class="comment-input-sm" type="password" placeholder="비밀번호"> <input id="cmt-txt-${x.id}" class="comment-input-lg" placeholder="따뜻한 댓글을 남겨주세요..."> <button id="cmt-submit-${x.id}" class="comment-submit" onclick="addComment('${x.id}')">댓글 등록</button> <button id="cmt-cancel-${x.id}" type="button" class="action-btn bg-cancel" style="display:none;" onclick="cancelBoardCommentEdit('${x.id}')">취소</button> </div> </td> </tr>`); }); l.innerHTML = rowsHtml.join(""); pageData.forEach(x => { const nicknameInput = document.getElementById(`cmt-name-${x.id}`); if (nicknameInput && !nicknameInput.value.trim()) nicknameInput.value = getPortNickname(); loadComments(x.id); }); renderPagination(p); } 
 function renderShipPage(p) {
     const list = document.getElementById("shipList");
     const pagination = document.getElementById("shipPagination");
