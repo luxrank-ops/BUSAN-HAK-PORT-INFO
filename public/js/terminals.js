@@ -158,26 +158,33 @@ function getSelectedVesselPeriod(vessel, fallbackDate = "") {
 
 function syncWageHoursBlockSize() {
     if (typeof document === "undefined" || typeof document.querySelector !== "function") return;
-    const dateInput = document.getElementById("wageStartDate");
     const grid = document.querySelector("#wage-card .wage-hours-grid");
-    if (!dateInput || !grid || typeof dateInput.getBoundingClientRect !== "function") return;
+    if (!grid) return;
 
-    const rect = dateInput.getBoundingClientRect();
-    if (!rect.width || !rect.height) return;
+    const dateInput = document.getElementById("wageStartDate");
+    const shipInput = document.getElementById("wageShipName");
+    const hourlyInput = document.getElementById("wageHourly");
+    const dateRect = dateInput && typeof dateInput.getBoundingClientRect === "function" ? dateInput.getBoundingClientRect() : null;
+    const fallbackRect = (shipInput && typeof shipInput.getBoundingClientRect === "function" ? shipInput.getBoundingClientRect() : null) ||
+        (hourlyInput && typeof hourlyInput.getBoundingClientRect === "function" ? hourlyInput.getBoundingClientRect() : null);
+
+    const rowHeight = (dateRect && dateRect.height > 0) ? dateRect.height : ((fallbackRect && fallbackRect.height > 0) ? fallbackRect.height : 42);
+    const refWidth = (dateRect && dateRect.width > 0) ? dateRect.width : ((fallbackRect && fallbackRect.width > 0) ? fallbackRect.width : 200);
 
     // 정사각형의 최소 한 변: 날짜칸 높이 2개 + 선박 블록 사이 간격
-    const minimumSide = rect.height * 2 + 4;
+    const minimumSide = rowHeight * 2 + 4;
     const available = grid.getBoundingClientRect?.().width ||
         grid.parentElement?.getBoundingClientRect?.().width ||
+        grid.closest?.(".dash-content")?.getBoundingClientRect?.().width ||
         grid.closest?.(".calc-layout")?.getBoundingClientRect?.().width ||
-        rect.width + minimumSide + 6;
+        refWidth + minimumSide + 6;
 
     // 기본은 가로폭의 30%. 좁으면 날짜칸 기준 최소 높이를 우선
     const side = Math.max(minimumSide, (available - 6) * 0.3);
-    grid.style?.setProperty("--wage-date-height", `${rect.height}px`);
+    grid.style?.setProperty("--wage-date-height", `${rowHeight}px`);
     grid.style?.setProperty("--wage-total-side", `${side}px`);
 
-    const timeButton = document.querySelector("#wage-card .calc-left .action-btn");
+    const timeButton = document.querySelector("#wage-card .calc-left .action-btn") || document.querySelector("#wage-card .wage-action-grid .action-btn");
     if (timeButton && typeof getComputedStyle === "function") {
         grid.style?.setProperty("--wage-hours-font", getComputedStyle(timeButton).fontSize);
     }
@@ -189,7 +196,6 @@ if (typeof window !== "undefined" && typeof window.addEventListener === "functio
 
 function updateWageHoursBreakdown() {
     syncWageHoursBlockSize();
-    const breakdownEl = document.getElementById("wageHoursBreakdown");
     const v1NameEl = document.getElementById("wageVessel1Name");
     const v1HoursEl = document.getElementById("wageVessel1Hours");
     const v2NameEl = document.getElementById("wageVessel2Name");
@@ -231,39 +237,7 @@ function updateWageHoursBreakdown() {
         v1HoursEl.textContent = displayHours > 0 ? `${displayHours}시간` : "확인 필요";
         v2NameEl.textContent = "미선택";
         v2HoursEl.textContent = "-";
-        return;
     }
-
-    if (!breakdownEl) return;
-
-    if (selectedWageVessels.length > 1) {
-        const firstItem = selectedWageVessels[0];
-        const secondItem = selectedWageVessels[1];
-        const secondPeriod = getSelectedVesselPeriod(secondItem.vessel, secondItem.date);
-        const h1 = firstHours > 0 ? `${firstHours}시간` : "확인 필요";
-        const h2 = secondPeriod.hours > 0 ? `${secondPeriod.hours}시간` : "확인 필요";
-        breakdownEl.innerHTML =
-            `<div class="wage-vessel-hours-card"><span class="vessel-order">1번 선박</span><span id="wageVessel1Name" class="vessel-name">${escapeShipCommentHtml(firstItem.name)}</span><span id="wageVessel1Hours" class="vessel-hours">${h1}</span></div>` +
-            `<div class="wage-vessel-hours-card"><span class="vessel-order">2번 선박</span><span id="wageVessel2Name" class="vessel-name">${escapeShipCommentHtml(secondItem.name)}</span><span id="wageVessel2Hours" class="vessel-hours">${h2}</span></div>`;
-        return;
-    }
-
-    if (selectedWageVessels.length === 1) {
-        const firstItem = selectedWageVessels[0];
-        const displayHours = manualTotal || firstHours;
-        const h1 = displayHours > 0 ? `${displayHours}시간` : "확인 필요";
-        breakdownEl.innerHTML =
-            `<div class="wage-vessel-hours-card"><span class="vessel-order">1번 선박</span><span id="wageVessel1Name" class="vessel-name">${escapeShipCommentHtml(firstItem.name)}</span><span id="wageVessel1Hours" class="vessel-hours">${h1}</span></div>` +
-            `<div class="wage-vessel-hours-card"><span class="vessel-order">2번 선박</span><span id="wageVessel2Name" class="vessel-name">미선택</span><span id="wageVessel2Hours" class="vessel-hours">-</span></div>`;
-        return;
-    }
-
-    const shipInputVal = document.getElementById("wageShipName")?.value.trim() || "";
-    const displayHours = manualTotal || firstHours;
-    const h1 = displayHours > 0 ? `${displayHours}시간` : "확인 필요";
-    breakdownEl.innerHTML =
-        `<div class="wage-vessel-hours-card"><span class="vessel-order">1번 선박</span><span id="wageVessel1Name" class="vessel-name">${escapeShipCommentHtml(shipInputVal || "미선택")}</span><span id="wageVessel1Hours" class="vessel-hours">${h1}</span></div>` +
-        `<div class="wage-vessel-hours-card"><span class="vessel-order">2번 선박</span><span id="wageVessel2Name" class="vessel-name">미선택</span><span id="wageVessel2Hours" class="vessel-hours">-</span></div>`;
 }
 
 function refreshWageWorkHours() {
@@ -323,6 +297,9 @@ function setWageScheduleDate(dateStr) {
 
     const dateInput = document.getElementById("wageScheduleDatePicker");
     if (dateInput) dateInput.value = normalizedDate;
+    if (typeof syncWageHourlyYearLabel === "function") {
+        syncWageHourlyYearLabel(normalizedDate);
+    }
     return true;
 }
 
@@ -538,6 +515,9 @@ function applyVesselPeriodToWageInputs(vessel, fallbackDate) {
 
     if (startDateInput && period.startDate) startDateInput.value = period.startDate;
     if (endDateInput && period.endDate) endDateInput.value = period.endDate;
+    if (typeof syncWageHourlyYearLabel === "function") {
+        syncWageHourlyYearLabel(period.startDate || period.endDate || fallbackDate);
+    }
     if (startHourInput && period.startHour !== null) {
         startHourInput.value = String(period.startHour);
     }

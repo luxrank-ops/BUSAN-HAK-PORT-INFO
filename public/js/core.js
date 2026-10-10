@@ -550,10 +550,50 @@ function openDatePicker(inputId, event) {
     input.focus();
     try { input.click(); } catch (e) {}
 }
+const WAGE_HOURLY_BY_YEAR = {
+    2020: 8590,
+    2021: 8720,
+    2022: 9160,
+    2023: 9620,
+    2024: 9860,
+    2025: 10030,
+    2026: 10320
+};
+
+function syncWageHourlyYearLabel(dateStr) {
+    const raw = String(
+        dateStr ||
+        document.getElementById('wageStartDate')?.value ||
+        document.getElementById('wageScheduleDatePicker')?.value ||
+        document.getElementById('wageEndDate')?.value ||
+        ''
+    ).trim();
+    const parsedYear = parseInt(raw.split('-')[0], 10);
+    const validYear = (parsedYear >= 2000 && parsedYear <= 2100) ? parsedYear : 2026;
+
+    const labelEl = document.getElementById('wageHourlyLabel');
+    if (labelEl) {
+        labelEl.textContent = `${validYear}년 시급`;
+    }
+
+    const hourlyEl = document.getElementById('wageHourly');
+    if (hourlyEl && !hourlyEl.dataset.userModified) {
+        const targetWage = WAGE_HOURLY_BY_YEAR[validYear] || 10320;
+        if (String(hourlyEl.value) !== String(targetWage)) {
+            hourlyEl.value = String(targetWage);
+        }
+    }
+    return validYear;
+}
+
 function onWageDateChange(which) {
     const sdEl = document.getElementById('wageStartDate');
     const edEl = document.getElementById('wageEndDate');
     if (!sdEl || !edEl) return;
+    const activeDateStr = (which === 'end' && edEl.value) ? edEl.value : (sdEl.value || edEl.value);
+    if (activeDateStr) {
+        syncWageHourlyYearLabel(activeDateStr);
+    }
     if (sdEl.value) {
         const m = parseInt(sdEl.value.split('-')[1], 10);
         if (m >= 1 && m <= 12) {

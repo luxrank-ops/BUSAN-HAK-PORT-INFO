@@ -675,6 +675,11 @@ function resetWageForm() {
         });
         const totalHoursEl = document.getElementById('wageTotalHours');
         if (totalHoursEl) totalHoursEl.readOnly = false;
+        const hourlyEl = document.getElementById('wageHourly');
+        if (hourlyEl) {
+            delete hourlyEl.dataset.userModified;
+            hourlyEl.value = '10320';
+        }
         const allowanceType = document.getElementById('wageAllowanceType');
         if (allowanceType) allowanceType.value = 'wageHoliday';
         const sDate = document.getElementById('wageStartDate');
@@ -684,6 +689,7 @@ function resetWageForm() {
         if (sDate) sDate.value = todayStr;
         if (eDate) eDate.value = todayStr;
         if (typeof setWageScheduleDate === 'function') setWageScheduleDate(todayStr);
+        if (typeof syncWageHourlyYearLabel === 'function') syncWageHourlyYearLabel(todayStr);
         const curMonth = parseInt(todayStr.split('-')[1], 10) || (now.getMonth() + 1);
         highlightSeasonRow(curMonth);
         applySeasonDefaultHours(curMonth, true);

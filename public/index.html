@@ -1952,7 +1952,7 @@
                             <label id="wageHourlyLabel" style="min-width: 80px; margin-bottom: 0 !important; font-weight: 900;">2026년 시급</label>
                             <input type="number" id="wageHourly" class="input-field" value="10320" oninput="this.dataset.userModified='1'; invalidateCalculatedWage()" style="flex: 0 1 266px; width: 266px; max-width: 100%; min-width: 0; text-align:right; font-weight:900; color:#ef4444; font-size:1.15rem; border: 2px solid #23195e; border-color: #23195e;">
                         </div>
-                        <details class="wage-datetime-card" aria-labelledby="wageDateTimeTitle">
+                        <details class="wage-datetime-card" aria-labelledby="wageDateTimeTitle" ontoggle="if (typeof syncWageHoursBlockSize === 'function') syncWageHoursBlockSize()">
                             <summary class="wage-datetime-toggle">
                                 <span id="wageDateTimeTitle" class="wage-tools-title">📅 시작·종료 날짜·시간 수동 입력</span>
                                 <span class="wage-datetime-chevron" aria-hidden="true">▼</span>
@@ -6061,26 +6061,33 @@ function getSelectedVesselPeriod(vessel, fallbackDate = "") {
 
 function syncWageHoursBlockSize() {
     if (typeof document === "undefined" || typeof document.querySelector !== "function") return;
-    const dateInput = document.getElementById("wageStartDate");
     const grid = document.querySelector("#wage-card .wage-hours-grid");
-    if (!dateInput || !grid || typeof dateInput.getBoundingClientRect !== "function") return;
+    if (!grid) return;
 
-    const rect = dateInput.getBoundingClientRect();
-    if (!rect.width || !rect.height) return;
+    const dateInput = document.getElementById("wageStartDate");
+    const shipInput = document.getElementById("wageShipName");
+    const hourlyInput = document.getElementById("wageHourly");
+    const dateRect = dateInput && typeof dateInput.getBoundingClientRect === "function" ? dateInput.getBoundingClientRect() : null;
+    const fallbackRect = (shipInput && typeof shipInput.getBoundingClientRect === "function" ? shipInput.getBoundingClientRect() : null) ||
+        (hourlyInput && typeof hourlyInput.getBoundingClientRect === "function" ? hourlyInput.getBoundingClientRect() : null);
+
+    const rowHeight = (dateRect && dateRect.height > 0) ? dateRect.height : ((fallbackRect && fallbackRect.height > 0) ? fallbackRect.height : 42);
+    const refWidth = (dateRect && dateRect.width > 0) ? dateRect.width : ((fallbackRect && fallbackRect.width > 0) ? fallbackRect.width : 200);
 
     // 정사각형의 최소 한 변: 날짜칸 높이 2개 + 선박 블록 사이 간격
-    const minimumSide = rect.height * 2 + 4;
+    const minimumSide = rowHeight * 2 + 4;
     const available = grid.getBoundingClientRect?.().width ||
         grid.parentElement?.getBoundingClientRect?.().width ||
+        grid.closest?.(".dash-content")?.getBoundingClientRect?.().width ||
         grid.closest?.(".calc-layout")?.getBoundingClientRect?.().width ||
-        rect.width + minimumSide + 6;
+        refWidth + minimumSide + 6;
 
     // 기본은 가로폭의 30%. 좁으면 날짜칸 기준 최소 높이를 우선
     const side = Math.max(minimumSide, (available - 6) * 0.3);
-    grid.style?.setProperty("--wage-date-height", `${rect.height}px`);
+    grid.style?.setProperty("--wage-date-height", `${rowHeight}px`);
     grid.style?.setProperty("--wage-total-side", `${side}px`);
 
-    const timeButton = document.querySelector("#wage-card .calc-left .action-btn");
+    const timeButton = document.querySelector("#wage-card .calc-left .action-btn") || document.querySelector("#wage-card .wage-action-grid .action-btn");
     if (timeButton && typeof getComputedStyle === "function") {
         grid.style?.setProperty("--wage-hours-font", getComputedStyle(timeButton).fontSize);
     }
@@ -6092,7 +6099,6 @@ if (typeof window !== "undefined" && typeof window.addEventListener === "functio
 
 function updateWageHoursBreakdown() {
     syncWageHoursBlockSize();
-    const breakdownEl = document.getElementById("wageHoursBreakdown");
     const v1NameEl = document.getElementById("wageVessel1Name");
     const v1HoursEl = document.getElementById("wageVessel1Hours");
     const v2NameEl = document.getElementById("wageVessel2Name");
@@ -6134,39 +6140,7 @@ function updateWageHoursBreakdown() {
         v1HoursEl.textContent = displayHours > 0 ? `${displayHours}시간` : "확인 필요";
         v2NameEl.textContent = "미선택";
         v2HoursEl.textContent = "-";
-        return;
     }
-
-    if (!breakdownEl) return;
-
-    if (selectedWageVessels.length > 1) {
-        const firstItem = selectedWageVessels[0];
-        const secondItem = selectedWageVessels[1];
-        const secondPeriod = getSelectedVesselPeriod(secondItem.vessel, secondItem.date);
-        const h1 = firstHours > 0 ? `${firstHours}시간` : "확인 필요";
-        const h2 = secondPeriod.hours > 0 ? `${secondPeriod.hours}시간` : "확인 필요";
-        breakdownEl.innerHTML =
-            `<div class="wage-vessel-hours-card"><span class="vessel-order">1번 선박</span><span id="wageVessel1Name" class="vessel-name">${escapeShipCommentHtml(firstItem.name)}</span><span id="wageVessel1Hours" class="vessel-hours">${h1}</span></div>` +
-            `<div class="wage-vessel-hours-card"><span class="vessel-order">2번 선박</span><span id="wageVessel2Name" class="vessel-name">${escapeShipCommentHtml(secondItem.name)}</span><span id="wageVessel2Hours" class="vessel-hours">${h2}</span></div>`;
-        return;
-    }
-
-    if (selectedWageVessels.length === 1) {
-        const firstItem = selectedWageVessels[0];
-        const displayHours = manualTotal || firstHours;
-        const h1 = displayHours > 0 ? `${displayHours}시간` : "확인 필요";
-        breakdownEl.innerHTML =
-            `<div class="wage-vessel-hours-card"><span class="vessel-order">1번 선박</span><span id="wageVessel1Name" class="vessel-name">${escapeShipCommentHtml(firstItem.name)}</span><span id="wageVessel1Hours" class="vessel-hours">${h1}</span></div>` +
-            `<div class="wage-vessel-hours-card"><span class="vessel-order">2번 선박</span><span id="wageVessel2Name" class="vessel-name">미선택</span><span id="wageVessel2Hours" class="vessel-hours">-</span></div>`;
-        return;
-    }
-
-    const shipInputVal = document.getElementById("wageShipName")?.value.trim() || "";
-    const displayHours = manualTotal || firstHours;
-    const h1 = displayHours > 0 ? `${displayHours}시간` : "확인 필요";
-    breakdownEl.innerHTML =
-        `<div class="wage-vessel-hours-card"><span class="vessel-order">1번 선박</span><span id="wageVessel1Name" class="vessel-name">${escapeShipCommentHtml(shipInputVal || "미선택")}</span><span id="wageVessel1Hours" class="vessel-hours">${h1}</span></div>` +
-        `<div class="wage-vessel-hours-card"><span class="vessel-order">2번 선박</span><span id="wageVessel2Name" class="vessel-name">미선택</span><span id="wageVessel2Hours" class="vessel-hours">-</span></div>`;
 }
 
 function refreshWageWorkHours() {
@@ -10284,11 +10258,21 @@ function loadComments(pid){if(commentUnsubscribes[pid]) commentUnsubscribes[pid]
 function openBusSchedule(){ trackAppEvent('actions', 'bus_view'); const m=document.getElementById('imageModal'); document.getElementById('modalImage').src='https://firebasestorage.googleapis.com/v0/b/busan-hak-port.firebasestorage.app/o/KakaoTalk_20260129_001114789.jpg?alt=media'; m.style.display='flex'; } function closeImageModal(){ document.getElementById('imageModal').style.display='none'; } function openPrivacy() { toggleDashItem('privacy-center-card'); document.getElementById('privacy-center-card').scrollIntoView({behavior: 'smooth', block: 'center'}); }
 
 if ("serviceWorker" in navigator) {
-    navigator.serviceWorker.getRegistrations().then(registrations => {
-        for (let registration of registrations) {
-            registration.unregister();
-        }
-    }).catch(() => {});
+    window.addEventListener("load", () => {
+        navigator.serviceWorker.register("/service-worker.js").then(reg => {
+            reg.addEventListener("updatefound", () => {
+                const newWorker = reg.installing;
+                if (!newWorker) return;
+                newWorker.addEventListener("statechange", () => {
+                    if (newWorker.state === "installed" && navigator.serviceWorker.controller) {
+                        if (typeof showToast === "function") {
+                            showToast("✨ 새 버전이 준비되었습니다. 새로고침 시 즉시 반영됩니다.");
+                        }
+                    }
+                });
+            });
+        }).catch(err => console.warn("SW 등록 확인:", err));
+    });
 }
 
 async function ensureTodayUpdateNotice() {

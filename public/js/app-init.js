@@ -19,43 +19,34 @@ if ("serviceWorker" in navigator) {
 }
 
 async function ensureTodayUpdateNotice() {
-    const noticeDocId = "update_2026_10_04_v2027";
-    const noticeVersion = "v2027_rev2";
-    const noticeTitle = "🚀 [종합 업데이트 안내] 스마트 신규 기능 10종 및 전체 화면 디자인 대개편 안내";
+    const noticeDocId = "update_2026_10_10_hak_port_ver2";
+    const noticeVersion = "hak_port_ver2_20261010_r1";
+    const noticeTitle = "HAK PORT Ver.2 업데이트";
     const noticeContent = [
         "부산항(신항·북항) 현장 근로자 여러분, 안녕하십니까! 운영관리자 이춘학입니다.",
-        "현장 작업 효율성과 정산·안전 편의를 극대화하기 위해 오늘 아래와 같이 대규모 기능 추가 및 디자인 개편이 완료되었습니다.",
+        "더 빠르고 정확한 임금 계산과 모바일 현장 사용성을 위해 [HAK PORT Ver.2 업데이트]가 적용되었습니다. 오늘 반영된 주요 변경 사항을 안내해 드립니다.",
         "",
-        "⭐ 1. [내 단골 터미널 빠른 실행 바] 상단 고정 기능",
-        "• 1·2·3항업 9개 터미널 이름 왼쪽의 별표(⭐)를 터치하면 화면 최상단에 [내 단골 터미널 빠른 실행 바]가 생성됩니다.",
-        "• 폴더를 열지 않고도 상단에서 스케줄·차트·현황·베이 플랜·셔틀·식단을 1초 만에 바로 실행할 수 있습니다.",
+        "🚢 1. 당일 입·출항 선박 최대 2척 선택(더블오더) & 선박별 자동계산 연동",
+        "• 당일 입·출항 선박 스케줄에서 작업 선박을 최대 2척까지 동시에 선택할 수 있습니다.",
+        "• 2번째 선박 선택 시 [더블오더]가 자동 체크되며, [⏱️ 선박별 자동계산 (1번 선박 / 2번 선박)] 카드와 [⏳ 총 근무시간]에 선박별 근무시간이 자동 합산·표시됩니다.",
+        "• 계산 완료 후 [이 계산 결과를 근무일지로 보내기]를 누르면 1번 선박은 [임금 1], 2번 선박(더블오더)은 [임금 2]로 자동 분리 입력됩니다.",
         "",
-        "🧮 2. 임금계산기 [넓게 보기 스위치] & [근무일지 원클릭 전송]",
-        "• [📐 입력창 넓게 보기 / 5:5 단가표 나란히 보기] 전환 버튼이 추가되어 작은 스마트폰 화면에서도 편리하게 입력할 수 있습니다.",
-        "• 계산 완료 후 [✨ 📅 이 계산 결과를 근무일지로 보내기 ✨] 버튼을 누르면 해당 날짜의 근무일지에 실수령액과 근무 시간 요약이 자동 입력됩니다.",
+        "📅 2. 연도별 시급(기본 2026년 시급) 표시 및 달력 날짜 자동 연동",
+        "• 시급 입력란이 [2026년 시급]으로 표시되며, 시작·종료 날짜 달력 및 선박 스케줄 달력에서 선택한 연도에 맞춰 해당 연도 시급 라벨과 기본 시급으로 자동 변경됩니다.",
+        "• 시급 입력창 너비와 테두리 시인성을 강화하여 터치 및 직접 수정이 더욱 편리해졌습니다.",
         "",
-        "🎯 3. 근무일지 [이번 달 목표 수입 달성률 게이지 바] & [동료·선박 원클릭 자동 완성 칩]",
-        "• 본인의 월 목표 금액(예: 450만 원)을 설정하면 실시간 달성률(%) 게이지 바와 목표까지 남은 금액·예상 출근일수를 자동으로 계산해 줍니다.",
-        "• 달력에서 날짜를 눌러 일지를 쓸 때, 최근 자주 입력한 [작업 선박명]과 [동반 근무자]가 버튼(칩)으로 자동 표시되어 터치 한 번으로 입력됩니다.",
+        "📐 3. 임금계산기 화면 구성 최적화 및 접기/펼치기(▼) 기능 도입",
+        "• [월·주간·야간 기준표]를 임금계산기 상단 헤더 오른쪽에 컴팩트하게 배치하여 공간 활용도를 높였습니다.",
+        "• [📅 시작·종료 날짜·시간 수동 입력] 및 [✅ 추가 수당 시간 입력] 블록을 터치하여 접고 펼칠 수 있도록 개선했습니다.",
+        "• [⏱️ 선박별 자동계산(7) · ⏳ 총 근무시간(3)] 블록을 추가 수당 입력 아래(내역서 생성 버튼 바로 위)로 이동하여 선박 선택부터 계산까지 한눈에 확인하실 수 있습니다.",
         "",
-        "🚢 4. 작업선박정보(등록및검색) [작업 난이도 별점(★1~5) & 필수 장비 태그] 및 [전체 선박 도감 한눈에 보기]",
-        "• 선박 등록 시 작업 난이도(★1~5)와 특징 태그(#오토콘, #수동콘, #브릿지주의, #라싱바무거움 등)를 선택할 수 있습니다.",
-        "• 하단 [📋 전체 선박 도감 한눈에 보기] 테이블에 상단 고정 헤더, 줄무늬(스트라이프) 가독성, 컴팩트 1줄 요약 및 터치 강조 효과를 적용해 한 화면에서 수많은 선박을 쾌적하게 확인할 수 있습니다.",
+        "🧾 4. 세금 공제 선택 제거 및 순수 임금 산정 일원화",
+        "• 기존의 복잡한 세금 공제(프리랜서 3.3% / 4대보험) 선택 블록을 제거하고, 주·야간 기본급, 기능공 수당, 추가 가산 수당 중심의 직관적인 순수 임금 산정 내역서로 일원화했습니다.",
         "",
-        "🌬️ 5. [부산항 실시간 기상 · 작업 안전 전광판] 탑재",
-        "• [날씨 및 도선 상황] 탭을 열면 외부 사이트로 이동하기 전에 부산 신항(2·3항업)과 북항(1항업)의 현재 기온·체감 온도, 순간 풍속(m/s), 강수량 및 강풍 작업 주의 단계를 즉시 보여줍니다.",
+        "📱 5. 모바일(Galaxy S24 Ultra 등) 상단 헤더 및 오프라인 안정성 강화",
+        "• 작은 화면에서도 상단 방문자 배지·타이틀·야간모드 버튼이 겹치지 않도록 레이아웃을 보완하고, 터미널 카드 내 [작업중] 선박 강조 테두리와 오프라인 캐시 안정성을 높였습니다.",
         "",
-        "🔒 6. 개인 정산·고급 기능 전용 보안 잠금 및 [명세서 이미지 저장·카톡 공유]",
-        "• 근무일지 기간·키워드 검색, 월별 수입·근로일수 막대그래프 및 연간 종합 정산 요약 보고서",
-        "• 임금 산정 내역서 & 월간 정산 요약표 [📸 이미지(PNG) 저장 / 📤 카톡·문자 공유]",
-        "• 작업선박정보(등록및검색) 장비 태그·난이도 필터 및 하단 전체 선박 도감 뷰 (전용 보안 비밀번호 해제 시 열람 가능)",
-        "",
-        "🎨 7. 전체 화면 디자인 최적화 및 야간(다크) 모드 완벽 보완",
-        "• 3항업·2항업·1항업 맞춤형 그라데이션 배너 및 소속 터미널 약칭 칩 표시",
-        "• 모든 메뉴 카드에 아이콘 배지 및 실시간 현황(출근일수·등록 선박 수·게시글 수·댓글 수) 자동 표시",
-        "• 달력 '오늘' 날짜 배지 및 일별 수입 요약 칩(만 원 단위) 표시, 야간 작업 시 눈부심 없는 다크 모드 완벽 대응",
-        "",
-        "언제나 안전을 최우선으로 작업하시길 바라며, 이용 문의나 건의 사항은 운영관리자(이춘학 / 010-2846-8906)에게 문자 남겨 주시기 바랍니다. 오늘도 무사고 안전 작업하십시오!"
+        "언제나 안전을 최우선으로 작업하시길 바라며, 이용 문의나 건의 사항은 운영관리자(이춘학 / 010-2846-8906)에게 언제든 연락해 주시기 바랍니다. 오늘도 무사고 안전 작업하십시오!"
     ].join("\n");
     try {
         const docRef = db.collection("notices").doc(noticeDocId);
@@ -65,6 +56,7 @@ async function ensureTodayUpdateNotice() {
                 title: noticeTitle,
                 content: noticeContent,
                 version: noticeVersion,
+                isPriority: true,
                 imageUrl: null,
                 timestamp: firebase.firestore.FieldValue.serverTimestamp()
             }, { merge: true });
@@ -438,7 +430,7 @@ window.onload = async () => {
     trackVisitorSession();
     initTodayVisitorBadge();
     ensureTodayUpdateNotice();
-    try { const now = new Date(); now.setMinutes(now.getMinutes() - now.getTimezoneOffset()); const todayStr = now.toISOString().split('T')[0]; const sDate = document.getElementById('wageStartDate'); const eDate = document.getElementById('wageEndDate'); if(sDate) sDate.value = todayStr; if(eDate) eDate.value = todayStr; if (typeof loadWageScheduledShipsForDate === 'function') loadWageScheduledShipsForDate(todayStr, false); } catch(e) { console.error("날짜 초기화 오류", e); } 
+    try { const now = new Date(); now.setMinutes(now.getMinutes() - now.getTimezoneOffset()); const todayStr = now.toISOString().split('T')[0]; const sDate = document.getElementById('wageStartDate'); const eDate = document.getElementById('wageEndDate'); if(sDate) sDate.value = todayStr; if(eDate) eDate.value = todayStr; if (typeof syncWageHourlyYearLabel === 'function') syncWageHourlyYearLabel(todayStr); const initMonth = parseInt(todayStr.split('-')[1], 10) || (now.getMonth() + 1); highlightSeasonRow(initMonth); applySeasonDefaultHours(initMonth, true); if (typeof syncWageHoursBlockSize === 'function') syncWageHoursBlockSize(); if (typeof loadWageScheduledShipsForDate === 'function') loadWageScheduledShipsForDate(todayStr, false); } catch(e) { console.error("날짜 초기화 오류", e); } 
     loadBanner(); 
     try { 
         db.collection("notices").orderBy("timestamp","desc").onSnapshot(s => { const l = document.getElementById("noticeList"); const badge = document.getElementById("noticeBadge"); const subMeta = document.getElementById("noticeCardSubMeta"); if (subMeta) subMeta.innerText = s.empty ? "운영 안내 및 주요 소식" : `등록된 공지 ${s.size}건`; if (s.empty) { l.innerHTML = "<tr><td colspan='3' style='text-align:center; padding:20px; color:var(--text-sub); font-weight:700;'>등록된 공지가 없습니다.</td></tr>"; if(badge) badge.classList.add("hidden"); return; } let isNew = false; const now = new Date(); let index = 0; const rowsHtml = []; s.forEach(d => { const x = d.data(); let dateStr = ""; if(x.timestamp) { const dt = x.timestamp.toDate(); dateStr = `${dt.getFullYear()}/${String(dt.getMonth()+1).padStart(2,'0')}/${String(dt.getDate()).padStart(2,'0')}`; if (index === 0) { const diffTime = now.getTime() - dt.getTime(); if (diffTime < 24 * 60 * 60 * 1000) isNew = true; } } const linkedContent = autoLink(x.content); const imageHtml = x.imageUrl ? `<img src="${x.imageUrl}" loading="lazy" alt="공지사항 이미지" style="max-width:100%; border-radius:8px; margin-top:10px; border:1px solid rgba(0,0,0,0.1);" onclick="document.getElementById('imageModal').style.display='flex'; document.getElementById('modalImage').src=this.src;">` : ''; const safeTitle = (x.title || '').replace(/'/g, "\\'").replace(/"/g, "&quot;"); const safeContent = (x.content || '').replace(/'/g, "\\'").replace(/"/g, "&quot;").replace(/\n/g, "\\n"); const imgParam = x.imageUrl ? `'${x.imageUrl}'` : `null`; const rowId = `n-${d.id}`; rowsHtml.push(`<tr onclick="toggleBoardRow('${rowId}')" style="cursor:pointer; background:${index === 0 ? 'rgba(239,68,68,0.06)' : 'rgba(239,68,68,0.02)'};"> <td class="board-no" style="color:var(--danger); font-weight:900;">${index === 0 ? '📌 필독' : '공지'}</td> <td class="board-title">📢 ${x.title} <span style="font-size:0.75rem; color:var(--primary); margin-left:4px;">▼</span></td> <td class="board-date">${dateStr}</td> </tr> <tr id="${rowId}" class="board-content-row"> <td colspan="3" class="board-content-box" style="border-left: 3px solid var(--danger);"> <div style="margin-bottom:15px; white-space:pre-wrap; font-weight:600; background:var(--card-bg); padding:12px; border-radius:8px; border:1px solid var(--border);">${linkedContent}</div> ${imageHtml} <div style="text-align:right; margin-top:10px;"> <button class="mini-btn" style="background:var(--primary) !important; margin-right:5px; color:white !important;" onclick="startEditNotice('${d.id}', '${safeTitle}', '${safeContent}', ${imgParam}, event)">✏️ 수정(Admin)</button> <button class="mini-btn btn-del" onclick="delNotice('${d.id}',event)">🗑️ 삭제(Admin)</button> </div> </td> </tr>`); index++; }); l.innerHTML = rowsHtml.join(""); if(badge) { if(isNew) badge.classList.remove("hidden"); else badge.classList.add("hidden"); } }); 

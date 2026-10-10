@@ -1,4 +1,4 @@
-const CACHE_VERSION = "busan-hak-port-v2027.2";
+const CACHE_VERSION = "busan-hak-port-v2027.3";
 const STATIC_PRECACHE_ASSETS = [
   "/",
   "/index.html",
@@ -6,13 +6,13 @@ const STATIC_PRECACHE_ASSETS = [
   "/favicon.ico",
   "/icon-192.png",
   "/icon-512.png",
-  "/css/app.css?v=2027.1",
-  "/js/core.js?v=2027.2",
-  "/js/terminals.js?v=2027.2",
-  "/js/worklog.js?v=2027.2",
-  "/js/wage.js?v=2027.2",
-  "/js/community.js?v=2027.2",
-  "/js/app-init.js?v=2027.2",
+  "/css/app.css?v=2027.3",
+  "/js/core.js?v=2027.3",
+  "/js/terminals.js?v=2027.3",
+  "/js/worklog.js?v=2027.3",
+  "/js/wage.js?v=2027.3",
+  "/js/community.js?v=2027.3",
+  "/js/app-init.js?v=2027.3",
   "/js/lazy-guides.js?v=2027.1",
   "/js/lazy-d3.js?v=2027.1",
   "/js/lazy-ships.js?v=2027.1",
