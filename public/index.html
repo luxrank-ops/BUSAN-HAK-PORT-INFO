@@ -1949,7 +1949,7 @@
                 <div class="calc-layout">
                     <div class="calc-left">
                         <div class="wage-row" style="flex-direction: row !important; align-items: center !important; flex-wrap: nowrap !important;">
-                            <label id="wageHourlyLabel" for="wageHourly" style="min-width: 80px; margin-bottom: 0 !important; font-weight: 900;">2026년 시급(기본)</label>
+                            <label id="wageHourlyLabel" style="min-width: 80px; margin-bottom: 0 !important; font-weight: 900;">2026년 시급</label>
                             <input type="number" id="wageHourly" class="input-field" value="10320" oninput="this.dataset.userModified='1'; invalidateCalculatedWage()" style="flex: 0 1 266px; width: 266px; max-width: 100%; min-width: 0; text-align:right; font-weight:900; color:#ef4444; font-size:1.15rem; border: 2px solid #23195e; border-color: #23195e;">
                         </div>
                         <details class="wage-datetime-card" aria-labelledby="wageDateTimeTitle">
@@ -4947,7 +4947,7 @@ function syncWageHourlyYearLabel(dateStr) {
     const validYear = (Number.isFinite(yearNum) && yearNum >= 1900 && yearNum <= 2100) ? yearNum : 2026;
     const labelEl = document.getElementById('wageHourlyLabel');
     if (labelEl) {
-        labelEl.textContent = `${validYear}년 시급(기본)`;
+        labelEl.textContent = `${validYear}년 시급`;
     }
     const hourlyInput = document.getElementById('wageHourly');
     if (hourlyInput && !hourlyInput.dataset.userModified && WAGE_HOURLY_BY_YEAR[validYear]) {
