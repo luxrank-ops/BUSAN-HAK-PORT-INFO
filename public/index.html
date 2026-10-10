@@ -4483,6 +4483,7 @@ function toggleDashItem(id) {
     } else {
         syncBottomNavActive("nav-home");
     }
+    scheduleAppHistoryRecord();
 }
 function toggleSection(id){
     const el = document.getElementById(id);
@@ -4493,6 +4494,7 @@ function toggleSection(id){
     if (isExpanded) {
         trackAppEvent('blocks', id);
     }
+    scheduleAppHistoryRecord();
 }
 function toggleContent(id){
     const e = document.getElementById(id);
@@ -4506,6 +4508,7 @@ function toggleContent(id){
     if (isOpening && id.startsWith('term-')) {
         trackAppEvent('terminals', id.replace('term-', ''));
     }
+    scheduleAppHistoryRecord();
 }
 function toggleHidden(id){
     const el = document.getElementById(id);
@@ -4514,10 +4517,383 @@ function toggleHidden(id){
     if (id === 'shipForm' && !el.classList.contains('hidden')) {
         initShipFormSchedulePicker();
     }
+    scheduleAppHistoryRecord();
 }
 function toggleDarkMode(){ document.body.classList.toggle('dark-mode'); }
-function scrollToTop(){ syncBottomNavActive('nav-home'); window.scrollTo({top:0, behavior:'smooth'}); }
+function scrollToTop(){
+    document.querySelectorAll(".dash-card.expanded").forEach(item => {
+        if (item.id === "daily-field-english-card") pauseDailyFieldEnglish();
+        item.classList.remove("expanded");
+        const content = item.querySelector(".dash-content");
+        if (content) content.style.display = "none";
+    });
+    ["t1-content", "t2-content", "t3-content"].forEach(secId => {
+        const secEl = document.getElementById(secId);
+        if (secEl && !secEl.classList.contains("collapsed")) {
+            secEl.classList.add("collapsed");
+            secEl.style.border = "1px solid var(--border)";
+        }
+    });
+    syncBottomNavActive('nav-home');
+    window.scrollTo({top:0, behavior:'smooth'});
+    scheduleAppHistoryRecord();
+}
 function showToast(m){const t=document.getElementById("toast"); t.innerText=m; t.classList.add("show"); setTimeout(()=>t.classList.remove("show"),3000);}
+
+/* ==================================================================
+   🔙 브라우저/모바일 뒤로가기(History API) 이전 작업 상태 복원 매니저
+   ================================================================== */
+const APP_MODAL_IDS = [
+    "imageModal",
+    "workLogPinModal",
+    "loginModal",
+    "vesselInfoLinkModal",
+    "hjncMealModal",
+    "leaderCalendarModal",
+    "tickerManageModal",
+    "privacyModal",
+    "adminWorkLogModal",
+    "visitorStatsModal"
+];
+const APP_SECTION_IDS = ["t1-content", "t2-content", "t3-content"];
+const APP_TERM_IDS = [
+    "term-hjnc", "term-bnct", "term-dgt", "term-bct",
+    "term-pnc", "term-hpnt", "term-pnit",
+    "term-bptc", "term-hbct"
+];
+const APP_FORM_IDS = ["boardForm", "noticeForm", "shipForm", "archiveForm", "dailyLogForm", "coworkerRosterPanel"];
+
+let appHistoryStack = [];
+let isRestoringAppHistory = false;
+let appHistoryRecordTimer = null;
+let lastBackExitPromptAt = 0;
+
+function captureCurrentAppUIState() {
+    let expandedCard = null;
+    document.querySelectorAll(".dash-card.expanded").forEach(el => {
+        if (el.id) expandedCard = el.id;
+    });
+
+    const openSections = APP_SECTION_IDS.filter(id => {
+        const el = document.getElementById(id);
+        return el && !el.classList.contains("collapsed");
+    });
+
+    const openTerms = APP_TERM_IDS.filter(id => {
+        const el = document.getElementById(id);
+        return el && el.style.display === "block";
+    });
+
+    const openModals = APP_MODAL_IDS.filter(id => {
+        const el = document.getElementById(id);
+        return el && el.style.display === "flex";
+    });
+
+    const openForms = APP_FORM_IDS.filter(id => {
+        const el = document.getElementById(id);
+        return el && !el.classList.contains("hidden");
+    });
+
+    const openBoardRows = [];
+    document.querySelectorAll(".board-content-row.show").forEach(el => {
+        if (el.id) openBoardRows.push(el.id);
+    });
+
+    const logDate = document.getElementById("dailyLogForm")?.getAttribute("data-date") || "";
+    const wageResultVisible = Boolean(
+        document.getElementById("wageResultBox") &&
+        !document.getElementById("wageResultBox").classList.contains("hidden")
+    );
+
+    return {
+        expandedCard,
+        openSections,
+        openTerms,
+        openModals,
+        openForms,
+        openBoardRows,
+        logDate,
+        wageResultVisible
+    };
+}
+
+function isAppUIStateHome(state) {
+    if (!state) return true;
+    return (
+        !state.expandedCard &&
+        (!state.openSections || state.openSections.length === 0) &&
+        (!state.openTerms || state.openTerms.length === 0) &&
+        (!state.openModals || state.openModals.length === 0) &&
+        (!state.openBoardRows || state.openBoardRows.length === 0)
+    );
+}
+
+function serializeAppUIState(state) {
+    return JSON.stringify(state || {});
+}
+
+function scheduleAppHistoryRecord() {
+    if (isRestoringAppHistory) return;
+    if (appHistoryRecordTimer) clearTimeout(appHistoryRecordTimer);
+    appHistoryRecordTimer = setTimeout(() => {
+        recordAppHistoryState();
+    }, 40);
+}
+
+function recordAppHistoryState() {
+    if (isRestoringAppHistory) return;
+    const current = captureCurrentAppUIState();
+    const currentJson = serializeAppUIState(current);
+    const topState = appHistoryStack.length > 0 ? appHistoryStack[appHistoryStack.length - 1] : null;
+    if (topState && serializeAppUIState(topState) === currentJson) {
+        return;
+    }
+    appHistoryStack.push(current);
+    if (appHistoryStack.length > 40) {
+        appHistoryStack.shift();
+    }
+    try {
+        window.history.pushState({ busanPortIdx: appHistoryStack.length - 1 }, "");
+    } catch (e) {}
+}
+
+function applyAppUIState(targetState) {
+    if (!targetState) return;
+    isRestoringAppHistory = true;
+    try {
+        // 1. 모달 상태 복원
+        APP_MODAL_IDS.forEach(id => {
+            const el = document.getElementById(id);
+            if (!el) return;
+            const shouldOpen = Array.isArray(targetState.openModals) && targetState.openModals.includes(id);
+            el.style.display = shouldOpen ? "flex" : "none";
+        });
+
+        // 2. 대시보드 카드 확장 상태 복원
+        const currentExpanded = document.querySelector(".dash-card.expanded")?.id || null;
+        if (currentExpanded !== targetState.expandedCard) {
+            document.querySelectorAll(".dash-card").forEach(item => {
+                if (item.id === "daily-field-english-card" && item.classList.contains("expanded")) {
+                    pauseDailyFieldEnglish();
+                }
+                item.classList.remove("expanded");
+                const content = item.querySelector(".dash-content");
+                if (content) content.style.display = "none";
+            });
+
+            if (targetState.expandedCard) {
+                const targetCard = document.getElementById(targetState.expandedCard);
+                if (targetCard) {
+                    targetCard.classList.add("expanded");
+                    const content = targetCard.querySelector(".dash-content");
+                    if (content) content.style.display = "block";
+                    syncBottomNavActive(targetState.expandedCard);
+
+                    if (targetState.expandedCard === "daily-field-english-card") {
+                        initializeDailyFieldEnglish();
+                    } else if (targetState.expandedCard === "log-card") {
+                        syncWorkLogExtraUnlockUI();
+                        renderCalendar(currentDate.getFullYear(), currentDate.getMonth());
+                    } else if (targetState.expandedCard === "ship-card" || targetState.expandedCard === "wage-card") {
+                        syncWorkLogExtraUnlockUI();
+                    } else if (targetState.expandedCard === "weather-card") {
+                        fetchBusanPortLiveWeather(false);
+                    }
+                }
+            } else {
+                syncBottomNavActive("nav-home");
+            }
+        }
+
+        // 3. 1·2·3항업 섹션 아코디언 상태 복원
+        APP_SECTION_IDS.forEach(id => {
+            const el = document.getElementById(id);
+            if (!el) return;
+            const shouldOpen = Array.isArray(targetState.openSections) && targetState.openSections.includes(id);
+            el.classList.toggle("collapsed", !shouldOpen);
+            el.style.border = shouldOpen ? "2px solid var(--primary)" : "1px solid var(--border)";
+        });
+
+        // 4. 개별 터미널 블록 확장 상태 복원
+        APP_TERM_IDS.forEach(id => {
+            const el = document.getElementById(id);
+            if (!el) return;
+            const shouldOpen = Array.isArray(targetState.openTerms) && targetState.openTerms.includes(id);
+            el.style.display = shouldOpen ? "block" : "none";
+            const parentBlock = el.closest(".terminal-block");
+            if (parentBlock) parentBlock.classList.toggle("active-block", shouldOpen);
+        });
+
+        // 5. 글쓰기/등록 폼 상태 복원
+        APP_FORM_IDS.forEach(id => {
+            const el = document.getElementById(id);
+            if (!el) return;
+            const shouldOpen = Array.isArray(targetState.openForms) && targetState.openForms.includes(id);
+            el.classList.toggle("hidden", !shouldOpen);
+        });
+        if (targetState.expandedCard === "log-card" && targetState.logDate) {
+            const prevLogDate = document.getElementById("dailyLogForm")?.getAttribute("data-date");
+            if (prevLogDate !== targetState.logDate && Array.isArray(targetState.openForms) && targetState.openForms.includes("dailyLogForm")) {
+                clickDate(targetState.logDate);
+            }
+        }
+
+        // 6. 임금계산기 결과창 표시 여부 복원
+        const wageResultBox = document.getElementById("wageResultBox");
+        if (wageResultBox) {
+            wageResultBox.classList.toggle("hidden", !targetState.wageResultVisible);
+        }
+
+        // 7. 게시판/공지/선박 상세 행 펼침 상태 복원
+        document.querySelectorAll(".board-content-row").forEach(row => {
+            const shouldShow = Array.isArray(targetState.openBoardRows) && targetState.openBoardRows.includes(row.id);
+            row.classList.toggle("show", shouldShow);
+            if (shouldShow && row.id && row.id.startsWith("s-")) {
+                loadShipComments(row.id.slice(2));
+            }
+        });
+    } finally {
+        setTimeout(() => {
+            isRestoringAppHistory = false;
+        }, 50);
+    }
+}
+
+function stepBackActiveUIInPlace() {
+    // 1순위: 열려 있는 모달 닫기
+    for (const modalId of APP_MODAL_IDS) {
+        const el = document.getElementById(modalId);
+        if (el && el.style.display === "flex") {
+            el.style.display = "none";
+            return true;
+        }
+    }
+    // 2순위: 열려 있는 작성/수정 폼 닫기
+    for (const formId of ["boardForm", "noticeForm", "shipForm", "archiveForm", "coworkerRosterPanel"]) {
+        const el = document.getElementById(formId);
+        if (el && !el.classList.contains("hidden")) {
+            el.classList.add("hidden");
+            return true;
+        }
+    }
+    // 3순위: 펼쳐진 게시글/공지/선박 본문 행 닫기
+    const openRows = document.querySelectorAll(".board-content-row.show");
+    if (openRows.length > 0) {
+        openRows[openRows.length - 1].classList.remove("show");
+        return true;
+    }
+    // 4순위: 임금계산기 결과창 닫기
+    const wageResult = document.getElementById("wageResultBox");
+    if (wageResult && !wageResult.classList.contains("hidden")) {
+        wageResult.classList.add("hidden");
+        return true;
+    }
+    // 5순위: 펼쳐진 개별 터미널 닫기
+    for (let i = APP_TERM_IDS.length - 1; i >= 0; i--) {
+        const el = document.getElementById(APP_TERM_IDS[i]);
+        if (el && el.style.display === "block") {
+            toggleContent(APP_TERM_IDS[i]);
+            return true;
+        }
+    }
+    // 6순위: 펼쳐진 대시보드 카드 또는 항업 섹션 닫기
+    const expandedCard = document.querySelector(".dash-card.expanded");
+    if (expandedCard && expandedCard.id) {
+        toggleDashItem(expandedCard.id);
+        return true;
+    }
+    for (let i = APP_SECTION_IDS.length - 1; i >= 0; i--) {
+        const el = document.getElementById(APP_SECTION_IDS[i]);
+        if (el && !el.classList.contains("collapsed")) {
+            toggleSection(APP_SECTION_IDS[i]);
+            return true;
+        }
+    }
+    return false;
+}
+
+function initAppHistoryNavigation() {
+    const initialState = captureCurrentAppUIState();
+    appHistoryStack = [initialState];
+    try {
+        // 기본 베이스 상태와 가드 엔트리를 등록하여 뒤로가기 시 앱이 즉시 종료되지 않도록 보호
+        window.history.replaceState({ busanPortBase: true, busanPortIdx: 0 }, "");
+        window.history.pushState({ busanPortIdx: 0 }, "");
+    } catch (e) {}
+
+    window.addEventListener("popstate", () => {
+        if (isRestoringAppHistory) return;
+
+        const liveState = captureCurrentAppUIState();
+        const liveJson = serializeAppUIState(liveState);
+        const topState = appHistoryStack.length > 0 ? appHistoryStack[appHistoryStack.length - 1] : null;
+
+        // 기록되지 않은 모달/폼/행이 열려 있었다면 우선 이전 상태로 되돌림
+        if (topState && serializeAppUIState(topState) !== liveJson) {
+            applyAppUIState(topState);
+            try {
+                window.history.pushState({ busanPortIdx: appHistoryStack.length - 1 }, "");
+            } catch (e) {}
+            return;
+        }
+
+        if (appHistoryStack.length > 1) {
+            appHistoryStack.pop();
+            const prevState = appHistoryStack[appHistoryStack.length - 1];
+            applyAppUIState(prevState);
+            // 스택이 바닥(0)에 도달했으면 앱 종료 방지를 위해 가드 엔트리 유지
+            if (appHistoryStack.length === 1) {
+                try {
+                    window.history.pushState({ busanPortIdx: 0 }, "");
+                } catch (e) {}
+            }
+            return;
+        }
+
+        // 히스토리 스택에 1개만 남았더라도 현재 열린 UI가 있다면 단계적으로 닫기
+        if (!isAppUIStateHome(liveState) && stepBackActiveUIInPlace()) {
+            const updatedState = captureCurrentAppUIState();
+            appHistoryStack = [updatedState];
+            try {
+                window.history.pushState({ busanPortIdx: 0 }, "");
+            } catch (e) {}
+            return;
+        }
+
+        // 이미 초기 홈 화면인 경우: 한 번에 종료되지 않도록 가드 재등록 및 안내
+        const now = Date.now();
+        if (now - lastBackExitPromptAt < 2200) {
+            // 2.2초 내 연속 2회 뒤로가기 시 기본 브라우저 이전 동작 허용
+            window.history.back();
+            return;
+        }
+        lastBackExitPromptAt = now;
+        try {
+            window.history.pushState({ busanPortIdx: 0 }, "");
+        } catch (e) {}
+        window.scrollTo({ top: 0, behavior: "smooth" });
+        showToast("🏠 메인 홈 화면입니다. 앱을 나가시려면 뒤로가기를 한 번 더 누르세요.");
+    });
+
+    // 모달 열림/닫힘 등 스타일 변경 시 자동으로 히스토리에 기록되도록 MutationObserver 연결
+    if (typeof MutationObserver !== "undefined") {
+        const modalObserver = new MutationObserver(() => {
+            if (!isRestoringAppHistory) scheduleAppHistoryRecord();
+        });
+        APP_MODAL_IDS.forEach(id => {
+            const el = document.getElementById(id);
+            if (el) modalObserver.observe(el, { attributes: true, attributeFilter: ["style", "class"] });
+        });
+        APP_FORM_IDS.forEach(id => {
+            const el = document.getElementById(id);
+            if (el) modalObserver.observe(el, { attributes: true, attributeFilter: ["class", "data-date"] });
+        });
+        const wageResultBox = document.getElementById("wageResultBox");
+        if (wageResultBox) {
+            modalObserver.observe(wageResultBox, { attributes: true, attributeFilter: ["class"] });
+        }
+    }
+}
 
 function renderMainTickerText(message) {
     const ticker = document.getElementById("tickerText");
@@ -8569,10 +8945,12 @@ function toggleBoardRow(id) {
     if (!row) return;
     if (row.classList.contains("show")) {
         row.classList.remove("show");
+        scheduleAppHistoryRecord();
         return;
     }
     row.classList.add("show");
     if (id.startsWith("s-")) loadShipComments(id.slice(2));
+    scheduleAppHistoryRecord();
 }
 function loadShipComments(shipId) {
     if (shipCommentUnsubscribes[shipId]) return;
@@ -9147,6 +9525,7 @@ window.onload = async () => {
     applyOfficialTerminalNames();
     appendTerminalMealBlocks();
     renderTerminalScheduleTabBar();
+    initAppHistoryNavigation();
     await ensureAnonymousAuth();
     ["t1", "t2", "t3"].forEach(loadSectionTicker);
     trackVisitorSession();
