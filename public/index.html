@@ -264,7 +264,7 @@
 
         .wage-row { display: flex; align-items: center; margin-bottom: 10px; width: 100%; justify-content: space-between; gap: 8px; }
         .wage-row label { width: auto; min-width: max-content; font-weight: 800; font-size: clamp(0.9rem, 3vw, 1rem); word-break: keep-all; }
-        #wage-card #wageHourly { border-color: #23195e !important; width: 100px !important; flex: 0 0 100px !important; }
+        #wage-card #wageHourly { border-color: #23195e !important; width: 266px !important; flex: 0 1 266px !important; max-width: 100%; }
         .allowance-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 8px; }
         
         .calc-layout { display: flex; flex-direction: row; gap: 6px; margin-bottom: 12px; width: 100%; align-items: stretch; }
@@ -1949,8 +1949,8 @@
                 <div class="calc-layout">
                     <div class="calc-left">
                         <div class="wage-row" style="flex-direction: row !important; align-items: center !important; flex-wrap: nowrap !important;">
-                            <label style="min-width: 80px; margin-bottom: 0 !important; font-weight: 900;">시급(기본)</label>
-                            <input type="number" id="wageHourly" class="input-field" value="10320" style="flex: 0 0 100px; width: 100px; min-width: 0; text-align:right; font-weight:900; color:#ef4444; font-size:1.15rem; border: 2px solid #23195e; border-color: #23195e;">
+                            <label id="wageHourlyLabel" for="wageHourly" style="min-width: 80px; margin-bottom: 0 !important; font-weight: 900;">2026년 시급(기본)</label>
+                            <input type="number" id="wageHourly" class="input-field" value="10320" oninput="this.dataset.userModified='1'; invalidateCalculatedWage()" style="flex: 0 1 266px; width: 266px; max-width: 100%; min-width: 0; text-align:right; font-weight:900; color:#ef4444; font-size:1.15rem; border: 2px solid #23195e; border-color: #23195e;">
                         </div>
                         <details class="wage-datetime-card" aria-labelledby="wageDateTimeTitle">
                             <summary class="wage-datetime-toggle">
@@ -4925,11 +4925,42 @@ function openDatePicker(inputId, event) {
     input.focus();
     try { input.click(); } catch (e) {}
 }
+const WAGE_HOURLY_BY_YEAR = {
+    2020: 8590,
+    2021: 8720,
+    2022: 9160,
+    2023: 9620,
+    2024: 9860,
+    2025: 10030,
+    2026: 10320
+};
+
+function syncWageHourlyYearLabel(dateStr) {
+    const raw = String(
+        dateStr ||
+        document.getElementById('wageStartDate')?.value ||
+        document.getElementById('wageScheduleDatePicker')?.value ||
+        ''
+    ).trim();
+    const yearMatch = raw.match(/^(\d{4})/);
+    const yearNum = yearMatch ? parseInt(yearMatch[1], 10) : 2026;
+    const validYear = (Number.isFinite(yearNum) && yearNum >= 1900 && yearNum <= 2100) ? yearNum : 2026;
+    const labelEl = document.getElementById('wageHourlyLabel');
+    if (labelEl) {
+        labelEl.textContent = `${validYear}년 시급(기본)`;
+    }
+    const hourlyInput = document.getElementById('wageHourly');
+    if (hourlyInput && !hourlyInput.dataset.userModified && WAGE_HOURLY_BY_YEAR[validYear]) {
+        hourlyInput.value = String(WAGE_HOURLY_BY_YEAR[validYear]);
+    }
+}
+
 function onWageDateChange(which) {
     const sdEl = document.getElementById('wageStartDate');
     const edEl = document.getElementById('wageEndDate');
     if (!sdEl || !edEl) return;
     if (sdEl.value) {
+        syncWageHourlyYearLabel(sdEl.value);
         const m = parseInt(sdEl.value.split('-')[1], 10);
         if (m >= 1 && m <= 12) {
             highlightSeasonRow(m);
@@ -4951,6 +4982,8 @@ function onWageDateChange(which) {
         autoFillWeekendHoliday();
         if (typeof refreshWageWorkHours === 'function') refreshWageWorkHours();
         if (typeof invalidateCalculatedWage === 'function') invalidateCalculatedWage();
+    } else if (which === 'end' && edEl.value) {
+        syncWageHourlyYearLabel(edEl.value);
     }
 }
 function filterGuide() {
@@ -6193,6 +6226,9 @@ function setWageScheduleDate(dateStr) {
 
     const dateInput = document.getElementById("wageScheduleDatePicker");
     if (dateInput) dateInput.value = normalizedDate;
+    if (typeof syncWageHourlyYearLabel === "function") {
+        syncWageHourlyYearLabel(normalizedDate);
+    }
     return true;
 }
 
@@ -6406,7 +6442,12 @@ function applyVesselPeriodToWageInputs(vessel, fallbackDate) {
     const startHourInput = document.getElementById("wageStartHour");
     const endHourInput = document.getElementById("wageEndHour");
 
-    if (startDateInput && period.startDate) startDateInput.value = period.startDate;
+    if (startDateInput && period.startDate) {
+        startDateInput.value = period.startDate;
+        if (typeof syncWageHourlyYearLabel === "function") {
+            syncWageHourlyYearLabel(period.startDate);
+        }
+    }
     if (endDateInput && period.endDate) endDateInput.value = period.endDate;
     if (startHourInput && period.startHour !== null) {
         startHourInput.value = String(period.startHour);
@@ -8914,10 +8955,16 @@ function resetWageForm() {
         if (allowanceType) allowanceType.value = 'wageHoliday';
         const sDate = document.getElementById('wageStartDate');
         const eDate = document.getElementById('wageEndDate');
+        const hourlyEl = document.getElementById('wageHourly');
+        if (hourlyEl) {
+            delete hourlyEl.dataset.userModified;
+            hourlyEl.value = '10320';
+        }
         selectedWageScheduleShipName = "";
         selectedWageVessels = [];
         if (sDate) sDate.value = todayStr;
         if (eDate) eDate.value = todayStr;
+        if (typeof syncWageHourlyYearLabel === 'function') syncWageHourlyYearLabel(todayStr);
         if (typeof setWageScheduleDate === 'function') setWageScheduleDate(todayStr);
         const curMonth = parseInt(todayStr.split('-')[1], 10) || (now.getMonth() + 1);
         highlightSeasonRow(curMonth);
@@ -10739,7 +10786,7 @@ window.onload = async () => {
     trackVisitorSession();
     initTodayVisitorBadge();
     ensureTodayUpdateNotice();
-    try { const now = new Date(); now.setMinutes(now.getMinutes() - now.getTimezoneOffset()); const todayStr = now.toISOString().split('T')[0]; const sDate = document.getElementById('wageStartDate'); const eDate = document.getElementById('wageEndDate'); if(sDate) sDate.value = todayStr; if(eDate) eDate.value = todayStr; const initMonth = parseInt(todayStr.split('-')[1], 10) || (now.getMonth() + 1); highlightSeasonRow(initMonth); applySeasonDefaultHours(initMonth, true); if (typeof syncWageHoursBlockSize === 'function') syncWageHoursBlockSize(); if (typeof loadWageScheduledShipsForDate === 'function') loadWageScheduledShipsForDate(todayStr, false); } catch(e) { console.error("날짜 초기화 오류", e); } 
+    try { const now = new Date(); now.setMinutes(now.getMinutes() - now.getTimezoneOffset()); const todayStr = now.toISOString().split('T')[0]; const sDate = document.getElementById('wageStartDate'); const eDate = document.getElementById('wageEndDate'); if(sDate) sDate.value = todayStr; if(eDate) eDate.value = todayStr; if (typeof syncWageHourlyYearLabel === 'function') syncWageHourlyYearLabel(todayStr); const initMonth = parseInt(todayStr.split('-')[1], 10) || (now.getMonth() + 1); highlightSeasonRow(initMonth); applySeasonDefaultHours(initMonth, true); if (typeof syncWageHoursBlockSize === 'function') syncWageHoursBlockSize(); if (typeof loadWageScheduledShipsForDate === 'function') loadWageScheduledShipsForDate(todayStr, false); } catch(e) { console.error("날짜 초기화 오류", e); } 
     loadBanner(); 
     try { 
         db.collection("notices").orderBy("timestamp","desc").onSnapshot(s => { const openIds = Array.from(document.querySelectorAll("#noticeList .board-content-row.show")).map(el => el.id); window.allNoticesCache = []; const badge = document.getElementById("noticeBadge"); const subMeta = document.getElementById("noticeCardSubMeta"); if (subMeta) subMeta.innerText = s.empty ? "운영 안내 및 주요 소식" : `등록된 공지 ${s.size}건`; if (s.empty) { renderNoticePage(1); if(badge) badge.classList.add("hidden"); return; } let isNew = false; const now = new Date(); const sortedNotices = []; s.forEach(d => { const item = { ...(d.data() || {}), id: d.id }; if (item.timestamp && item.timestamp.toDate) { if (now.getTime() - item.timestamp.toDate().getTime() < 24 * 60 * 60 * 1000) isNew = true; } sortedNotices.push(item); }); sortedNotices.sort((a, b) => { const pA = a.isPriority ? 1 : 0; const pB = b.isPriority ? 1 : 0; if (pA !== pB) return pB - pA; const tA = a.timestamp && a.timestamp.toMillis ? a.timestamp.toMillis() : 0; const tB = b.timestamp && b.timestamp.toMillis ? b.timestamp.toMillis() : 0; return tB - tA; }); window.allNoticesCache = sortedNotices; const maxPage = Math.max(1, Math.ceil(sortedNotices.length / postsPerPage)); renderNoticePage(Math.min(currentNoticePage || 1, maxPage)); openIds.forEach(rid => document.getElementById(rid)?.classList.add("show")); if(badge) { if(isNew) badge.classList.remove("hidden"); else badge.classList.add("hidden"); } }, err => { console.warn("공지사항 구독 오류:", err); }); 
