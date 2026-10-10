@@ -833,6 +833,38 @@
         .wage-allowance-content {
             padding: 0 9px 9px;
         }
+        .wage-datetime-card {
+            background: rgba(59, 130, 246, 0.05);
+            border: 2px solid var(--primary-light);
+            border-radius: 10px;
+            margin-bottom: 10px;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        .wage-datetime-toggle {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 6px;
+            min-height: 42px;
+            padding: 8px 10px;
+            box-sizing: border-box;
+            cursor: pointer;
+            touch-action: manipulation;
+            list-style: none;
+        }
+        .wage-datetime-toggle::-webkit-details-marker { display: none; }
+        .wage-datetime-chevron {
+            color: var(--primary);
+            font-size: 0.75rem;
+            transition: transform 0.15s ease;
+        }
+        .wage-datetime-card[open] .wage-datetime-chevron {
+            transform: rotate(180deg);
+        }
+        .wage-datetime-content {
+            padding: 0 10px 10px;
+        }
         .wage-tools-title-row {
             display: flex;
             justify-content: space-between;
@@ -1598,8 +1630,8 @@
             #wage-card .calc-layout > .calc-left { display: contents !important; }
             #wage-card .calc-layout > .calc-left > .wage-row:nth-child(1) { order: 1; }
             #wage-card .calc-layout > .calc-right { order: 2; flex: none !important; width: 100% !important; max-width: 100% !important; min-width: 0 !important; }
-            #wage-card .calc-layout > .calc-left > div:nth-child(2) { order: 3; }
-            #wage-card .calc-layout > .calc-left > .wage-row:nth-child(3) { order: 4; }
+            #wage-card .calc-layout > .calc-left > :nth-child(2) { order: 3; }
+            #wage-card .calc-layout > .calc-left > :nth-child(3) { order: 4; }
 
             #wage-card .calc-layout > .calc-left > .wage-row {
                 flex-direction: row !important;
@@ -1614,7 +1646,7 @@
             #wage-card .calc-layout > .calc-left > .wage-row > input { height: 42px !important; font-size: 1.1rem !important; }
 
             /* 시작·종료 날짜 블록: 가로로 길게 */
-            #wage-card .calc-layout > .calc-left > div:nth-child(2) { width: 100% !important; padding: 8px !important; margin-bottom: 0 !important; }
+            #wage-card .calc-layout > .calc-left > .wage-datetime-card { width: 100% !important; margin-bottom: 0 !important; }
             #wage-card .calc-left .date-touch-block {
                 flex-direction: column !important;
                 align-items: stretch !important;
@@ -1642,7 +1674,7 @@
                 font-size: 1rem !important;
                 margin: 0 !important;
             }
-            #wage-card .calc-left > div:nth-child(2) > .action-btn { width: 100% !important; height: 44px !important; font-size: 1rem !important; margin-top: 2px !important; }
+            #wage-card .calc-left .wage-datetime-content > .action-btn { width: 100% !important; height: 44px !important; font-size: 1rem !important; margin-top: 2px !important; }
 
             /* 월(Month)/주간/야간 표: 세로에서 행·열 전치 (CSS 그리드) */
             #wage-card .calc-right > table.ref-table {
@@ -1920,31 +1952,37 @@
                             <label style="min-width: 80px; margin-bottom: 0 !important; font-weight: 900;">시급(기본)</label>
                             <input type="number" id="wageHourly" class="input-field" value="10320" style="flex: 0 0 100px; width: 100px; min-width: 0; text-align:right; font-weight:900; color:#ef4444; font-size:1.15rem; border: 2px solid #23195e; border-color: #23195e;">
                         </div>
-                        <div style="background: rgba(59, 130, 246, 0.05); border: 2px solid var(--primary-light); padding: 10px; border-radius: 10px; margin-bottom: 10px;">
-                            <div class="wage-row date-touch-block" style="margin-bottom: 6px;" onclick="openDatePicker('wageStartDate', event)" title="터치하여 시작 날짜 달력 열기">
-                                <label for="wageStartDate" style="min-width: 50px; color:var(--primary); font-size:0.95rem; font-weight: 900; cursor:pointer; display:flex; align-items:center; justify-content:space-between; width:100%;">
-                                    <span>🟢 시작 날짜·시간 (터치 시 달력)</span>
-                                </label>
-                                <div style="width:100%;">
-                                    <input type="date" id="wageStartDate" class="input-field" style="font-size:0.85rem; padding:0 4px; border: 2px solid #cbd5e1; cursor:pointer;" onclick="openDatePicker('wageStartDate', event)" onchange="onWageDateChange('start')">
-                                    <select id="wageStartHour" class="input-field" style="font-size:0.95rem; padding:0 4px; margin-left:4px; text-align:center; border: 2px solid #cbd5e1;" onclick="event.stopPropagation()" onchange="this.dataset.userModified='1'; refreshWageWorkHours(); invalidateCalculatedWage()">
-                                        <option value="0">00시</option><option value="1">01시</option><option value="2">02시</option><option value="3">03시</option><option value="4">04시</option><option value="5">05시</option><option value="6">06시</option><option value="7">07시</option><option value="8" selected>08시</option><option value="9">09시</option><option value="10">10시</option><option value="11">11시</option><option value="12">12시</option><option value="13">13시</option><option value="14">14시</option><option value="15">15시</option><option value="16">16시</option><option value="17">17시</option><option value="18">18시</option><option value="19">19시</option><option value="20">20시</option><option value="21">21시</option><option value="22">22시</option><option value="23">23시</option>
-                                    </select>
+                        <details class="wage-datetime-card" aria-labelledby="wageDateTimeTitle">
+                            <summary class="wage-datetime-toggle">
+                                <span id="wageDateTimeTitle" class="wage-tools-title">📅 시작·종료 날짜·시간 설정</span>
+                                <span class="wage-datetime-chevron" aria-hidden="true">▼</span>
+                            </summary>
+                            <div class="wage-datetime-content">
+                                <div class="wage-row date-touch-block" style="margin-bottom: 6px;" onclick="openDatePicker('wageStartDate', event)" title="터치하여 시작 날짜 달력 열기">
+                                    <label for="wageStartDate" style="min-width: 50px; color:var(--primary); font-size:0.95rem; font-weight: 900; cursor:pointer; display:flex; align-items:center; justify-content:space-between; width:100%;">
+                                        <span>🟢 시작 날짜·시간 (터치 시 달력)</span>
+                                    </label>
+                                    <div style="width:100%;">
+                                        <input type="date" id="wageStartDate" class="input-field" style="font-size:0.85rem; padding:0 4px; border: 2px solid #cbd5e1; cursor:pointer;" onclick="openDatePicker('wageStartDate', event)" onchange="onWageDateChange('start')">
+                                        <select id="wageStartHour" class="input-field" style="font-size:0.95rem; padding:0 4px; margin-left:4px; text-align:center; border: 2px solid #cbd5e1;" onclick="event.stopPropagation()" onchange="this.dataset.userModified='1'; refreshWageWorkHours(); invalidateCalculatedWage()">
+                                            <option value="0">00시</option><option value="1">01시</option><option value="2">02시</option><option value="3">03시</option><option value="4">04시</option><option value="5">05시</option><option value="6">06시</option><option value="7">07시</option><option value="8" selected>08시</option><option value="9">09시</option><option value="10">10시</option><option value="11">11시</option><option value="12">12시</option><option value="13">13시</option><option value="14">14시</option><option value="15">15시</option><option value="16">16시</option><option value="17">17시</option><option value="18">18시</option><option value="19">19시</option><option value="20">20시</option><option value="21">21시</option><option value="22">22시</option><option value="23">23시</option>
+                                        </select>
+                                    </div>
                                 </div>
-                            </div>
-                            <div class="wage-row date-touch-block" style="margin-bottom: 8px;" onclick="openDatePicker('wageEndDate', event)" title="터치하여 종료 날짜 달력 열기">
-                                <label for="wageEndDate" style="min-width: 50px; color:var(--danger); font-size:0.95rem; font-weight: 900; cursor:pointer; display:flex; align-items:center; justify-content:space-between; width:100%;">
-                                    <span>🔴 종료 날짜·시간 (터치 시 달력)</span>
-                                </label>
-                                <div style="width:100%;">
-                                    <input type="date" id="wageEndDate" class="input-field" style="font-size:0.85rem; padding:0 4px; border: 2px solid #cbd5e1; cursor:pointer;" onclick="openDatePicker('wageEndDate', event)" onchange="onWageDateChange('end')">
-                                    <select id="wageEndHour" class="input-field" style="font-size:0.95rem; padding:0 4px; margin-left:4px; text-align:center; border: 2px solid #cbd5e1;" onclick="event.stopPropagation()" onchange="this.dataset.userModified='1'; refreshWageWorkHours(); invalidateCalculatedWage()">
-                                        <option value="0">00시</option><option value="1">01시</option><option value="2">02시</option><option value="3">03시</option><option value="4">04시</option><option value="5">05시</option><option value="6">06시</option><option value="7">07시</option><option value="8">08시</option><option value="9">09시</option><option value="10">10시</option><option value="11">11시</option><option value="12">12시</option><option value="13">13시</option><option value="14">14시</option><option value="15">15시</option><option value="16">16시</option><option value="17" selected>17시</option><option value="18">18시</option><option value="19">19시</option><option value="20">20시</option><option value="21">21시</option><option value="22">22시</option><option value="23">23시</option>
-                                    </select>
+                                <div class="wage-row date-touch-block" style="margin-bottom: 8px;" onclick="openDatePicker('wageEndDate', event)" title="터치하여 종료 날짜 달력 열기">
+                                    <label for="wageEndDate" style="min-width: 50px; color:var(--danger); font-size:0.95rem; font-weight: 900; cursor:pointer; display:flex; align-items:center; justify-content:space-between; width:100%;">
+                                        <span>🔴 종료 날짜·시간 (터치 시 달력)</span>
+                                    </label>
+                                    <div style="width:100%;">
+                                        <input type="date" id="wageEndDate" class="input-field" style="font-size:0.85rem; padding:0 4px; border: 2px solid #cbd5e1; cursor:pointer;" onclick="openDatePicker('wageEndDate', event)" onchange="onWageDateChange('end')">
+                                        <select id="wageEndHour" class="input-field" style="font-size:0.95rem; padding:0 4px; margin-left:4px; text-align:center; border: 2px solid #cbd5e1;" onclick="event.stopPropagation()" onchange="this.dataset.userModified='1'; refreshWageWorkHours(); invalidateCalculatedWage()">
+                                            <option value="0">00시</option><option value="1">01시</option><option value="2">02시</option><option value="3">03시</option><option value="4">04시</option><option value="5">05시</option><option value="6">06시</option><option value="7">07시</option><option value="8">08시</option><option value="9">09시</option><option value="10">10시</option><option value="11">11시</option><option value="12">12시</option><option value="13">13시</option><option value="14">14시</option><option value="15">15시</option><option value="16">16시</option><option value="17" selected>17시</option><option value="18">18시</option><option value="19">19시</option><option value="20">20시</option><option value="21">21시</option><option value="22">22시</option><option value="23">23시</option>
+                                        </select>
+                                    </div>
                                 </div>
+                                <button type="button" class="action-btn" style="background:var(--primary); padding:10px; margin:0; font-size:1rem; border: 2px solid #1e3a8a;" onclick="calcTimeAndFill()">⏱️ 시간 설정 완료</button>
                             </div>
-                            <button type="button" class="action-btn" style="background:var(--primary); padding:10px; margin:0; font-size:1rem; border: 2px solid #1e3a8a;" onclick="calcTimeAndFill()">⏱️ 시간 설정 완료</button>
-                        </div>
+                        </details>
                         <div class="wage-hours-grid">
                             <div class="wage-vessel-hours" aria-label="선박별 자동계산">
                                 <strong title="선박별 자동계산">⏱️ 선박별 자동계산</strong>
