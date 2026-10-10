@@ -654,17 +654,42 @@
             display: grid;
             grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
             gap: 10px;
-            align-items: stretch;
+            align-items: start;
             margin: 15px 0 8px;
             padding-top: 15px;
             border-top: 2px dashed #94a3b8;
         }
         .wage-allowance-card {
             min-width: 0;
-            padding: 10px;
+            align-self: start;
             border: 1.5px solid var(--border);
             border-radius: 10px;
             background: var(--card-bg);
+        }
+        .wage-allowance-toggle {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 6px;
+            min-height: 42px;
+            padding: 7px 9px;
+            box-sizing: border-box;
+            cursor: pointer;
+            touch-action: manipulation;
+            list-style: none;
+        }
+        .wage-allowance-toggle::-webkit-details-marker { display: none; }
+        .wage-allowance-chevron {
+            color: var(--primary);
+            font-size: 0.75rem;
+            transition: transform 0.15s ease;
+        }
+        /* 펼쳤을 때 ▼를 위로 회전 */
+        .wage-allowance-card[open] .wage-allowance-chevron {
+            transform: rotate(180deg);
+        }
+        .wage-allowance-content {
+            padding: 0 9px 9px;
         }
         .wage-tools-title-row {
             display: flex;

@@ -706,17 +706,42 @@
             display: grid;
             grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
             gap: 10px;
-            align-items: stretch;
+            align-items: start;
             margin: 15px 0 8px;
             padding-top: 15px;
             border-top: 2px dashed #94a3b8;
         }
         .wage-allowance-card {
             min-width: 0;
-            padding: 10px;
+            align-self: start;
             border: 1.5px solid var(--border);
             border-radius: 10px;
             background: var(--card-bg);
+        }
+        .wage-allowance-toggle {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 6px;
+            min-height: 42px;
+            padding: 7px 9px;
+            box-sizing: border-box;
+            cursor: pointer;
+            touch-action: manipulation;
+            list-style: none;
+        }
+        .wage-allowance-toggle::-webkit-details-marker { display: none; }
+        .wage-allowance-chevron {
+            color: var(--primary);
+            font-size: 0.75rem;
+            transition: transform 0.15s ease;
+        }
+        /* 펼쳤을 때 ▼를 위로 회전 */
+        .wage-allowance-card[open] .wage-allowance-chevron {
+            transform: rotate(180deg);
+        }
+        .wage-allowance-content {
+            padding: 0 9px 9px;
         }
         .wage-tools-title-row {
             display: flex;
@@ -1854,55 +1879,49 @@
                         </div>
                     </section>
 
-                    <section class="wage-allowance-card"
-                             aria-labelledby="wageAllowanceTitle">
-                        <div class="wage-tools-title-row">
-                            <div>
-                                <p id="wageAllowanceTitle" class="wage-tools-title">
-                                    ✅ 추가 수당 시간 입력
-                                </p>
-                                <span class="wage-tools-subtitle">
-                                    해당 수당이 있는 항목만 입력하세요.
-                                </span>
+                    <details class="wage-allowance-card" aria-labelledby="wageAllowanceTitle">
+                        <summary class="wage-allowance-toggle">
+                            <span id="wageAllowanceTitle" class="wage-tools-title">✅ 추가 수당 시간 입력</span>
+                            <span class="wage-allowance-chevron" aria-hidden="true">▼</span>
+                        </summary>
+
+                        <div class="wage-allowance-content">
+                            <div class="wage-allowance-controls">
+                                <label class="wage-allowance-control" for="wageAllowanceType">
+                                    <span>수당 종류</span>
+                                    <select id="wageAllowanceType"
+                                            class="input-field wage-allowance-type-select"
+                                            onchange="changeWageAllowanceType()">
+                                        <option value="wageHoliday">🚜 지게차</option>
+                                        <option value="wageWeekend">🎈 특별·주말·공휴일 수당</option>
+                                        <option value="wageRain">☔ 우천</option>
+                                        <option value="wageHotTime">☀️ 혹서기 (30%)</option>
+                                    </select>
+                                </label>
+
+                                <label class="wage-allowance-control" for="wageAllowanceHours">
+                                    <span>적용 시간</span>
+                                    <span class="wage-allowance-input-wrap">
+                                        <input type="number"
+                                               id="wageAllowanceHours"
+                                               class="input-field"
+                                               placeholder="0"
+                                               min="0"
+                                               step="any"
+                                               inputmode="decimal"
+                                               aria-label="선택한 추가 수당 시간"
+                                               oninput="updateSelectedWageAllowanceHours(this.value)">
+                                        <span class="wage-allowance-unit">시간</span>
+                                    </span>
+                                </label>
                             </div>
-                            <span class="wage-unit-badge">단위 · 시간</span>
+
+                            <input type="hidden" id="wageHoliday" value="">
+                            <input type="hidden" id="wageWeekend" value="">
+                            <input type="hidden" id="wageRain" value="">
+                            <input type="hidden" id="wageHotTime" value="">
                         </div>
-
-                        <div class="wage-allowance-controls">
-                            <label class="wage-allowance-control" for="wageAllowanceType">
-                                <span>수당 종류</span>
-                                <select id="wageAllowanceType"
-                                        class="input-field wage-allowance-type-select"
-                                        onchange="changeWageAllowanceType()">
-                                    <option value="wageHoliday">🚜 지게차</option>
-                                    <option value="wageWeekend">🎈 특별·주말·공휴일 수당</option>
-                                    <option value="wageRain">☔ 우천</option>
-                                    <option value="wageHotTime">☀️ 혹서기 (30%)</option>
-                                </select>
-                            </label>
-
-                            <label class="wage-allowance-control" for="wageAllowanceHours">
-                                <span>적용 시간</span>
-                                <span class="wage-allowance-input-wrap">
-                                    <input type="number"
-                                           id="wageAllowanceHours"
-                                           class="input-field"
-                                           placeholder="0"
-                                           min="0"
-                                           step="any"
-                                           inputmode="decimal"
-                                           aria-label="선택한 추가 수당 시간"
-                                           oninput="updateSelectedWageAllowanceHours(this.value)">
-                                    <span class="wage-allowance-unit">시간</span>
-                                </span>
-                            </label>
-                        </div>
-
-                        <input type="hidden" id="wageHoliday" value="">
-                        <input type="hidden" id="wageWeekend" value="">
-                        <input type="hidden" id="wageRain" value="">
-                        <input type="hidden" id="wageHotTime" value="">
-                    </section>
+                    </details>
                 </div>
                 <div class="wage-action-grid">
                     <button class="action-btn bg-calc" style="border: 2px solid var(--primary);" onclick="calculateWage()">내역서 생성 및 계산</button>

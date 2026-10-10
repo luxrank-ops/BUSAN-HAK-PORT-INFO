@@ -102,11 +102,14 @@ test('no freelancer/insurance selector or withholding is applied to calculated w
     assert.equal(elements.wageTotal.innerText, '20,640원');
 });
 
-test('double-order block has flashing red hint', () => {
+test('double-order block has flashing red hint and wage allowance card is collapsible <details>', () => {
     assert.match(html, /class="wage-action-grid"/);
     assert.match(html, /class="wage-double-card"/);
     assert.match(html, /class="wage-double-hint"[^>]*>\(2번째 작업선박 체크\)/);
     assert.match(html, /@keyframes double-order-flash/);
+    assert.match(html, /<details class="wage-allowance-card" aria-labelledby="wageAllowanceTitle">/);
+    assert.match(html, /<summary class="wage-allowance-toggle">/);
+    assert.match(html, /class="wage-allowance-chevron"[^>]*>▼<\/span>/);
 });
 
 test('2. wage hours grid includes 7:3 per-vessel breakdown cards and square total hours block', () => {
