@@ -135,20 +135,37 @@ service cloud.firestore {
 
     // ---------------------------------------------------------
     // 8. notices, posts, ships, archives, leader_overrides
+    //    - 조회수(views) 단건 증가(중복 조회 포함)는 인증된 세션 누구나 허용
     // ---------------------------------------------------------
+    function isValidViewCountIncrement() {
+      return resource != null &&
+        incoming().diff(existing()).affectedKeys().hasOnly(['views']) &&
+        incoming().views is int &&
+        incoming().views == ((!('views' in existing()) || !(existing().views is int)) ? 1 : existing().views + 1);
+    }
+
     match /notices/{noticeId} {
       allow get, list: if isSignedIn();
-      allow create, update: if isSignedIn() && (isAdmin() || noticeId == 'update_2026_10_04_v2027');
+      allow create: if isSignedIn() && (isAdmin() || noticeId == 'update_2026_10_04_v2027');
+      allow update: if isSignedIn() && (isAdmin() || noticeId == 'update_2026_10_04_v2027' || isValidViewCountIncrement());
       allow delete: if isAdmin();
     }
 
     match /posts/{postId} {
       allow get, list: if isSignedIn();
-      allow create, update: if isSignedIn() && isValidId(postId) &&
+      allow create: if isSignedIn() && isValidId(postId) &&
         incoming().nick is string && incoming().nick.size() <= 50 &&
         incoming().title is string && incoming().title.size() <= 200 &&
         incoming().content is string && incoming().content.size() <= 10000 &&
         isSha256Hash(incoming().password);
+      allow update: if isSignedIn() && isValidId(postId) && (
+        isValidViewCountIncrement() || (
+          incoming().nick is string && incoming().nick.size() <= 50 &&
+          incoming().title is string && incoming().title.size() <= 200 &&
+          incoming().content is string && incoming().content.size() <= 10000 &&
+          isSha256Hash(incoming().password)
+        )
+      );
       allow delete: if isSignedIn() && isValidId(postId);
 
       match /comments/{commentId} {
@@ -163,9 +180,15 @@ service cloud.firestore {
 
     match /ships/{shipId} {
       allow get, list: if isSignedIn();
-      allow create, update: if isSignedIn() && isValidId(shipId) &&
+      allow create: if isSignedIn() && isValidId(shipId) &&
         incoming().shipName is string && incoming().shipName.size() <= 120 &&
         isSha256Hash(incoming().password);
+      allow update: if isSignedIn() && isValidId(shipId) && (
+        isValidViewCountIncrement() || (
+          incoming().shipName is string && incoming().shipName.size() <= 120 &&
+          isSha256Hash(incoming().password)
+        )
+      );
       allow delete: if isAdmin();
 
       match /comments/{commentId} {
