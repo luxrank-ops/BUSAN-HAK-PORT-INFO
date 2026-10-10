@@ -556,7 +556,12 @@ function onWageDateChange(which) {
     if (!sdEl || !edEl) return;
     if (sdEl.value) {
         const m = parseInt(sdEl.value.split('-')[1], 10);
-        if (m >= 1 && m <= 12) highlightSeasonRow(m);
+        if (m >= 1 && m <= 12) {
+            highlightSeasonRow(m);
+            if (which === 'start' && typeof applySeasonDefaultHours === 'function') {
+                applySeasonDefaultHours(m, false);
+            }
+        }
         if (which === 'start') {
             if (!edEl.value || edEl.value < sdEl.value) {
                 edEl.value = sdEl.value;
@@ -568,6 +573,9 @@ function onWageDateChange(which) {
                 loadWageScheduledShipsForDate(sdEl.value, false);
             }
         }
+        if (typeof autoFillWeekendHoliday === 'function') autoFillWeekendHoliday();
+        if (typeof refreshWageWorkHours === 'function') refreshWageWorkHours();
+        if (typeof invalidateCalculatedWage === 'function') invalidateCalculatedWage();
     }
 }
 function toggleTickerMenu(event) {

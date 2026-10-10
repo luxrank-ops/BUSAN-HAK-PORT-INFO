@@ -4,9 +4,10 @@ import assert from 'node:assert/strict';
 import vm from 'node:vm';
 
 const html = readFileSync(new URL('../public/index.html', import.meta.url), 'utf8');
+const segmentFn = html.split('function calculateWageSegment(')[1].split('function calculateWage() {')[0];
 const calculator = html.split('function calculateWage() {')[1].split('function onWageShipNameChange(')[0];
-const transfer = html.split('let wageToLogTransferPending = false;')[1].split('function sendWorkLogShipToWage(')[0];
-assert.ok(calculator && transfer, 'calculator and transfer code found');
+const transfer = html.split('let wageToLogTransferPending = false;')[1].split('async function sendWorkLogShipToWage(')[0];
+assert.ok(segmentFn && calculator && transfer, 'calculator and transfer code found');
 
 function setup({ doubleOrder = false, savedLog = null, sameDateDraft = false } = {}) {
     const elements = {};
@@ -46,7 +47,12 @@ function setup({ doubleOrder = false, savedLog = null, sameDateDraft = false } =
     const context = vm.createContext({
         document: { getElementById: id => elements[id] },
         currentWorkerId: 'worker', adminWorkLogs: logs, selectedWageScheduleShipName: '',
+        selectedWageVessels: [],
         selectedScheduleTerminal: 'HJNC',
+        periodHours: () => 2,
+        getSelectedVesselPeriod: () => ({ hours: 2 }),
+        updateWageHoursBreakdown() {},
+        escapeShipCommentHtml: s => String(s || ''),
         db: { collection: () => ({ doc: () => ({ get: async () => {
             fetchCount++;
             return { exists: !!savedLog, data: () => savedLog };
@@ -67,7 +73,7 @@ function setup({ doubleOrder = false, savedLog = null, sameDateDraft = false } =
         renderRow: (label, amount) => `${label}: ${amount}`,
         setTimeout() {}, console: { error() {} }
     });
-    vm.runInContext(`let lastCalculatedWageData = null; function calculateWage() {${calculator}let wageToLogTransferPending = false;${transfer}`, context);
+    vm.runInContext(`let lastCalculatedWageData = null; function calculateWageSegment(${segmentFn}function calculateWage() {${calculator}let wageToLogTransferPending = false;${transfer}`, context);
     return { elements, context, messages, get fetchCount() { return fetchCount; }, get jumpCount() { return jumpCount; } };
 }
 

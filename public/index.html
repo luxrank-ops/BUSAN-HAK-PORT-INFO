@@ -267,6 +267,24 @@
         .spec-table td { padding: 8px 4px; color: var(--text-main); word-break: keep-all; }
         .wage-total { font-size: clamp(1.4rem, 6vw, 1.8rem); color: #c2410c; font-weight: 900; text-align: center; border-top: 2px solid var(--primary); padding-top: 12px; margin-top: 12px; font-variant-numeric: tabular-nums; }
         body.dark-mode .wage-total { color: #fb923c; }
+        .wage-action-grid { display: grid; grid-template-columns: minmax(0, 1.35fr) auto minmax(0, 0.75fr); gap: 8px; align-items: stretch; margin-top: 14px; }
+        .wage-action-grid > .action-btn { margin-top: 0 !important; height: 100%; display: inline-flex; align-items: center; justify-content: center; }
+        .wage-double-card { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; padding: 6px 10px; border: 2px solid #cbd5e1; border-radius: 10px; background: #f8fafc; cursor: pointer; font-size: 0.8rem; font-weight: 900; color: var(--primary); text-align: center; line-height: 1.2; transition: border-color 0.16s ease, background-color 0.16s ease, box-shadow 0.16s ease; }
+        .wage-double-card:has(input:checked) { border-color: #dc2626; background: #fef2f2; box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.14); }
+        .wage-double-card input[type="checkbox"] { width: 18px; height: 18px; margin: 0 0 2px; accent-color: #dc2626; cursor: pointer; }
+        .wage-double-hint { display: block; font-size: 0.68rem; font-weight: 900; color: #dc2626; white-space: nowrap; animation: double-order-flash 1.5s ease-in-out infinite; }
+        @keyframes double-order-flash { 50% { opacity: 0.25; } }
+        .wage-hours-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-top: 4px; }
+        .wage-hours-card { background: #f8fafc; border: 1.5px solid #cbd5e1; border-radius: 10px; padding: 8px 10px; display: flex; flex-direction: column; justify-content: center; gap: 4px; min-width: 0; }
+        .wage-hours-card label, .wage-hours-card strong { font-size: 0.78rem; font-weight: 900; color: var(--primary); margin: 0; line-height: 1.25; }
+        .wage-hours-card .input-field { margin: 0; height: 38px; text-align: right; font-weight: 900; color: var(--primary); border: 2px solid #cbd5e1; }
+        .wage-hours-card .input-field[readonly] { background: #eff6ff; border-color: #93c5fd; color: #1d4ed8; }
+        .wage-hours-breakdown { font-size: 0.74rem; font-weight: 800; color: var(--text-main); line-height: 1.38; word-break: keep-all; }
+        @media (max-width: 480px) {
+            .wage-action-grid { grid-template-columns: 1fr 1fr; }
+            .wage-action-grid > button:first-child { grid-column: 1 / -1; }
+            .wage-hours-grid { grid-template-columns: 1fr; }
+        }
 
         .role-selector { display: flex; gap: 4px; margin-bottom: 12px; background: rgba(0,0,0,0.05); padding: 4px; border-radius: 10px; flex-wrap: wrap; }
         .role-selector label { flex: 1; text-align: center; padding: 12px 4px; border-radius: 8px; font-weight: 800; cursor: pointer; color: var(--text-sub); font-size: clamp(0.85rem, 3vw, 1rem); min-width: 80px; touch-action: manipulation; word-break: keep-all; }
@@ -1590,7 +1608,7 @@
                                 </label>
                                 <div style="width:100%;">
                                     <input type="date" id="wageStartDate" class="input-field" style="font-size:0.85rem; padding:0 4px; border: 2px solid #cbd5e1; cursor:pointer;" onclick="openDatePicker('wageStartDate', event)" onchange="onWageDateChange('start')">
-                                    <select id="wageStartHour" class="input-field" style="font-size:0.95rem; padding:0 4px; margin-left:4px; text-align:center; border: 2px solid #cbd5e1;" onclick="event.stopPropagation()" onchange="this.dataset.userModified='1'">
+                                    <select id="wageStartHour" class="input-field" style="font-size:0.95rem; padding:0 4px; margin-left:4px; text-align:center; border: 2px solid #cbd5e1;" onclick="event.stopPropagation()" onchange="this.dataset.userModified='1'; refreshWageWorkHours(); invalidateCalculatedWage()">
                                         <option value="0">00시</option><option value="1">01시</option><option value="2">02시</option><option value="3">03시</option><option value="4">04시</option><option value="5">05시</option><option value="6">06시</option><option value="7">07시</option><option value="8" selected>08시</option><option value="9">09시</option><option value="10">10시</option><option value="11">11시</option><option value="12">12시</option><option value="13">13시</option><option value="14">14시</option><option value="15">15시</option><option value="16">16시</option><option value="17">17시</option><option value="18">18시</option><option value="19">19시</option><option value="20">20시</option><option value="21">21시</option><option value="22">22시</option><option value="23">23시</option>
                                     </select>
                                 </div>
@@ -1601,16 +1619,23 @@
                                 </label>
                                 <div style="width:100%;">
                                     <input type="date" id="wageEndDate" class="input-field" style="font-size:0.85rem; padding:0 4px; border: 2px solid #cbd5e1; cursor:pointer;" onclick="openDatePicker('wageEndDate', event)" onchange="onWageDateChange('end')">
-                                    <select id="wageEndHour" class="input-field" style="font-size:0.95rem; padding:0 4px; margin-left:4px; text-align:center; border: 2px solid #cbd5e1;" onclick="event.stopPropagation()" onchange="this.dataset.userModified='1'">
+                                    <select id="wageEndHour" class="input-field" style="font-size:0.95rem; padding:0 4px; margin-left:4px; text-align:center; border: 2px solid #cbd5e1;" onclick="event.stopPropagation()" onchange="this.dataset.userModified='1'; refreshWageWorkHours(); invalidateCalculatedWage()">
                                         <option value="0">00시</option><option value="1">01시</option><option value="2">02시</option><option value="3">03시</option><option value="4">04시</option><option value="5">05시</option><option value="6">06시</option><option value="7">07시</option><option value="8">08시</option><option value="9">09시</option><option value="10">10시</option><option value="11">11시</option><option value="12">12시</option><option value="13">13시</option><option value="14">14시</option><option value="15">15시</option><option value="16">16시</option><option value="17" selected>17시</option><option value="18">18시</option><option value="19">19시</option><option value="20">20시</option><option value="21">21시</option><option value="22">22시</option><option value="23">23시</option>
                                     </select>
                                 </div>
                             </div>
                             <button type="button" class="action-btn" style="background:var(--primary); padding:10px; margin:0; font-size:1rem; border: 2px solid #1e3a8a;" onclick="calcTimeAndFill()">⏱️ 시간 설정 완료</button>
                         </div>
-                        <div class="wage-row" style="flex-direction: row !important; align-items: center !important; flex-wrap: nowrap !important;">
-                            <label style="min-width: 70px; font-weight:900; margin-bottom: 0 !important;">⏳ 총 근무</label>
-                            <input type="number" id="wageTotalHours" class="input-field" placeholder="자동 계산됨" style="flex: 1; min-width: 0; text-align:right; font-weight:900; color:var(--primary); border: 2px solid #cbd5e1;">
+                        <div class="wage-hours-grid">
+                            <div class="wage-hours-card">
+                                <label for="wageTotalHours">⏳ 총 근무시간 (합산)</label>
+                                <input type="number" id="wageTotalHours" class="input-field" placeholder="자동 계산됨" oninput="updateWageHoursBreakdown(); invalidateCalculatedWage()">
+                            </div>
+
+                            <div class="wage-hours-card" aria-live="polite">
+                                <strong>⏱️ 선박별 자동계산</strong>
+                                <div id="wageHoursBreakdown" class="wage-hours-breakdown">선박을 선택하거나 시간을 설정하세요.</div>
+                            </div>
                         </div>
                     </div>
                     <div class="calc-right">
@@ -1657,7 +1682,7 @@
                             <input type="text"
                                    id="wageShipName"
                                    class="input-field"
-                                   placeholder="스케줄 선택 또는 선박명 입력"
+                                   placeholder="스케줄 선택(최대 2척) 또는 선박명 입력"
                                    style="flex:1; min-width:0; margin:0; text-align:left;"
                                    oninput="onWageShipNameChange(this.value)">
                             <button type="button"
@@ -1704,7 +1729,7 @@
                              class="wage-terminal-scheduled-list"
                              aria-live="polite">
                             <span class="wage-terminal-schedule-message">
-                                시작 날짜의 스케줄입니다. 선박을 선택하면 입·출항 일시를 시작·종료 입력에 반영합니다.
+                                시작 날짜의 스케줄입니다. 선박을 최대 2척까지 선택하면 입·출항 일시와 선박별 근무시간을 자동 계산합니다.
                             </span>
                         </div>
                     </section>
@@ -1759,18 +1784,18 @@
                         <input type="hidden" id="wageHotTime" value="">
                     </section>
                 </div>
-                <select id="wageTaxType" class="input-field" style="margin-top:8px; text-align:center; border: 2px solid #cbd5e1; font-weight: 900;">
-                    <option value="0">공제 없음 (0%)</option>
+                <select id="wageTaxType" onchange="invalidateCalculatedWage()" class="input-field" style="margin-top:8px; text-align:center; border: 2px solid #cbd5e1; font-weight: 900;">
                     <option value="0.033">프리랜서 (3.3%)</option>
                     <option value="0.094">4대 보험 (9.4%)</option>
                 </select>
-                <div style="display:flex; gap:10px; margin-top:15px;">
-                    <button class="action-btn bg-calc" style="flex:2; border: 2px solid var(--primary);" onclick="calculateWage()">내역서 생성 및 계산</button>
-                    <label for="wageDoubleOrder" title="같은 날짜의 두 번째 선박 금액을 임금 2에 입력합니다. 근무일지에서 저장해 주세요." style="display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px; cursor:pointer; font-size:0.8rem; font-weight:900; color:var(--primary); white-space:nowrap;">
-                        <input type="checkbox" id="wageDoubleOrder" style="width:20px; height:20px; margin:0; accent-color:var(--primary);" onchange="lastCalculatedWageData = null; document.getElementById('wageResultBox').classList.add('hidden')">
+                <div class="wage-action-grid">
+                    <button class="action-btn bg-calc" style="border: 2px solid var(--primary);" onclick="calculateWage()">내역서 생성 및 계산</button>
+                    <label class="wage-double-card" for="wageDoubleOrder" title="2번째 작업선박 체크 시 더블오더로 임금 2에 반영됩니다.">
+                        <input type="checkbox" id="wageDoubleOrder" onchange="invalidateCalculatedWage()">
                         더블오더
+                        <span class="wage-double-hint">(2번째 작업선박 체크)</span>
                     </label>
-                    <button class="action-btn bg-cancel" style="flex:1; border: 2px solid #475569;" onclick="resetWageForm()">초기화</button>
+                    <button class="action-btn bg-cancel" style="border: 2px solid #475569;" onclick="resetWageForm()">초기화</button>
                 </div>
                 <div id="wageResultBox" class="hidden wage-result-box" style="border: 3px solid var(--primary);">
                     <h4 id="wageResultTitle" style="margin:0; text-align:center; color:var(--primary); font-size:1.15rem; font-weight:900;">📋 임금 산정 내역서</h4>
@@ -4575,6 +4600,8 @@ function onWageDateChange(which) {
             }
         }
         autoFillWeekendHoliday();
+        if (typeof refreshWageWorkHours === 'function') refreshWageWorkHours();
+        if (typeof invalidateCalculatedWage === 'function') invalidateCalculatedWage();
     }
 }
 function filterGuide() {
@@ -5594,6 +5621,136 @@ function selectScheduleTerminal(terminalId) {
     }
 }
 let selectedWageScheduleShipName = "";
+let selectedWageVessels = [];
+
+function invalidateCalculatedWage() {
+    lastCalculatedWageData = null;
+    document.getElementById("wageResultBox")?.classList.add("hidden");
+}
+
+function periodHours(startDate, startHour, endDate, endHour) {
+    if (!startDate || !endDate) return 0;
+    const sh = parseInt(startHour, 10);
+    const eh = parseInt(endHour, 10);
+    if (!Number.isInteger(sh) || !Number.isInteger(eh)) return 0;
+    const startAt = new Date(`${startDate}T${String(sh).padStart(2, "0")}:00:00`);
+    const endAt = new Date(`${endDate}T${String(eh).padStart(2, "0")}:00:00`);
+    const diffMs = endAt.getTime() - startAt.getTime();
+    return diffMs > 0 ? Math.floor(diffMs / (1000 * 60 * 60)) : 0;
+}
+
+function getSelectedVesselPeriod(vessel, fallbackDate = "") {
+    if (!vessel) {
+        return {
+            startDate: fallbackDate,
+            endDate: fallbackDate,
+            startHour: null,
+            endHour: null,
+            hours: 0,
+            arrival: null,
+            departure: null
+        };
+    }
+    const arrival = getVesselScheduleDateTime(vessel, ["ATA", "ETB", "ATW"]);
+    const departure = getVesselScheduleDateTime(vessel, ["ATD", "ATC"]);
+    const startDate = arrival?.date || fallbackDate;
+    const endDate = departure?.date || startDate;
+    const startHour = arrival?.time ? parseInt(arrival.time.slice(0, 2), 10) : null;
+    const endHour = departure?.time ? parseInt(departure.time.slice(0, 2), 10) : null;
+    const validStart = Number.isInteger(startHour) && startHour >= 0 && startHour <= 23 ? startHour : null;
+    const validEnd = Number.isInteger(endHour) && endHour >= 0 && endHour <= 23 ? endHour : null;
+    const hours = (validStart !== null && validEnd !== null)
+        ? periodHours(startDate, validStart, endDate, validEnd)
+        : 0;
+    return {
+        startDate,
+        endDate,
+        startHour: validStart,
+        endHour: validEnd,
+        hours,
+        arrival,
+        departure
+    };
+}
+
+function updateWageHoursBreakdown() {
+    const breakdownEl = document.getElementById("wageHoursBreakdown");
+    if (!breakdownEl) return;
+
+    const firstHours = periodHours(
+        document.getElementById("wageStartDate")?.value,
+        document.getElementById("wageStartHour")?.value,
+        document.getElementById("wageEndDate")?.value,
+        document.getElementById("wageEndHour")?.value
+    );
+    const manualTotal = parseFloat(document.getElementById("wageTotalHours")?.value) || 0;
+
+    if (selectedWageVessels.length > 1) {
+        const firstItem = selectedWageVessels[0];
+        const secondItem = selectedWageVessels[1];
+        const secondPeriod = getSelectedVesselPeriod(secondItem.vessel, secondItem.date);
+        const h1 = firstHours > 0 ? `${firstHours}시간` : "시간 확인 필요";
+        const h2 = secondPeriod.hours > 0 ? `${secondPeriod.hours}시간` : "시간 확인 필요";
+        breakdownEl.innerHTML =
+            `<div>1️⃣ ${escapeShipCommentHtml(firstItem.name)}: <strong>${h1}</strong></div>` +
+            `<div>2️⃣ ${escapeShipCommentHtml(secondItem.name)}: <strong>${h2}</strong></div>`;
+        return;
+    }
+
+    if (selectedWageVessels.length === 1) {
+        const firstItem = selectedWageVessels[0];
+        const displayHours = manualTotal || firstHours;
+        breakdownEl.innerHTML = displayHours > 0
+            ? `1️⃣ ${escapeShipCommentHtml(firstItem.name)}: <strong>${displayHours}시간</strong>`
+            : `1️⃣ ${escapeShipCommentHtml(firstItem.name)}: 시간 확인 필요`;
+        return;
+    }
+
+    const shipInputVal = document.getElementById("wageShipName")?.value.trim() || "";
+    const displayHours = manualTotal || firstHours;
+    if (displayHours > 0) {
+        breakdownEl.textContent = shipInputVal
+            ? `${shipInputVal}: ${displayHours}시간`
+            : `설정 근무시간: ${displayHours}시간`;
+    } else {
+        breakdownEl.textContent = "선박을 선택하거나 시간을 설정하세요.";
+    }
+}
+
+function refreshWageWorkHours() {
+    const total = document.getElementById("wageTotalHours");
+
+    if (selectedWageVessels.length > 1) {
+        const first = periodHours(
+            document.getElementById("wageStartDate")?.value,
+            document.getElementById("wageStartHour")?.value,
+            document.getElementById("wageEndDate")?.value,
+            document.getElementById("wageEndHour")?.value
+        );
+        const second = getSelectedVesselPeriod(
+            selectedWageVessels[1].vessel,
+            selectedWageVessels[1].date
+        ).hours;
+
+        if (total) {
+            total.value = first && second ? first + second : "";
+            total.readOnly = true;
+        }
+    } else if (total) {
+        total.readOnly = false;
+        if (selectedWageVessels.length === 1) {
+            const first = periodHours(
+                document.getElementById("wageStartDate")?.value,
+                document.getElementById("wageStartHour")?.value,
+                document.getElementById("wageEndDate")?.value,
+                document.getElementById("wageEndHour")?.value
+            );
+            total.value = first > 0 ? String(first) : "";
+        }
+    }
+
+    updateWageHoursBreakdown();
+}
 
 function getWageScheduleDate() {
     const dateInput = document.getElementById("wageScheduleDatePicker");
@@ -5739,13 +5896,15 @@ function renderWageScheduledShipsUI(
         );
         const arrivalLabel = formatWageScheduleEvent(arrival);
         const departureLabel = formatWageScheduleEvent(departure);
-        const isSelected = selectedWageScheduleShipName === name;
+        const selectedIndex = selectedWageVessels.findIndex(item => item.name === name);
+        const isSelected = selectedIndex >= 0 || (selectedWageVessels.length === 0 && selectedWageScheduleShipName === name);
         const selectedStyle = isSelected
             ? `background:${meta.color}; color:#ffffff; border-color:${meta.color};`
             : `border-color:${meta.color};`;
         const timeStyle = isSelected
             ? "color:#ffedd5;"
             : `color:${meta.color};`;
+        const orderBadge = selectedIndex >= 0 ? `[${selectedIndex + 1}선박] ` : "";
 
         return `<button type="button"
             class="hjnc-ship-chip wage-schedule-ship-chip ${isSelected ? 'selected' : ''}"
@@ -5758,7 +5917,7 @@ function renderWageScheduledShipsUI(
                     : `background:${meta.color}; color:#ffffff;`}">
                 ${berth}
             </span>
-            <span>🚢 ${safeName}</span>
+            <span>🚢 ${orderBadge}${safeName}</span>
             ${ptnr
                 ? `<span style="font-size:0.66rem; color:${isSelected ? '#fed7aa' : '#64748b'}; font-weight:800;">(${ptnr})</span>`
                 : ""}
@@ -5821,6 +5980,34 @@ async function refreshWageScheduleForSelectedDate() {
     await loadWageScheduledShipsForDate(dateStr, true);
 }
 
+function applyVesselPeriodToWageInputs(vessel, fallbackDate) {
+    const period = getSelectedVesselPeriod(vessel, fallbackDate);
+    const startDateInput = document.getElementById("wageStartDate");
+    const endDateInput = document.getElementById("wageEndDate");
+    const startHourInput = document.getElementById("wageStartHour");
+    const endHourInput = document.getElementById("wageEndHour");
+
+    if (startDateInput && period.startDate) startDateInput.value = period.startDate;
+    if (endDateInput && period.endDate) endDateInput.value = period.endDate;
+    if (startHourInput && period.startHour !== null) {
+        startHourInput.value = String(period.startHour);
+    }
+    if (endHourInput && period.endHour !== null) {
+        endHourInput.value = String(period.endHour);
+    }
+
+    const month = parseInt((period.startDate || "").split("-")[1], 10);
+    if (month >= 1 && month <= 12) highlightSeasonRow(month);
+
+    if (period.hours > 0 && period.startDate && period.startHour !== null) {
+        const startAt = new Date(
+            `${period.startDate}T${String(period.startHour).padStart(2, "0")}:00:00`
+        );
+        autoFillWeekendHoliday(startAt, period.hours);
+    }
+    return period;
+}
+
 function applyWageScheduleShip(
     vessel,
     dateStr,
@@ -5829,94 +6016,79 @@ function applyWageScheduleShip(
     if (!vessel) return;
 
     const name = String(vessel.VSL_NM || "").trim();
-    const arrival = getVesselScheduleDateTime(
-        vessel, ["ATA", "ETB", "ATW"]
-    );
-    const departure = getVesselScheduleDateTime(
-        vessel, ["ATD", "ATC"]
-    );
+    if (!name) return;
 
-    const startDate = arrival?.date || dateStr;
-    const endDate = departure?.date || startDate;
-
-    const startDateInput = document.getElementById("wageStartDate");
-    const endDateInput = document.getElementById("wageEndDate");
-    const startHourInput = document.getElementById("wageStartHour");
-    const endHourInput = document.getElementById("wageEndHour");
-    const totalHoursInput = document.getElementById("wageTotalHours");
-
-    if (startDateInput) startDateInput.value = startDate;
-    if (endDateInput) endDateInput.value = endDate;
-
-    const startHour = arrival?.time
-        ? parseInt(arrival.time.slice(0, 2), 10)
-        : NaN;
-    const endHour = departure?.time
-        ? parseInt(departure.time.slice(0, 2), 10)
-        : NaN;
-
-    if (startHourInput && Number.isInteger(startHour) &&
-        startHour >= 0 && startHour <= 23) {
-        startHourInput.value = String(startHour);
-    }
-    if (endHourInput && Number.isInteger(endHour) &&
-        endHour >= 0 && endHour <= 23) {
-        endHourInput.value = String(endHour);
+    const index = selectedWageVessels.findIndex(item => item.name === name);
+    if (index >= 0) {
+        selectedWageVessels.splice(index, 1); // 다시 누르면 선택 해제
+    } else if (selectedWageVessels.length >= 2) {
+        return showToast("⚠️ 선박은 최대 2척까지 선택할 수 있습니다.");
+    } else {
+        selectedWageVessels.push({ name, vessel, date: dateStr, terminalId });
     }
 
-    const month = parseInt(startDate.split("-")[1], 10);
-    if (month >= 1 && month <= 12) highlightSeasonRow(month);
-
-    selectedWageScheduleShipName = name;
+    const names = selectedWageVessels.map(item => item.name);
+    selectedWageScheduleShipName = names.join(" / ");
 
     const wageShipNameInput = document.getElementById("wageShipName");
-    if (wageShipNameInput) wageShipNameInput.value = name;
+    if (wageShipNameInput) wageShipNameInput.value = names.join(" / ");
 
-    lastCalculatedWageData = null;
-    document.getElementById("wageResultBox")?.classList.add("hidden");
-    if (totalHoursInput) totalHoursInput.value = "";
+    const doubleOrderInput = document.getElementById("wageDoubleOrder");
+    if (doubleOrderInput) doubleOrderInput.checked = names.length === 2;
 
-    let calculatedHours = false;
-    if (arrival?.time && departure?.time &&
-        Number.isInteger(startHour) && Number.isInteger(endHour)) {
-        const startAt = new Date(
-            `${startDate}T${String(startHour).padStart(2, "0")}:00:00`
-        );
-        const endAt = new Date(
-            `${endDate}T${String(endHour).padStart(2, "0")}:00:00`
-        );
+    invalidateCalculatedWage();
 
-        if (endAt.getTime() > startAt.getTime()) {
-            calcTimeAndFill();
-            calculatedHours = true;
+    if (selectedWageVessels.length > 0) {
+        const firstEntry = selectedWageVessels[0];
+        applyVesselPeriodToWageInputs(firstEntry.vessel, firstEntry.date);
+    } else {
+        const totalHoursInput = document.getElementById("wageTotalHours");
+        if (totalHoursInput) {
+            totalHoursInput.value = "";
+            totalHoursInput.readOnly = false;
         }
     }
 
-    const startLabel = formatWageScheduleEvent(
-        arrival || { date: startDate, time: "" }
-    );
-    const endLabel = formatWageScheduleEvent(departure);
-    const missingTimes = [];
-    if (!arrival?.time) missingTimes.push("입항 시각");
-    if (!departure?.time) missingTimes.push("출항 시각");
+    refreshWageWorkHours();
 
-    const timingNote = missingTimes.length
-        ? ` · ${missingTimes.join("·")} 직접 확인`
-        : (!calculatedHours ? " · 시각 순서·분 단위 확인 필요" : "");
-    const calcNote = calculatedHours
-        ? " · 총 근무 시간 자동 계산"
-        : "";
+    if (selectedWageVessels.length === 0) {
+        showToast(`🚢 ${name} 선박 선택이 해제되었습니다.`);
+    } else if (selectedWageVessels.length === 1) {
+        const firstEntry = selectedWageVessels[0];
+        const firstPeriod = getSelectedVesselPeriod(firstEntry.vessel, firstEntry.date);
+        const startLabel = formatWageScheduleEvent(
+            firstPeriod.arrival || { date: firstPeriod.startDate, time: "" }
+        );
+        const endLabel = formatWageScheduleEvent(firstPeriod.departure);
+        const missingTimes = [];
+        if (!firstPeriod.arrival?.time) missingTimes.push("입항 시각");
+        if (!firstPeriod.departure?.time) missingTimes.push("출항 시각");
+        const timingNote = missingTimes.length
+            ? ` · ${missingTimes.join("·")} 직접 확인`
+            : (!firstPeriod.hours ? " · 시각 순서·분 단위 확인 필요" : "");
+        const calcNote = firstPeriod.hours > 0 ? ` · ${firstPeriod.hours}시간 자동 계산` : "";
+        showToast(
+            `🚢 ${firstEntry.name} 선택 · 시작 ${startLabel} · 종료 ${endLabel}${calcNote}${timingNote}`
+        );
+    } else {
+        const firstEntry = selectedWageVessels[0];
+        const secondEntry = selectedWageVessels[1];
+        const secondPeriod = getSelectedVesselPeriod(secondEntry.vessel, secondEntry.date);
+        const totalVal = document.getElementById("wageTotalHours")?.value;
+        const missingNote = !secondPeriod.hours ? " · 2번째 선박 입·출항 시각 확인 필요" : "";
+        showToast(
+            `🚢 더블오더 2척 선택 (${firstEntry.name} / ${secondEntry.name})` +
+            `${totalVal ? ` · 합산 ${totalVal}시간` : ""}${missingNote}`
+        );
+    }
 
-    showToast(
-        `🚢 ${name} 선택 · 시작 ${startLabel} · 종료 ${endLabel}${calcNote}${timingNote}`
-    );
-
-    const cacheKey = `${terminalId}_${startDate.slice(0, 7)}`;
+    const activeDate = getWageScheduleDate() || dateStr;
+    const cacheKey = `${terminalId}_${activeDate.slice(0, 7)}`;
     const cachedVessels = hjncScheduleMonthCache[cacheKey];
     if (cachedVessels) {
-        renderWageScheduledShipsUI(startDate, cachedVessels, terminalId);
+        renderWageScheduledShipsUI(activeDate, cachedVessels, terminalId);
     } else {
-        loadWageScheduledShipsForDate(startDate, false);
+        loadWageScheduledShipsForDate(activeDate, false);
     }
 }
 function initShipFormSchedulePicker() {
@@ -7702,16 +7874,28 @@ function calcTimeAndFill() {
         const endD = new Date(`${ed}T${String(eh).padStart(2,'0')}:00:00`);
         const diffMs = endD.getTime() - startD.getTime();
         if (diffMs > 0) {
-            const hours = Math.floor(diffMs / (1000 * 60 * 60));
-            document.getElementById('wageTotalHours').value = hours;
-            const autoWeekendHours = autoFillWeekendHoliday(startD, hours);
-            if (autoWeekendHours > 0) {
-                showToast(`⏱️ 총 근무 ${hours}시간 (주말·공휴일 ${autoWeekendHours}시간 자동 반영)`);
+            const firstHours = Math.floor(diffMs / (1000 * 60 * 60));
+            const autoWeekendHours = autoFillWeekendHoliday(startD, firstHours);
+            if (selectedWageVessels.length > 1) {
+                refreshWageWorkHours();
+                const totalHours = document.getElementById('wageTotalHours').value;
+                showToast(`⏱️ 1선박 ${firstHours}시간 · 총 근무 ${totalHours || firstHours}시간 설정 완료`);
             } else {
-                showToast(`⏱️ 총 근무 시간 ${hours}시간이 설정되었습니다.`);
+                const totalInput = document.getElementById('wageTotalHours');
+                if (totalInput) {
+                    totalInput.readOnly = false;
+                    totalInput.value = firstHours;
+                }
+                updateWageHoursBreakdown();
+                if (autoWeekendHours > 0) {
+                    showToast(`⏱️ 총 근무 ${firstHours}시간 (주말·공휴일 ${autoWeekendHours}시간 자동 반영)`);
+                } else {
+                    showToast(`⏱️ 총 근무 시간 ${firstHours}시간이 설정되었습니다.`);
+                }
             }
         } else {
             document.getElementById('wageTotalHours').value = '';
+            updateWageHoursBreakdown();
             if (sd !== ed || sh !== eh) {
                 alert("종료 시간이 시작 시간보다 빠를 수 없습니다.");
             } else {
@@ -7795,87 +7979,235 @@ function updateSelectedWageAllowanceHours(hours) {
             delete storedInput.dataset.userModified;
         }
     }
+    invalidateCalculatedWage();
+}
+
+function calculateWageSegment(period, options) {
+    const {
+        startDate,
+        endDate,
+        startHour = 0,
+        endHour = 0,
+        hours = 0
+    } = period || {};
+    const {
+        isSkilled = false,
+        roleLabel = "본선",
+        baseRate = 10320,
+        taxRate = 0,
+        holidayH = 0,
+        rainH = 0,
+        hotH = 0,
+        weekendH = null
+    } = options || {};
+
+    const SKILLED_DAY_ADD = 2557;
+    const SKILLED_NIGHT_ADD = 3836;
+    const startD = new Date(`${startDate}T${String(startHour).padStart(2, "0")}:00:00`);
+
+    let dayHours = 0;
+    let nightHours = 0;
+    let autoWeekendHolidayHours = 0;
+
+    for (let i = 0; i < hours; i++) {
+        const slotDate = new Date(startD.getTime() + i * 60 * 60 * 1000);
+        const slotMonth = slotDate.getMonth() + 1;
+        const { dayStart, dayEnd } = getSeasonScheduleByMonth(slotMonth);
+        const currentHour = slotDate.getHours();
+        if (currentHour >= dayStart && currentHour < dayEnd) dayHours++;
+        else nightHours++;
+
+        if (isWeekendOrPublicHolidayDate(slotDate)) {
+            autoWeekendHolidayHours++;
+        }
+    }
+
+    const effectiveWeekendH = (weekendH !== null && weekendH !== undefined && !isNaN(Number(weekendH)))
+        ? Number(weekendH)
+        : autoWeekendHolidayHours;
+
+    const dayAmt = dayHours * baseRate;
+    const nightAmt = nightHours * (baseRate * 1.5);
+    const holidayAmt = holidayH * (baseRate * 0.5);
+    const weekendAmt = effectiveWeekendH * (baseRate * 0.5);
+    const rainAmt = rainH * (baseRate * 0.5);
+    const hotAmt = hotH * (baseRate * 0.3);
+    const otherAmt = rainAmt + hotAmt;
+    const skilledAmt = isSkilled
+        ? (dayHours * SKILLED_DAY_ADD) + (nightHours * SKILLED_NIGHT_ADD)
+        : 0;
+    const subTotal = dayAmt + nightAmt + skilledAmt + holidayAmt + weekendAmt + otherAmt;
+    const taxAmt = Math.floor(subTotal * taxRate);
+    const totalPay = Math.round(subTotal - taxAmt);
+
+    let extraHtml = "";
+    if (holidayAmt > 0) extraHtml += renderRow("🚜 지게차 수당 (" + holidayH + "H)", holidayAmt, "#ea580c");
+    if (weekendAmt > 0) {
+        const weekendLabel = autoWeekendHolidayHours > 0
+            ? "🗓️ 주말·공휴일 수당 (" + effectiveWeekendH + "H)"
+            : "🎈 특별·주말 수당 (" + effectiveWeekendH + "H)";
+        extraHtml += renderRow(weekendLabel, weekendAmt, "#3b82f6");
+    }
+    if (rainAmt > 0) extraHtml += renderRow("☔ 우천 수당 (" + rainH + "H)", rainAmt, "#0284c7");
+    if (hotAmt > 0) extraHtml += renderRow("☀️ 혹서기(30%) 수당 (" + hotH + "H)", hotAmt, "#d97706");
+    if (holidayAmt === 0 && weekendAmt === 0 && otherAmt === 0) {
+        extraHtml += renderRow("➕ 추가 가산 수당", 0);
+    }
+
+    const rowsHtml =
+        ` ${renderRow("☀️ 주간 기본 (" + dayHours + "H)", dayAmt)}` +
+        ` ${renderRow("🌙 야간 할증 (" + nightHours + "H)", nightAmt)}` +
+        ` ${renderRow("🔧 기능공 수당 추가", skilledAmt, "var(--primary)")}` +
+        ` ${extraHtml}` +
+        ` ${taxAmt > 0 ? renderRow("💸 공제액 (세금/보험)", -taxAmt, "var(--danger)") : ""} `;
+
+    const summary =
+        `[${roleLabel}] ${startDate} ${String(startHour).padStart(2, "0")}시~` +
+        `${endDate} ${String(endHour).padStart(2, "0")}시 · ` +
+        `총 ${hours}H (주간 ${dayHours}H / 야간 ${nightHours}H${effectiveWeekendH > 0 ? ` / 주말·공휴일 ${effectiveWeekendH}H` : ""})`;
+
+    return {
+        startDate,
+        endDate,
+        startHour,
+        endHour,
+        hours,
+        dayHours,
+        nightHours,
+        autoWeekendHolidayHours,
+        weekendH: effectiveWeekendH,
+        dayAmt,
+        nightAmt,
+        skilledAmt,
+        holidayAmt,
+        weekendAmt,
+        rainAmt,
+        hotAmt,
+        taxAmt,
+        totalPay,
+        rowsHtml,
+        summary
+    };
 }
 
 function calculateWage() {
     try {
-        const totalHours = parseFloat(document.getElementById('wageTotalHours').value) || 0;
         const sd = document.getElementById('wageStartDate').value;
         const sh = parseInt(document.getElementById('wageStartHour').value, 10) || 0;
-        if (!sd || !document.getElementById('wageEndDate').value) {
+        const wageEndDate = document.getElementById('wageEndDate').value;
+        const wageEndHour = parseInt(document.getElementById('wageEndHour').value, 10) || 0;
+        if (!sd || !wageEndDate) {
             alert("근무 날짜를 선택해 주세요.");
             return;
         }
-        if (totalHours <= 0) {
+
+        const multi = selectedWageVessels.length > 1;
+        let firstHours = parseFloat(document.getElementById('wageTotalHours').value) || 0;
+        let secondPeriod = null;
+
+        if (multi) {
+            firstHours = periodHours(sd, sh, wageEndDate, wageEndHour);
+            secondPeriod = getSelectedVesselPeriod(
+                selectedWageVessels[1].vessel,
+                selectedWageVessels[1].date
+            );
+            if (firstHours <= 0 || !secondPeriod.hours) {
+                alert("선택한 두 선박의 입·출항 근무 시간이 모두 확인되어야 합산 계산할 수 있습니다.");
+                return;
+            }
+            const totalEl = document.getElementById('wageTotalHours');
+            if (totalEl) {
+                totalEl.value = firstHours + secondPeriod.hours;
+                totalEl.readOnly = true;
+            }
+        } else if (firstHours <= 0) {
             alert("총 근무 시간이 0시간입니다. [⏱️ 시간 설정 완료] 버튼을 누르거나 총 근무 시간을 입력해 주세요.");
             return;
         }
-        const startTime = sh;
-        const startD = new Date(`${sd}T${String(sh).padStart(2, '0')}:00:00`);
+
         const isSkilled = document.getElementById('role-skilled').checked;
         const roleLabel = isSkilled ? '기능공' : (document.getElementById('role-onshore').checked ? '육상' : '본선');
-
-        // 시작~종료 시간 중 주말(토·일) 및 법정 공휴일 시간 자동 계산 및 월별 주·야간 시간대 판별
-        let dayHours = 0, nightHours = 0, autoWeekendHolidayHours = 0;
-        for (let i = 0; i < totalHours; i++) {
-            const slotDate = new Date(startD.getTime() + i * 60 * 60 * 1000);
-            const slotMonth = slotDate.getMonth() + 1;
-            const { dayStart, dayEnd } = getSeasonScheduleByMonth(slotMonth);
-            const currentHour = slotDate.getHours();
-            if (currentHour >= dayStart && currentHour < dayEnd) dayHours++;
-            else nightHours++;
-
-            if (isWeekendOrPublicHolidayDate(slotDate)) {
-                autoWeekendHolidayHours++;
-            }
-        }
-
         const holidayH = parseFloat(document.getElementById('wageHoliday').value) || 0;
         const weekendInputEl = document.getElementById('wageWeekend');
+        const manualWeekendH = parseFloat(weekendInputEl?.value);
+        const rainH = parseFloat(document.getElementById('wageRain').value) || 0;
+        const hotH = parseFloat(document.getElementById('wageHotTime').value) || 0;
+        const taxRate = parseFloat(document.getElementById('wageTaxType').value) || 0;
+        const BASE_RATE = parseFloat(document.getElementById('wageHourly').value) || 10320;
+
+        const month = parseInt(sd.split('-')[1], 10) || (new Date(sd).getMonth() + 1);
+        highlightSeasonRow(month);
+
+        const common = {
+            isSkilled,
+            roleLabel,
+            baseRate: BASE_RATE,
+            taxRate,
+            holidayH,
+            rainH,
+            hotH,
+            weekendH: (weekendInputEl?.dataset.userModified && !isNaN(manualWeekendH))
+                ? manualWeekendH
+                : null
+        };
+
+        const firstPeriod = {
+            startDate: sd,
+            endDate: wageEndDate,
+            startHour: sh,
+            endHour: wageEndHour,
+            hours: firstHours
+        };
+        const first = calculateWageSegment(firstPeriod, common);
+
         if (weekendInputEl && !weekendInputEl.dataset.userModified) {
-            weekendInputEl.value = autoWeekendHolidayHours > 0 ? String(autoWeekendHolidayHours) : '';
+            weekendInputEl.value = first.autoWeekendHolidayHours > 0 ? String(first.autoWeekendHolidayHours) : '';
             const typeSelect = document.getElementById('wageAllowanceType');
             const hoursInput = document.getElementById('wageAllowanceHours');
             if (typeSelect && hoursInput && typeSelect.value === 'wageWeekend') {
                 hoursInput.value = weekendInputEl.value;
             }
         }
-        const manualWeekendH = parseFloat(weekendInputEl?.value);
-        const weekendH = (weekendInputEl?.dataset.userModified && !isNaN(manualWeekendH))
-            ? manualWeekendH
-            : (autoWeekendHolidayHours > 0 ? autoWeekendHolidayHours : (manualWeekendH || 0));
 
-        const rainH = parseFloat(document.getElementById('wageRain').value) || 0;
-        const hotH = parseFloat(document.getElementById('wageHotTime').value) || 0;
-        const taxRate = parseFloat(document.getElementById('wageTaxType').value) || 0;
-        const BASE_RATE = parseFloat(document.getElementById('wageHourly').value) || 10320;
-        const SKILLED_DAY_ADD = 2557;
-        const SKILLED_NIGHT_ADD = 3836;
-        const month = parseInt(sd.split('-')[1], 10) || (startD.getMonth() + 1);
-        highlightSeasonRow(month);
-
-        const dayAmt = dayHours * BASE_RATE;
-        const nightAmt = nightHours * (BASE_RATE * 1.5);
-        const holidayAmt = holidayH * (BASE_RATE * 0.5);
-        const weekendAmt = weekendH * (BASE_RATE * 0.5);
-        const rainAmt = rainH * (BASE_RATE * 0.5);
-        const hotAmt = hotH * (BASE_RATE * 0.3);
-        const otherAmt = rainAmt + hotAmt;
-        let skilledAmt = isSkilled ? (dayHours * SKILLED_DAY_ADD) + (nightHours * SKILLED_NIGHT_ADD) : 0;
-        const subTotal = dayAmt + nightAmt + skilledAmt + holidayAmt + weekendAmt + otherAmt;
-        const taxAmt = Math.floor(subTotal * taxRate);
-        const finalTotal = Math.round(subTotal - taxAmt);
-        const wageShipName =
+        const rawShipInput =
             document.getElementById("wageShipName")?.value.trim() ||
             selectedWageScheduleShipName ||
             "";
-        const wageEndDate = document.getElementById("wageEndDate").value;
-        const wageEndHour =
-            parseInt(document.getElementById("wageEndHour").value, 10) || 0;
-        const isDoubleOrder = Boolean(document.getElementById("wageDoubleOrder")?.checked);
+        const firstName = multi
+            ? selectedWageVessels[0].name
+            : (selectedWageVessels[0]?.name || rawShipInput);
+
+        const segments = [{ ...first, name: firstName, hours: firstHours }];
+
+        if (multi) {
+            const second = calculateWageSegment(secondPeriod, {
+                ...common,
+                holidayH: 0,
+                rainH: 0,
+                hotH: 0,
+                weekendH: null
+            });
+
+            segments.push({
+                ...second,
+                name: selectedWageVessels[1].name,
+                hours: secondPeriod.hours
+            });
+        }
+
+        const isDoubleOrder = multi || Boolean(
+            document.getElementById('wageDoubleOrder')?.checked
+        );
+        const finalTotal = segments.reduce((sum, item) => sum + item.totalPay, 0);
+        const totalHours = segments.reduce((sum, item) => sum + item.hours, 0);
+        const wageShipName = multi
+            ? segments.map(item => item.name).join(' / ')
+            : firstName;
 
         lastCalculatedWageData = {
             isDoubleOrder,
+            isMultiVessel: multi,
+            segments,
             date: sd,
             endDate: wageEndDate,
             startHour: sh,
@@ -7884,31 +8216,33 @@ function calculateWage() {
             totalPay: finalTotal,
             shipName: wageShipName,
             terminalId: selectedScheduleTerminal,
-            summary:
-                `[${roleLabel}] ${sd} ${String(sh).padStart(2, "0")}시~` +
-                `${wageEndDate} ${String(wageEndHour).padStart(2, "0")}시 · ` +
-                `총 ${totalHours}H (주간 ${dayHours}H / 야간 ${nightHours}H${weekendH > 0 ? ` / 주말·공휴일 ${weekendH}H` : ''})`
+            summary: multi
+                ? segments.map((part, idx) => `[더블오더 · 임금 ${idx + 1} · ${part.name}] ${part.summary}`).join('\n')
+                : first.summary
         };
-        let extraHtml = "";
-        if (holidayAmt > 0) extraHtml += renderRow("🚜 지게차 수당 (" + holidayH + "H)", holidayAmt, "#ea580c");
-        if (weekendAmt > 0) {
-            const weekendLabel = autoWeekendHolidayHours > 0
-                ? "🗓️ 주말·공휴일 수당 (" + weekendH + "H)"
-                : "🎈 특별·주말 수당 (" + weekendH + "H)";
-            extraHtml += renderRow(weekendLabel, weekendAmt, "#3b82f6");
-        }
-        if (rainAmt > 0) extraHtml += renderRow("☔ 우천 수당 (" + rainH + "H)", rainAmt, "#0284c7");
-        if (hotAmt > 0) extraHtml += renderRow("☀️ 혹서기(30%) 수당 (" + hotH + "H)", hotAmt, "#d97706");
-        if (holidayAmt === 0 && weekendAmt === 0 && otherAmt === 0) extraHtml += renderRow("➕ 추가 가산 수당", 0);
+
         const specBody = document.getElementById('wageSpecBody');
-        specBody.innerHTML = ` ${renderRow("☀️ 주간 기본 ("+dayHours+"H)", dayAmt)} ${renderRow("🌙 야간 할증 ("+nightHours+"H)", nightAmt)} ${renderRow("🔧 기능공 수당 추가", skilledAmt, "var(--primary)")} ${extraHtml} ${taxAmt > 0 ? renderRow("💸 공제액 (세금/보험)", -taxAmt, "var(--danger)") : ""} `;
-        document.getElementById('wageResultTitle').innerText = isDoubleOrder
-            ? '📋 더블오더 임금 산정 내역서 (임금 2)'
-            : '📋 임금 산정 내역서';
+        if (multi) {
+            specBody.innerHTML = segments.map((seg, idx) =>
+                `<tr><td colspan="2" style="padding:10px 0 4px; font-weight:900; color:var(--primary); border-top:${idx > 0 ? '2px dashed var(--border)' : 'none'};">🚢 선박 ${idx + 1} (임금 ${idx + 1}): ${escapeShipCommentHtml(seg.name)} · ${seg.hours}H</td></tr>` +
+                seg.rowsHtml +
+                `<tr><td style="padding:6px 0 10px; font-weight:900; color:var(--primary);">💰 임금 ${idx + 1} 소계</td><td style="text-align:right; font-weight:900; color:var(--primary);">${seg.totalPay.toLocaleString()}원</td></tr>`
+            ).join("");
+        } else {
+            specBody.innerHTML = first.rowsHtml;
+        }
+
+        document.getElementById('wageResultTitle').innerText = multi
+            ? '📋 더블오더 선박별 임금 산정 내역서 (임금 1 · 임금 2)'
+            : (isDoubleOrder
+                ? '📋 더블오더 임금 산정 내역서 (임금 2)'
+                : '📋 임금 산정 내역서');
         document.getElementById('wageTotal').innerText = finalTotal.toLocaleString() + "원";
         document.getElementById('wageResultBox').classList.remove('hidden');
+        updateWageHoursBreakdown();
         trackAppEvent('actions', 'wage_calc');
-        if (isDoubleOrder) {
+
+        if (isDoubleOrder && !multi) {
             // 같은 날짜의 첫 번째 작업은 보존하고, 두 번째 작업만 임금 2로 전송한다.
             void sendCalculatedWageToLog();
         } else {
@@ -7928,7 +8262,11 @@ function calculateWage() {
 }
 function onWageShipNameChange(value) {
     const trimmed = String(value || "").trim();
+    const parts = trimmed.split(" / ").map(s => s.trim()).filter(Boolean);
+    selectedWageVessels = selectedWageVessels.filter(item => parts.includes(item.name));
     selectedWageScheduleShipName = trimmed;
+    invalidateCalculatedWage();
+    refreshWageWorkHours();
     const dateStr = typeof getWageScheduleDate === "function"
         ? getWageScheduleDate()
         : document.getElementById("wageStartDate")?.value;
@@ -7945,11 +8283,11 @@ async function sendCalculatedWageToLog() {
     wageToLogTransferPending = true;
     // 체크박스나 선박 입력을 나중에 바꿔도 이미 계산한 내역의 대상이 바뀌지 않도록 고정한다.
     const calculatedData = lastCalculatedWageData;
-    const { date, totalPay, summary, shipName, isDoubleOrder } = calculatedData;
+    const { date, totalPay, summary, shipName, isDoubleOrder, isMultiVessel } = calculatedData;
     try {
         const form = document.getElementById("dailyLogForm");
         const sameDateDraft = form?.getAttribute("data-date") === date && !form.classList.contains("hidden");
-        if (isDoubleOrder && !sameDateDraft && currentWorkerId) {
+        if (isDoubleOrder && !isMultiVessel && !sameDateDraft && currentWorkerId) {
             // 달력을 다른 달로 이동한 경우에도 저장된 첫 선박/임금을 읽어 덮어쓰지 않는다.
             const doc = await db.collection('work_logs').doc(`${currentWorkerId}_${date}`).get();
             if (lastCalculatedWageData !== calculatedData) return;
@@ -7961,9 +8299,38 @@ async function sendCalculatedWageToLog() {
         if (logCard && !logCard.classList.contains("expanded")) toggleDashItem("log-card");
         if (!sameDateDraft) jumpToLogDate(date);
 
-        const wageInput = document.getElementById(isDoubleOrder ? "logWage2" : "logWage1");
         const memoInput = document.getElementById("logMemo");
         const logShipInput = document.getElementById("logShipName");
+
+        if (calculatedData.isMultiVessel && Array.isArray(calculatedData.segments) && calculatedData.segments.length >= 2) {
+            const wage1El = document.getElementById("logWage1");
+            const wage2El = document.getElementById("logWage2");
+            if (wage1El) wage1El.value = calculatedData.segments[0].totalPay;
+            if (wage2El) wage2El.value = calculatedData.segments[1].totalPay;
+
+            if (logShipInput) {
+                logShipInput.value = calculatedData.segments.map(item => item.name).join(" / ");
+            }
+
+            const lines = calculatedData.segments.map((part, index) =>
+                `[더블오더 · 임금 ${index + 1} · ${part.name}] ${part.summary}`
+            );
+            if (memoInput) {
+                lines.forEach(line => {
+                    if (!memoInput.value.includes(line)) {
+                        memoInput.value = memoInput.value
+                            ? `${memoInput.value}\n${line}`
+                            : line;
+                    }
+                });
+            }
+
+            trackAppEvent("actions", "wage_to_log");
+            showToast("📅 더블오더 선박 2척의 금액을 임금 1·임금 2에 각각 입력했습니다. 저장을 눌러 기록하세요.");
+            return;
+        }
+
+        const wageInput = document.getElementById(isDoubleOrder ? "logWage2" : "logWage1");
         if (wageInput) wageInput.value = totalPay;
         if (logShipInput && shipName) {
             if (isDoubleOrder) {
@@ -7996,35 +8363,43 @@ async function sendCalculatedWageToLog() {
     } finally {
         wageToLogTransferPending = false;
         // 저장된 내역을 읽는 동안 다시 계산했다면 가장 최근 더블오더를 전송한다.
-        if (lastCalculatedWageData && lastCalculatedWageData !== calculatedData && lastCalculatedWageData.isDoubleOrder) {
+        if (lastCalculatedWageData && lastCalculatedWageData !== calculatedData && lastCalculatedWageData.isDoubleOrder && !lastCalculatedWageData.isMultiVessel) {
             void sendCalculatedWageToLog();
         }
     }
 }
-function sendWorkLogShipToWage() {
-    const name =
+async function sendWorkLogShipToWage() {
+    const rawName =
         document.getElementById("logShipName")?.value.trim() || "";
-    if (!name) {
+    if (!rawName) {
         return showToast("근무일지에 선박명을 먼저 입력해 주세요.");
     }
+
+    const shipNames = rawName
+        .split(/\s*\/\s*|\s*,\s*/)
+        .map(s => s.trim())
+        .filter(Boolean)
+        .slice(0, 2);
 
     const card = document.getElementById("wage-card");
     if (card && !card.classList.contains("expanded")) {
         toggleDashItem("wage-card");
     }
 
-    lastCalculatedWageData = null;
-    document.getElementById("wageResultBox")?.classList.add("hidden");
+    invalidateCalculatedWage();
+    selectedWageVessels = [];
+    selectedWageScheduleShipName = "";
 
     const totalHoursInput = document.getElementById("wageTotalHours");
-    if (totalHoursInput) totalHoursInput.value = "";
-
-    const input = document.getElementById("wageShipName");
-    if (input) input.value = name;
-    onWageShipNameChange(name);
+    if (totalHoursInput) {
+        totalHoursInput.value = "";
+        totalHoursInput.readOnly = false;
+    }
 
     const logDate =
-        document.getElementById("dailyLogForm")?.getAttribute("data-date") || "";
+        document.getElementById("dailyLogForm")?.getAttribute("data-date") ||
+        document.getElementById("wageStartDate")?.value ||
+        getAppLocalDateString();
 
     if (logDate) {
         const startDate = document.getElementById("wageStartDate");
@@ -8037,16 +8412,75 @@ function sendWorkLogShipToWage() {
         const logMonth = parseInt(logDate.split("-")[1], 10);
         highlightSeasonRow(logMonth);
         applySeasonDefaultHours(logMonth, false);
-        autoFillWeekendHoliday();
-        loadWageScheduledShipsForDate(logDate, false);
+    }
+
+    let scheduleVessels = [];
+    if (logDate) {
+        const cacheKey = `${selectedScheduleTerminal}_${logDate.slice(0, 7)}`;
+        scheduleVessels = hjncScheduleMonthCache[cacheKey] || [];
+        if (scheduleVessels.length === 0 && typeof fetchHjncScheduleForMonth === "function") {
+            try {
+                scheduleVessels = (await fetchHjncScheduleForMonth(
+                    logDate.slice(0, 7),
+                    false,
+                    selectedScheduleTerminal
+                )) || [];
+            } catch (e) {
+                scheduleVessels = [];
+            }
+        }
+    }
+
+    const matchedVessels = [];
+    const missingNames = [];
+
+    shipNames.forEach(targetName => {
+        const cleaned = targetName.replace(/^\[[^\]]+\]\s*/, "").trim().toUpperCase();
+        const found = scheduleVessels.find(v => {
+            const vName = String(v?.VSL_NM || "").trim().toUpperCase();
+            return vName && (vName === cleaned || vName === targetName.toUpperCase());
+        });
+        if (found) {
+            const period = getSelectedVesselPeriod(found, logDate);
+            if (period.hours > 0) {
+                matchedVessels.push(found);
+            } else {
+                matchedVessels.push(found);
+                missingNames.push(targetName);
+            }
+        } else {
+            missingNames.push(targetName);
+        }
+    });
+
+    if (matchedVessels.length > 0) {
+        matchedVessels.forEach(vessel => {
+            applyWageScheduleShip(vessel, logDate, selectedScheduleTerminal);
+        });
+    } else {
+        const input = document.getElementById("wageShipName");
+        if (input) input.value = shipNames.join(" / ");
+        selectedWageScheduleShipName = shipNames.join(" / ");
+        const doubleOrderEl = document.getElementById("wageDoubleOrder");
+        if (doubleOrderEl) doubleOrderEl.checked = shipNames.length === 2;
+        refreshWageWorkHours();
+        if (logDate && typeof loadWageScheduledShipsForDate === "function") {
+            loadWageScheduledShipsForDate(logDate, false);
+        }
     }
 
     document.getElementById("wage-card")
         ?.scrollIntoView({ behavior: "smooth", block: "start" });
 
-    showToast(
-        `🚢 ${name} 선박과 근무일자를 임금계산기로 보냈습니다. 근무 시간은 확인해 주세요.`
-    );
+    if (missingNames.length > 0) {
+        showToast(
+            `🚢 ${shipNames.join(" / ")} 선박을 임금계산기로 보냈습니다. 스케줄 시각을 확인할 수 없어 근무 시간을 직접 확인해 주세요.`
+        );
+    } else {
+        showToast(
+            `🚢 ${shipNames.join(" / ")} 선박의 스케줄 입·출항 시각을 임금계산기에 반영했습니다.`
+        );
+    }
 }
 function resetWageForm() {
     try {
@@ -8060,26 +8494,29 @@ function resetWageForm() {
                 delete el.dataset.userModified;
             }
         });
+        const totalHoursEl = document.getElementById('wageTotalHours');
+        if (totalHoursEl) totalHoursEl.readOnly = false;
         const allowanceType = document.getElementById('wageAllowanceType');
         if (allowanceType) allowanceType.value = 'wageHoliday';
         const sDate = document.getElementById('wageStartDate');
         const eDate = document.getElementById('wageEndDate');
         const taxType = document.getElementById('wageTaxType');
         selectedWageScheduleShipName = "";
+        selectedWageVessels = [];
         if (sDate) sDate.value = todayStr;
         if (eDate) eDate.value = todayStr;
         if (typeof setWageScheduleDate === 'function') setWageScheduleDate(todayStr);
         const curMonth = parseInt(todayStr.split('-')[1], 10) || (now.getMonth() + 1);
         highlightSeasonRow(curMonth);
         applySeasonDefaultHours(curMonth, true);
-        if (taxType) taxType.value = '0';
+        if (taxType) taxType.value = '0.033';
         const doubleOrder = document.getElementById('wageDoubleOrder');
         if (doubleOrder) doubleOrder.checked = false;
-        lastCalculatedWageData = null;
+        invalidateCalculatedWage();
+        updateWageHoursBreakdown();
         if (typeof loadWageScheduledShipsForDate === 'function') {
             loadWageScheduledShipsForDate(todayStr, false);
         }
-        document.getElementById('wageResultBox').classList.add('hidden');
         showToast("🔄 임금계산기 입력값이 초기화되었습니다.");
     } catch (e) {
         console.error(e);

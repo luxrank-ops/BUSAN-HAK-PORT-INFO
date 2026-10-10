@@ -7,7 +7,14 @@ function generateReceiptCanvas(mode) {
     let highlightTotal = "";
 
     if (mode === "wage") {
-        title = "🧾 부산항 임금 산정 명세서";
+        title = lastCalculatedWageData?.isDoubleOrder
+            ? (lastCalculatedWageData?.isMultiVessel
+                ? "🧾 부산항 더블오더 선박별 명세서"
+                : "🧾 부산항 더블오더 임금 2 명세서")
+            : "🧾 부산항 임금 산정 명세서";
+        if (lastCalculatedWageData?.isDoubleOrder) {
+            lines.push({ label: "🚢 더블오더 선박", value: lastCalculatedWageData.shipName || "미입력" });
+        }
         const sd = document.getElementById("wageStartDate")?.value || "-";
         const ed = document.getElementById("wageEndDate")?.value || "-";
         subTitle = `근무 일자: ${sd} ~ ${ed}`;

@@ -104,6 +104,136 @@ function selectScheduleTerminal(terminalId) {
     }
 }
 let selectedWageScheduleShipName = "";
+let selectedWageVessels = [];
+
+function invalidateCalculatedWage() {
+    lastCalculatedWageData = null;
+    document.getElementById("wageResultBox")?.classList.add("hidden");
+}
+
+function periodHours(startDate, startHour, endDate, endHour) {
+    if (!startDate || !endDate) return 0;
+    const sh = parseInt(startHour, 10);
+    const eh = parseInt(endHour, 10);
+    if (!Number.isInteger(sh) || !Number.isInteger(eh)) return 0;
+    const startAt = new Date(`${startDate}T${String(sh).padStart(2, "0")}:00:00`);
+    const endAt = new Date(`${endDate}T${String(eh).padStart(2, "0")}:00:00`);
+    const diffMs = endAt.getTime() - startAt.getTime();
+    return diffMs > 0 ? Math.floor(diffMs / (1000 * 60 * 60)) : 0;
+}
+
+function getSelectedVesselPeriod(vessel, fallbackDate = "") {
+    if (!vessel) {
+        return {
+            startDate: fallbackDate,
+            endDate: fallbackDate,
+            startHour: null,
+            endHour: null,
+            hours: 0,
+            arrival: null,
+            departure: null
+        };
+    }
+    const arrival = getVesselScheduleDateTime(vessel, ["ATA", "ETB", "ATW"]);
+    const departure = getVesselScheduleDateTime(vessel, ["ATD", "ATC"]);
+    const startDate = arrival?.date || fallbackDate;
+    const endDate = departure?.date || startDate;
+    const startHour = arrival?.time ? parseInt(arrival.time.slice(0, 2), 10) : null;
+    const endHour = departure?.time ? parseInt(departure.time.slice(0, 2), 10) : null;
+    const validStart = Number.isInteger(startHour) && startHour >= 0 && startHour <= 23 ? startHour : null;
+    const validEnd = Number.isInteger(endHour) && endHour >= 0 && endHour <= 23 ? endHour : null;
+    const hours = (validStart !== null && validEnd !== null)
+        ? periodHours(startDate, validStart, endDate, validEnd)
+        : 0;
+    return {
+        startDate,
+        endDate,
+        startHour: validStart,
+        endHour: validEnd,
+        hours,
+        arrival,
+        departure
+    };
+}
+
+function updateWageHoursBreakdown() {
+    const breakdownEl = document.getElementById("wageHoursBreakdown");
+    if (!breakdownEl) return;
+
+    const firstHours = periodHours(
+        document.getElementById("wageStartDate")?.value,
+        document.getElementById("wageStartHour")?.value,
+        document.getElementById("wageEndDate")?.value,
+        document.getElementById("wageEndHour")?.value
+    );
+    const manualTotal = parseFloat(document.getElementById("wageTotalHours")?.value) || 0;
+
+    if (selectedWageVessels.length > 1) {
+        const firstItem = selectedWageVessels[0];
+        const secondItem = selectedWageVessels[1];
+        const secondPeriod = getSelectedVesselPeriod(secondItem.vessel, secondItem.date);
+        const h1 = firstHours > 0 ? `${firstHours}시간` : "시간 확인 필요";
+        const h2 = secondPeriod.hours > 0 ? `${secondPeriod.hours}시간` : "시간 확인 필요";
+        breakdownEl.innerHTML =
+            `<div>1️⃣ ${escapeShipCommentHtml(firstItem.name)}: <strong>${h1}</strong></div>` +
+            `<div>2️⃣ ${escapeShipCommentHtml(secondItem.name)}: <strong>${h2}</strong></div>`;
+        return;
+    }
+
+    if (selectedWageVessels.length === 1) {
+        const firstItem = selectedWageVessels[0];
+        const displayHours = manualTotal || firstHours;
+        breakdownEl.innerHTML = displayHours > 0
+            ? `1️⃣ ${escapeShipCommentHtml(firstItem.name)}: <strong>${displayHours}시간</strong>`
+            : `1️⃣ ${escapeShipCommentHtml(firstItem.name)}: 시간 확인 필요`;
+        return;
+    }
+
+    const shipInputVal = document.getElementById("wageShipName")?.value.trim() || "";
+    const displayHours = manualTotal || firstHours;
+    if (displayHours > 0) {
+        breakdownEl.textContent = shipInputVal
+            ? `${shipInputVal}: ${displayHours}시간`
+            : `설정 근무시간: ${displayHours}시간`;
+    } else {
+        breakdownEl.textContent = "선박을 선택하거나 시간을 설정하세요.";
+    }
+}
+
+function refreshWageWorkHours() {
+    const total = document.getElementById("wageTotalHours");
+
+    if (selectedWageVessels.length > 1) {
+        const first = periodHours(
+            document.getElementById("wageStartDate")?.value,
+            document.getElementById("wageStartHour")?.value,
+            document.getElementById("wageEndDate")?.value,
+            document.getElementById("wageEndHour")?.value
+        );
+        const second = getSelectedVesselPeriod(
+            selectedWageVessels[1].vessel,
+            selectedWageVessels[1].date
+        ).hours;
+
+        if (total) {
+            total.value = first && second ? first + second : "";
+            total.readOnly = true;
+        }
+    } else if (total) {
+        total.readOnly = false;
+        if (selectedWageVessels.length === 1) {
+            const first = periodHours(
+                document.getElementById("wageStartDate")?.value,
+                document.getElementById("wageStartHour")?.value,
+                document.getElementById("wageEndDate")?.value,
+                document.getElementById("wageEndHour")?.value
+            );
+            total.value = first > 0 ? String(first) : "";
+        }
+    }
+
+    updateWageHoursBreakdown();
+}
 
 function getWageScheduleDate() {
     const dateInput = document.getElementById("wageScheduleDatePicker");
@@ -249,13 +379,15 @@ function renderWageScheduledShipsUI(
         );
         const arrivalLabel = formatWageScheduleEvent(arrival);
         const departureLabel = formatWageScheduleEvent(departure);
-        const isSelected = selectedWageScheduleShipName === name;
+        const selectedIndex = selectedWageVessels.findIndex(item => item.name === name);
+        const isSelected = selectedIndex >= 0 || (selectedWageVessels.length === 0 && selectedWageScheduleShipName === name);
         const selectedStyle = isSelected
             ? `background:${meta.color}; color:#ffffff; border-color:${meta.color};`
             : `border-color:${meta.color};`;
         const timeStyle = isSelected
             ? "color:#ffedd5;"
             : `color:${meta.color};`;
+        const orderBadge = selectedIndex >= 0 ? `[${selectedIndex + 1}선박] ` : "";
 
         return `<button type="button"
             class="hjnc-ship-chip wage-schedule-ship-chip ${isSelected ? 'selected' : ''}"
@@ -268,7 +400,7 @@ function renderWageScheduledShipsUI(
                     : `background:${meta.color}; color:#ffffff;`}">
                 ${berth}
             </span>
-            <span>🚢 ${safeName}</span>
+            <span>🚢 ${orderBadge}${safeName}</span>
             ${ptnr
                 ? `<span style="font-size:0.66rem; color:${isSelected ? '#fed7aa' : '#64748b'}; font-weight:800;">(${ptnr})</span>`
                 : ""}
@@ -331,6 +463,34 @@ async function refreshWageScheduleForSelectedDate() {
     await loadWageScheduledShipsForDate(dateStr, true);
 }
 
+function applyVesselPeriodToWageInputs(vessel, fallbackDate) {
+    const period = getSelectedVesselPeriod(vessel, fallbackDate);
+    const startDateInput = document.getElementById("wageStartDate");
+    const endDateInput = document.getElementById("wageEndDate");
+    const startHourInput = document.getElementById("wageStartHour");
+    const endHourInput = document.getElementById("wageEndHour");
+
+    if (startDateInput && period.startDate) startDateInput.value = period.startDate;
+    if (endDateInput && period.endDate) endDateInput.value = period.endDate;
+    if (startHourInput && period.startHour !== null) {
+        startHourInput.value = String(period.startHour);
+    }
+    if (endHourInput && period.endHour !== null) {
+        endHourInput.value = String(period.endHour);
+    }
+
+    const month = parseInt((period.startDate || "").split("-")[1], 10);
+    if (month >= 1 && month <= 12) highlightSeasonRow(month);
+
+    if (period.hours > 0 && period.startDate && period.startHour !== null) {
+        const startAt = new Date(
+            `${period.startDate}T${String(period.startHour).padStart(2, "0")}:00:00`
+        );
+        autoFillWeekendHoliday(startAt, period.hours);
+    }
+    return period;
+}
+
 function applyWageScheduleShip(
     vessel,
     dateStr,
@@ -339,94 +499,79 @@ function applyWageScheduleShip(
     if (!vessel) return;
 
     const name = String(vessel.VSL_NM || "").trim();
-    const arrival = getVesselScheduleDateTime(
-        vessel, ["ATA", "ETB", "ATW"]
-    );
-    const departure = getVesselScheduleDateTime(
-        vessel, ["ATD", "ATC"]
-    );
+    if (!name) return;
 
-    const startDate = arrival?.date || dateStr;
-    const endDate = departure?.date || startDate;
-
-    const startDateInput = document.getElementById("wageStartDate");
-    const endDateInput = document.getElementById("wageEndDate");
-    const startHourInput = document.getElementById("wageStartHour");
-    const endHourInput = document.getElementById("wageEndHour");
-    const totalHoursInput = document.getElementById("wageTotalHours");
-
-    if (startDateInput) startDateInput.value = startDate;
-    if (endDateInput) endDateInput.value = endDate;
-
-    const startHour = arrival?.time
-        ? parseInt(arrival.time.slice(0, 2), 10)
-        : NaN;
-    const endHour = departure?.time
-        ? parseInt(departure.time.slice(0, 2), 10)
-        : NaN;
-
-    if (startHourInput && Number.isInteger(startHour) &&
-        startHour >= 0 && startHour <= 23) {
-        startHourInput.value = String(startHour);
-    }
-    if (endHourInput && Number.isInteger(endHour) &&
-        endHour >= 0 && endHour <= 23) {
-        endHourInput.value = String(endHour);
+    const index = selectedWageVessels.findIndex(item => item.name === name);
+    if (index >= 0) {
+        selectedWageVessels.splice(index, 1); // 다시 누르면 선택 해제
+    } else if (selectedWageVessels.length >= 2) {
+        return showToast("⚠️ 선박은 최대 2척까지 선택할 수 있습니다.");
+    } else {
+        selectedWageVessels.push({ name, vessel, date: dateStr, terminalId });
     }
 
-    const month = parseInt(startDate.split("-")[1], 10);
-    if (month >= 1 && month <= 12) highlightSeasonRow(month);
-
-    selectedWageScheduleShipName = name;
+    const names = selectedWageVessels.map(item => item.name);
+    selectedWageScheduleShipName = names.join(" / ");
 
     const wageShipNameInput = document.getElementById("wageShipName");
-    if (wageShipNameInput) wageShipNameInput.value = name;
+    if (wageShipNameInput) wageShipNameInput.value = names.join(" / ");
 
-    lastCalculatedWageData = null;
-    document.getElementById("wageResultBox")?.classList.add("hidden");
-    if (totalHoursInput) totalHoursInput.value = "";
+    const doubleOrderInput = document.getElementById("wageDoubleOrder");
+    if (doubleOrderInput) doubleOrderInput.checked = names.length === 2;
 
-    let calculatedHours = false;
-    if (arrival?.time && departure?.time &&
-        Number.isInteger(startHour) && Number.isInteger(endHour)) {
-        const startAt = new Date(
-            `${startDate}T${String(startHour).padStart(2, "0")}:00:00`
-        );
-        const endAt = new Date(
-            `${endDate}T${String(endHour).padStart(2, "0")}:00:00`
-        );
+    invalidateCalculatedWage();
 
-        if (endAt.getTime() > startAt.getTime()) {
-            calcTimeAndFill();
-            calculatedHours = true;
+    if (selectedWageVessels.length > 0) {
+        const firstEntry = selectedWageVessels[0];
+        applyVesselPeriodToWageInputs(firstEntry.vessel, firstEntry.date);
+    } else {
+        const totalHoursInput = document.getElementById("wageTotalHours");
+        if (totalHoursInput) {
+            totalHoursInput.value = "";
+            totalHoursInput.readOnly = false;
         }
     }
 
-    const startLabel = formatWageScheduleEvent(
-        arrival || { date: startDate, time: "" }
-    );
-    const endLabel = formatWageScheduleEvent(departure);
-    const missingTimes = [];
-    if (!arrival?.time) missingTimes.push("입항 시각");
-    if (!departure?.time) missingTimes.push("출항 시각");
+    refreshWageWorkHours();
 
-    const timingNote = missingTimes.length
-        ? ` · ${missingTimes.join("·")} 직접 확인`
-        : (!calculatedHours ? " · 시각 순서·분 단위 확인 필요" : "");
-    const calcNote = calculatedHours
-        ? " · 총 근무 시간 자동 계산"
-        : "";
+    if (selectedWageVessels.length === 0) {
+        showToast(`🚢 ${name} 선박 선택이 해제되었습니다.`);
+    } else if (selectedWageVessels.length === 1) {
+        const firstEntry = selectedWageVessels[0];
+        const firstPeriod = getSelectedVesselPeriod(firstEntry.vessel, firstEntry.date);
+        const startLabel = formatWageScheduleEvent(
+            firstPeriod.arrival || { date: firstPeriod.startDate, time: "" }
+        );
+        const endLabel = formatWageScheduleEvent(firstPeriod.departure);
+        const missingTimes = [];
+        if (!firstPeriod.arrival?.time) missingTimes.push("입항 시각");
+        if (!firstPeriod.departure?.time) missingTimes.push("출항 시각");
+        const timingNote = missingTimes.length
+            ? ` · ${missingTimes.join("·")} 직접 확인`
+            : (!firstPeriod.hours ? " · 시각 순서·분 단위 확인 필요" : "");
+        const calcNote = firstPeriod.hours > 0 ? ` · ${firstPeriod.hours}시간 자동 계산` : "";
+        showToast(
+            `🚢 ${firstEntry.name} 선택 · 시작 ${startLabel} · 종료 ${endLabel}${calcNote}${timingNote}`
+        );
+    } else {
+        const firstEntry = selectedWageVessels[0];
+        const secondEntry = selectedWageVessels[1];
+        const secondPeriod = getSelectedVesselPeriod(secondEntry.vessel, secondEntry.date);
+        const totalVal = document.getElementById("wageTotalHours")?.value;
+        const missingNote = !secondPeriod.hours ? " · 2번째 선박 입·출항 시각 확인 필요" : "";
+        showToast(
+            `🚢 더블오더 2척 선택 (${firstEntry.name} / ${secondEntry.name})` +
+            `${totalVal ? ` · 합산 ${totalVal}시간` : ""}${missingNote}`
+        );
+    }
 
-    showToast(
-        `🚢 ${name} 선택 · 시작 ${startLabel} · 종료 ${endLabel}${calcNote}${timingNote}`
-    );
-
-    const cacheKey = `${terminalId}_${startDate.slice(0, 7)}`;
+    const activeDate = getWageScheduleDate() || dateStr;
+    const cacheKey = `${terminalId}_${activeDate.slice(0, 7)}`;
     const cachedVessels = hjncScheduleMonthCache[cacheKey];
     if (cachedVessels) {
-        renderWageScheduledShipsUI(startDate, cachedVessels, terminalId);
+        renderWageScheduledShipsUI(activeDate, cachedVessels, terminalId);
     } else {
-        loadWageScheduledShipsForDate(startDate, false);
+        loadWageScheduledShipsForDate(activeDate, false);
     }
 }
 function initShipFormSchedulePicker() {
