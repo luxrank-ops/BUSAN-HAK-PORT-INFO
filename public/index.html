@@ -144,17 +144,95 @@
         .dash-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)) !important; gap: 10px; margin-bottom: 14px; width: 100%; }
         
         .dash-card { background: var(--card-bg); border-radius: 12px; box-shadow: 0 2px 6px rgba(15, 23, 42, 0.04); border: 1.5px solid var(--border); overflow: hidden; width: 100%; transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.15s ease; }
-        .dash-card.expanded { grid-column: 1 / -1; border-color: var(--primary) !important; box-shadow: 0 6px 18px rgba(10, 27, 63, 0.1) !important; }
-        .dash-header { padding: 14px 12px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; background: var(--card-bg) !important; min-height: 54px; touch-action: manipulation; transition: background 0.15s ease; }
-        .dash-card.expanded > .dash-header { background: rgba(10, 27, 63, 0.03) !important; border-bottom: 1px solid var(--border); }
-        body.dark-mode .dash-card.expanded > .dash-header { background: rgba(96, 165, 250, 0.08) !important; }
+        .dash-card.expanded { grid-column: 1 / -1; border: 3px solid #2563eb !important; box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.18), 0 10px 26px rgba(10, 27, 63, 0.16) !important; background: var(--card-bg) !important; position: relative; }
+        body.dark-mode .dash-card.expanded { border-color: #60a5fa !important; box-shadow: 0 0 0 4px rgba(96, 165, 250, 0.24), 0 10px 26px rgba(0, 0, 0, 0.5) !important; }
+        #wage-card.dash-card.expanded { border: 3px solid #2563eb !important; box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.22), 0 10px 28px rgba(37, 99, 235, 0.2) !important; }
+        #log-card.dash-card.expanded { border: 3px solid #059669 !important; box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.22), 0 10px 28px rgba(5, 150, 105, 0.2) !important; }
+        body.dark-mode #log-card.dash-card.expanded { border-color: #34d399 !important; box-shadow: 0 0 0 4px rgba(52, 211, 153, 0.25), 0 10px 28px rgba(0, 0, 0, 0.5) !important; }
+        #ship-card.dash-card.expanded { border: 3px solid #d97706 !important; border-radius: 12px !important; box-shadow: 0 0 0 4px rgba(245, 158, 11, 0.22), 0 10px 28px rgba(217, 119, 6, 0.2) !important; background: var(--card-bg) !important; }
+        #ship-card.dash-card.expanded > .section-header { border-radius: 9px 9px 0 0 !important; border-bottom: 2.5px solid #d97706 !important; }
+        #ship-card.dash-card.expanded > .dash-content { margin-top: 0 !important; border: none !important; border-radius: 0 0 9px 9px !important; }
+        .dash-header { padding: 14px 12px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; background: var(--card-bg) !important; min-height: 54px; touch-action: manipulation; transition: background 0.15s ease; position: relative; }
+        .dash-card.expanded > .dash-header { background: linear-gradient(135deg, rgba(37, 99, 235, 0.09), rgba(37, 99, 235, 0.03)) !important; border-bottom: 2.5px solid #2563eb !important; }
+        #log-card.dash-card.expanded > .dash-header { background: linear-gradient(135deg, rgba(16, 185, 129, 0.12), rgba(16, 185, 129, 0.04)) !important; border-bottom: 2.5px solid #059669 !important; }
+        body.dark-mode .dash-card.expanded > .dash-header { background: rgba(96, 165, 250, 0.14) !important; border-bottom-color: #60a5fa !important; }
+        body.dark-mode #log-card.dash-card.expanded > .dash-header { background: rgba(52, 211, 153, 0.14) !important; border-bottom-color: #34d399 !important; }
+        .dash-card.expanded > .dash-header::after,
+        #ship-card.dash-card.expanded > .section-header::after,
+        .card.active-work-section > .section-header::after {
+            content: '● 작업중';
+            font-size: 0.68rem;
+            font-weight: 900;
+            color: #ffffff;
+            background: #2563eb;
+            padding: 3px 8px;
+            border-radius: 999px;
+            box-shadow: 0 2px 6px rgba(37, 99, 235, 0.35);
+            letter-spacing: -0.2px;
+            white-space: nowrap;
+            flex-shrink: 0;
+            margin-left: 6px;
+        }
+        #wage-card.dash-card.expanded > .dash-header.hero-header::after,
+        #log-card.dash-card.expanded > .dash-header.hero-header::after {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            margin-left: 0;
+        }
+        #log-card.dash-card.expanded > .dash-header::after { background: #059669; box-shadow: 0 2px 6px rgba(5, 150, 105, 0.35); }
+        #ship-card.dash-card.expanded > .section-header::after { background: #d97706; box-shadow: 0 2px 6px rgba(217, 119, 6, 0.35); }
+        .card.active-work-section > .section-header::after { background: #f59e0b; color: #0f172a; box-shadow: 0 2px 6px rgba(245, 158, 11, 0.4); }
         .dash-title { font-size: clamp(1rem, 3.4vw, 1.15rem); font-weight: 800; word-break: keep-all; letter-spacing: -0.2px; }
         .dash-content { display: none; padding: 14px 12px; background: var(--card-bg); animation: fadeIn 0.2s; width: 100%; box-sizing: border-box; }
 
-        .card { background: var(--card-bg); border-radius: 12px; margin-bottom: 12px; box-shadow: 0 2px 6px rgba(15, 23, 42, 0.04); border: 1px solid var(--border); overflow: hidden; width: 100%; }
+        .card { background: var(--card-bg); border-radius: 12px; margin-bottom: 12px; box-shadow: 0 2px 6px rgba(15, 23, 42, 0.04); border: 1px solid var(--border); overflow: hidden; width: 100%; transition: border-color 0.2s ease, box-shadow 0.2s ease; }
+        .card.active-work-section { border: 3px solid #2563eb !important; border-radius: 12px !important; box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.18), 0 10px 26px rgba(10, 27, 63, 0.16) !important; background: var(--card-bg) !important; }
+        body.dark-mode .card.active-work-section { border-color: #60a5fa !important; box-shadow: 0 0 0 4px rgba(96, 165, 250, 0.24), 0 10px 26px rgba(0, 0, 0, 0.5) !important; }
+        .card.active-work-section > .section-header { border-radius: 9px 9px 0 0 !important; }
+        .card.active-work-section > .collapsible-content { margin-top: 0 !important; border: none !important; border-top: 2.5px solid #2563eb !important; border-radius: 0 0 9px 9px !important; }
         .section-header { display: flex; justify-content: space-between; align-items: center; padding: 15px 16px; cursor: pointer; touch-action: manipulation; font-size: 1.08rem; font-weight: 900; background: var(--primary); color: white; transition: filter 0.15s ease; }
         .collapsible-content { display: block; padding: 12px; background: var(--card-bg) !important; border-top: 1px solid var(--border); }
         .collapsible-content.collapsed { display: none !important; }
+
+        /* 🔦 앱 내 세부 작업 블럭(일지 입력폼, 글쓰기/등록폼, 터미널, 게시글 열람 등) 활성화 시 명확한 경계선 표시 */
+        #dailyLogForm:not(.hidden),
+        #shipForm:not(.hidden),
+        #boardForm:not(.hidden),
+        #noticeForm:not(.hidden),
+        #archiveForm:not(.hidden),
+        #coworkerRosterPanel:not(.hidden) {
+            border: 2.5px solid #2563eb !important;
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15), 0 6px 16px rgba(10, 27, 63, 0.1) !important;
+            border-radius: 12px !important;
+        }
+        #dailyLogForm:not(.hidden) {
+            border-color: #059669 !important;
+            box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.18), 0 6px 16px rgba(5, 150, 105, 0.12) !important;
+        }
+        .terminal-block.active-block {
+            border-width: 2.5px !important;
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.16), 0 4px 12px rgba(10, 27, 63, 0.12) !important;
+        }
+        .terminal-block.term-theme-hjnc.active-block { border-color: #f97316 !important; box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.2), 0 4px 12px rgba(249, 115, 22, 0.15) !important; }
+        .terminal-block.term-theme-bnct.active-block { border-color: #2563eb !important; box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2), 0 4px 12px rgba(37, 99, 235, 0.15) !important; }
+        .terminal-block.term-theme-dgt.active-block { border-color: #0d9488 !important; box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.2), 0 4px 12px rgba(13, 148, 136, 0.15) !important; }
+        .terminal-block.term-theme-bct.active-block { border-color: #16a34a !important; box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.2), 0 4px 12px rgba(22, 163, 74, 0.15) !important; }
+        .board-content-row.show > .board-content-box {
+            border: 2px solid #2563eb !important;
+            border-radius: 0 0 10px 10px;
+            box-shadow: inset 0 0 0 2px rgba(37, 99, 235, 0.1);
+        }
+        .cal-day.selected-work-day {
+            border: 2.5px solid #059669 !important;
+            box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.25) !important;
+        }
+        .wage-terminal-picker:focus-within,
+        .wage-allowance-card:focus-within,
+        .log-filter-box:focus-within {
+            border-color: #2563eb !important;
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.16) !important;
+        }
 
         .input-field { width: 100%; padding: 0 12px; margin-bottom: 0; border: 1.5px solid var(--border); border-radius: 8px; background: var(--card-bg); color: var(--text-main); font-size: clamp(0.95rem, 3.4vw, 1.05rem); height: 44px; text-align: right; font-weight: 800; font-variant-numeric: tabular-nums; display: flex; align-items: center; box-sizing: border-box; appearance: none; transition: border-color 0.15s ease, box-shadow 0.15s ease; }
         .input-field:focus { outline: none; border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15); }
@@ -4595,6 +4673,8 @@ function toggleSection(id){
     el.classList.toggle('collapsed');
     const isExpanded = !el.classList.contains('collapsed');
     el.style.border = isExpanded ? '2px solid var(--primary)' : '1px solid var(--border)';
+    const parentCard = el.closest('.card');
+    if (parentCard) parentCard.classList.toggle('active-work-section', isExpanded);
     if (isExpanded) {
         trackAppEvent('blocks', id);
     }
@@ -4636,6 +4716,8 @@ function scrollToTop(){
         if (secEl && !secEl.classList.contains("collapsed")) {
             secEl.classList.add("collapsed");
             secEl.style.border = "1px solid var(--border)";
+            const parentCard = secEl.closest(".card");
+            if (parentCard) parentCard.classList.remove("active-work-section");
         }
     });
     syncBottomNavActive('nav-home');
@@ -4816,6 +4898,8 @@ function applyAppUIState(targetState) {
             const shouldOpen = Array.isArray(targetState.openSections) && targetState.openSections.includes(id);
             el.classList.toggle("collapsed", !shouldOpen);
             el.style.border = shouldOpen ? "2px solid var(--primary)" : "1px solid var(--border)";
+            const parentCard = el.closest(".card");
+            if (parentCard) parentCard.classList.toggle("active-work-section", shouldOpen);
         });
 
         // 4. 개별 터미널 블록 확장 상태 복원

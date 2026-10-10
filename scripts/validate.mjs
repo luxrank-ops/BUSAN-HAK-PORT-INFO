@@ -13,11 +13,35 @@ const requiredFiles = [
   'public/sitemap.xml',
   'public/favicon.ico',
   'public/icon-192.png',
-  'public/icon-512.png'
+  'public/icon-512.png',
+  'public/css/app.css',
+  'public/js/core.js',
+  'public/js/terminals.js',
+  'public/js/worklog.js',
+  'public/js/wage.js',
+  'public/js/community.js',
+  'public/js/app-init.js',
+  'public/js/lazy-guides.js',
+  'public/js/lazy-d3.js',
+  'public/js/lazy-ships.js',
+  'public/js/lazy-admin.js'
 ];
 
 const jsonFiles = ['.firebaserc', 'firebase.json', 'metadata.json', 'package.json', 'public/manifest.json'];
 const htmlFiles = ['public/index.html', 'public/admin.html'];
+const jsFiles = [
+  'public/service-worker.js',
+  'public/js/core.js',
+  'public/js/terminals.js',
+  'public/js/worklog.js',
+  'public/js/wage.js',
+  'public/js/community.js',
+  'public/js/app-init.js',
+  'public/js/lazy-guides.js',
+  'public/js/lazy-d3.js',
+  'public/js/lazy-ships.js',
+  'public/js/lazy-admin.js'
+];
 const errors = [];
 
 for (const file of requiredFiles) {
@@ -58,6 +82,35 @@ for (const file of htmlFiles) {
   } catch (error) {
     errors.push(`${file} 검사 오류: ${error.message}`);
   }
+}
+
+for (const file of jsFiles) {
+  try {
+    const code = await readFile(file, 'utf8');
+    const normalized = code
+      .replace(/^\s*export\s+(async\s+function|function|const|let|var)\s+/gm, '$1 ')
+      .replace(/^\s*export\s*\{[\s\S]*?\};?\s*$/gm, '');
+    new vm.Script(normalized, { filename: file });
+  } catch (error) {
+    errors.push(`${file} 스크립트 문법 오류: ${error.message}`);
+  }
+}
+
+try {
+  const globalScriptFiles = [
+    'public/js/core.js',
+    'public/js/terminals.js',
+    'public/js/worklog.js',
+    'public/js/wage.js',
+    'public/js/community.js',
+    'public/js/app-init.js'
+  ];
+  const combinedGlobal = (
+    await Promise.all(globalScriptFiles.map((file) => readFile(file, 'utf8')))
+  ).join('\n');
+  new vm.Script(combinedGlobal, { filename: 'combined-global-scripts.js' });
+} catch (error) {
+  errors.push(`전역 스크립트 통합 검증 오류 (중복 선언 등): ${error.message}`);
 }
 
 const firebaseConfig = JSON.parse(await readFile('firebase.json', 'utf8'));

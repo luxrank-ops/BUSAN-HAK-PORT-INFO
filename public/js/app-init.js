@@ -1,0 +1,498 @@
+function openBusSchedule(){ trackAppEvent('actions', 'bus_view'); const m=document.getElementById('imageModal'); document.getElementById('modalImage').src='https://firebasestorage.googleapis.com/v0/b/busan-hak-port.firebasestorage.app/o/KakaoTalk_20260129_001114789.jpg?alt=media'; m.style.display='flex'; } function closeImageModal(){ document.getElementById('imageModal').style.display='none'; } function openPrivacy() { toggleDashItem('privacy-center-card'); document.getElementById('privacy-center-card').scrollIntoView({behavior: 'smooth', block: 'center'}); }
+
+if ("serviceWorker" in navigator) {
+    window.addEventListener("load", () => {
+        navigator.serviceWorker.register("/service-worker.js").then(reg => {
+            reg.addEventListener("updatefound", () => {
+                const newWorker = reg.installing;
+                if (!newWorker) return;
+                newWorker.addEventListener("statechange", () => {
+                    if (newWorker.state === "installed" && navigator.serviceWorker.controller) {
+                        if (typeof showToast === "function") {
+                            showToast("✨ 새 버전이 준비되었습니다. 새로고침 시 즉시 반영됩니다.");
+                        }
+                    }
+                });
+            });
+        }).catch(err => console.warn("SW 등록 확인:", err));
+    });
+}
+
+async function ensureTodayUpdateNotice() {
+    const noticeDocId = "update_2026_10_04_v2027";
+    const noticeVersion = "v2027_rev2";
+    const noticeTitle = "🚀 [종합 업데이트 안내] 스마트 신규 기능 10종 및 전체 화면 디자인 대개편 안내";
+    const noticeContent = [
+        "부산항(신항·북항) 현장 근로자 여러분, 안녕하십니까! 운영관리자 이춘학입니다.",
+        "현장 작업 효율성과 정산·안전 편의를 극대화하기 위해 오늘 아래와 같이 대규모 기능 추가 및 디자인 개편이 완료되었습니다.",
+        "",
+        "⭐ 1. [내 단골 터미널 빠른 실행 바] 상단 고정 기능",
+        "• 1·2·3항업 9개 터미널 이름 왼쪽의 별표(⭐)를 터치하면 화면 최상단에 [내 단골 터미널 빠른 실행 바]가 생성됩니다.",
+        "• 폴더를 열지 않고도 상단에서 스케줄·차트·현황·베이 플랜·셔틀·식단을 1초 만에 바로 실행할 수 있습니다.",
+        "",
+        "🧮 2. 임금계산기 [넓게 보기 스위치] & [근무일지 원클릭 전송]",
+        "• [📐 입력창 넓게 보기 / 5:5 단가표 나란히 보기] 전환 버튼이 추가되어 작은 스마트폰 화면에서도 편리하게 입력할 수 있습니다.",
+        "• 계산 완료 후 [✨ 📅 이 계산 결과를 근무일지로 보내기 ✨] 버튼을 누르면 해당 날짜의 근무일지에 실수령액과 근무 시간 요약이 자동 입력됩니다.",
+        "",
+        "🎯 3. 근무일지 [이번 달 목표 수입 달성률 게이지 바] & [동료·선박 원클릭 자동 완성 칩]",
+        "• 본인의 월 목표 금액(예: 450만 원)을 설정하면 실시간 달성률(%) 게이지 바와 목표까지 남은 금액·예상 출근일수를 자동으로 계산해 줍니다.",
+        "• 달력에서 날짜를 눌러 일지를 쓸 때, 최근 자주 입력한 [작업 선박명]과 [동반 근무자]가 버튼(칩)으로 자동 표시되어 터치 한 번으로 입력됩니다.",
+        "",
+        "🚢 4. 작업선박정보(등록및검색) [작업 난이도 별점(★1~5) & 필수 장비 태그] 및 [전체 선박 도감 한눈에 보기]",
+        "• 선박 등록 시 작업 난이도(★1~5)와 특징 태그(#오토콘, #수동콘, #브릿지주의, #라싱바무거움 등)를 선택할 수 있습니다.",
+        "• 하단 [📋 전체 선박 도감 한눈에 보기] 테이블에 상단 고정 헤더, 줄무늬(스트라이프) 가독성, 컴팩트 1줄 요약 및 터치 강조 효과를 적용해 한 화면에서 수많은 선박을 쾌적하게 확인할 수 있습니다.",
+        "",
+        "🌬️ 5. [부산항 실시간 기상 · 작업 안전 전광판] 탑재",
+        "• [날씨 및 도선 상황] 탭을 열면 외부 사이트로 이동하기 전에 부산 신항(2·3항업)과 북항(1항업)의 현재 기온·체감 온도, 순간 풍속(m/s), 강수량 및 강풍 작업 주의 단계를 즉시 보여줍니다.",
+        "",
+        "🔒 6. 개인 정산·고급 기능 전용 보안 잠금 및 [명세서 이미지 저장·카톡 공유]",
+        "• 근무일지 기간·키워드 검색, 월별 수입·근로일수 막대그래프 및 연간 종합 정산 요약 보고서",
+        "• 임금 산정 내역서 & 월간 정산 요약표 [📸 이미지(PNG) 저장 / 📤 카톡·문자 공유]",
+        "• 작업선박정보(등록및검색) 장비 태그·난이도 필터 및 하단 전체 선박 도감 뷰 (전용 보안 비밀번호 해제 시 열람 가능)",
+        "",
+        "🎨 7. 전체 화면 디자인 최적화 및 야간(다크) 모드 완벽 보완",
+        "• 3항업·2항업·1항업 맞춤형 그라데이션 배너 및 소속 터미널 약칭 칩 표시",
+        "• 모든 메뉴 카드에 아이콘 배지 및 실시간 현황(출근일수·등록 선박 수·게시글 수·댓글 수) 자동 표시",
+        "• 달력 '오늘' 날짜 배지 및 일별 수입 요약 칩(만 원 단위) 표시, 야간 작업 시 눈부심 없는 다크 모드 완벽 대응",
+        "",
+        "언제나 안전을 최우선으로 작업하시길 바라며, 이용 문의나 건의 사항은 운영관리자(이춘학 / 010-2846-8906)에게 문자 남겨 주시기 바랍니다. 오늘도 무사고 안전 작업하십시오!"
+    ].join("\n");
+    try {
+        const docRef = db.collection("notices").doc(noticeDocId);
+        const snap = await docRef.get();
+        if (!snap.exists || snap.data()?.version !== noticeVersion) {
+            await docRef.set({
+                title: noticeTitle,
+                content: noticeContent,
+                version: noticeVersion,
+                imageUrl: null,
+                timestamp: firebase.firestore.FieldValue.serverTimestamp()
+            }, { merge: true });
+        }
+    } catch (e) {
+        console.warn("업데이트 공지 자동 등록 확인 중 오류:", e);
+    }
+}
+
+const DAILY_FIELD_ENGLISH_PHRASES = [
+    { sentence: "Please wait here.", pronunciation: "플리즈 웨잇 히어", meaning: "여기서 기다려 주세요.", word: "wait = 기다리다" },
+    { sentence: "Watch your step.", pronunciation: "와치 유어 스텝", meaning: "발밑을 조심하세요.", word: "step = 발걸음, 계단" },
+    { sentence: "Please wear a helmet.", pronunciation: "플리즈 웨어 어 헬멧", meaning: "안전모를 써 주세요.", word: "wear = 착용하다" },
+    { sentence: "The ship is here.", pronunciation: "더 쉽 이즈 히어", meaning: "배가 여기에 있어요.", word: "ship = 배" },
+    { sentence: "The crane is moving.", pronunciation: "더 크레인 이즈 무빙", meaning: "크레인이 움직이고 있어요.", word: "moving = 움직이는 중" },
+    { sentence: "Stay behind the line.", pronunciation: "스테이 비하인드 더 라인", meaning: "선 뒤에 서 주세요.", word: "behind = 뒤에" },
+    { sentence: "Walk slowly, please.", pronunciation: "워크 슬로울리, 플리즈", meaning: "천천히 걸어 주세요.", word: "slowly = 천천히" },
+    { sentence: "The floor is wet.", pronunciation: "더 플로어 이즈 웻", meaning: "바닥이 젖어 있어요.", word: "wet = 젖은" },
+    { sentence: "Hold the handrail, please.", pronunciation: "홀드 더 핸드레일, 플리즈", meaning: "손잡이를 잡아 주세요.", word: "hold = 잡다" },
+    { sentence: "Stay with your team.", pronunciation: "스테이 위드 유어 팀", meaning: "작업조와 함께 있어 주세요.", word: "team = 팀, 작업조" },
+    { sentence: "Let's check the tools.", pronunciation: "렛츠 체크 더 툴즈", meaning: "도구를 함께 확인해요.", word: "check = 확인하다" },
+    { sentence: "I need a safety vest.", pronunciation: "아이 니드 어 세이프티 베스트", meaning: "안전 조끼가 필요해요.", word: "need = 필요하다" },
+    { sentence: "The truck is coming.", pronunciation: "더 트럭 이즈 커밍", meaning: "트럭이 오고 있어요.", word: "coming = 오는 중" },
+    { sentence: "Do not run here.", pronunciation: "두 낫 런 히어", meaning: "여기서 뛰지 마세요.", word: "run = 뛰다" },
+    { sentence: "Please stand back.", pronunciation: "플리즈 스탠드 백", meaning: "뒤로 물러나 주세요.", word: "stand back = 뒤로 물러서다" },
+    { sentence: "Can you help me?", pronunciation: "캔 유 헬프 미?", meaning: "저를 도와주실 수 있나요?", word: "help = 돕다" },
+    { sentence: "I am ready to work.", pronunciation: "아이 앰 레디 투 워크", meaning: "저는 일할 준비가 됐어요.", word: "ready = 준비된" },
+    { sentence: "Please follow me.", pronunciation: "플리즈 팔로우 미", meaning: "저를 따라오세요.", word: "follow = 따라오다" },
+    { sentence: "Put the tools here.", pronunciation: "풋 더 툴즈 히어", meaning: "도구를 여기에 놓아 주세요.", word: "put = 놓다" },
+    { sentence: "Be careful near the crane.", pronunciation: "비 케어풀 니어 더 크레인", meaning: "크레인 근처에서는 조심하세요.", word: "careful = 조심하는" },
+    { sentence: "The container is heavy.", pronunciation: "더 컨테이너 이즈 헤비", meaning: "컨테이너가 무거워요.", word: "heavy = 무거운" },
+    { sentence: "Let's work together.", pronunciation: "렛츠 워크 투게더", meaning: "함께 일해요.", word: "together = 함께" },
+    { sentence: "Is this the right place?", pronunciation: "이즈 디스 더 라이트 플레이스?", meaning: "여기가 맞는 장소인가요?", word: "right = 맞는" },
+    { sentence: "Where is the meeting point?", pronunciation: "웨어 이즈 더 미팅 포인트?", meaning: "모이는 장소가 어디인가요?", word: "where = 어디" },
+    { sentence: "Please look at the sign.", pronunciation: "플리즈 룩 앳 더 사인", meaning: "표지판을 봐 주세요.", word: "sign = 표지판" },
+    { sentence: "Wait for the green light.", pronunciation: "웨잇 포 더 그린 라이트", meaning: "초록불을 기다려 주세요.", word: "green light = 초록불" },
+    { sentence: "Keep a safe distance.", pronunciation: "킵 어 세이프 디스턴스", meaning: "안전거리를 유지해 주세요.", word: "safe = 안전한" },
+    { sentence: "The work is finished.", pronunciation: "더 워크 이즈 피니시트", meaning: "작업이 끝났어요.", word: "finished = 끝난" },
+    { sentence: "Thank you for your help.", pronunciation: "땡큐 포 유어 헬프", meaning: "도와주셔서 고맙습니다.", word: "thank you = 고맙습니다" },
+    { sentence: "Use the safe path.", pronunciation: "유즈 더 세이프 패스", meaning: "안전한 길을 이용하세요.", word: "path = 길" }
+];
+
+const DAILY_FIELD_ENGLISH_TIME_ZONE = "Asia/Seoul";
+const DAILY_FIELD_ENGLISH_UPDATE_HOUR = 9;
+const DAILY_FIELD_ENGLISH_CYCLE_START = Date.UTC(2026, 0, 1);
+const DAILY_FIELD_ENGLISH_FIRST_DATE_KEY = "2026-01-01";
+
+let dailyFieldEnglishSelectedDateKey = "";
+let dailyFieldEnglishActiveDateKey = "";
+let dailyFieldEnglishCalendarYear = null;
+let dailyFieldEnglishCalendarMonth = null;
+let dailyFieldEnglishUpdateTimer = null;
+let dailyFieldEnglishInitialized = false;
+
+function getKoreaDateTimeParts(date = new Date()) {
+    const parts = new Intl.DateTimeFormat("en-US", {
+        timeZone: DAILY_FIELD_ENGLISH_TIME_ZONE,
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+        hourCycle: "h23"
+    }).formatToParts(date);
+
+    const values = {};
+    parts.forEach(part => {
+        if (part.type !== "literal") values[part.type] = Number(part.value);
+    });
+    return values;
+}
+
+function formatDailyFieldEnglishDateKey(year, month, day) {
+    return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+}
+
+function getDailyFieldEnglishSnapshotForDateKey(dateKey) {
+    const [year, month, day] = String(dateKey || "").split("-").map(Number);
+    if (
+        !Number.isInteger(year) ||
+        !Number.isInteger(month) ||
+        !Number.isInteger(day) ||
+        month < 1 || month > 12 ||
+        day < 1 || day > 31
+    ) return null;
+
+    const effectiveDate = new Date(Date.UTC(year, month - 1, day));
+    if (
+        effectiveDate.getUTCFullYear() !== year ||
+        effectiveDate.getUTCMonth() + 1 !== month ||
+        effectiveDate.getUTCDate() !== day
+    ) return null;
+
+    const daysSinceCycleStart = Math.floor(
+        (effectiveDate.getTime() - DAILY_FIELD_ENGLISH_CYCLE_START) / 86400000
+    );
+    const phraseIndex =
+        ((daysSinceCycleStart % DAILY_FIELD_ENGLISH_PHRASES.length) +
+            DAILY_FIELD_ENGLISH_PHRASES.length) %
+        DAILY_FIELD_ENGLISH_PHRASES.length;
+
+    return {
+        dateKey: formatDailyFieldEnglishDateKey(year, month, day),
+        year,
+        month,
+        day,
+        phrase: DAILY_FIELD_ENGLISH_PHRASES[phraseIndex]
+    };
+}
+
+function getDailyFieldEnglishSnapshot(date = new Date()) {
+    const koreaTime = getKoreaDateTimeParts(date);
+    const effectiveDate = new Date(
+        Date.UTC(koreaTime.year, koreaTime.month - 1, koreaTime.day)
+    );
+
+    if (koreaTime.hour < DAILY_FIELD_ENGLISH_UPDATE_HOUR) {
+        effectiveDate.setUTCDate(effectiveDate.getUTCDate() - 1);
+    }
+
+    const dateKey = formatDailyFieldEnglishDateKey(
+        effectiveDate.getUTCFullYear(),
+        effectiveDate.getUTCMonth() + 1,
+        effectiveDate.getUTCDate()
+    );
+
+    return getDailyFieldEnglishSnapshotForDateKey(dateKey);
+}
+
+function updateDailyFieldEnglishLesson(snapshot) {
+    if (!snapshot) return;
+
+    const sentenceEl = document.getElementById("dailyFieldEnglishSentence");
+    if (sentenceEl) sentenceEl.textContent = snapshot.phrase.sentence;
+    const pronEl = document.getElementById("dailyFieldEnglishPronunciation");
+    if (pronEl) pronEl.textContent = snapshot.phrase.pronunciation;
+    const meanEl = document.getElementById("dailyFieldEnglishMeaning");
+    if (meanEl) meanEl.textContent = snapshot.phrase.meaning;
+    const wordEl = document.getElementById("dailyFieldEnglishWord");
+    if (wordEl) wordEl.textContent = snapshot.phrase.word;
+    const dateEl = document.getElementById("dailyFieldEnglishDate");
+    if (dateEl) dateEl.textContent = `${snapshot.year}년 ${snapshot.month}월 ${snapshot.day}일 문장`;
+
+    const hintEl = document.getElementById("dailyFieldEnglishCalendarHint");
+    if (hintEl) {
+        hintEl.innerHTML = snapshot.dateKey === dailyFieldEnglishActiveDateKey
+            ? "<strong>현재 문장</strong> · 날짜를 눌러 지난 문장을 복습하세요."
+            : `${snapshot.month}월 ${snapshot.day}일 문장을 복습 중입니다.`;
+    }
+}
+
+function renderDailyFieldEnglishCalendar() {
+    const grid = document.getElementById("dailyFieldEnglishCalendarGrid");
+    const monthLabel = document.getElementById("dailyFieldEnglishCalendarMonth");
+    if (!grid || !monthLabel || !dailyFieldEnglishActiveDateKey) return;
+
+    const activeSnapshot = getDailyFieldEnglishSnapshotForDateKey(
+        dailyFieldEnglishActiveDateKey
+    );
+    if (!activeSnapshot) return;
+
+    const year = dailyFieldEnglishCalendarYear;
+    const month = dailyFieldEnglishCalendarMonth;
+    const firstWeekday = new Date(Date.UTC(year, month - 1, 1)).getUTCDay();
+    const daysInMonth = new Date(Date.UTC(year, month, 0)).getUTCDate();
+    const activeMonth = Date.UTC(activeSnapshot.year, activeSnapshot.month - 1, 1);
+    const visibleMonth = Date.UTC(year, month - 1, 1);
+
+    monthLabel.textContent = `${year}년 ${month}월`;
+    const prevBtn = document.getElementById("dailyFieldEnglishPrevMonth");
+    if (prevBtn) prevBtn.disabled = visibleMonth <= Date.UTC(2026, 0, 1);
+    const nextBtn = document.getElementById("dailyFieldEnglishNextMonth");
+    if (nextBtn) nextBtn.disabled = visibleMonth >= activeMonth;
+
+    const cells = [];
+    for (let blank = 0; blank < firstWeekday; blank++) {
+        cells.push('<span class="daily-field-english-calendar-empty" aria-hidden="true"></span>');
+    }
+
+    for (let day = 1; day <= daysInMonth; day++) {
+        const dateKey = formatDailyFieldEnglishDateKey(year, month, day);
+        const isSelected = dateKey === dailyFieldEnglishSelectedDateKey;
+        const isActiveDate = dateKey === dailyFieldEnglishActiveDateKey;
+        const isDisabled =
+            dateKey < DAILY_FIELD_ENGLISH_FIRST_DATE_KEY ||
+            dateKey > dailyFieldEnglishActiveDateKey;
+
+        const classes = ["daily-field-english-calendar-day"];
+        if (isSelected) classes.push("is-selected");
+        if (isActiveDate) classes.push("is-active-date");
+
+        cells.push(
+            `<button type="button"
+                class="${classes.join(" ")}"
+                onclick="selectDailyFieldEnglishDate('${dateKey}')"
+                aria-pressed="${isSelected ? "true" : "false"}"
+                ${isDisabled ? "disabled" : ""}>${day}</button>`
+        );
+    }
+
+    while (cells.length % 7 !== 0) {
+        cells.push('<span class="daily-field-english-calendar-empty" aria-hidden="true"></span>');
+    }
+
+    grid.innerHTML = cells.join("");
+}
+
+function selectDailyFieldEnglishDate(dateKey) {
+    if (
+        !dateKey ||
+        dateKey < DAILY_FIELD_ENGLISH_FIRST_DATE_KEY ||
+        dateKey > dailyFieldEnglishActiveDateKey
+    ) return;
+
+    const snapshot = getDailyFieldEnglishSnapshotForDateKey(dateKey);
+    if (!snapshot) return;
+
+    dailyFieldEnglishSelectedDateKey = dateKey;
+    if (window.speechSynthesis) window.speechSynthesis.cancel();
+
+    updateDailyFieldEnglishLesson(snapshot);
+    renderDailyFieldEnglishCalendar();
+}
+
+function changeDailyFieldEnglishMonth(offset) {
+    const target = new Date(Date.UTC(
+        dailyFieldEnglishCalendarYear,
+        dailyFieldEnglishCalendarMonth - 1 + offset,
+        1
+    ));
+
+    const targetMonth = Date.UTC(target.getUTCFullYear(), target.getUTCMonth(), 1);
+    const activeSnapshot = getDailyFieldEnglishSnapshotForDateKey(
+        dailyFieldEnglishActiveDateKey
+    );
+    if (!activeSnapshot) return;
+    const activeMonth = Date.UTC(
+        activeSnapshot.year,
+        activeSnapshot.month - 1,
+        1
+    );
+
+    if (targetMonth < Date.UTC(2026, 0, 1) || targetMonth > activeMonth) return;
+
+    dailyFieldEnglishCalendarYear = target.getUTCFullYear();
+    dailyFieldEnglishCalendarMonth = target.getUTCMonth() + 1;
+    renderDailyFieldEnglishCalendar();
+}
+
+function showDailyFieldEnglishToday() {
+    const currentSnapshot = getDailyFieldEnglishSnapshot();
+    if (!currentSnapshot) return;
+
+    dailyFieldEnglishActiveDateKey = currentSnapshot.dateKey;
+    dailyFieldEnglishSelectedDateKey = currentSnapshot.dateKey;
+    dailyFieldEnglishCalendarYear = currentSnapshot.year;
+    dailyFieldEnglishCalendarMonth = currentSnapshot.month;
+
+    updateDailyFieldEnglishLesson(currentSnapshot);
+    renderDailyFieldEnglishCalendar();
+}
+
+function renderDailyFieldEnglish(date = new Date()) {
+    const currentSnapshot = getDailyFieldEnglishSnapshot(date);
+    if (!currentSnapshot) return;
+
+    const previousActiveDateKey = dailyFieldEnglishActiveDateKey;
+    dailyFieldEnglishActiveDateKey = currentSnapshot.dateKey;
+
+    if (
+        !dailyFieldEnglishSelectedDateKey ||
+        dailyFieldEnglishSelectedDateKey === previousActiveDateKey ||
+        dailyFieldEnglishSelectedDateKey > currentSnapshot.dateKey
+    ) {
+        dailyFieldEnglishSelectedDateKey = currentSnapshot.dateKey;
+        dailyFieldEnglishCalendarYear = currentSnapshot.year;
+        dailyFieldEnglishCalendarMonth = currentSnapshot.month;
+    }
+
+    if (!dailyFieldEnglishCalendarYear || !dailyFieldEnglishCalendarMonth) {
+        dailyFieldEnglishCalendarYear = currentSnapshot.year;
+        dailyFieldEnglishCalendarMonth = currentSnapshot.month;
+    }
+
+    const selectedSnapshot =
+        getDailyFieldEnglishSnapshotForDateKey(dailyFieldEnglishSelectedDateKey) ||
+        currentSnapshot;
+
+    updateDailyFieldEnglishLesson(selectedSnapshot);
+    renderDailyFieldEnglishCalendar();
+}
+
+function scheduleDailyFieldEnglishUpdate() {
+    pauseDailyFieldEnglish();
+    const now = new Date();
+    const koreaTime = getKoreaDateTimeParts(now);
+    const nextKoreaDate = new Date(Date.UTC(
+        koreaTime.year,
+        koreaTime.month - 1,
+        koreaTime.day
+    ));
+
+    if (koreaTime.hour >= DAILY_FIELD_ENGLISH_UPDATE_HOUR) {
+        nextKoreaDate.setUTCDate(nextKoreaDate.getUTCDate() + 1);
+    }
+
+    // 한국시간은 UTC+9이므로 다음 오전 9시에 맞춰 렌더링합니다.
+    const nextUpdateUtc = Date.UTC(
+        nextKoreaDate.getUTCFullYear(),
+        nextKoreaDate.getUTCMonth(),
+        nextKoreaDate.getUTCDate(),
+        DAILY_FIELD_ENGLISH_UPDATE_HOUR
+    ) - (9 * 60 * 60 * 1000);
+
+    dailyFieldEnglishUpdateTimer = setTimeout(() => {
+        renderDailyFieldEnglish();
+        scheduleDailyFieldEnglishUpdate();
+    }, Math.max(100, nextUpdateUtc - now.getTime() + 50));
+}
+
+function pauseDailyFieldEnglish() {
+    if (dailyFieldEnglishUpdateTimer) {
+        clearTimeout(dailyFieldEnglishUpdateTimer);
+    }
+    dailyFieldEnglishUpdateTimer = null;
+}
+
+function initializeDailyFieldEnglish() {
+    if (!dailyFieldEnglishInitialized) {
+        dailyFieldEnglishInitialized = true;
+
+        document.addEventListener("visibilitychange", () => {
+            const card = document.getElementById("daily-field-english-card");
+
+            if (!document.hidden && card?.classList.contains("expanded")) {
+                renderDailyFieldEnglish();
+                scheduleDailyFieldEnglishUpdate();
+            }
+        });
+    }
+
+    renderDailyFieldEnglish();
+    scheduleDailyFieldEnglishUpdate();
+}
+
+function speakDailyFieldEnglish() {
+    const sentence = document.getElementById("dailyFieldEnglishSentence")
+        ?.textContent?.trim();
+
+    if (!sentence) return;
+    if (!window.speechSynthesis ||
+        typeof window.SpeechSynthesisUtterance !== "function") {
+        showToast("이 브라우저에서는 영어 듣기를 사용할 수 없습니다.");
+        return;
+    }
+
+    window.speechSynthesis.cancel();
+    const utterance = new window.SpeechSynthesisUtterance(sentence);
+    utterance.lang = "en-US";
+    utterance.rate = 0.78;
+    window.speechSynthesis.speak(utterance);
+}
+
+window.onload = async () => { 
+    applyOfficialTerminalNames();
+    appendTerminalMealBlocks();
+    renderTerminalScheduleTabBar();
+    await ensureAnonymousAuth();
+    ["t1", "t2", "t3"].forEach(loadSectionTicker);
+    trackVisitorSession();
+    initTodayVisitorBadge();
+    ensureTodayUpdateNotice();
+    try { const now = new Date(); now.setMinutes(now.getMinutes() - now.getTimezoneOffset()); const todayStr = now.toISOString().split('T')[0]; const sDate = document.getElementById('wageStartDate'); const eDate = document.getElementById('wageEndDate'); if(sDate) sDate.value = todayStr; if(eDate) eDate.value = todayStr; if (typeof loadWageScheduledShipsForDate === 'function') loadWageScheduledShipsForDate(todayStr, false); } catch(e) { console.error("날짜 초기화 오류", e); } 
+    loadBanner(); 
+    try { 
+        db.collection("notices").orderBy("timestamp","desc").onSnapshot(s => { const l = document.getElementById("noticeList"); const badge = document.getElementById("noticeBadge"); const subMeta = document.getElementById("noticeCardSubMeta"); if (subMeta) subMeta.innerText = s.empty ? "운영 안내 및 주요 소식" : `등록된 공지 ${s.size}건`; if (s.empty) { l.innerHTML = "<tr><td colspan='3' style='text-align:center; padding:20px; color:var(--text-sub); font-weight:700;'>등록된 공지가 없습니다.</td></tr>"; if(badge) badge.classList.add("hidden"); return; } let isNew = false; const now = new Date(); let index = 0; const rowsHtml = []; s.forEach(d => { const x = d.data(); let dateStr = ""; if(x.timestamp) { const dt = x.timestamp.toDate(); dateStr = `${dt.getFullYear()}/${String(dt.getMonth()+1).padStart(2,'0')}/${String(dt.getDate()).padStart(2,'0')}`; if (index === 0) { const diffTime = now.getTime() - dt.getTime(); if (diffTime < 24 * 60 * 60 * 1000) isNew = true; } } const linkedContent = autoLink(x.content); const imageHtml = x.imageUrl ? `<img src="${x.imageUrl}" loading="lazy" alt="공지사항 이미지" style="max-width:100%; border-radius:8px; margin-top:10px; border:1px solid rgba(0,0,0,0.1);" onclick="document.getElementById('imageModal').style.display='flex'; document.getElementById('modalImage').src=this.src;">` : ''; const safeTitle = (x.title || '').replace(/'/g, "\\'").replace(/"/g, "&quot;"); const safeContent = (x.content || '').replace(/'/g, "\\'").replace(/"/g, "&quot;").replace(/\n/g, "\\n"); const imgParam = x.imageUrl ? `'${x.imageUrl}'` : `null`; const rowId = `n-${d.id}`; rowsHtml.push(`<tr onclick="toggleBoardRow('${rowId}')" style="cursor:pointer; background:${index === 0 ? 'rgba(239,68,68,0.06)' : 'rgba(239,68,68,0.02)'};"> <td class="board-no" style="color:var(--danger); font-weight:900;">${index === 0 ? '📌 필독' : '공지'}</td> <td class="board-title">📢 ${x.title} <span style="font-size:0.75rem; color:var(--primary); margin-left:4px;">▼</span></td> <td class="board-date">${dateStr}</td> </tr> <tr id="${rowId}" class="board-content-row"> <td colspan="3" class="board-content-box" style="border-left: 3px solid var(--danger);"> <div style="margin-bottom:15px; white-space:pre-wrap; font-weight:600; background:var(--card-bg); padding:12px; border-radius:8px; border:1px solid var(--border);">${linkedContent}</div> ${imageHtml} <div style="text-align:right; margin-top:10px;"> <button class="mini-btn" style="background:var(--primary) !important; margin-right:5px; color:white !important;" onclick="startEditNotice('${d.id}', '${safeTitle}', '${safeContent}', ${imgParam}, event)">✏️ 수정(Admin)</button> <button class="mini-btn btn-del" onclick="delNotice('${d.id}',event)">🗑️ 삭제(Admin)</button> </div> </td> </tr>`); index++; }); l.innerHTML = rowsHtml.join(""); if(badge) { if(isNew) badge.classList.remove("hidden"); else badge.classList.add("hidden"); } }); 
+        db.collection("posts").orderBy("timestamp","desc").onSnapshot(s => { allPostsData = []; s.forEach(d => { allPostsData.push({...d.data(), id:d.id}) }); const subMeta = document.getElementById("boardCardSubMeta"); if (subMeta) subMeta.innerText = allPostsData.length > 0 ? `자유 게시글 ${allPostsData.length}건` : "현장 동료 자유 소통방"; const badge = document.getElementById("boardBadge"); if (badge) { if (allPostsData.length > 0 && allPostsData[0].timestamp) { const now = new Date(); const dt = allPostsData[0].timestamp.toDate(); const diffTime = now.getTime() - dt.getTime(); if (diffTime < 24 * 60 * 60 * 1000) badge.classList.remove("hidden"); else badge.classList.add("hidden"); } else badge.classList.add("hidden"); } renderBoardPage(1); }); 
+        db.collection("ships").orderBy("timestamp","desc").onSnapshot(s=>{shipDirectorySnapshotLoaded = true; allShipsData=[]; s.forEach(d=>{allShipsData.push({...d.data(), id:d.id})}); const subMeta = document.getElementById("shipCardSubMeta"); if (subMeta) subMeta.innerText = allShipsData.length > 0 ? `등록 선박 ${allShipsData.length}척 · 장비 도감` : "난이도 · 필수 장비 도감"; filteredShips=allShipsData; renderShipPage(1); if(typeof loadAndSearchAllShips==="function") loadAndSearchAllShips(document.getElementById('shipSearch')?.value || '');}); 
+        db.collection("archives").orderBy("timestamp","desc").onSnapshot(s=>{const l=document.getElementById("fileList"); const subMeta = document.getElementById("archiveCardSubMeta"); if (subMeta) subMeta.innerText = s.size > 0 ? `등록 자료 ${s.size}건 · 시간표` : "터미널 셔틀 시간표 · 서식"; const rowsHtml=[]; s.forEach(d=>{const x=d.data(); rowsHtml.push(`<tr><td class="board-title" style="width: 75%; padding-left: 10px;"><a href="${x.url}" target="_blank" style="text-decoration:none; color:var(--primary); font-weight:800;">💾 ${x.title}</a></td><td style="width: 25%; text-align:center;"><button class="mini-btn btn-del" onclick="delArchive('${d.id}',event)">삭제</button></td></tr>`);}); l.innerHTML=rowsHtml.join("");}); 
+    } catch(err) { console.warn("실시간 연결 오류:", err); } 
+    if(localStorage.getItem('myWorkerId')) { currentWorkerId = localStorage.getItem('myWorkerId'); updateUserBar(); }
+    if (window.location.hash && window.location.hash.length > 1 && typeof applyHashRoute === "function") {
+        applyHashRoute();
+    } 
+};
+
+let leaderCurrentDate = new Date(); let leaderOverrides = []; const baseCycle = ["재경", "성철", "개굴"]; const baseAnchor = "2026-02-01"; function openLeaderSchedule() { trackAppEvent('actions', 'leader_cal'); document.getElementById('leaderCalendarModal').style.display = 'flex'; leaderCurrentDate = new Date(); renderLeaderCalendar(leaderCurrentDate.getFullYear(), leaderCurrentDate.getMonth()); } function closeLeaderCalendar() { document.getElementById('leaderCalendarModal').style.display = 'none'; } function changeLeaderMonth(s) { leaderCurrentDate.setMonth(leaderCurrentDate.getMonth() + s); renderLeaderCalendar(leaderCurrentDate.getFullYear(), leaderCurrentDate.getMonth()); } function getSlotIndex(dStr) { const target = new Date(dStr); const anchor = new Date(baseAnchor); const diffDays = Math.floor((target.getTime() - anchor.getTime()) / (1000 * 60 * 60 * 24)); return ((diffDays % 3) + 3) % 3; } function getCalculatedLeader(targetDateStr) { const targetSlot = getSlotIndex(targetDateStr); for (let i = leaderOverrides.length - 1; i >= 0; i--) { const ov = leaderOverrides[i]; if (ov.date <= targetDateStr) { if (getSlotIndex(ov.date) === targetSlot) return ov.leader; } } return baseCycle[targetSlot]; } function renderLeaderCalendar(y, m) { document.getElementById('leaderCalMonthYear').innerText = `${y}년 ${m+1}월`; const lD = new Date(y, m+1, 0).getDate(); db.collection('leader_overrides').get().then(s => { leaderOverrides = []; s.forEach(doc => { leaderOverrides.push(doc.data()); }); leaderOverrides.sort((a, b) => a.date.localeCompare(b.date)); drawLeaderGrid(y, m, lD); }).catch(err => { drawLeaderGrid(y, m, lD); }); } function drawLeaderGrid(y, m, lD) { const g = document.getElementById('leaderCalendarGrid'); const cells = []; const fD = new Date(y, m, 1).getDay(); for(let i=0; i<fD; i++) { cells.push(`<div style="background:transparent; border:none;"></div>`); } for(let d=1; d<=lD; d++) { const dStr = `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`; const isAnchor = leaderOverrides.some(ov => ov.date === dStr); const leaderName = getCalculatedLeader(dStr); let badgeClass = "leader-badge "; if (leaderName.includes("재경")) badgeClass += "leader-jaekyung"; else if (leaderName.includes("성철")) badgeClass += "leader-sungchul"; else if (leaderName.includes("개굴")) badgeClass += "leader-gaegool"; else badgeClass += "leader-jaekyung"; let customStyle = isAnchor ? "border: 2px solid #ef4444;" : ""; if (!baseCycle.includes(leaderName)) customStyle += "background-color: #8b5cf6; color: white;"; let dayColor = "var(--text-main)"; let currentDayObj = new Date(y, m, d).getDay(); if (currentDayObj === 0) dayColor = "#ef4444"; if (currentDayObj === 6) dayColor = "#3b82f6"; cells.push(`<div class="cal-day tap-effect" onclick="overrideLeader('${dStr}', '${leaderName}')" style="min-height: 65px; justify-content: flex-start; padding-top: 5px; background: white;"><span style="color: ${dayColor}; font-weight: 900; font-size: 0.95rem;">${d}</span><div class="${badgeClass}" style="${customStyle}">${leaderName}</div></div>`); } g.innerHTML = cells.join(""); } async function overrideLeader(dStr, currentLeader) { if (!(await verifyAdmin())) return; const newLeader = prompt(`[${dStr}] 조장을 변경합니다.\n\n👉 이곳에 새 이름(예: 용병)을 넣으면 이후 3일마다 돌아오는 이 근무조의 스케줄이 모두 교체됩니다.\n\n※ 취소하려면 '초기화'를 입력하세요.`, currentLeader); if (newLeader === null) return; if (newLeader.trim() === "" || newLeader === "초기화") { db.collection('leader_overrides').doc(dStr).delete().then(() => { showToast("기존 패턴이 복구되었습니다."); renderLeaderCalendar(leaderCurrentDate.getFullYear(), leaderCurrentDate.getMonth()); }); } else { db.collection('leader_overrides').doc(dStr).set({ date: dStr, leader: newLeader.trim() }).then(() => { showToast("새 근무조가 적용되었습니다."); renderLeaderCalendar(leaderCurrentDate.getFullYear(), leaderCurrentDate.getMonth()); }); } }
+
+/**
+ * 조장 근무일 접근 권한 검증 모듈
+ * @param {Event} event - 클릭 이벤트 객체
+ */
+function verifyLeaderAccess(event) {
+    try {
+        // 1. 기본 이벤트 전파 차단
+        if (event) {
+            event.preventDefault();
+            event.stopPropagation();
+        }
+
+        // 2. 요청하신 안내 문구와 함께 비밀번호 입력창 호출
+        const userPassword = prompt("비밀번호를 입력하세요.\n(비밀번호는 제작자에게 문의 바랍니다. 문의: luxrank@gmail.com / 문자: 010-2846-8906)");
+
+        // 3. 취소 버튼을 누르거나 빈값일 경우 안전하게 중단 (예외 처리)
+        if (userPassword === null) {
+            return false;
+        }
+
+        // 4. 비밀번호 확인 (9363)
+        if (userPassword.trim() === "9363") {
+            alert("인증되었습니다.");
+            
+            // 5. 원래 실행되어야 할 함수가 있다면 안전하게 호출, 없으면 관리자 페이지 등으로 연결
+            if (typeof openLeaderSchedule === "function") {
+                openLeaderSchedule();
+            } else {
+                // 만약 연결된 함수가 없다면 기본 동작이나 페이지 이동 처리 가능
+                console.warn("openLeaderSchedule 함수가 정의되어 있지 않습니다.");
+            }
+        } else {
+            alert("비밀번호가 일치하지 않습니다.");
+            return false;
+        }
+    } catch (error) {
+        // 6. 런타임 에러 핸들링 (OWASP 방어 지침 준수)
+        console.error("비밀번호 검증 중 오류 발생:", error);
+        alert("일시적인 오류가 발생했습니다. 다시 시도해 주세요.");
+        return false;
+    }
+}
