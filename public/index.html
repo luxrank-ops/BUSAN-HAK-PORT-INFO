@@ -264,6 +264,7 @@
 
         .wage-row { display: flex; align-items: center; margin-bottom: 10px; width: 100%; justify-content: space-between; gap: 8px; }
         .wage-row label { width: auto; min-width: max-content; font-weight: 800; font-size: clamp(0.9rem, 3vw, 1rem); word-break: keep-all; }
+        #wage-card #wageHourly { border-color: #23195e !important; width: 100px !important; flex: 0 0 100px !important; }
         .allowance-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 8px; }
         
         .calc-layout { display: flex; flex-direction: row; gap: 6px; margin-bottom: 12px; width: 100%; align-items: stretch; }
@@ -1917,7 +1918,7 @@
                     <div class="calc-left">
                         <div class="wage-row" style="flex-direction: row !important; align-items: center !important; flex-wrap: nowrap !important;">
                             <label style="min-width: 80px; margin-bottom: 0 !important; font-weight: 900;">시급(기본)</label>
-                            <input type="number" id="wageHourly" class="input-field" value="10320" style="flex: 1; min-width: 0; text-align:right; font-weight:900; color:#ef4444; font-size:1.15rem; border: 2px solid #cbd5e1;">
+                            <input type="number" id="wageHourly" class="input-field" value="10320" style="flex: 0 0 100px; width: 100px; min-width: 0; text-align:right; font-weight:900; color:#ef4444; font-size:1.15rem; border: 2px solid #23195e; border-color: #23195e;">
                         </div>
                         <div style="background: rgba(59, 130, 246, 0.05); border: 2px solid var(--primary-light); padding: 10px; border-radius: 10px; margin-bottom: 10px;">
                             <div class="wage-row date-touch-block" style="margin-bottom: 6px;" onclick="openDatePicker('wageStartDate', event)" title="터치하여 시작 날짜 달력 열기">
