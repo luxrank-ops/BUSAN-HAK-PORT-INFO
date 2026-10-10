@@ -379,9 +379,10 @@
             display: none;
         }
 
-        /* 임금계산기 카드를 열면 제목 왼쪽, 펼쳐진 표 오른쪽 */
+        /* 임금계산기 카드를 열면 첫 줄에 아이콘·시간표, 아래 줄에 제목·설명 */
         #wage-card.expanded > .dash-header.hero-header {
             flex-direction: row !important;
+            flex-wrap: wrap;
             justify-content: space-between !important;
             align-items: center !important;
             min-height: 0 !important;
@@ -389,20 +390,27 @@
             gap: 8px !important;
         }
 
-        #wage-card.expanded > .dash-header.hero-header .hero-copy {
-            flex: 1 1 auto;
-            flex-direction: column;
-            align-items: flex-start;
-            width: auto;
-            min-width: 0;
-            text-align: left;
+        #wage-card.expanded > .dash-header.hero-header > .dash-icon-badge.hero {
+            order: 0;
         }
 
         #wage-card.expanded .wage-header-schedule {
             display: block;
+            order: 1;
+            margin-left: auto;
             flex: 0 0 clamp(130px, 40%, 280px);
             min-width: 0;
             cursor: default;
+        }
+
+        #wage-card.expanded > .dash-header.hero-header > .hero-copy {
+            order: 2;
+            flex: 1 1 100%;
+            width: 100%;
+            min-width: 0;
+            flex-direction: column;
+            align-items: flex-start;
+            text-align: left;
         }
 
         .wage-header-schedule .ref-table {
