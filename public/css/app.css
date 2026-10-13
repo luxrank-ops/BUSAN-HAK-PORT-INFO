@@ -608,16 +608,29 @@ img { max-width: 100%; height: auto; object-fit: cover; background: #eee; }
         .board-content-box .btn-del, #fileList .btn-del { border-color: #fca5a5 !important; color: #ef4444 !important; background: #fef2f2 !important; }
         .board-content-box .btn-del:hover, #fileList .btn-del:hover { background: #fee2e2 !important; border-color: #f87171 !important; }
 
-        .comment-section { margin-top: 15px; }
-        .comment-item { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 12px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: flex-start; word-break: break-all; box-shadow: 0 1px 2px rgba(0,0,0,0.03); }
-        .comment-meta { font-weight: 900; color: var(--primary); font-size: 0.85rem; margin-right: 6px; }
-        .comment-text { color: var(--text-main); font-size: 0.9rem; line-height: 1.5; font-weight: 600;}
-        .comment-del-btn { background: #fee2e2; border: 1px solid #fca5a5; color: #ef4444; width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; font-weight: bold; cursor: pointer; flex-shrink: 0; transition: all 0.2s; padding: 0; margin-left: 10px; }
+        .comment-section { margin-top: 10px; display: flex; flex-direction: column; gap: 6px; }
+        .comment-item { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 7px 10px; margin-bottom: 0; display: flex; justify-content: space-between; align-items: flex-start; word-break: break-all; box-shadow: none; font-size: 0.85rem; }
+        .comment-meta { font-weight: 800; color: var(--primary); font-size: 0.82rem; margin-right: 6px; white-space: nowrap; }
+        .comment-text { color: var(--text-main); font-size: 0.85rem; line-height: 1.45; font-weight: 600; }
+        .comment-img-thumb { margin-top: 5px; display: block; max-width: 150px; max-height: 95px; border-radius: 6px; border: 1px solid #cbd5e1; cursor: pointer; object-fit: cover; transition: transform 0.15s ease, opacity 0.15s ease; }
+        .comment-img-thumb:hover { opacity: 0.9; transform: scale(1.02); }
+        .comment-del-btn { background: #fee2e2; border: 1px solid #fca5a5; color: #ef4444; width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.95rem; font-weight: bold; cursor: pointer; flex-shrink: 0; transition: all 0.2s; padding: 0; margin-left: 8px; }
         
-        .comment-form { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; background: #ffffff; border: 1px solid #e5e7eb; padding: 12px; border-radius: 16px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
-        .comment-input-sm { flex: 1; min-width: 80px; border-radius: 20px; border: 1px solid #d1d5db; padding: 8px 12px; font-size: 0.85rem; font-weight: 700; outline: none; transition: border 0.3s, box-shadow 0.3s; background: #f9fafb; }
-        .comment-input-lg { flex: 100%; border-radius: 20px; border: 1px solid #d1d5db; padding: 10px 14px; font-size: 0.9rem; font-weight: 600; outline: none; transition: border 0.3s, box-shadow 0.3s; background: #f9fafb; }
-        .comment-submit { width: 100%; background: var(--primary); color: white; border: none; border-radius: 20px; padding: 10px; font-weight: 900; cursor: pointer; font-size: 0.95rem; transition: background 0.2s; margin-top: 4px; }
+        .comment-form { display: flex; flex-direction: column; gap: 5px; margin-top: 8px; background: #ffffff; border: 1px solid #e2e8f0; padding: 8px 10px; border-radius: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.03); }
+        .comment-form-row { display: flex; gap: 6px; align-items: center; width: 100%; }
+        .comment-input-sm { width: 110px; max-width: 45%; border-radius: 6px; border: 1px solid #d1d5db; padding: 4px 8px; font-size: 0.8rem; font-weight: 700; outline: none; transition: border 0.2s, box-shadow 0.2s; background: #f9fafb; height: 30px; box-sizing: border-box; }
+        .comment-input-sm:focus { border-color: var(--primary); background: #ffffff; }
+        .comment-input-main, .comment-input-lg { flex: 1; min-width: 0; border-radius: 6px; border: 1px solid #d1d5db; padding: 5px 10px; font-size: 0.84rem; font-weight: 600; outline: none; transition: border 0.2s, box-shadow 0.2s; background: #f9fafb; height: 32px; box-sizing: border-box; }
+        .comment-input-main:focus, .comment-input-lg:focus { border-color: var(--primary); background: #ffffff; }
+        .comment-attach-btn { height: 32px; padding: 0 8px; border-radius: 6px; border: 1px solid #d1d5db; background: #ffffff; color: #475569; font-size: 0.95rem; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0; transition: all 0.2s; box-sizing: border-box; user-select: none; }
+        .comment-attach-btn:hover { background: #f1f5f9; border-color: #94a3b8; }
+        .comment-attach-btn.has-file { border-color: var(--primary); color: var(--primary); background: rgba(10,27,63,0.06); }
+        .comment-submit { height: 32px; padding: 0 12px; background: var(--primary); color: white; border: none; border-radius: 6px; font-weight: 800; cursor: pointer; font-size: 0.82rem; white-space: nowrap; flex-shrink: 0; transition: background 0.2s; display: inline-flex; align-items: center; justify-content: center; box-sizing: border-box; margin: 0; }
+        .comment-submit:hover { opacity: 0.92; }
+        .comment-preview-box { display: flex; align-items: center; gap: 8px; padding: 4px 8px; background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.75rem; color: #334155; }
+        .comment-preview-thumb { width: 30px; height: 30px; border-radius: 4px; object-fit: cover; border: 1px solid #cbd5e1; flex-shrink: 0; }
+        .comment-preview-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 700; }
+        .comment-preview-remove { background: none; border: none; color: #ef4444; font-size: 1.1rem; font-weight: bold; cursor: pointer; padding: 0 4px; line-height: 1; display: inline-flex; align-items: center; }
         
         .mini-btn-old { padding: 8px 12px; font-size: clamp(0.8rem, 2.5vw, 0.9rem); font-weight: 800; border-radius: 6px; border: none; cursor: pointer; color: white; margin-left: 4px; touch-action: manipulation; }
         .ship-star-picker { display: flex; gap: 6px; align-items: center; }

@@ -173,7 +173,8 @@ service cloud.firestore {
         allow create, update: if isSignedIn() && isValidId(commentId) &&
           incoming().name is string && incoming().name.size() <= 50 &&
           incoming().text is string && incoming().text.size() <= 2000 &&
-          isSha256Hash(incoming().password);
+          isSha256Hash(incoming().password) &&
+          (!('imageUrl' in incoming()) || incoming().imageUrl == null || (incoming().imageUrl is string && incoming().imageUrl.size() <= 2000));
         allow delete: if isSignedIn() && isValidId(commentId);
       }
     }
@@ -196,7 +197,8 @@ service cloud.firestore {
         allow create, update: if isSignedIn() && isValidId(commentId) &&
           incoming().name is string && incoming().name.size() <= 50 &&
           incoming().text is string && incoming().text.size() <= 2000 &&
-          isSha256Hash(incoming().password);
+          isSha256Hash(incoming().password) &&
+          (!('imageUrl' in incoming()) || incoming().imageUrl == null || (incoming().imageUrl is string && incoming().imageUrl.size() <= 2000));
         allow delete: if isSignedIn() && isValidId(commentId);
       }
     }

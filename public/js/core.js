@@ -103,7 +103,7 @@ async function verifyPasswordMatch(inputPw, storedPwOrHash) {
 
 let allPostsData=[], allShipsData=[], filteredShips=[], adminWorkLogs={};
 let currentDate = new Date(); let currentWorkerId = localStorage.getItem('myWorkerId'); 
-let commentUnsubscribes = {}; let shipCommentUnsubscribes = {}; let shipCommentsById = {}; let editingShipComment = null; let visitorCountPromise = null; const postsPerPage = 5; let globalTickerData = { adminMessage: "", userMessages: [] };
+let commentUnsubscribes = {}; let shipCommentUnsubscribes = {}; let shipCommentsById = {}; let editingShipComment = null; let boardCommentsById = {}; let editingBoardComment = null; let selectedCommentFiles = {}; let selectedShipCommentFiles = {}; let visitorCountPromise = null; const postsPerPage = 5; let globalTickerData = { adminMessage: "", userMessages: [] };
 let currentEditPostId = null;
 
 async function safeGet(ref) { if (!ref) return null; try { return await ref.get(); } catch (e) { return null; } }
