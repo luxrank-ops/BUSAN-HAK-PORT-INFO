@@ -101,13 +101,20 @@ service cloud.firestore {
     match /user_profiles/{nick} {
       allow get: if isSignedIn() && isValidId(nick);
       allow list: if isAdmin();
-      allow create: if isSignedIn() && isValidId(nick) &&
-        incoming().keys().hasAll(['password', 'createdAt']) &&
-        incoming().keys().hasOnly(['password', 'createdAt']) &&
-        isSha256Hash(incoming().password);
+      allow create: if isSignedIn() && isValidId(nick) && (
+        (
+          incoming().keys().hasAll(['password', 'createdAt']) &&
+          incoming().keys().hasOnly(['password', 'createdAt', 'fcmToken', 'updatedAt']) &&
+          isSha256Hash(incoming().password)
+        ) || (
+          incoming().keys().hasOnly(['fcmToken', 'updatedAt']) &&
+          incoming().fcmToken is string && incoming().fcmToken.size() <= 1024
+        )
+      );
       allow update: if isSignedIn() && isValidId(nick) &&
-        incoming().diff(existing()).affectedKeys().hasOnly(['password']) &&
-        isSha256Hash(incoming().password);
+        incoming().diff(existing()).affectedKeys().hasOnly(['password', 'fcmToken', 'updatedAt']) &&
+        (!('password' in incoming().diff(existing()).affectedKeys()) || isSha256Hash(incoming().password)) &&
+        (!('fcmToken' in incoming()) || incoming().fcmToken == null || (incoming().fcmToken is string && incoming().fcmToken.size() <= 1024));
       allow delete: if isAdmin();
     }
 
@@ -210,6 +217,27 @@ service cloud.firestore {
     }
 
     match /leader_overrides/{dateId} {
+      allow get, list: if isSignedIn();
+      allow create, update, delete: if isAdmin();
+    }
+
+    // ---------------------------------------------------------
+    // 9. notifications & vessel_schedules_cache (자동화 알림 및 스케줄 캐시)
+    // ---------------------------------------------------------
+    match /notifications/{notiId} {
+      allow get, list: if isSignedIn();
+      allow create: if isSignedIn() && isValidId(notiId) &&
+        incoming().userId is string && incoming().userId.size() <= 64 &&
+        incoming().title is string && incoming().title.size() <= 200 &&
+        incoming().body is string && incoming().body.size() <= 2000;
+      allow update: if isSignedIn() && isValidId(notiId) && (
+        isAdmin() ||
+        incoming().diff(existing()).affectedKeys().hasOnly(['read', 'readAt'])
+      );
+      allow delete: if isAdmin();
+    }
+
+    match /vessel_schedules_cache/{vslId} {
       allow get, list: if isSignedIn();
       allow create, update, delete: if isAdmin();
     }

@@ -9,12 +9,14 @@ const requiredFiles = [
   'public/admin.html',
   'public/manifest.json',
   'public/service-worker.js',
+  'public/firebase-messaging-sw.js',
   'public/robots.txt',
   'public/sitemap.xml',
   'public/favicon.ico',
   'public/icon-192.png',
   'public/icon-512.png',
   'public/css/app.css',
+  'public/js/notifications.js',
   'public/js/core.js',
   'public/js/terminals.js',
   'public/js/worklog.js',
@@ -31,6 +33,8 @@ const jsonFiles = ['.firebaserc', 'firebase.json', 'metadata.json', 'package.jso
 const htmlFiles = ['public/index.html', 'public/admin.html'];
 const jsFiles = [
   'public/service-worker.js',
+  'public/firebase-messaging-sw.js',
+  'public/js/notifications.js',
   'public/js/core.js',
   'public/js/terminals.js',
   'public/js/worklog.js',
