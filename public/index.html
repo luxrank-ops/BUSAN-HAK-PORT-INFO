@@ -639,16 +639,29 @@
         .board-content-box .btn-del, #fileList .btn-del { border-color: #fca5a5 !important; color: #ef4444 !important; background: #fef2f2 !important; }
         .board-content-box .btn-del:hover, #fileList .btn-del:hover { background: #fee2e2 !important; border-color: #f87171 !important; }
 
-        .comment-section { margin-top: 15px; }
-        .comment-item { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 12px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: flex-start; word-break: break-all; box-shadow: 0 1px 2px rgba(0,0,0,0.03); }
-        .comment-meta { font-weight: 900; color: var(--primary); font-size: 0.85rem; margin-right: 6px; }
-        .comment-text { color: var(--text-main); font-size: 0.9rem; line-height: 1.5; font-weight: 600;}
-        .comment-del-btn { background: #fee2e2; border: 1px solid #fca5a5; color: #ef4444; width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; font-weight: bold; cursor: pointer; flex-shrink: 0; transition: all 0.2s; padding: 0; margin-left: 10px; }
+        .comment-section { margin-top: 10px; display: flex; flex-direction: column; gap: 6px; }
+        .comment-item { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 7px 10px; margin-bottom: 0; display: flex; justify-content: space-between; align-items: flex-start; word-break: break-all; box-shadow: none; font-size: 0.85rem; }
+        .comment-meta { font-weight: 800; color: var(--primary); font-size: 0.82rem; margin-right: 6px; white-space: nowrap; }
+        .comment-text { color: var(--text-main); font-size: 0.85rem; line-height: 1.45; font-weight: 600; }
+        .comment-img-thumb { margin-top: 5px; display: block; max-width: 150px; max-height: 95px; border-radius: 6px; border: 1px solid #cbd5e1; cursor: pointer; object-fit: cover; transition: transform 0.15s ease, opacity 0.15s ease; }
+        .comment-img-thumb:hover { opacity: 0.9; transform: scale(1.02); }
+        .comment-del-btn { background: #fee2e2; border: 1px solid #fca5a5; color: #ef4444; width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.95rem; font-weight: bold; cursor: pointer; flex-shrink: 0; transition: all 0.2s; padding: 0; margin-left: 8px; }
         
-        .comment-form { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; background: #ffffff; border: 1px solid #e5e7eb; padding: 12px; border-radius: 16px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
-        .comment-input-sm { flex: 1; min-width: 80px; border-radius: 20px; border: 1px solid #d1d5db; padding: 8px 12px; font-size: 0.85rem; font-weight: 700; outline: none; transition: border 0.3s, box-shadow 0.3s; background: #f9fafb; }
-        .comment-input-lg { flex: 100%; border-radius: 20px; border: 1px solid #d1d5db; padding: 10px 14px; font-size: 0.9rem; font-weight: 600; outline: none; transition: border 0.3s, box-shadow 0.3s; background: #f9fafb; }
-        .comment-submit { width: 100%; background: var(--primary); color: white; border: none; border-radius: 20px; padding: 10px; font-weight: 900; cursor: pointer; font-size: 0.95rem; transition: background 0.2s; margin-top: 4px; }
+        .comment-form { display: flex; flex-direction: column; gap: 5px; margin-top: 8px; background: #ffffff; border: 1px solid #e2e8f0; padding: 8px 10px; border-radius: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.03); }
+        .comment-form-row { display: flex; gap: 6px; align-items: center; width: 100%; }
+        .comment-input-sm { width: 110px; max-width: 45%; border-radius: 6px; border: 1px solid #d1d5db; padding: 4px 8px; font-size: 0.8rem; font-weight: 700; outline: none; transition: border 0.2s, box-shadow 0.2s; background: #f9fafb; height: 30px; box-sizing: border-box; }
+        .comment-input-sm:focus { border-color: var(--primary); background: #ffffff; }
+        .comment-input-main, .comment-input-lg { flex: 1; min-width: 0; border-radius: 6px; border: 1px solid #d1d5db; padding: 5px 10px; font-size: 0.84rem; font-weight: 600; outline: none; transition: border 0.2s, box-shadow 0.2s; background: #f9fafb; height: 32px; box-sizing: border-box; }
+        .comment-input-main:focus, .comment-input-lg:focus { border-color: var(--primary); background: #ffffff; }
+        .comment-attach-btn { height: 32px; padding: 0 8px; border-radius: 6px; border: 1px solid #d1d5db; background: #ffffff; color: #475569; font-size: 0.95rem; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0; transition: all 0.2s; box-sizing: border-box; user-select: none; }
+        .comment-attach-btn:hover { background: #f1f5f9; border-color: #94a3b8; }
+        .comment-attach-btn.has-file { border-color: var(--primary); color: var(--primary); background: rgba(10,27,63,0.06); }
+        .comment-submit { height: 32px; padding: 0 12px; background: var(--primary); color: white; border: none; border-radius: 6px; font-weight: 800; cursor: pointer; font-size: 0.82rem; white-space: nowrap; flex-shrink: 0; transition: background 0.2s; display: inline-flex; align-items: center; justify-content: center; box-sizing: border-box; margin: 0; }
+        .comment-submit:hover { opacity: 0.92; }
+        .comment-preview-box { display: flex; align-items: center; gap: 8px; padding: 4px 8px; background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.75rem; color: #334155; }
+        .comment-preview-thumb { width: 30px; height: 30px; border-radius: 4px; object-fit: cover; border: 1px solid #cbd5e1; flex-shrink: 0; }
+        .comment-preview-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 700; }
+        .comment-preview-remove { background: none; border: none; color: #ef4444; font-size: 1.1rem; font-weight: bold; cursor: pointer; padding: 0 4px; line-height: 1; display: inline-flex; align-items: center; }
         
         .mini-btn-old { padding: 8px 12px; font-size: clamp(0.8rem, 2.5vw, 0.9rem); font-weight: 800; border-radius: 6px; border: none; cursor: pointer; color: white; margin-left: 4px; touch-action: manipulation; }
         .ship-star-picker { display: flex; gap: 6px; align-items: center; }
@@ -3543,7 +3556,7 @@ async function verifyPasswordMatch(inputPw, storedPwOrHash) {
 
 let allPostsData=[], allShipsData=[], filteredShips=[], adminWorkLogs={};
 let currentDate = new Date(); let currentWorkerId = localStorage.getItem('myWorkerId'); 
-let commentUnsubscribes = {}; let shipCommentUnsubscribes = {}; let shipCommentsById = {}; let editingShipComment = null; let visitorCountPromise = null; const postsPerPage = 5; let globalTickerData = { adminMessage: "", userMessages: [] };
+let commentUnsubscribes = {}; let shipCommentUnsubscribes = {}; let shipCommentsById = {}; let editingShipComment = null; let selectedCommentFiles = {}; let selectedShipCommentFiles = {}; let visitorCountPromise = null; const postsPerPage = 5; let globalTickerData = { adminMessage: "", userMessages: [] };
 let currentEditPostId = null;
 
 async function safeGet(ref) { if (!ref) return null; try { return await ref.get(); } catch (e) { return null; } }
@@ -9212,6 +9225,116 @@ async function tryEditPost(id, savedPw, nick, title, content, e) { if (e) e.stop
 async function deletePost(id,pw,e){ if (e) e.stopPropagation(); const postObj = (allPostsData || []).find(p => p.id === id); const finalPw = postObj ? (postObj.password || '') : pw; const inputPw = prompt("게시글 비밀번호를 입력하세요 (작성자 또는 관리자):"); if (inputPw === null) return; const isAuthor = await verifyPasswordMatch(inputPw, finalPw); const inputHash = await sha256Hex(inputPw); const isAdmin = isAdminSessionVerified || (inputHash === DEFAULT_ADMIN_PW_HASH); if(isAuthor || isAdmin) { if(!confirm("이 게시글을 삭제하시겠습니까?")) return; db.collection("posts").doc(id).delete().then(() => showToast("게시글이 삭제되었습니다.")).catch(err => alert("삭제 실패: " + err.message)); } else { alert("⚠️ 비밀번호가 일치하지 않습니다."); } } 
 let boardCommentsById = {};
 let editingBoardComment = null;
+
+function uploadCommentImageFile(file, pathPrefix = "comments") {
+    return new Promise((resolve, reject) => {
+        const safeName = (file.name || "comment_image.jpg").replace(/[^\w.\-가-힣]/g, "_");
+        const storageRef = storage.ref(`${pathPrefix}/${Date.now()}_${safeName}`);
+        const uploadTask = storageRef.put(file);
+        uploadTask.on('state_changed', null, reject, () => {
+            uploadTask.snapshot.ref.getDownloadURL().then(resolve).catch(reject);
+        });
+    });
+}
+
+function handleCommentFileChange(pid, inputEl) {
+    const file = inputEl.files && inputEl.files[0];
+    const previewEl = document.getElementById(`cmt-preview-${pid}`);
+    const labelEl = document.getElementById(`cmt-file-label-${pid}`);
+    if (!file) {
+        delete selectedCommentFiles[pid];
+        if (previewEl) { previewEl.style.display = "none"; previewEl.innerHTML = ""; }
+        if (labelEl) labelEl.classList.remove("has-file");
+        return;
+    }
+    if (!file.type.startsWith("image/")) {
+        alert("이미지 파일만 첨부할 수 있습니다.");
+        inputEl.value = "";
+        return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+        alert("이미지 용량은 10MB를 초과할 수 없습니다.");
+        inputEl.value = "";
+        return;
+    }
+    selectedCommentFiles[pid] = file;
+    if (labelEl) labelEl.classList.add("has-file");
+    if (previewEl) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            previewEl.style.display = "flex";
+            previewEl.innerHTML = `
+                <img src="${e.target.result}" class="comment-preview-thumb" alt="미리보기">
+                <span class="comment-preview-name">${escapeShipCommentHtml(file.name)}</span>
+                <button type="button" class="comment-preview-remove" onclick="removeCommentFile('${pid}')" title="첨부 취소">×</button>
+            `;
+        };
+        reader.readAsDataURL(file);
+    }
+}
+
+function removeCommentFile(pid) {
+    delete selectedCommentFiles[pid];
+    const inputEl = document.getElementById(`cmt-file-${pid}`);
+    if (inputEl) inputEl.value = "";
+    const previewEl = document.getElementById(`cmt-preview-${pid}`);
+    if (previewEl) { previewEl.style.display = "none"; previewEl.innerHTML = ""; }
+    const labelEl = document.getElementById(`cmt-file-label-${pid}`);
+    if (labelEl) labelEl.classList.remove("has-file");
+    if (editingBoardComment && editingBoardComment.pid === pid) {
+        editingBoardComment.existingImageUrl = null;
+    }
+}
+
+function handleShipCommentFileChange(shipId, inputEl) {
+    const file = inputEl.files && inputEl.files[0];
+    const previewEl = document.getElementById(`ship-comment-preview-${shipId}`);
+    const labelEl = document.getElementById(`ship-comment-file-label-${shipId}`);
+    if (!file) {
+        delete selectedShipCommentFiles[shipId];
+        if (previewEl) { previewEl.style.display = "none"; previewEl.innerHTML = ""; }
+        if (labelEl) labelEl.classList.remove("has-file");
+        return;
+    }
+    if (!file.type.startsWith("image/")) {
+        alert("이미지 파일만 첨부할 수 있습니다.");
+        inputEl.value = "";
+        return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+        alert("이미지 용량은 10MB를 초과할 수 없습니다.");
+        inputEl.value = "";
+        return;
+    }
+    selectedShipCommentFiles[shipId] = file;
+    if (labelEl) labelEl.classList.add("has-file");
+    if (previewEl) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            previewEl.style.display = "flex";
+            previewEl.innerHTML = `
+                <img src="${e.target.result}" class="comment-preview-thumb" alt="미리보기">
+                <span class="comment-preview-name">${escapeShipCommentHtml(file.name)}</span>
+                <button type="button" class="comment-preview-remove" onclick="removeShipCommentFile('${shipId}')" title="첨부 취소">×</button>
+            `;
+        };
+        reader.readAsDataURL(file);
+    }
+}
+
+function removeShipCommentFile(shipId) {
+    delete selectedShipCommentFiles[shipId];
+    const inputEl = document.getElementById(`ship-comment-file-${shipId}`);
+    if (inputEl) inputEl.value = "";
+    const previewEl = document.getElementById(`ship-comment-preview-${shipId}`);
+    if (previewEl) { previewEl.style.display = "none"; previewEl.innerHTML = ""; }
+    const labelEl = document.getElementById(`ship-comment-file-label-${shipId}`);
+    if (labelEl) labelEl.classList.remove("has-file");
+    if (editingShipComment && editingShipComment.shipId === shipId) {
+        editingShipComment.existingImageUrl = null;
+    }
+}
+
 async function verifyBoardCommentPassword(comment) {
     const enteredPassword = prompt("댓글 비밀번호를 입력하세요 (작성자 또는 관리자):");
     if (enteredPassword === null) return false;
@@ -9229,12 +9352,31 @@ async function editComment(pid, cid) {
     const txtEl = document.getElementById(`cmt-txt-${pid}`);
     const submitBtn = document.getElementById(`cmt-submit-${pid}`);
     const cancelBtn = document.getElementById(`cmt-cancel-${pid}`);
+    const previewEl = document.getElementById(`cmt-preview-${pid}`);
+    const labelEl = document.getElementById(`cmt-file-label-${pid}`);
     if (nameEl) nameEl.value = comment.name || "";
     if (pwEl) pwEl.value = "";
     if (txtEl) { txtEl.value = comment.text || ""; txtEl.focus(); }
-    editingBoardComment = { pid, cid };
+    delete selectedCommentFiles[pid];
+    const fileInput = document.getElementById(`cmt-file-${pid}`);
+    if (fileInput) fileInput.value = "";
+    if (comment.imageUrl) {
+        if (labelEl) labelEl.classList.add("has-file");
+        if (previewEl) {
+            previewEl.style.display = "flex";
+            previewEl.innerHTML = `
+                <img src="${escapeShipCommentHtml(comment.imageUrl)}" class="comment-preview-thumb" alt="기존 첨부 이미지">
+                <span class="comment-preview-name">기존 첨부 이미지</span>
+                <button type="button" class="comment-preview-remove" onclick="removeCommentFile('${pid}')" title="이미지 삭제">×</button>
+            `;
+        }
+    } else {
+        if (labelEl) labelEl.classList.remove("has-file");
+        if (previewEl) { previewEl.style.display = "none"; previewEl.innerHTML = ""; }
+    }
+    editingBoardComment = { pid, cid, existingImageUrl: comment.imageUrl || null };
     if (submitBtn) submitBtn.innerText = "수정 완료";
-    if (cancelBtn) cancelBtn.style.display = "block";
+    if (cancelBtn) cancelBtn.style.display = "inline-flex";
     showToast("댓글 수정 모드로 전환되었습니다.");
 }
 function cancelBoardCommentEdit(pid) {
@@ -9246,28 +9388,74 @@ function cancelBoardCommentEdit(pid) {
     if (nameEl) nameEl.value = getPortNickname();
     if (pwEl) pwEl.value = "";
     if (txtEl) txtEl.value = "";
-    if (submitBtn) submitBtn.innerText = "댓글 등록";
+    if (submitBtn) { submitBtn.innerText = "등록"; submitBtn.disabled = false; }
     if (cancelBtn) cancelBtn.style.display = "none";
+    removeCommentFile(pid);
     editingBoardComment = null;
 }
 async function addComment(pid){
-    const n=(document.getElementById(`cmt-name-${pid}`)?.value||"").trim(), p=(document.getElementById(`cmt-pw-${pid}`)?.value||"").trim(), t=(document.getElementById(`cmt-txt-${pid}`)?.value||"").trim();
-    if(!n||!p||!t){alert("닉네임, 비밀번호, 댓글 내용을 모두 입력해 주세요."); return;}
+    const nameEl = document.getElementById(`cmt-name-${pid}`);
+    const pwEl = document.getElementById(`cmt-pw-${pid}`);
+    const txtEl = document.getElementById(`cmt-txt-${pid}`);
+    const submitBtn = document.getElementById(`cmt-submit-${pid}`);
+    const n = (nameEl?.value || "").trim();
+    const p = (pwEl?.value || "").trim();
+    const t = (txtEl?.value || "").trim();
+    const attachedFile = selectedCommentFiles[pid];
+
+    if(!n || !p || (!t && !attachedFile)){
+        alert("닉네임, 비밀번호, 그리고 댓글 내용(또는 사진)을 입력해 주세요.");
+        return;
+    }
+
     const pwHash = (/^[a-f0-9]{64}$/i.test(p)) ? p.toLowerCase() : (await sha256Hex(p));
-    const commentsRef = db.collection('posts').doc(pid).collection('comments');
-    const commentData = {name:n, password:pwHash, text:t, timestamp:firebase.firestore.FieldValue.serverTimestamp()};
     const isEditing = editingBoardComment && editingBoardComment.pid === pid;
-    const req = isEditing ? commentsRef.doc(editingBoardComment.cid).update(commentData) : commentsRef.add(commentData);
-    req.then(()=>{
+
+    if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.innerText = attachedFile ? "사진 업로드 중..." : "저장 중...";
+    }
+
+    try {
+        let imageUrl = null;
+        if (attachedFile) {
+            imageUrl = await uploadCommentImageFile(attachedFile, "posts/comments");
+        } else if (isEditing) {
+            imageUrl = editingBoardComment.existingImageUrl || null;
+        }
+
+        const commentsRef = db.collection('posts').doc(pid).collection('comments');
+        const commentData = {
+            name: n,
+            password: pwHash,
+            text: t,
+            timestamp: firebase.firestore.FieldValue.serverTimestamp()
+        };
+        if (imageUrl) {
+            commentData.imageUrl = imageUrl;
+        } else if (isEditing) {
+            commentData.imageUrl = null;
+        }
+
         if (isEditing) {
+            await commentsRef.doc(editingBoardComment.cid).update(commentData);
             cancelBoardCommentEdit(pid);
             showToast("댓글이 수정되었습니다.");
         } else {
-            const txtEl=document.getElementById(`cmt-txt-${pid}`);
-            if(txtEl) txtEl.value="";
+            await commentsRef.add(commentData);
+            if (txtEl) txtEl.value = "";
+            if (pwEl) pwEl.value = "";
+            removeCommentFile(pid);
             showToast("댓글이 등록되었습니다.");
         }
-    }).catch(err=>alert("댓글 저장 실패: "+err.message));
+    } catch(err) {
+        alert("댓글 저장 실패: " + (err?.message || err));
+    } finally {
+        if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.innerText = (editingBoardComment && editingBoardComment.pid === pid) ? "수정 완료" : "등록";
+        }
+    }
 } 
 async function deleteComment(pid,cid,pw){
     const comment = (boardCommentsById[pid] || []).find(item => item.id === cid) || { password: pw };
@@ -10064,7 +10252,7 @@ async function delArchive(id,e){
 } 
 
 let currentBoardPage = 1;
-function renderBoardPage(p){ currentBoardPage = p; const l = document.getElementById("boardList"); Object.values(commentUnsubscribes).forEach(unsub => { if (typeof unsub === "function") unsub(); }); commentUnsubscribes = {}; boardCommentsById = {}; editingBoardComment = null; l.innerHTML = ""; const start = (p-1) * postsPerPage; const end = start + postsPerPage; const pageData = allPostsData.slice(start, end); if(pageData.length === 0) { l.innerHTML = "<tr><td colspan='4' style='text-align:center; padding:20px; color:var(--text-sub); font-weight:700;'>게시글이 없습니다.</td></tr>"; document.getElementById("pagination").innerHTML = ""; return; } const rowsHtml = []; const nowMs = Date.now(); pageData.forEach((x, i) => { let dateStr = ""; let isRowNew = false; if(x.timestamp) { const d = x.timestamp.toDate(); const month = String(d.getMonth() + 1).padStart(2, '0'); const day = String(d.getDate()).padStart(2, '0'); const hour = String(d.getHours()).padStart(2, '0'); const min = String(d.getMinutes()).padStart(2, '0'); dateStr = `${month}/${day} ${hour}:${min}`; if (nowMs - d.getTime() < 24 * 60 * 60 * 1000) isRowNew = true; } const newRowBadge = isRowNew ? `<span class="badge-new">NEW</span>` : ""; const rowId = `p-${x.id}`; const authorName = escapeShipCommentHtml(x.nick || '익명'); const postNum = allPostsData.length - ((currentBoardPage - 1) * postsPerPage) - i; const safeTitleHtml = escapeShipCommentHtml(x.title || ''); const safeContentHtml = escapeShipCommentHtml(x.content || ''); const viewCnt = Math.max(0, Number(x.views) || 0); const viewBadgeHtml = `<span id="view-badge-p-${x.id}" class="view-count-pill" title="조회수 ${viewCnt.toLocaleString()}회 (중복 조회 포함)">👁️ ${viewCnt.toLocaleString()}</span>`; let attachmentsList = []; if (Array.isArray(x.attachments) && x.attachments.length > 0) { attachmentsList = x.attachments.filter(item => item && item.url); } else if (Array.isArray(x.imageUrls) && x.imageUrls.length > 0) { attachmentsList = x.imageUrls.filter(Boolean).map((u, idx) => ({ url: u, name: `첨부 이미지 ${idx + 1}`, type: 'image/jpeg', isImage: true })); } else { const rawFileUrl = x.fileUrl || x.imageUrl || ''; if (rawFileUrl) { const isImg = Boolean(x.imageUrl || (x.fileType && String(x.fileType).startsWith('image/')) || /\.(jpg|jpeg|png|gif|webp|bmp|svg|heic|heif)(\?|$)/i.test(rawFileUrl)); attachmentsList = [{ url: rawFileUrl, name: x.fileName || (isImg ? '첨부 이미지' : '첨부파일 열기/다운로드'), type: x.fileType || '', isImage: isImg }]; } } const imageAttachments = attachmentsList.filter(att => Boolean(att.isImage || (att.type && String(att.type).startsWith('image/')) || /\.(jpg|jpeg|png|gif|webp|bmp|svg|heic|heif)(\?|$)/i.test(att.url || ''))); const hasAnyAttachment = attachmentsList.length > 0; const attachIconHtml = hasAnyAttachment ? `<span title="첨부파일 ${attachmentsList.length}개 포함" style="margin-left:3px; font-size:0.82rem; font-weight:800; color:var(--primary);">${imageAttachments.length > 0 ? '🖼️' : '📎'}${attachmentsList.length > 1 ? `<span style="font-size:0.7rem; margin-left:1px;">+${attachmentsList.length}</span>` : ''}</span>` : ''; let attachmentBoxHtml = ''; if (hasAnyAttachment) { const imagesHtml = imageAttachments.map((imgAtt, idx) => { const safeImgUrl = escapeShipCommentHtml(imgAtt.url); return `<div style="margin-bottom:8px;"><img src="${safeImgUrl}" loading="lazy" alt="게시글 첨부 이미지 ${idx + 1}" style="max-width:100%; border-radius:8px; border:1px solid var(--border); cursor:pointer; display:block;" onclick="document.getElementById('imageModal').style.display='flex'; document.getElementById('modalImage').src=this.src;"></div>`; }).join(''); const downloadLinksHtml = attachmentsList.map((att, idx) => { const safeUrl = escapeShipCommentHtml(att.url); const safeName = escapeShipCommentHtml(att.name || `첨부파일 ${idx + 1}`); return `<a href="${safeUrl}" target="_blank" rel="noopener noreferrer" style="display:inline-flex; align-items:center; gap:5px; padding:5px 10px; background:rgba(59,130,246,0.08); border:1px solid rgba(59,130,246,0.25); border-radius:6px; color:var(--primary); font-size:0.78rem; font-weight:800; text-decoration:none;">📎 ${safeName}</a>`; }).join(''); attachmentBoxHtml = `<div style="margin-bottom:12px;">${imagesHtml}<div style="display:flex; flex-wrap:wrap; gap:6px; margin-top:4px;">${downloadLinksHtml}</div></div>`; } rowsHtml.push(`<tr onclick="toggleBoardRow('${rowId}')" style="cursor:pointer;"> <td class="board-no">${postNum}</td> <td class="board-title">${safeTitleHtml}${attachIconHtml}${newRowBadge}${viewBadgeHtml} <span id="cmt-badge-${x.id}" class="cmt-count-pill hidden"></span> <span style="font-size:0.75rem; color:var(--primary); margin-left:4px;">▼</span></td> <td class="board-date">${dateStr}</td> <td class="board-nick">${authorName}</td> </tr> <tr id="${rowId}" class="board-content-row"> <td colspan="4" class="board-content-box"> <div style="margin-bottom:12px; font-weight:600; background:var(--card-bg); padding:12px; border-radius:8px; border:1px solid var(--border); white-space:pre-wrap;">${safeContentHtml}</div> ${attachmentBoxHtml} <div style="display:flex; justify-content:space-between; align-items:center; gap:6px; flex-wrap:wrap; border-bottom:1px dashed var(--border); padding-bottom:10px; margin-bottom:10px;"> <span id="view-detail-p-${x.id}" style="font-size:0.76rem; color:var(--text-sub); font-weight:800;">👁️ 조회수 ${viewCnt.toLocaleString()}회</span> <div style="display:flex; gap:5px; margin-left:auto;"> <button class="mini-btn" style="background:var(--primary-light) !important; color:white !important;" onclick="tryEditPost('${x.id}', '', '', '', '', event)">✏️ 수정</button> <button class="mini-btn btn-del" onclick="deletePost('${x.id}','',event)">🗑️ 삭제</button> </div> </div> <div id="cmt-list-${x.id}" class="comment-section"></div> <div class="comment-form"> <input id="cmt-name-${x.id}" class="comment-input-sm board-comment-nickname" placeholder="항만용어 닉네임" aria-label="댓글 닉네임 (직접 수정 가능)" maxlength="50"> <input id="cmt-pw-${x.id}" class="comment-input-sm" type="password" placeholder="비밀번호"> <input id="cmt-txt-${x.id}" class="comment-input-lg" placeholder="따뜻한 댓글을 남겨주세요..."> <button id="cmt-submit-${x.id}" class="comment-submit" onclick="addComment('${x.id}')">댓글 등록</button> <button id="cmt-cancel-${x.id}" type="button" class="action-btn bg-cancel" style="display:none;" onclick="cancelBoardCommentEdit('${x.id}')">취소</button> </div> </td> </tr>`); }); l.innerHTML = rowsHtml.join(""); pageData.forEach(x => { const nicknameInput = document.getElementById(`cmt-name-${x.id}`); if (nicknameInput && !nicknameInput.value.trim()) nicknameInput.value = getPortNickname(); loadComments(x.id); }); renderPagination(p); } 
+function renderBoardPage(p){ currentBoardPage = p; const l = document.getElementById("boardList"); Object.values(commentUnsubscribes).forEach(unsub => { if (typeof unsub === "function") unsub(); }); commentUnsubscribes = {}; boardCommentsById = {}; editingBoardComment = null; l.innerHTML = ""; const start = (p-1) * postsPerPage; const end = start + postsPerPage; const pageData = allPostsData.slice(start, end); if(pageData.length === 0) { l.innerHTML = "<tr><td colspan='4' style='text-align:center; padding:20px; color:var(--text-sub); font-weight:700;'>게시글이 없습니다.</td></tr>"; document.getElementById("pagination").innerHTML = ""; return; } const rowsHtml = []; const nowMs = Date.now(); pageData.forEach((x, i) => { let dateStr = ""; let isRowNew = false; if(x.timestamp) { const d = x.timestamp.toDate(); const month = String(d.getMonth() + 1).padStart(2, '0'); const day = String(d.getDate()).padStart(2, '0'); const hour = String(d.getHours()).padStart(2, '0'); const min = String(d.getMinutes()).padStart(2, '0'); dateStr = `${month}/${day} ${hour}:${min}`; if (nowMs - d.getTime() < 24 * 60 * 60 * 1000) isRowNew = true; } const newRowBadge = isRowNew ? `<span class="badge-new">NEW</span>` : ""; const rowId = `p-${x.id}`; const authorName = escapeShipCommentHtml(x.nick || '익명'); const postNum = allPostsData.length - ((currentBoardPage - 1) * postsPerPage) - i; const safeTitleHtml = escapeShipCommentHtml(x.title || ''); const safeContentHtml = escapeShipCommentHtml(x.content || ''); const viewCnt = Math.max(0, Number(x.views) || 0); const viewBadgeHtml = `<span id="view-badge-p-${x.id}" class="view-count-pill" title="조회수 ${viewCnt.toLocaleString()}회 (중복 조회 포함)">👁️ ${viewCnt.toLocaleString()}</span>`; let attachmentsList = []; if (Array.isArray(x.attachments) && x.attachments.length > 0) { attachmentsList = x.attachments.filter(item => item && item.url); } else if (Array.isArray(x.imageUrls) && x.imageUrls.length > 0) { attachmentsList = x.imageUrls.filter(Boolean).map((u, idx) => ({ url: u, name: `첨부 이미지 ${idx + 1}`, type: 'image/jpeg', isImage: true })); } else { const rawFileUrl = x.fileUrl || x.imageUrl || ''; if (rawFileUrl) { const isImg = Boolean(x.imageUrl || (x.fileType && String(x.fileType).startsWith('image/')) || /\.(jpg|jpeg|png|gif|webp|bmp|svg|heic|heif)(\?|$)/i.test(rawFileUrl)); attachmentsList = [{ url: rawFileUrl, name: x.fileName || (isImg ? '첨부 이미지' : '첨부파일 열기/다운로드'), type: x.fileType || '', isImage: isImg }]; } } const imageAttachments = attachmentsList.filter(att => Boolean(att.isImage || (att.type && String(att.type).startsWith('image/')) || /\.(jpg|jpeg|png|gif|webp|bmp|svg|heic|heif)(\?|$)/i.test(att.url || ''))); const hasAnyAttachment = attachmentsList.length > 0; const attachIconHtml = hasAnyAttachment ? `<span title="첨부파일 ${attachmentsList.length}개 포함" style="margin-left:3px; font-size:0.82rem; font-weight:800; color:var(--primary);">${imageAttachments.length > 0 ? '🖼️' : '📎'}${attachmentsList.length > 1 ? `<span style="font-size:0.7rem; margin-left:1px;">+${attachmentsList.length}</span>` : ''}</span>` : ''; let attachmentBoxHtml = ''; if (hasAnyAttachment) { const imagesHtml = imageAttachments.map((imgAtt, idx) => { const safeImgUrl = escapeShipCommentHtml(imgAtt.url); return `<div style="margin-bottom:8px;"><img src="${safeImgUrl}" loading="lazy" alt="게시글 첨부 이미지 ${idx + 1}" style="max-width:100%; border-radius:8px; border:1px solid var(--border); cursor:pointer; display:block;" onclick="document.getElementById('imageModal').style.display='flex'; document.getElementById('modalImage').src=this.src;"></div>`; }).join(''); const downloadLinksHtml = attachmentsList.map((att, idx) => { const safeUrl = escapeShipCommentHtml(att.url); const safeName = escapeShipCommentHtml(att.name || `첨부파일 ${idx + 1}`); return `<a href="${safeUrl}" target="_blank" rel="noopener noreferrer" style="display:inline-flex; align-items:center; gap:5px; padding:5px 10px; background:rgba(59,130,246,0.08); border:1px solid rgba(59,130,246,0.25); border-radius:6px; color:var(--primary); font-size:0.78rem; font-weight:800; text-decoration:none;">📎 ${safeName}</a>`; }).join(''); attachmentBoxHtml = `<div style="margin-bottom:12px;">${imagesHtml}<div style="display:flex; flex-wrap:wrap; gap:6px; margin-top:4px;">${downloadLinksHtml}</div></div>`; } rowsHtml.push(`<tr onclick="toggleBoardRow('${rowId}')" style="cursor:pointer;"> <td class="board-no">${postNum}</td> <td class="board-title">${safeTitleHtml}${attachIconHtml}${newRowBadge}${viewBadgeHtml} <span id="cmt-badge-${x.id}" class="cmt-count-pill hidden"></span> <span style="font-size:0.75rem; color:var(--primary); margin-left:4px;">▼</span></td> <td class="board-date">${dateStr}</td> <td class="board-nick">${authorName}</td> </tr> <tr id="${rowId}" class="board-content-row"> <td colspan="4" class="board-content-box"> <div style="margin-bottom:12px; font-weight:600; background:var(--card-bg); padding:12px; border-radius:8px; border:1px solid var(--border); white-space:pre-wrap;">${safeContentHtml}</div> ${attachmentBoxHtml} <div style="display:flex; justify-content:space-between; align-items:center; gap:6px; flex-wrap:wrap; border-bottom:1px dashed var(--border); padding-bottom:10px; margin-bottom:10px;"> <span id="view-detail-p-${x.id}" style="font-size:0.76rem; color:var(--text-sub); font-weight:800;">👁️ 조회수 ${viewCnt.toLocaleString()}회</span> <div style="display:flex; gap:5px; margin-left:auto;"> <button class="mini-btn" style="background:var(--primary-light) !important; color:white !important;" onclick="tryEditPost('${x.id}', '', '', '', '', event)">✏️ 수정</button> <button class="mini-btn btn-del" onclick="deletePost('${x.id}','',event)">🗑️ 삭제</button> </div> </div> <div id="cmt-list-${x.id}" class="comment-section"></div> <div class="comment-form"> <div class="comment-form-row"> <input id="cmt-name-${x.id}" class="comment-input-sm board-comment-nickname" placeholder="항만용어 닉네임" aria-label="댓글 닉네임 (직접 수정 가능)" maxlength="50"> <input id="cmt-pw-${x.id}" class="comment-input-sm" type="password" placeholder="비밀번호" aria-label="비밀번호" maxlength="30"> </div> <div id="cmt-preview-${x.id}" class="comment-preview-box" style="display:none;"></div> <div class="comment-form-row"> <input id="cmt-txt-${x.id}" class="comment-input-main" placeholder="따뜻한 댓글을 남겨주세요..." onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();addComment('${x.id}');}"> <label for="cmt-file-${x.id}" id="cmt-file-label-${x.id}" class="comment-attach-btn" title="사진 첨부">📷</label> <input type="file" id="cmt-file-${x.id}" accept="image/*" style="display:none;" onchange="handleCommentFileChange('${x.id}', this)"> <button id="cmt-submit-${x.id}" class="comment-submit" onclick="addComment('${x.id}')">등록</button> <button id="cmt-cancel-${x.id}" type="button" class="mini-btn btn-del" style="display:none; height:32px; padding:0 8px; border-radius:6px; font-size:0.8rem; margin:0; line-height:30px;" onclick="cancelBoardCommentEdit('${x.id}')">취소</button> </div> </div> </td> </tr>`); }); l.innerHTML = rowsHtml.join(""); pageData.forEach(x => { const nicknameInput = document.getElementById(`cmt-name-${x.id}`); if (nicknameInput && !nicknameInput.value.trim()) nicknameInput.value = getPortNickname(); loadComments(x.id); }); renderPagination(p); } 
 function renderShipPage(p) {
     currentShipPage = p;
     const list = document.getElementById("shipList");
@@ -10125,15 +10313,22 @@ function renderShipPage(p) {
     pagination.innerHTML = pageHtml.join("");
 };
 function renderShipCommentMarkup(shipId) {
-    return `<div style="margin-top:15px; border-top:1px dashed var(--border); padding-top:12px;">
-        <div style="font-weight:900; margin-bottom:8px; color:var(--primary);">댓글</div>
+    return `<div style="margin-top:12px; border-top:1px dashed var(--border); padding-top:10px;">
+        <div style="font-weight:900; margin-bottom:6px; font-size:0.88rem; color:var(--primary);">댓글</div>
         <div id="ship-comment-list-${shipId}" class="comment-section"></div>
-        <div class="comment-form" style="border-radius:8px;">
-            <input id="ship-comment-name-${shipId}" class="comment-input-sm" placeholder="닉네임">
-            <input id="ship-comment-password-${shipId}" class="comment-input-sm" type="password" placeholder="비밀번호">
-            <input id="ship-comment-text-${shipId}" class="comment-input-lg" placeholder="댓글을 입력하세요">
-            <button id="ship-comment-submit-${shipId}" class="comment-submit" onclick="submitShipComment('${shipId}')">댓글 등록</button>
-            <button id="ship-comment-cancel-${shipId}" class="action-btn bg-cancel" style="display:none;" onclick="cancelShipCommentEdit('${shipId}')">취소</button>
+        <div class="comment-form">
+            <div class="comment-form-row">
+                <input id="ship-comment-name-${shipId}" class="comment-input-sm" placeholder="닉네임" maxlength="50">
+                <input id="ship-comment-password-${shipId}" class="comment-input-sm" type="password" placeholder="비밀번호" maxlength="30">
+            </div>
+            <div id="ship-comment-preview-${shipId}" class="comment-preview-box" style="display:none;"></div>
+            <div class="comment-form-row">
+                <input id="ship-comment-text-${shipId}" class="comment-input-main" placeholder="선박 댓글을 입력하세요..." onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();submitShipComment('${shipId}');}">
+                <label for="ship-comment-file-${shipId}" id="ship-comment-file-label-${shipId}" class="comment-attach-btn" title="사진 첨부">📷</label>
+                <input type="file" id="ship-comment-file-${shipId}" accept="image/*" style="display:none;" onchange="handleShipCommentFileChange('${shipId}', this)">
+                <button id="ship-comment-submit-${shipId}" class="comment-submit" onclick="submitShipComment('${shipId}')">등록</button>
+                <button id="ship-comment-cancel-${shipId}" type="button" class="mini-btn btn-del" style="display:none; height:32px; padding:0 8px; border-radius:6px; font-size:0.8rem; margin:0; line-height:30px;" onclick="cancelShipCommentEdit('${shipId}')">취소</button>
+            </div>
         </div>
     </div>`;
 }
@@ -10204,17 +10399,22 @@ function loadShipComments(shipId) {
         shipCommentsById[shipId] = [];
         list.innerHTML = "";
         if (snapshot.empty) {
-            list.innerHTML = "<div style='color:var(--text-sub); font-size:0.85rem; padding:8px 0;'>첫 댓글을 남겨보세요.</div>";
+            list.innerHTML = "<div style='color:var(--text-sub); font-size:0.8rem; padding:4px 0;'>첫 댓글을 남겨보세요.</div>";
             return;
         }
         snapshot.forEach(doc => {
             const comment = { ...doc.data(), id: doc.id };
             shipCommentsById[shipId].push(comment);
-            list.innerHTML += `<div class="comment-item"><div><span class="comment-meta">${escapeShipCommentHtml(comment.name || "익명")}</span><div class="comment-text" style="white-space:pre-wrap;">${escapeShipCommentHtml(comment.text)}</div></div><div style="display:flex; gap:4px; flex-shrink:0;"><button class="mini-btn" onclick="editShipComment('${shipId}','${doc.id}')">수정</button><button class="mini-btn btn-del" onclick="deleteShipComment('${shipId}','${doc.id}')">삭제</button></div></div>`;
+            const safeName = escapeShipCommentHtml(comment.name || "익명");
+            const safeText = escapeShipCommentHtml(comment.text || "");
+            const imgHtml = comment.imageUrl
+                ? `<div style="margin-top:4px;"><img src="${escapeShipCommentHtml(comment.imageUrl)}" loading="lazy" alt="댓글 첨부 이미지" class="comment-img-thumb" onclick="document.getElementById('imageModal').style.display='flex'; document.getElementById('modalImage').src=this.src;" title="클릭하여 원본 확대 보기"></div>`
+                : "";
+            list.innerHTML += `<div class="comment-item"><div style="flex:1; min-width:0; padding-right:6px;"><div><span class="comment-meta">${safeName}:</span> <span class="comment-text" style="white-space:pre-wrap;">${safeText}</span></div>${imgHtml}</div><div style="display:flex; gap:3px; flex-shrink:0;"><button class="mini-btn" style="padding:2px 8px; font-size:0.75rem; border-radius:4px;" onclick="editShipComment('${shipId}','${doc.id}')">수정</button><button class="mini-btn btn-del" style="padding:2px 8px; font-size:0.75rem; border-radius:4px;" onclick="deleteShipComment('${shipId}','${doc.id}')">삭제</button></div></div>`;
         });
     }, error => {
         const list = document.getElementById(`ship-comment-list-${shipId}`);
-        if (list) list.innerHTML = "<div style='color:var(--danger); font-size:0.85rem;'>댓글을 불러오지 못했습니다.</div>";
+        if (list) list.innerHTML = "<div style='color:var(--danger); font-size:0.8rem;'>댓글을 불러오지 못했습니다.</div>";
         console.error("선박 댓글 불러오기 오류:", error);
     });
 }
@@ -10230,47 +10430,128 @@ async function verifyShipCommentPassword(comment) {
 async function editShipComment(shipId, commentId) {
     const comment = (shipCommentsById[shipId] || []).find(item => item.id === commentId);
     if (!comment || !(await verifyShipCommentPassword(comment))) return;
-    document.getElementById(`ship-comment-name-${shipId}`).value = comment.name || "";
-    document.getElementById(`ship-comment-password-${shipId}`).value = "";
-    document.getElementById(`ship-comment-text-${shipId}`).value = comment.text || "";
-    editingShipComment = { shipId, commentId };
-    document.getElementById(`ship-comment-submit-${shipId}`).innerText = "수정 완료";
-    document.getElementById(`ship-comment-cancel-${shipId}`).style.display = "block";
+    const nameEl = document.getElementById(`ship-comment-name-${shipId}`);
+    const pwEl = document.getElementById(`ship-comment-password-${shipId}`);
+    const txtEl = document.getElementById(`ship-comment-text-${shipId}`);
+    const submitBtn = document.getElementById(`ship-comment-submit-${shipId}`);
+    const cancelBtn = document.getElementById(`ship-comment-cancel-${shipId}`);
+    const previewEl = document.getElementById(`ship-comment-preview-${shipId}`);
+    const labelEl = document.getElementById(`ship-comment-file-label-${shipId}`);
+    if (nameEl) nameEl.value = comment.name || "";
+    if (pwEl) pwEl.value = "";
+    if (txtEl) { txtEl.value = comment.text || ""; txtEl.focus(); }
+    delete selectedShipCommentFiles[shipId];
+    const fileInput = document.getElementById(`ship-comment-file-${shipId}`);
+    if (fileInput) fileInput.value = "";
+    if (comment.imageUrl) {
+        if (labelEl) labelEl.classList.add("has-file");
+        if (previewEl) {
+            previewEl.style.display = "flex";
+            previewEl.innerHTML = `
+                <img src="${escapeShipCommentHtml(comment.imageUrl)}" class="comment-preview-thumb" alt="기존 첨부 이미지">
+                <span class="comment-preview-name">기존 첨부 이미지</span>
+                <button type="button" class="comment-preview-remove" onclick="removeShipCommentFile('${shipId}')" title="이미지 삭제">×</button>
+            `;
+        }
+    } else {
+        if (labelEl) labelEl.classList.remove("has-file");
+        if (previewEl) { previewEl.style.display = "none"; previewEl.innerHTML = ""; }
+    }
+    editingShipComment = { shipId, commentId, existingImageUrl: comment.imageUrl || null };
+    if (submitBtn) submitBtn.innerText = "수정 완료";
+    if (cancelBtn) cancelBtn.style.display = "inline-flex";
 }
 async function deleteShipComment(shipId, commentId) {
     const comment = (shipCommentsById[shipId] || []).find(item => item.id === commentId);
     if (!comment || !(await verifyShipCommentPassword(comment))) return;
     if (!confirm("이 댓글을 삭제할까요?")) return;
-    db.collection("ships").doc(shipId).collection("comments").doc(commentId).delete().catch(error => alert("댓글 삭제 실패: " + error.message));
+    db.collection("ships").doc(shipId).collection("comments").doc(commentId).delete().then(() => {
+        if (editingShipComment && editingShipComment.shipId === shipId && editingShipComment.commentId === commentId) {
+            cancelShipCommentEdit(shipId);
+        }
+        showToast("댓글이 삭제되었습니다.");
+    }).catch(error => alert("댓글 삭제 실패: " + error.message));
 }
 function cancelShipCommentEdit(shipId) {
-    document.getElementById(`ship-comment-name-${shipId}`).value = "";
-    document.getElementById(`ship-comment-password-${shipId}`).value = "";
-    document.getElementById(`ship-comment-text-${shipId}`).value = "";
-    document.getElementById(`ship-comment-submit-${shipId}`).innerText = "댓글 등록";
-    document.getElementById(`ship-comment-cancel-${shipId}`).style.display = "none";
+    const nameEl = document.getElementById(`ship-comment-name-${shipId}`);
+    const pwEl = document.getElementById(`ship-comment-password-${shipId}`);
+    const txtEl = document.getElementById(`ship-comment-text-${shipId}`);
+    const submitBtn = document.getElementById(`ship-comment-submit-${shipId}`);
+    const cancelBtn = document.getElementById(`ship-comment-cancel-${shipId}`);
+    if (nameEl) nameEl.value = "";
+    if (pwEl) pwEl.value = "";
+    if (txtEl) txtEl.value = "";
+    if (submitBtn) { submitBtn.innerText = "등록"; submitBtn.disabled = false; }
+    if (cancelBtn) cancelBtn.style.display = "none";
+    removeShipCommentFile(shipId);
     editingShipComment = null;
 }
 async function submitShipComment(shipId) {
-    const name = document.getElementById(`ship-comment-name-${shipId}`).value.trim();
-    const password = document.getElementById(`ship-comment-password-${shipId}`).value.trim();
-    const text = document.getElementById(`ship-comment-text-${shipId}`).value.trim();
-    if (!name || !password || !text) {
-        alert("닉네임, 비밀번호, 댓글 내용을 모두 입력해 주세요.");
+    const nameEl = document.getElementById(`ship-comment-name-${shipId}`);
+    const pwEl = document.getElementById(`ship-comment-password-${shipId}`);
+    const txtEl = document.getElementById(`ship-comment-text-${shipId}`);
+    const submitBtn = document.getElementById(`ship-comment-submit-${shipId}`);
+    const name = (nameEl?.value || "").trim();
+    const password = (pwEl?.value || "").trim();
+    const text = (txtEl?.value || "").trim();
+    const attachedFile = selectedShipCommentFiles[shipId];
+
+    if (!name || !password || (!text && !attachedFile)) {
+        alert("닉네임, 비밀번호, 그리고 댓글 내용(또는 사진)을 입력해 주세요.");
         return;
     }
+
     const pwHash = (/^[a-f0-9]{64}$/i.test(password)) ? password.toLowerCase() : (await sha256Hex(password));
-    const comments = db.collection("ships").doc(shipId).collection("comments");
-    const commentData = { name, password: pwHash, text, timestamp: firebase.firestore.FieldValue.serverTimestamp() };
     const isEditing = editingShipComment && editingShipComment.shipId === shipId;
-    const request = isEditing ? comments.doc(editingShipComment.commentId).update(commentData) : comments.add(commentData);
-    request.then(() => {
-        if (isEditing) cancelShipCommentEdit(shipId);
-        else document.getElementById(`ship-comment-text-${shipId}`).value = "";
-    }).catch(error => alert("댓글 저장 실패: " + error.message));
+
+    if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.innerText = attachedFile ? "사진 업로드 중..." : "저장 중...";
+    }
+
+    try {
+        let imageUrl = null;
+        if (attachedFile) {
+            imageUrl = await uploadCommentImageFile(attachedFile, "ships/comments");
+        } else if (isEditing) {
+            imageUrl = editingShipComment.existingImageUrl || null;
+        }
+
+        const comments = db.collection("ships").doc(shipId).collection("comments");
+        const commentData = {
+            name,
+            password: pwHash,
+            text,
+            timestamp: firebase.firestore.FieldValue.serverTimestamp()
+        };
+        if (imageUrl) {
+            commentData.imageUrl = imageUrl;
+        } else if (isEditing) {
+            commentData.imageUrl = null;
+        }
+
+        if (isEditing) {
+            await comments.doc(editingShipComment.commentId).update(commentData);
+            cancelShipCommentEdit(shipId);
+            showToast("선박 댓글이 수정되었습니다.");
+        } else {
+            await comments.add(commentData);
+            if (txtEl) txtEl.value = "";
+            if (pwEl) pwEl.value = "";
+            removeShipCommentFile(shipId);
+            showToast("선박 댓글이 등록되었습니다.");
+        }
+    } catch (error) {
+        alert("댓글 저장 실패: " + (error?.message || error));
+    } finally {
+        if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.innerText = (editingShipComment && editingShipComment.shipId === shipId) ? "수정 완료" : "등록";
+        }
+    }
 }
 function renderPagination(curr) { const total = Math.ceil(allPostsData.length / postsPerPage); const el = document.getElementById('pagination'); if(!el) return; const html = []; for(let i=1; i<=total; i++){ html.push(`<span class="page-num ${i===curr?'active':''}" onclick="renderBoardPage(${i})" style="cursor:pointer; padding:5px 12px; margin:2px; background:#e5e7eb; border-radius:8px; font-weight:800; font-size:0.9rem;">${i}</span>`); } el.innerHTML = html.join(""); } 
-function loadComments(pid){if(commentUnsubscribes[pid]) commentUnsubscribes[pid](); commentUnsubscribes[pid]=db.collection('posts').doc(pid).collection('comments').orderBy('timestamp','asc').onSnapshot(s=>{const el=document.getElementById(`cmt-list-${pid}`); const badgeEl=document.getElementById(`cmt-badge-${pid}`); if(badgeEl){ if(s.size>0){ badgeEl.innerText=`💬 ${s.size}`; badgeEl.classList.remove('hidden'); } else { badgeEl.classList.add('hidden'); } } if(!el) return; boardCommentsById[pid]=[]; const items=[]; s.forEach(d=>{const c=d.data()||{}; boardCommentsById[pid].push({...c, id:d.id}); const safeName=escapeShipCommentHtml(c.name||"익명"); const safeText=escapeShipCommentHtml(c.text||""); const safePw=String(c.password||"").replace(/\\/g,"\\\\").replace(/'/g,"\\'").replace(/"/g,"&quot;"); items.push(`<div class="comment-item"><div><span class="comment-meta">${safeName}:</span> <span class="comment-text" style="white-space:pre-wrap;">${safeText}</span></div><div style="display:flex; gap:4px; flex-shrink:0;"><button class="mini-btn" onclick="editComment('${pid}','${d.id}')">수정</button><button class="mini-btn btn-del" onclick="deleteComment('${pid}','${d.id}','${safePw}')">삭제</button></div></div>`);}); el.innerHTML=items.join("");}, err=>{console.warn("댓글 로드 오류:",err);});} 
+function loadComments(pid){if(commentUnsubscribes[pid]) commentUnsubscribes[pid](); commentUnsubscribes[pid]=db.collection('posts').doc(pid).collection('comments').orderBy('timestamp','asc').onSnapshot(s=>{const el=document.getElementById(`cmt-list-${pid}`); const badgeEl=document.getElementById(`cmt-badge-${pid}`); if(badgeEl){ if(s.size>0){ badgeEl.innerText=`💬 ${s.size}`; badgeEl.classList.remove('hidden'); } else { badgeEl.classList.add('hidden'); } } if(!el) return; boardCommentsById[pid]=[]; const items=[]; s.forEach(d=>{const c=d.data()||{}; boardCommentsById[pid].push({...c, id:d.id}); const safeName=escapeShipCommentHtml(c.name||"익명"); const safeText=escapeShipCommentHtml(c.text||""); const safePw=String(c.password||"").replace(/\\/g,"\\\\").replace(/'/g,"\\'").replace(/"/g,"&quot;"); const imgHtml=c.imageUrl ? `<div style="margin-top:4px;"><img src="${escapeShipCommentHtml(c.imageUrl)}" loading="lazy" alt="댓글 첨부 이미지" class="comment-img-thumb" onclick="document.getElementById('imageModal').style.display='flex'; document.getElementById('modalImage').src=this.src;" title="클릭하여 원본 확대 보기"></div>` : ""; items.push(`<div class="comment-item"><div style="flex:1; min-width:0; padding-right:6px;"><div><span class="comment-meta">${safeName}:</span> <span class="comment-text" style="white-space:pre-wrap;">${safeText}</span></div>${imgHtml}</div><div style="display:flex; gap:3px; flex-shrink:0;"><button class="mini-btn" style="padding:2px 8px; font-size:0.75rem; border-radius:4px;" onclick="editComment('${pid}','${d.id}')">수정</button><button class="mini-btn btn-del" style="padding:2px 8px; font-size:0.75rem; border-radius:4px;" onclick="deleteComment('${pid}','${d.id}','${safePw}')">삭제</button></div></div>`);}); el.innerHTML=items.join("");}, err=>{console.warn("댓글 로드 오류:",err);});} 
 
 function openBusSchedule(){ trackAppEvent('actions', 'bus_view'); const m=document.getElementById('imageModal'); document.getElementById('modalImage').src='https://firebasestorage.googleapis.com/v0/b/busan-hak-port.firebasestorage.app/o/KakaoTalk_20260129_001114789.jpg?alt=media'; m.style.display='flex'; } function closeImageModal(){ document.getElementById('imageModal').style.display='none'; } function openPrivacy() { toggleDashItem('privacy-center-card'); document.getElementById('privacy-center-card').scrollIntoView({behavior: 'smooth', block: 'center'}); }
 
