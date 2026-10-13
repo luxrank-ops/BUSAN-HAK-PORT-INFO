@@ -263,6 +263,13 @@
         .action-btn { width: 100%; padding: 14px; border: none; border-radius: 10px; font-weight: 900; color: white; cursor: pointer; background: var(--primary); font-size: clamp(0.98rem, 3.4vw, 1.1rem); margin-top: 8px; touch-action: manipulation; transition: transform 0.12s ease, filter 0.15s ease; }
         .action-btn:active { transform: scale(0.985); }
         .bg-submit { background: var(--success); } .bg-calc { background: var(--primary); } .bg-cancel { background: var(--text-sub); }
+        /* 근무일지 하단 [저장하기·초기화·삭제] 블럭: 세 버튼의 가로(flex 1 1 0)·세로(52px) 크기를 완전히 동일하게 맞춤
+           (기존에는 저장하기 flex:1.7 + margin-top:8px, 초기화 2px 테두리 때문에 가로·세로 크기가 모두 달랐음) */
+        .worklog-action-row { display: flex; gap: 8px; margin-top: 15px; }
+        .worklog-action-row > .action-btn { flex: 1 1 0; min-width: 0; width: auto; height: 52px; margin: 0; padding: 4px 3px; border: 2px solid transparent; box-sizing: border-box; display: inline-flex; align-items: center; justify-content: center; font-size: clamp(0.84rem, 2.9vw, 0.98rem); line-height: 1.2; text-align: center; word-break: keep-all; overflow-wrap: anywhere; }
+        .worklog-action-row > .worklog-reset-btn { border-color: #475569; }
+        .worklog-action-row > .worklog-delete-btn { background: var(--danger); }
+        body.dark-mode .worklog-action-row > .worklog-reset-btn { border-color: #94a3b8; }
 
         .wage-row { display: flex; align-items: center; margin-bottom: 10px; width: 100%; justify-content: space-between; gap: 8px; }
         .wage-row label { width: auto; min-width: max-content; font-weight: 800; font-size: clamp(0.9rem, 3vw, 1rem); word-break: keep-all; }
@@ -705,12 +712,9 @@
         .worklog-schedule-tools { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; margin: 2px 0 7px; }
         .worklog-schedule-nav { flex: 0 0 auto; height: 32px; min-width: 32px; padding: 0 7px; border: 1.5px solid #fb923c; border-radius: 7px; background: #ffffff; color: #9a3412; font-size: 0.75rem; font-weight: 900; cursor: pointer; }
         .worklog-schedule-nav:active { transform: scale(0.96); }
-        .worklog-schedule-tool-btn { flex: 0 0 auto; height: 32px; padding: 0 9px; border: 1.5px solid #3b82f6; border-radius: 7px; background: #eff6ff; color: #1d4ed8; font-size: 0.72rem; font-weight: 900; cursor: pointer; white-space: nowrap; }
-        .worklog-schedule-tool-btn:active { transform: scale(0.96); }
         .worklog-double-status { font-size: 0.74rem; font-weight: 800; color: #9a3412; line-height: 1.4; margin-bottom: 6px; }
         .worklog-double-status.is-full { color: #047857; }
         body.dark-mode .worklog-schedule-nav { background: #1e293b; color: #fdba74; border-color: #f97316; }
-        body.dark-mode .worklog-schedule-tool-btn { background: #1e3a8a; color: #dbeafe; border-color: #60a5fa; }
         body.dark-mode .worklog-double-status { color: #fdba74; }
         body.dark-mode .worklog-double-status.is-full { color: #6ee7b7; }
         .hjnc-berth-tag { background: #ea580c; color: #ffffff; font-size: 0.65rem; font-weight: 900; padding: 1px 5px; border-radius: 4px; }
@@ -2280,8 +2284,6 @@
                                    onclick="openWorklogScheduleDatePicker()"
                                    onchange="onWorklogScheduleDateChange(this.value)">
                             <button type="button" class="worklog-schedule-nav" onclick="shiftWorklogScheduleDate(1)" aria-label="하루 뒤 스케줄 보기">▶</button>
-                            <button type="button" class="worklog-schedule-tool-btn" onclick="resetWorklogScheduleToLogDate()" title="이 근무일지의 날짜 스케줄로 돌아갑니다">📌 근무일 날짜</button>
-                            <button type="button" class="worklog-schedule-tool-btn" onclick="importWageVesselsToWorklog()" title="임금계산기에서 선택한 선박(최대 2척)을 가져옵니다">💰 임금계산기 선박</button>
                         </div>
                         <div id="worklogDoubleOrderStatus" class="worklog-double-status" aria-live="polite"></div>
                         <div id="hjncScheduledShipList" style="display:flex; flex-wrap:wrap; gap:5px;"></div>
@@ -2317,10 +2319,10 @@
                     <label style="font-size:0.9rem; font-weight:800; display:block; margin-top:10px; margin-bottom:4px;">📷 현장 사진</label>
                     <input type="file" id="logImageInput" class="input-field" accept="image/*" onchange="previewLogImage(this)">
                     <img id="logImagePreview" style="max-width:100%; border-radius:8px; margin-top:8px; display:none;" onclick="document.getElementById('imageModal').style.display='flex'; document.getElementById('modalImage').src=this.src;">
-                    <div style="display:flex; gap:8px; margin-top:15px;">
-                        <button id="saveLogBtn" class="action-btn bg-submit" style="flex:1.7;" onclick="trySaveWorkLog()">저장하기</button>
-                        <button type="button" class="action-btn bg-cancel" style="flex:1; margin-top:0; border:2px solid #475569; padding:14px 4px;" title="배 이름·임금·근무자·작업 내용·사진 입력을 모두 지웁니다" onclick="resetWorkLogForm()">초기화</button>
-                        <button class="action-btn bg-cancel" style="flex:1; margin-top:0; background:var(--danger); padding:14px 4px;" onclick="deleteWorkLog()">삭제</button>
+                    <div class="worklog-action-row">
+                        <button id="saveLogBtn" class="action-btn bg-submit" onclick="trySaveWorkLog()">저장하기</button>
+                        <button type="button" class="action-btn bg-cancel worklog-reset-btn" title="배 이름·임금·근무자·작업 내용·사진 입력을 모두 지웁니다" onclick="resetWorkLogForm()">초기화</button>
+                        <button class="action-btn bg-cancel worklog-delete-btn" onclick="deleteWorkLog()">삭제</button>
                     </div>
                 </div>
                 <div id="monthlyStatsSummary" class="hidden" style="display:grid; grid-template-columns: repeat(3, 1fr); gap:6px; margin-top:20px; border-top:1px dashed var(--border); padding-top:15px; text-align:center;">
@@ -7270,11 +7272,6 @@ function shiftWorklogScheduleDate(delta) {
     setWorklogScheduleDateInput(nextStr);
     loadHjncScheduledShipsForDate(nextStr, false);
 }
-function resetWorklogScheduleToLogDate() {
-    const logDate = document.getElementById("dailyLogForm")?.getAttribute("data-date") || getAppLocalDateString();
-    setWorklogScheduleDateInput(logDate);
-    loadHjncScheduledShipsForDate(logDate, false);
-}
 function parseWorklogShipNames(value) {
     return String(value || "").split(/\s*\/\s*/).map(s => s.trim()).filter(Boolean);
 }
@@ -7395,37 +7392,6 @@ function onWorklogShipNameEdited() {
     if (names.length > 2) showToast("⚠️ 선박은 최대 2척까지 입력할 수 있습니다.");
     syncWorklogDoubleOrderMemo();
     refreshWorklogVesselList();
-}
-function importWageVesselsToWorklog() {
-    const input = document.getElementById("logShipName");
-    if (!input) return;
-    const picks = (Array.isArray(selectedWageVessels) ? selectedWageVessels : []).slice(0, 2);
-    if (picks.length === 0) {
-        showToast("💰 임금계산기에서 입·출항 선박을 먼저 선택해 주세요.");
-        return;
-    }
-    picks.forEach(item => {
-        worklogVesselMeta.set(normalizeWorklogShipKey(item.name), {
-            name: item.name,
-            vessel: item.vessel,
-            date: item.date,
-            terminalId: item.terminalId || selectedScheduleTerminal
-        });
-    });
-    input.value = picks.map(item => item.name).join(" / ");
-    const wageDate = picks[0].date || "";
-    const logDate = document.getElementById("dailyLogForm")?.getAttribute("data-date") || "";
-    if (wageDate) {
-        setWorklogScheduleDateInput(wageDate);
-        loadHjncScheduledShipsForDate(wageDate, false);
-    }
-    syncWorklogDoubleOrderMemo();
-    refreshWorklogVesselList();
-    if (wageDate && logDate && wageDate !== logDate) {
-        showToast(`⚠️ 임금계산기 날짜(${wageDate})와 근무일지 날짜(${logDate})가 다릅니다. 날짜를 확인해 주세요.`);
-    } else {
-        showToast(`💰 임금계산기 선박 ${picks.length}척을 근무일지에 가져왔습니다.`);
-    }
 }
 function applyQuickShipChip(shipName, berthNo = "", ptnrCode = "", termBadge = "") {
     const input = document.getElementById("logShipName");

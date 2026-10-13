@@ -33,11 +33,11 @@ function extractLine(prefix) {
 const FUNCTIONS = [
     'renderHjncScheduledShipsUI', 'loadHjncScheduledShipsForDate',
     'getWorklogScheduleDate', 'setWorklogScheduleDateInput', 'openWorklogScheduleDatePicker',
-    'onWorklogScheduleDateChange', 'shiftWorklogScheduleDate', 'resetWorklogScheduleToLogDate',
+    'onWorklogScheduleDateChange', 'shiftWorklogScheduleDate',
     'parseWorklogShipNames', 'normalizeWorklogShipKey', 'getWorklogPickedNames', 'refreshWorklogVesselList',
     'resolveWorklogVesselMeta', 'buildWorklogDoubleOrderBlock', 'syncWorklogDoubleOrderMemo',
     'updateWorklogDoubleOrderStatus', 'toggleWorklogVesselPick', 'onWorklogShipNameEdited',
-    'importWageVesselsToWorklog', 'clickDate',
+    'clickDate',
     'getSelectedVesselPeriod', 'periodHours', 'getVesselScheduleDateTime', 'formatWageScheduleEvent',
     'extractDatePrefix', 'extractShortTime', 'isVesselActiveOnDate'
 ];
@@ -54,7 +54,7 @@ const SCHEDULE = [
     { VSL_NM: 'SHIP GAMMA', ATA: '2026-10-08 18:00', ATD: '2026-10-08 20:00', BERTH_NO: '3' }
 ];
 
-function setup({ logDate = '2026-10-08', shipName = '', memo = '', wageVessels = [] } = {}) {
+function setup({ logDate = '2026-10-08', shipName = '', memo = '' } = {}) {
     const elements = {};
     const make = (id, value = '') => (elements[id] = {
         id, value, innerText: '', innerHTML: '', textContent: '', dataset: {},
@@ -85,7 +85,6 @@ function setup({ logDate = '2026-10-08', shipName = '', memo = '', wageVessels =
         Map, Number, String, Array, Object, Date, RegExp, JSON, Math,
         console: { error() {}, warn() {} },
         selectedScheduleTerminal: 'hjnc',
-        selectedWageVessels: wageVessels,
         terminalQuickConfig: { hjnc: { schedule: '#', chart: '#' } },
         getTerminalMeta: () => ({ label: 'HJNC', color: '#ea580c', live: true, badge: 'HJNC' }),
         escapeShipCommentHtml: s => String(s ?? ''),
@@ -220,19 +219,6 @@ test('vessels without schedule times are flagged instead of getting fake hours',
     assert.doesNotMatch(elements.logMemo.value, /합계/);
 });
 
-test('importing wage-calculator vessels fills the ship field, the calendar and the work content', () => {
-    const wageVessels = [
-        { name: 'SHIP GAMMA', vessel: SCHEDULE[2], date: '2026-10-08', terminalId: 'hjnc' },
-        { name: 'SHIP ALPHA', vessel: SCHEDULE[0], date: '2026-10-08', terminalId: 'hjnc' }
-    ];
-    const { context, elements } = setup({ memo: '' , wageVessels });
-    context.importWageVesselsToWorklog();
-    assert.equal(elements.logShipName.value, 'SHIP GAMMA / SHIP ALPHA');
-    assert.equal(elements.worklogScheduleDatePicker.value, '2026-10-08');
-    assert.match(elements.logMemo.value, /① SHIP GAMMA · 입항 2026-10-08 18:00 → 출항 2026-10-08 20:00 · 2H/);
-    assert.match(elements.logMemo.value, /② SHIP ALPHA · 입항 2026-10-08 08:00 → 출항 2026-10-08 10:00 · 2H/);
-});
-
 test('opening a work-log day moves the calendar to that day and keeps the saved double-order text', () => {
     const app = setup({ logDate: '2026-10-08' });
     const { context, elements } = app;
@@ -244,16 +230,21 @@ test('opening a work-log day moves the calendar to that day and keeps the saved 
     assert.match(elements.worklogDoubleOrderStatus.textContent, /2\/2/);
 });
 
-test('importing with no wage selection only shows a hint', () => {
-    const { context, elements, toasts } = setup({ shipName: '' });
-    context.importWageVesselsToWorklog();
-    assert.equal(elements.logShipName.value, '');
-    assert.match(toasts.at(-1), /임금계산기에서 입·출항 선박을 먼저 선택/);
-});
-
 test('the work-log box renders the calendar, the double-order status and the toggle handlers', () => {
     assert.match(html, /<div id="worklogDoubleOrderStatus"/);
     assert.match(html, /onclick="toggleWorklogVesselPick\(\$\{index\}\)"/);
-    assert.match(html, /onclick="importWageVesselsToWorklog\(\)"/);
     assert.match(html, /placeholder="작업 선박명 \(2척 선택 시 더블오더\)" onchange="onWorklogShipNameEdited\(\)"/);
+});
+
+// 사용자가 삭제를 요청한 두 블럭: "📌 근무일 날짜"(resetWorklogScheduleToLogDate) · "💰 임금계산기 선박"(importWageVesselsToWorklog)
+test('the "근무일 날짜" and "임금계산기 선박" blocks are gone, the schedule calendar stays', () => {
+    assert.doesNotMatch(html, /근무일 날짜/);
+    assert.doesNotMatch(html, /임금계산기 선박/);
+    assert.doesNotMatch(html, /resetWorklogScheduleToLogDate/);
+    assert.doesNotMatch(html, /importWageVesselsToWorklog/);
+    assert.doesNotMatch(html, /worklog-schedule-tool-btn/);
+    // 날짜 달력(◀ ▶ · date 입력)과 더블오더 선택은 그대로 남아 있어야 한다.
+    assert.match(html, /onclick="shiftWorklogScheduleDate\(-1\)"/);
+    assert.match(html, /onclick="shiftWorklogScheduleDate\(1\)"/);
+    assert.match(html, /id="worklogScheduleDatePicker"/);
 });
