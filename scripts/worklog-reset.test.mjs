@@ -65,12 +65,28 @@ function setup({ hidden = false, filled = false, confirmYes = true, withImagePre
 
 test('the work-log form has an 초기화 button next to 저장하기 and 삭제', () => {
     assert.match(html, /onclick="resetWorkLogForm\(\)"[^>]*>초기화</);
-    const row = html.match(/<div style="display:flex; gap:8px; margin-top:15px;">[\s\S]*?<\/div>/);
+    const row = html.match(/<div class="worklog-action-row">[\s\S]*?<\/div>/);
     assert.ok(row, 'save/reset/delete button row not found');
     const order = ['trySaveWorkLog()', 'resetWorkLogForm()', 'deleteWorkLog()'];
     const at = order.map(fn => row[0].indexOf(fn));
     assert.ok(at.every(i => i >= 0), 'all three actions must be in the same row');
     assert.deepEqual([...at].sort((a, b) => a - b), at, 'order must be 저장하기 → 초기화 → 삭제');
+});
+
+test('the three action buttons are the same size (one shared rule, no per-button inline size)', () => {
+    const row = html.match(/<div class="worklog-action-row">[\s\S]*?<\/div>/);
+    assert.ok(row, 'save/reset/delete button row not found');
+    const buttons = [...row[0].matchAll(/<button[^>]*>/g)].map(match => match[0]);
+    assert.equal(buttons.length, 3, 'the row holds 저장하기 · 초기화 · 삭제');
+    for (const markup of buttons) {
+        assert.match(markup, /class="action-btn/, 'every button keeps the shared action-btn style');
+        assert.doesNotMatch(markup, /style="[^"]*(flex|padding|margin|height|width)/, 'a button must not override its size inline');
+    }
+    assert.match(
+        html,
+        /\.worklog-action-row > \.action-btn \{[^}]*flex: 1 1 0;[^}]*height: 52px;/,
+        'one rule must give all three buttons the same width and height'
+    );
 });
 
 test('reset clears every work-log input, the photo picker and shows a toast', () => {
