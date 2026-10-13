@@ -227,6 +227,8 @@ img { max-width: 100%; height: auto; object-fit: cover; background: #eee; }
         .calc-left input[type="date"] { flex: 6.5; min-width: 0; }
         .calc-left select { flex: 3.5; min-width: 0; cursor: pointer; }
         .textarea-field { height: 90px; resize: none; text-align: left; font-weight: 600; padding: 12px; line-height: 1.5; font-size: 0.95rem; }
+        /* 근무일지 '작업 내용' 입력 블록: 글자 수에 따라 높이가 자동으로 늘어나 스크롤 없이 전체가 보이도록 함 (모바일 미디어쿼리의 height 축소 !important 상쇄) */
+        #logMemo { min-height: 90px !important; padding: 12px !important; }
         .action-btn { width: 100%; padding: 14px; border: none; border-radius: 10px; font-weight: 900; color: white; cursor: pointer; background: var(--primary); font-size: clamp(0.98rem, 3.4vw, 1.1rem); margin-top: 8px; touch-action: manipulation; transition: transform 0.12s ease, filter 0.15s ease; }
         .action-btn:active { transform: scale(0.985); }
         .bg-submit { background: var(--success); } .bg-calc { background: var(--primary); } .bg-cancel { background: var(--text-sub); }

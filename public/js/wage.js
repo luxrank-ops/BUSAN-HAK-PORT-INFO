@@ -457,6 +457,17 @@ function onWageShipNameChange(value) {
     }
 }
 let wageToLogTransferPending = false;
+/* 근무일지 '작업 내용' 블록 높이 자동 조절: 내용 길이(글자 수)만큼 박스가 늘어나 항상 전체가 보이도록 함 */
+function autoGrowWorkLogMemo(el) {
+    const target = el || (typeof document !== 'undefined' && document.getElementById ? document.getElementById('logMemo') : null);
+    if (!target || !target.style || typeof target.style.setProperty !== 'function') return;
+    try {
+        target.style.setProperty('height', 'auto', 'important');
+        if (!target.scrollHeight) return; // 숨겨진 상태에서는 측정 불가 → 다음 표시 시 다시 조절
+        const borderPx = Math.max(0, (target.offsetHeight || 0) - (target.clientHeight || 0));
+        target.style.setProperty('height', (target.scrollHeight + borderPx) + 'px', 'important');
+    } catch (err) { /* 측정 실패 시 기본 스타일 유지 */ }
+}
 async function sendCalculatedWageToLog() {
     if (!lastCalculatedWageData || wageToLogTransferPending) return;
     wageToLogTransferPending = true;
@@ -502,6 +513,7 @@ async function sendCalculatedWageToLog() {
                             : line;
                     }
                 });
+                autoGrowWorkLogMemo(memoInput);
             }
 
             trackAppEvent("actions", "wage_to_log");
@@ -528,6 +540,7 @@ async function sendCalculatedWageToLog() {
             memoInput.value = memoInput.value
                 ? `${memoInput.value}\n${logSummary}`
                 : logSummary;
+            autoGrowWorkLogMemo(memoInput);
         }
 
         trackAppEvent("actions", "wage_to_log");

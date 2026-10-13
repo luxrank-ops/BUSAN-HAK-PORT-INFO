@@ -258,6 +258,8 @@
         .calc-left input[type="date"] { flex: 6.5; min-width: 0; }
         .calc-left select { flex: 3.5; min-width: 0; cursor: pointer; }
         .textarea-field { height: 90px; resize: none; text-align: left; font-weight: 600; padding: 12px; line-height: 1.5; font-size: 0.95rem; }
+        /* 근무일지 '작업 내용' 입력 블록: 글자 수에 따라 높이가 자동으로 늘어나 스크롤 없이 전체가 보이도록 함 (모바일 미디어쿼리의 height 축소 !important 상쇄) */
+        #logMemo { min-height: 90px !important; padding: 12px !important; }
         .action-btn { width: 100%; padding: 14px; border: none; border-radius: 10px; font-weight: 900; color: white; cursor: pointer; background: var(--primary); font-size: clamp(0.98rem, 3.4vw, 1.1rem); margin-top: 8px; touch-action: manipulation; transition: transform 0.12s ease, filter 0.15s ease; }
         .action-btn:active { transform: scale(0.985); }
         .bg-submit { background: var(--success); } .bg-calc { background: var(--primary); } .bg-cancel { background: var(--text-sub); }
@@ -2274,7 +2276,7 @@
                             <div id="coworkerRosterGrid" class="coworker-roster-grid"></div>
                         </div>
                     </div>
-                    <textarea id="logMemo" class="input-field textarea-field" placeholder="작업 내용..."></textarea>
+                    <textarea id="logMemo" class="input-field textarea-field" placeholder="작업 내용..." oninput="autoGrowWorkLogMemo(this)"></textarea>
                     <label style="font-size:0.9rem; font-weight:800; display:block; margin-top:10px; margin-bottom:4px;">📷 현장 사진</label>
                     <input type="file" id="logImageInput" class="input-field" accept="image/*" onchange="previewLogImage(this)">
                     <img id="logImagePreview" style="max-width:100%; border-radius:8px; margin-top:8px; display:none;" onclick="document.getElementById('imageModal').style.display='flex'; document.getElementById('modalImage').src=this.src;">
@@ -8065,7 +8067,18 @@ function jumpToLogDate(dStr) {
     const formEl = document.getElementById('dailyLogForm');
     if (formEl) formEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
-function clickDate(dStr){ document.getElementById('selectedDateText').innerText = dStr; document.getElementById('dailyLogForm').classList.remove('hidden'); document.getElementById('dailyLogForm').setAttribute('data-date', dStr); const d = adminWorkLogs[dStr]; document.getElementById('logShipName').value = d ? (d.shipName || '') : ''; document.getElementById('logWage1').value = d ? (d.wage1 || '') : ''; document.getElementById('logWage2').value = d ? (d.wage2 || '') : ''; document.getElementById('logCoworkers').value = d ? (d.coworkers || '') : ''; document.getElementById('logMemo').value = d ? d.memo : ''; const img = document.getElementById('logImagePreview'); if(d && d.imageUrl){ img.src = d.imageUrl; img.style.display = 'block'; } else { img.style.display = 'none'; img.src = ""; } document.getElementById('logImageInput').value = ''; renderWorkLogQuickChips(dStr); }
+/* 근무일지 '작업 내용' 블록 높이 자동 조절: 내용 길이(글자 수)만큼 박스가 늘어나 항상 전체가 보이도록 함 */
+function autoGrowWorkLogMemo(el) {
+    const target = el || (typeof document !== 'undefined' && document.getElementById ? document.getElementById('logMemo') : null);
+    if (!target || !target.style || typeof target.style.setProperty !== 'function') return;
+    try {
+        target.style.setProperty('height', 'auto', 'important');
+        if (!target.scrollHeight) return; // 숨겨진 상태에서는 측정 불가 → 다음 표시 시 다시 조절
+        const borderPx = Math.max(0, (target.offsetHeight || 0) - (target.clientHeight || 0));
+        target.style.setProperty('height', (target.scrollHeight + borderPx) + 'px', 'important');
+    } catch (err) { /* 측정 실패 시 기본 스타일 유지 */ }
+}
+function clickDate(dStr){ document.getElementById('selectedDateText').innerText = dStr; document.getElementById('dailyLogForm').classList.remove('hidden'); document.getElementById('dailyLogForm').setAttribute('data-date', dStr); const d = adminWorkLogs[dStr]; document.getElementById('logShipName').value = d ? (d.shipName || '') : ''; document.getElementById('logWage1').value = d ? (d.wage1 || '') : ''; document.getElementById('logWage2').value = d ? (d.wage2 || '') : ''; document.getElementById('logCoworkers').value = d ? (d.coworkers || '') : ''; document.getElementById('logMemo').value = d ? d.memo : ''; autoGrowWorkLogMemo(document.getElementById('logMemo')); const img = document.getElementById('logImagePreview'); if(d && d.imageUrl){ img.src = d.imageUrl; img.style.display = 'block'; } else { img.style.display = 'none'; img.src = ""; } document.getElementById('logImageInput').value = ''; renderWorkLogQuickChips(dStr); }
 function trySaveWorkLog(){ if(currentWorkerId) saveWorkLog(); else document.getElementById('loginModal').style.display = 'flex'; }
 async function confirmLoginAndSave(evt) {
     const nick = document.getElementById('loginNick').value.trim();
@@ -8247,7 +8260,7 @@ function loginSuccess(name) { currentWorkerId = name; localStorage.setItem('myWo
 function closeLoginModal(){ document.getElementById('loginModal').style.display = 'none'; }
 function updateUserBar() { document.getElementById('userProfileBar').style.display = currentWorkerId ? 'flex' : 'none'; if(currentWorkerId) document.getElementById('currentUserDisplay').innerText = `👤 ${currentWorkerId}`; }
 function logoutWorker() { if(confirm("로그아웃하시겠습니까?")) { currentWorkerId = null; localStorage.removeItem('myWorkerId'); updateUserBar(); renderCalendar(currentDate.getFullYear(), currentDate.getMonth()); document.getElementById('dailyLogForm').classList.add('hidden'); } }
-function deleteWorkLog(){ if(!currentWorkerId) return; if(!confirm("정말 삭제하시겠습니까?")) return; const dStr = document.getElementById('dailyLogForm').getAttribute('data-date'); db.collection('work_logs').doc(`${currentWorkerId}_${dStr}`).delete().then(()=>{ showToast("삭제되었습니다."); document.getElementById('logShipName').value=''; document.getElementById('logWage1').value=''; document.getElementById('logWage2').value=''; document.getElementById('logCoworkers').value=''; document.getElementById('logMemo').value=''; document.getElementById('logImageInput').value = ''; const imgPreview = document.getElementById('logImagePreview'); if(imgPreview) { imgPreview.src = ''; imgPreview.style.display = 'none'; } renderCalendar(currentDate.getFullYear(), currentDate.getMonth()); }).catch(err => alert("삭제 실패: " + err.message)); }
+function deleteWorkLog(){ if(!currentWorkerId) return; if(!confirm("정말 삭제하시겠습니까?")) return; const dStr = document.getElementById('dailyLogForm').getAttribute('data-date'); db.collection('work_logs').doc(`${currentWorkerId}_${dStr}`).delete().then(()=>{ showToast("삭제되었습니다."); document.getElementById('logShipName').value=''; document.getElementById('logWage1').value=''; document.getElementById('logWage2').value=''; document.getElementById('logCoworkers').value=''; document.getElementById('logMemo').value=''; autoGrowWorkLogMemo(document.getElementById('logMemo')); document.getElementById('logImageInput').value = ''; const imgPreview = document.getElementById('logImagePreview'); if(imgPreview) { imgPreview.src = ''; imgPreview.style.display = 'none'; } renderCalendar(currentDate.getFullYear(), currentDate.getMonth()); }).catch(err => alert("삭제 실패: " + err.message)); }
 function changeMonth(s){ currentDate.setMonth(currentDate.getMonth()+s); renderCalendar(currentDate.getFullYear(), currentDate.getMonth()); }
 function previewLogImage(input){ if(input.files&&input.files[0]){ const r=new FileReader(); r.onload=e=>{const i=document.getElementById('logImagePreview'); i.src=e.target.result; i.style.display='block';}; r.readAsDataURL(input.files[0]); } }
 function renderRow(label, amt, color = "inherit") { return `<tr><td style="padding: 8px 0; color: var(--text-sub); font-weight:700;">${label}</td><td style="text-align: right; font-weight: 900; color: ${color};">${amt.toLocaleString()}원</td></tr>`; }
@@ -8754,6 +8767,7 @@ async function sendCalculatedWageToLog() {
                             : line;
                     }
                 });
+                if (typeof autoGrowWorkLogMemo === 'function') autoGrowWorkLogMemo(memoInput);
             }
 
             trackAppEvent("actions", "wage_to_log");
@@ -8780,6 +8794,7 @@ async function sendCalculatedWageToLog() {
             memoInput.value = memoInput.value
                 ? `${memoInput.value}\n${logSummary}`
                 : logSummary;
+            if (typeof autoGrowWorkLogMemo === 'function') autoGrowWorkLogMemo(memoInput);
         }
 
         trackAppEvent("actions", "wage_to_log");
