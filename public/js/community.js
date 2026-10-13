@@ -687,7 +687,7 @@ function renderShipPage(p) {
             </div>`
             : "";
         const imageHtml = ship.imageUrl
-            ? `<img src="${ship.imageUrl}" loading="lazy" alt="선박 현장 이미지" style="max-width:100%; border-radius:8px; margin-top:8px; margin-bottom:10px; border:1px solid var(--border); cursor:pointer;" onclick="document.getElementById('imageModal').style.display='flex'; document.getElementById('modalImage').src=this.src;">`
+            ? `<div style="margin-top:8px; margin-bottom:10px;"><img src="${ship.imageUrl}" loading="lazy" alt="선박 현장 이미지" class="ship-post-img" style="width:30%; max-width:30%; min-width:140px; height:auto; border-radius:8px; border:1px solid var(--border); cursor:pointer; display:block; object-fit:cover;" onclick="document.getElementById('imageModal').style.display='flex'; document.getElementById('modalImage').src=this.src;" title="클릭하여 원본 크기로 확대 보기"></div>`
             : "";
         const rowId = `s-${ship.id}`;
         const postNum = filteredShips.length - ((p - 1) * postsPerPage) - index;

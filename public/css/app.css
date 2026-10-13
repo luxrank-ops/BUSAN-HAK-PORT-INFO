@@ -627,6 +627,8 @@ img { max-width: 100%; height: auto; object-fit: cover; background: #eee; }
         .ship-badge-star { display: inline-flex; align-items: center; background: #fef3c7; color: #b45309; border: 1px solid #fcd34d; border-radius: 5px; padding: 1px 6px; font-size: 0.72rem; font-weight: 900; margin-left: 4px; vertical-align: middle; }
         .ship-badge-tag { display: inline-block; background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; border-radius: 5px; padding: 1px 6px; font-size: 0.7rem; font-weight: 800; margin-right: 4px; margin-top: 3px; }
         .ship-badge-tag.warn { background: #fef2f2; color: #dc2626; border-color: #fecaca; }
+        .ship-post-img { width: 30% !important; max-width: 30% !important; min-width: 140px; height: auto; border-radius: 8px; border: 1px solid var(--border); cursor: pointer; display: block; object-fit: cover; transition: opacity 0.15s ease, transform 0.15s ease; }
+        .ship-post-img:hover { opacity: 0.9; transform: scale(1.02); }
         .quick-chip-row { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 4px; margin-bottom: 8px; }
         .quick-chip-btn { background: #f1f5f9; border: 1px solid #cbd5e1; color: var(--primary); border-radius: 14px; padding: 3px 9px; font-size: 0.74rem; font-weight: 800; cursor: pointer; transition: all 0.15s; }
         .quick-chip-btn:active { transform: scale(0.95); background: #dbeafe; border-color: #3b82f6; }
