@@ -702,6 +702,17 @@
         .hjnc-ship-chip { display: inline-flex; align-items: center; gap: 4px; background: #ffffff; color: #9a3412; border: 1.5px solid #fb923c; border-radius: 8px; padding: 4px 8px; font-size: 0.75rem; font-weight: 900; cursor: pointer; transition: all 0.14s ease; box-shadow: 0 1px 2px rgba(234, 88, 12, 0.08); }
         .hjnc-ship-chip:hover { background: #ffedd5; border-color: #ea580c; }
         .hjnc-ship-chip:active { transform: scale(0.96); }
+        .worklog-schedule-tools { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; margin: 2px 0 7px; }
+        .worklog-schedule-nav { flex: 0 0 auto; height: 32px; min-width: 32px; padding: 0 7px; border: 1.5px solid #fb923c; border-radius: 7px; background: #ffffff; color: #9a3412; font-size: 0.75rem; font-weight: 900; cursor: pointer; }
+        .worklog-schedule-nav:active { transform: scale(0.96); }
+        .worklog-schedule-tool-btn { flex: 0 0 auto; height: 32px; padding: 0 9px; border: 1.5px solid #3b82f6; border-radius: 7px; background: #eff6ff; color: #1d4ed8; font-size: 0.72rem; font-weight: 900; cursor: pointer; white-space: nowrap; }
+        .worklog-schedule-tool-btn:active { transform: scale(0.96); }
+        .worklog-double-status { font-size: 0.74rem; font-weight: 800; color: #9a3412; line-height: 1.4; margin-bottom: 6px; }
+        .worklog-double-status.is-full { color: #047857; }
+        body.dark-mode .worklog-schedule-nav { background: #1e293b; color: #fdba74; border-color: #f97316; }
+        body.dark-mode .worklog-schedule-tool-btn { background: #1e3a8a; color: #dbeafe; border-color: #60a5fa; }
+        body.dark-mode .worklog-double-status { color: #fdba74; }
+        body.dark-mode .worklog-double-status.is-full { color: #6ee7b7; }
         .hjnc-berth-tag { background: #ea580c; color: #ffffff; font-size: 0.65rem; font-weight: 900; padding: 1px 5px; border-radius: 4px; }
         .hjnc-time-tag { color: #c2410c; font-size: 0.68rem; font-weight: 800; }
         body.dark-mode .hjnc-schedule-box { background: rgba(234, 88, 12, 0.12); border-color: #ea580c; }
@@ -2233,7 +2244,7 @@
                         <input type="text"
                                id="logShipName"
                                class="input-field"
-                               placeholder="작업 선박명">
+                               placeholder="작업 선박명 (2척 선택 시 더블오더)" onchange="onWorklogShipNameEdited()">
                     </div>
                     <div style="display:flex; gap:6px; margin:4px 0 10px;">
                         <button type="button"
@@ -2260,6 +2271,19 @@
                             </div>
                         </div>
                         <div id="terminalScheduleTabBar" class="term-sched-tab-bar"></div>
+                        <div class="worklog-schedule-tools" role="group" aria-label="입·출항 선박 조회 날짜 달력">
+                            <button type="button" class="worklog-schedule-nav" onclick="shiftWorklogScheduleDate(-1)" aria-label="하루 전 스케줄 보기">◀</button>
+                            <input type="date"
+                                   id="worklogScheduleDatePicker"
+                                   class="wage-schedule-date-input"
+                                   aria-label="입·출항 선박 스케줄 날짜 선택 (달력)"
+                                   onclick="openWorklogScheduleDatePicker()"
+                                   onchange="onWorklogScheduleDateChange(this.value)">
+                            <button type="button" class="worklog-schedule-nav" onclick="shiftWorklogScheduleDate(1)" aria-label="하루 뒤 스케줄 보기">▶</button>
+                            <button type="button" class="worklog-schedule-tool-btn" onclick="resetWorklogScheduleToLogDate()" title="이 근무일지의 날짜 스케줄로 돌아갑니다">📌 근무일 날짜</button>
+                            <button type="button" class="worklog-schedule-tool-btn" onclick="importWageVesselsToWorklog()" title="임금계산기에서 선택한 선박(최대 2척)을 가져옵니다">💰 임금계산기 선박</button>
+                        </div>
+                        <div id="worklogDoubleOrderStatus" class="worklog-double-status" aria-live="polite"></div>
                         <div id="hjncScheduledShipList" style="display:flex; flex-wrap:wrap; gap:5px;"></div>
                     </div>
                     <div style="display:flex; gap:10px; margin-bottom:8px; width:100%;">
@@ -5919,6 +5943,11 @@ function changeMonthlyGoalAmount() {
     showToast(`🎯 이번 달 목표 수입이 ${monthlyGoalAmount.toLocaleString()}원으로 설정되었습니다!`);
 }
 const hjncScheduleMonthCache = {};
+// 근무일지 입·출항 선박 목록 상태: 현재 화면에 그려진 선박과, 선택된 선박의 입·출항 시각 정보
+let worklogRenderedVessels = [];
+const worklogVesselMeta = new Map();
+// 작업 내용에 자동 입력한 '더블오더 작업' 블록(헤더 + ①② 줄)을 찾는 패턴
+const WORKLOG_DOUBLE_BLOCK_RE = /🚢 더블오더 작업 \(선박 2척[^\n]*\n(?:[①②] [^\n]*(?:\n|$))*\n?/;
 const TERMINAL_SCHEDULE_LIST = [
     { id: "hjnc", group: "3항업", label: "한진(HJNC)", badge: "HJNC", color: "#ea580c", live: true },
     { id: "bnct", group: "3항업", label: "고려(BNCT)", badge: "BNCT", color: "#2563eb", live: true },
@@ -6007,7 +6036,7 @@ function selectScheduleTerminal(terminalId) {
     try { localStorage.setItem("busanPortScheduleTerminal", terminalId); } catch (e) {}
     trackAppEvent("terminals", terminalId);
     renderTerminalScheduleTabBar();
-    const curDate = document.getElementById("dailyLogForm")?.getAttribute("data-date");
+    const curDate = getWorklogScheduleDate() || document.getElementById("dailyLogForm")?.getAttribute("data-date");
     if (curDate && !document.getElementById("dailyLogForm")?.classList.contains("hidden")) {
         loadHjncScheduledShipsForDate(curDate, false);
     }
@@ -6779,7 +6808,7 @@ async function fetchHjncScheduleForMonth(yearMonth, forceRefresh = false, termin
         hjncScheduleMonthCache[cacheKey] = vessels;
         syncFromLiveApi().then(updated => {
             if (updated && updated.length > 0 && selectedScheduleTerminal === tid) {
-                const curDate = document.getElementById("dailyLogForm")?.getAttribute("data-date");
+                const curDate = getWorklogScheduleDate() || document.getElementById("dailyLogForm")?.getAttribute("data-date");
                 if (curDate && curDate.startsWith(yearMonth)) {
                     renderHjncScheduledShipsUI(curDate, updated, tid);
                 }
@@ -6819,7 +6848,7 @@ async function fetchHjncScheduleForMonth(yearMonth, forceRefresh = false, termin
     return vessels;
 }
 async function refreshHjncScheduleForSelectedDate() {
-    const dateStr = document.getElementById("dailyLogForm")?.getAttribute("data-date");
+    const dateStr = getWorklogScheduleDate() || document.getElementById("dailyLogForm")?.getAttribute("data-date");
     if (!dateStr) return;
     const yearMonth = dateStr.slice(0, 7);
     const cacheKey = `${selectedScheduleTerminal}_${yearMonth}`;
@@ -6829,6 +6858,7 @@ async function refreshHjncScheduleForSelectedDate() {
     await loadHjncScheduledShipsForDate(dateStr, true);
 }
 function renderHjncScheduledShipsUI(dateStr, allVessels, terminalId = selectedScheduleTerminal) {
+    worklogRenderedVessels = [];
     const titleEl = document.getElementById("hjncScheduleBoxTitle");
     const listEl = document.getElementById("hjncScheduledShipList");
     if (!titleEl || !listEl || !dateStr) return;
@@ -6836,7 +6866,7 @@ function renderHjncScheduledShipsUI(dateStr, allVessels, terminalId = selectedSc
     renderTerminalScheduleTabBar();
     const meta = getTerminalMeta(terminalId);
     const cfg = terminalQuickConfig[terminalId] || terminalQuickConfig.hjnc;
-    const currentValue = (document.getElementById("logShipName")?.value || "").trim().toUpperCase();
+    const pickedNames = getWorklogPickedNames();
     const matched = (allVessels || []).filter(v => isVesselActiveOnDate(v, dateStr));
     const seen = new Set();
     const uniqueMatched = [];
@@ -6847,7 +6877,7 @@ function renderHjncScheduledShipsUI(dateStr, allVessels, terminalId = selectedSc
         uniqueMatched.push(v);
     });
 
-    titleEl.innerText = `⚓ ${dateStr} ${meta.label}\n입항·작업 선박 (${uniqueMatched.length}척) — 터치 시 자동 입력`;
+    titleEl.innerText = `⚓ ${dateStr} ${meta.label}\n입항·작업 선박 (${uniqueMatched.length}척) — 터치: 선택·해제 (최대 2척 더블오더)`;
 
     if (uniqueMatched.length === 0) {
         if (!meta.live) {
@@ -6868,10 +6898,23 @@ function renderHjncScheduledShipsUI(dateStr, allVessels, terminalId = selectedSc
         return;
     }
 
-    listEl.innerHTML = uniqueMatched.map(v => {
+    worklogRenderedVessels = uniqueMatched.map(v => ({
+        name: String(v.VSL_NM || "").trim(),
+        vessel: v,
+        dateStr,
+        terminalId
+    }));
+    // 이미 선택된 선박은 최신 스케줄 시각으로 갱신해 두어야 작업 내용 계산에 반영된다.
+    worklogRenderedVessels.forEach(item => {
+        const key = normalizeWorklogShipKey(item.name);
+        if (pickedNames.includes(key)) {
+            worklogVesselMeta.set(key, { name: item.name, vessel: item.vessel, date: dateStr, terminalId });
+        }
+    });
+
+    listEl.innerHTML = uniqueMatched.map((v, index) => {
         const name = String(v.VSL_NM || "").trim();
         const safeName = escapeShipCommentHtml(name);
-        const jsSafeName = name.replace(/\\/g, "\\\\").replace(/'/g, "\\'");
         const berth = escapeShipCommentHtml(v.BERTH_NO || "-");
         const ptnr = escapeShipCommentHtml(v.PTNR_CODE || "");
         const arrDate = extractDatePrefix(v.ATA || v.ETB);
@@ -6880,16 +6923,19 @@ function renderHjncScheduledShipsUI(dateStr, allVessels, terminalId = selectedSc
         const timeBadge = arrDate === dateStr && arrTime
             ? `입항 ${arrTime}`
             : (depTime ? `~출항 ${depTime}` : "작업 중");
-        const isSelected = currentValue === name.toUpperCase() || currentValue === `[${meta.badge}] ${name.toUpperCase()}`;
+        const pickedIndex = pickedNames.indexOf(normalizeWorklogShipKey(name));
+        const isSelected = pickedIndex >= 0;
         const selectedStyle = isSelected ? `background:${meta.color}; color:#ffffff; border-color:${meta.color};` : "";
         const timeStyle = isSelected ? "color:#ffedd5;" : "";
-        return `<button type="button" class="hjnc-ship-chip" style="${selectedStyle}" onclick="applyQuickShipChip('${jsSafeName}', '${berth}', '${ptnr}', '${meta.badge}')">
+        const orderBadge = isSelected ? `[${pickedIndex + 1}선박] ` : "";
+        return `<button type="button" class="hjnc-ship-chip${isSelected ? " is-picked" : ""}" style="${selectedStyle}" aria-pressed="${isSelected}" onclick="toggleWorklogVesselPick(${index})">
             <span class="hjnc-berth-tag" style="${isSelected ? `background:#ffffff; color:${meta.color};` : `background:${meta.color}; color:#ffffff;`}">${berth}</span>
-            <span>🚢 ${safeName}</span>
+            <span>🚢 ${orderBadge}${safeName}</span>
             ${ptnr ? `<span style="font-size:0.66rem; color:${isSelected ? '#fed7aa' : '#64748b'}; font-weight:800;">(${ptnr})</span>` : ""}
             <span class="hjnc-time-tag" style="${timeStyle}">${timeBadge}</span>
         </button>`;
     }).join("");
+    updateWorklogDoubleOrderStatus();
 }
 async function loadHjncScheduledShipsForDate(dateStr, forceRefresh = false) {
     const titleEl = document.getElementById("hjncScheduleBoxTitle");
@@ -6910,7 +6956,7 @@ async function loadHjncScheduledShipsForDate(dateStr, forceRefresh = false) {
     listEl.innerHTML = `<span style="font-size:0.74rem; color:var(--text-sub); font-weight:700;">${meta.label} 선석 배정 현황 데이터를 불러오는 중입니다...</span>`;
 
     const allVessels = await fetchHjncScheduleForMonth(yearMonth, forceRefresh, tid);
-    const currentSelected = document.getElementById("dailyLogForm")?.getAttribute("data-date");
+    const currentSelected = getWorklogScheduleDate();
     if ((currentSelected && currentSelected !== dateStr) || selectedScheduleTerminal !== tid) return;
 
     renderHjncScheduledShipsUI(dateStr, allVessels, tid);
@@ -7151,7 +7197,7 @@ function syncCoworkerSelectionUI() {
     }
 }
 function renderWorkLogQuickChips(dateStr) {
-    const targetDate = dateStr || document.getElementById("dailyLogForm")?.getAttribute("data-date") || "";
+    const targetDate = getWorklogScheduleDate() || dateStr || document.getElementById("dailyLogForm")?.getAttribute("data-date") || "";
     if (targetDate) {
         loadHjncScheduledShipsForDate(targetDate);
     }
@@ -7188,12 +7234,204 @@ function renderWorkLogQuickChips(dateStr) {
         }).join("") +
         `<button type="button" class="quick-chip-btn" style="background:${panelOpen ? 'var(--primary)' : '#eff6ff'}; color:${panelOpen ? '#ffffff' : '#1d4ed8'}; border-color:#60a5fa; font-weight:900;" onclick="toggleCoworkerRosterPanel()">📋 작업자 선택 (${HANJIN_COWORKER_ROSTER.length}명) ${panelOpen ? '▲' : '▼'}</button>`;
 }
+/* ===== 근무일지: 입·출항 선박 달력 조회 · 더블오더(2척) 선택 · 작업 내용 자동 입력 ===== */
+function getWorklogScheduleDate() {
+    return document.getElementById("worklogScheduleDatePicker")?.value || "";
+}
+function setWorklogScheduleDateInput(dateStr) {
+    const normalized = String(dateStr || "");
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(normalized)) return false;
+    const input = document.getElementById("worklogScheduleDatePicker");
+    if (input) input.value = normalized;
+    return true;
+}
+function openWorklogScheduleDatePicker() {
+    const input = document.getElementById("worklogScheduleDatePicker");
+    if (!input) return;
+    if (!input.value) {
+        input.value = document.getElementById("dailyLogForm")?.getAttribute("data-date") || getAppLocalDateString();
+    }
+    if (typeof input.showPicker === "function") {
+        try { input.showPicker(); } catch (e) {}
+    }
+}
+function onWorklogScheduleDateChange(dateStr) {
+    if (!setWorklogScheduleDateInput(dateStr)) return;
+    showToast(`📅 ${dateStr} 입·출항 선박 스케줄을 조회합니다.`);
+    loadHjncScheduledShipsForDate(dateStr, false);
+}
+function shiftWorklogScheduleDate(delta) {
+    const base = getWorklogScheduleDate()
+        || document.getElementById("dailyLogForm")?.getAttribute("data-date")
+        || getAppLocalDateString();
+    const [y, m, d] = base.split("-").map(Number);
+    const nextStr = new Date(Date.UTC(y, m - 1, d + (Number(delta) || 0))).toISOString().slice(0, 10);
+    setWorklogScheduleDateInput(nextStr);
+    loadHjncScheduledShipsForDate(nextStr, false);
+}
+function resetWorklogScheduleToLogDate() {
+    const logDate = document.getElementById("dailyLogForm")?.getAttribute("data-date") || getAppLocalDateString();
+    setWorklogScheduleDateInput(logDate);
+    loadHjncScheduledShipsForDate(logDate, false);
+}
+function parseWorklogShipNames(value) {
+    return String(value || "").split(/\s*\/\s*/).map(s => s.trim()).filter(Boolean);
+}
+// 비교용 선박명: "[HJNC] " 같은 터미널 머리말을 떼고 대문자로 맞춘다.
+function normalizeWorklogShipKey(name) {
+    return String(name || "").trim().replace(/^\[[^\]]+\]\s*/, "").trim().toUpperCase();
+}
+function getWorklogPickedNames() {
+    return parseWorklogShipNames(document.getElementById("logShipName")?.value).map(normalizeWorklogShipKey);
+}
+function refreshWorklogVesselList() {
+    const dateStr = getWorklogScheduleDate();
+    if (!dateStr) return;
+    const cached = hjncScheduleMonthCache[`${selectedScheduleTerminal}_${dateStr.slice(0, 7)}`];
+    if (cached) renderHjncScheduledShipsUI(dateStr, cached, selectedScheduleTerminal);
+    else updateWorklogDoubleOrderStatus();
+}
+function resolveWorklogVesselMeta(name) {
+    const key = normalizeWorklogShipKey(name);
+    if (!key) return null;
+    if (worklogVesselMeta.has(key)) return worklogVesselMeta.get(key);
+    // 목록에서 고르지 않고 이름을 직접 입력한 경우, 현재 조회 날짜의 스케줄에서 시각을 찾는다.
+    const dateStr = getWorklogScheduleDate();
+    const cached = dateStr ? hjncScheduleMonthCache[`${selectedScheduleTerminal}_${dateStr.slice(0, 7)}`] : null;
+    const found = (cached || []).find(v => normalizeWorklogShipKey(v?.VSL_NM) === key);
+    if (!found) return null;
+    const meta = { name: String(found.VSL_NM).trim(), vessel: found, date: dateStr, terminalId: selectedScheduleTerminal };
+    worklogVesselMeta.set(key, meta);
+    return meta;
+}
+function buildWorklogDoubleOrderBlock(names) {
+    const circled = ["①", "②"];
+    const items = names.map(name => {
+        const meta = resolveWorklogVesselMeta(name);
+        return { name, period: meta ? getSelectedVesselPeriod(meta.vessel, meta.date) : null };
+    });
+    const allHours = items.every(item => item.period && item.period.hours > 0);
+    const totalHours = allHours ? items.reduce((sum, item) => sum + item.period.hours, 0) : 0;
+    const header = `🚢 더블오더 작업 (선박 2척${totalHours > 0 ? ` · 합계 ${totalHours}H` : ""})`;
+    const lines = items.map((item, index) => {
+        if (!item.period) return `${circled[index]} ${item.name} · 입·출항 시각 확인 필요`;
+        const arrival = formatWageScheduleEvent(item.period.arrival);
+        const departure = formatWageScheduleEvent(item.period.departure);
+        const hoursLabel = item.period.hours > 0 ? `${item.period.hours}H` : "시간 확인 필요";
+        return `${circled[index]} ${item.name} · 입항 ${arrival} → 출항 ${departure} · ${hoursLabel}`;
+    });
+    return [header, ...lines].join("\n");
+}
+// 배 이름이 정확히 2척이면 작업 내용 맨 위에 더블오더 블록을 넣고, 아니면 기존 블록만 제거한다.
+// 사용자가 직접 쓴 작업 내용은 그대로 둔다.
+function syncWorklogDoubleOrderMemo() {
+    const memo = document.getElementById("logMemo");
+    if (!memo) return;
+    const names = parseWorklogShipNames(document.getElementById("logShipName")?.value);
+    const original = memo.value;
+    const withoutBlock = original.replace(WORKLOG_DOUBLE_BLOCK_RE, "");
+    let nextValue = withoutBlock;
+    if (names.length === 2) {
+        const block = buildWorklogDoubleOrderBlock(names);
+        const rest = withoutBlock.replace(/^\n+/, "");
+        nextValue = rest ? `${block}\n\n${rest}` : block;
+    } else if (withoutBlock !== original) {
+        nextValue = withoutBlock.replace(/^\n+/, "");
+    }
+    if (nextValue === original) return;
+    memo.value = nextValue;
+    autoGrowWorkLogMemo(memo);
+}
+function updateWorklogDoubleOrderStatus() {
+    const el = document.getElementById("worklogDoubleOrderStatus");
+    if (!el) return;
+    const names = parseWorklogShipNames(document.getElementById("logShipName")?.value);
+    let text;
+    if (names.length === 0) {
+        text = "🔀 더블오더: 입·출항 선박을 2척 선택하면 작업 내용에 입·출항 시각과 근무시간이 자동 입력됩니다.";
+    } else if (names.length === 1) {
+        text = `🔀 더블오더 선택 1/2 · ${names[0]} · 한 척 더 선택해 주세요.`;
+    } else if (names.length === 2) {
+        text = `🔀 더블오더 선택 2/2 · ${names.join(" · ")} · 작업 내용 자동 입력됨`;
+    } else {
+        text = "⚠️ 선박은 최대 2척까지 입력할 수 있습니다. 배 이름을 2척 이하로 줄여 주세요.";
+    }
+    el.textContent = text;
+    el.classList.toggle("is-full", names.length === 2);
+}
+function toggleWorklogVesselPick(index) {
+    const item = worklogRenderedVessels[index];
+    const input = document.getElementById("logShipName");
+    if (!item || !input) return;
+    const names = parseWorklogShipNames(input.value);
+    const key = normalizeWorklogShipKey(item.name);
+    const pos = names.findIndex(n => normalizeWorklogShipKey(n) === key);
+    if (pos >= 0) {
+        names.splice(pos, 1);
+        input.value = names.join(" / ");
+        syncWorklogDoubleOrderMemo();
+        refreshWorklogVesselList();
+        showToast(`🚢 ${item.name} 선택을 해제했습니다.`);
+        return;
+    }
+    if (names.length >= 2) {
+        showToast("⚠️ 더블오더는 선박 2척까지만 선택할 수 있습니다. 먼저 선택된 선박을 다시 눌러 해제해 주세요.");
+        return;
+    }
+    names.push(item.name);
+    worklogVesselMeta.set(key, { name: item.name, vessel: item.vessel, date: item.dateStr, terminalId: item.terminalId });
+    input.value = names.join(" / ");
+    syncWorklogDoubleOrderMemo();
+    refreshWorklogVesselList();
+    if (names.length === 2) {
+        showToast(`🔀 더블오더 2척 선택 완료 (${names.join(" / ")}) · 작업 내용을 자동 입력했습니다.`);
+    } else {
+        showToast(`🚢 ${item.name} 선택 · 한 척 더 선택하면 더블오더 작업 내용이 자동 입력됩니다.`);
+    }
+}
+function onWorklogShipNameEdited() {
+    const names = parseWorklogShipNames(document.getElementById("logShipName")?.value);
+    if (names.length > 2) showToast("⚠️ 선박은 최대 2척까지 입력할 수 있습니다.");
+    syncWorklogDoubleOrderMemo();
+    refreshWorklogVesselList();
+}
+function importWageVesselsToWorklog() {
+    const input = document.getElementById("logShipName");
+    if (!input) return;
+    const picks = (Array.isArray(selectedWageVessels) ? selectedWageVessels : []).slice(0, 2);
+    if (picks.length === 0) {
+        showToast("💰 임금계산기에서 입·출항 선박을 먼저 선택해 주세요.");
+        return;
+    }
+    picks.forEach(item => {
+        worklogVesselMeta.set(normalizeWorklogShipKey(item.name), {
+            name: item.name,
+            vessel: item.vessel,
+            date: item.date,
+            terminalId: item.terminalId || selectedScheduleTerminal
+        });
+    });
+    input.value = picks.map(item => item.name).join(" / ");
+    const wageDate = picks[0].date || "";
+    const logDate = document.getElementById("dailyLogForm")?.getAttribute("data-date") || "";
+    if (wageDate) {
+        setWorklogScheduleDateInput(wageDate);
+        loadHjncScheduledShipsForDate(wageDate, false);
+    }
+    syncWorklogDoubleOrderMemo();
+    refreshWorklogVesselList();
+    if (wageDate && logDate && wageDate !== logDate) {
+        showToast(`⚠️ 임금계산기 날짜(${wageDate})와 근무일지 날짜(${logDate})가 다릅니다. 날짜를 확인해 주세요.`);
+    } else {
+        showToast(`💰 임금계산기 선박 ${picks.length}척을 근무일지에 가져왔습니다.`);
+    }
+}
 function applyQuickShipChip(shipName, berthNo = "", ptnrCode = "", termBadge = "") {
     const input = document.getElementById("logShipName");
     if (!input) return;
     input.value = shipName;
     if (shipName.endsWith(" ")) input.focus();
-    const curDate = document.getElementById("dailyLogForm")?.getAttribute("data-date");
+    const curDate = getWorklogScheduleDate() || document.getElementById("dailyLogForm")?.getAttribute("data-date");
     if (curDate) {
         const ym = curDate.slice(0, 7);
         const cacheKey = `${selectedScheduleTerminal}_${ym}`;
@@ -7577,7 +7815,7 @@ function renderCalendar(y, m){
             applyWorkLogFilter();
             const selDate = document.getElementById('dailyLogForm')?.getAttribute('data-date');
             if (selDate && !document.getElementById('dailyLogForm')?.classList.contains('hidden')) {
-                loadHjncScheduledShipsForDate(selDate);
+                loadHjncScheduledShipsForDate(getWorklogScheduleDate() || selDate);
             }
             if (isWorkLogUnlocked) loadAndRenderYearlyD3Chart(y);
         });
@@ -7585,7 +7823,7 @@ function renderCalendar(y, m){
         updateMonthlyStatsUI({});
         const selDate = document.getElementById('dailyLogForm')?.getAttribute('data-date');
         if (selDate && !document.getElementById('dailyLogForm')?.classList.contains('hidden')) {
-            loadHjncScheduledShipsForDate(selDate);
+            loadHjncScheduledShipsForDate(getWorklogScheduleDate() || selDate);
         }
         if (isWorkLogUnlocked) loadAndRenderYearlyD3Chart(y);
     }
@@ -8091,7 +8329,7 @@ function autoGrowWorkLogMemo(el) {
         target.style.setProperty('height', (target.scrollHeight + borderPx) + 'px', 'important');
     } catch (err) { /* 측정 실패 시 기본 스타일 유지 */ }
 }
-function clickDate(dStr){ document.getElementById('selectedDateText').innerText = dStr; document.getElementById('dailyLogForm').classList.remove('hidden'); document.getElementById('dailyLogForm').setAttribute('data-date', dStr); const d = adminWorkLogs[dStr]; document.getElementById('logShipName').value = d ? (d.shipName || '') : ''; document.getElementById('logWage1').value = d ? (d.wage1 || '') : ''; document.getElementById('logWage2').value = d ? (d.wage2 || '') : ''; document.getElementById('logCoworkers').value = d ? (d.coworkers || '') : ''; document.getElementById('logMemo').value = d ? d.memo : ''; autoGrowWorkLogMemo(document.getElementById('logMemo')); const img = document.getElementById('logImagePreview'); if(d && d.imageUrl){ img.src = d.imageUrl; img.style.display = 'block'; } else { img.style.display = 'none'; img.src = ""; } document.getElementById('logImageInput').value = ''; renderWorkLogQuickChips(dStr); }
+function clickDate(dStr){ document.getElementById('selectedDateText').innerText = dStr; document.getElementById('dailyLogForm').classList.remove('hidden'); document.getElementById('dailyLogForm').setAttribute('data-date', dStr); const d = adminWorkLogs[dStr]; document.getElementById('logShipName').value = d ? (d.shipName || '') : ''; document.getElementById('logWage1').value = d ? (d.wage1 || '') : ''; document.getElementById('logWage2').value = d ? (d.wage2 || '') : ''; document.getElementById('logCoworkers').value = d ? (d.coworkers || '') : ''; document.getElementById('logMemo').value = d ? d.memo : ''; autoGrowWorkLogMemo(document.getElementById('logMemo')); const img = document.getElementById('logImagePreview'); if(d && d.imageUrl){ img.src = d.imageUrl; img.style.display = 'block'; } else { img.style.display = 'none'; img.src = ""; } document.getElementById('logImageInput').value = ''; setWorklogScheduleDateInput(dStr); updateWorklogDoubleOrderStatus(); renderWorkLogQuickChips(dStr); }
 function trySaveWorkLog(){ if(currentWorkerId) saveWorkLog(); else document.getElementById('loginModal').style.display = 'flex'; }
 async function confirmLoginAndSave(evt) {
     const nick = document.getElementById('loginNick').value.trim();
@@ -8783,7 +9021,7 @@ async function sendCalculatedWageToLog() {
                 if (typeof autoGrowWorkLogMemo === 'function') autoGrowWorkLogMemo(memoInput);
             }
 
-            trackAppEvent("actions", "wage_to_log");
+            if (typeof refreshWorklogVesselList === "function") refreshWorklogVesselList(); trackAppEvent("actions", "wage_to_log");
             showToast("📅 더블오더 선박 2척의 금액을 임금 1·임금 2에 각각 입력했습니다. 저장을 눌러 기록하세요.");
             return;
         }
@@ -8810,7 +9048,7 @@ async function sendCalculatedWageToLog() {
             if (typeof autoGrowWorkLogMemo === 'function') autoGrowWorkLogMemo(memoInput);
         }
 
-        trackAppEvent("actions", "wage_to_log");
+        if (typeof refreshWorklogVesselList === "function") refreshWorklogVesselList(); trackAppEvent("actions", "wage_to_log");
         showToast(isDoubleOrder
             ? `📅 더블오더 금액을 임금 2에 입력했습니다. 기존 임금 1을 확인하고 근무일지를 저장하세요.`
             : (shipName
