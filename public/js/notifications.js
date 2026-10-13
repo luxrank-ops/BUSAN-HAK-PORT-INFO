@@ -1,4 +1,4 @@
-// notifications.js
+// notifications.js - 실시간 알림 및 FCM 푸시 관리
 let notiUnsubscribe = null;
 
 function escapeNotificationHtml(value) {
@@ -69,76 +69,85 @@ function initNotifications(userId) {
 
                             messaging.getToken(getTokenOptions)
                                 .then((currentToken) => {
-                                    if (currentToken && typeof db !== 'undefined' && db) {
+                                    if (currentToken && typeof db !== 'undefined' && db && db.collection) {
                                         db.collection('user_profiles').doc(userId).set({
                                             fcmToken: currentToken,
                                             updatedAt: firebase.firestore.FieldValue.serverTimestamp()
                                         }, { merge: true });
                                     }
                                 }).catch((err) => {
-                                    console.log('FCM Token get error', err);
+                                    console.log('FCM Token get error:', err);
                                 });
-                        }).catch(err => console.log('Config fetch error', err));
+                        }).catch(err => console.log('Config fetch error:', err));
                 }
-            });
+            }).catch(err => console.log('Notification permission error:', err));
 
             messaging.onMessage((payload) => {
-                console.log('Message received. ', payload);
+                console.log('Message received: ', payload);
                 if (payload && payload.notification && typeof showToast === 'function') {
-                    showToast(payload.notification.title + ' - ' + payload.notification.body);
+                    const msg = (payload.notification.title || '') + (payload.notification.body ? ' - ' + payload.notification.body : '');
+                    showToast(msg);
                 }
             });
         } catch (err) {
-            console.log('FCM messaging init error', err);
+            console.warn('FCM Push 초기화 건너뜀:', err);
         }
     }
 
     // 2. Firestore In-App Notification 리스너 등록
-    if (typeof db === 'undefined' || !db) return;
-    if (notiUnsubscribe) notiUnsubscribe();
-    notiUnsubscribe = db.collection('notifications')
-        .where('userId', '==', userId)
-        .orderBy('createdAt', 'desc')
-        .limit(20)
-        .onSnapshot((snapshot) => {
-            let unreadCount = 0;
-            let html = '';
+    if (typeof db === 'undefined' || !db || !db.collection) return;
+    if (notiUnsubscribe) {
+        try { notiUnsubscribe(); } catch (_) {}
+    }
+    try {
+        notiUnsubscribe = db.collection('notifications')
+            .where('userId', '==', userId)
+            .orderBy('createdAt', 'desc')
+            .limit(20)
+            .onSnapshot((snapshot) => {
+                let unreadCount = 0;
+                let html = '';
 
-            if (snapshot.empty) {
-                html = '<p style="color:var(--text-secondary); text-align:center; font-size:0.9rem;">알림이 없습니다.</p>';
-            } else {
-                snapshot.forEach(doc => {
-                    const data = doc.data() || {};
-                    if (!data.read) unreadCount++;
-                    const bg = data.read ? 'transparent' : 'rgba(37, 99, 235, 0.1)';
-                    const safeTitle = escapeNotificationHtml(data.title || '알림');
-                    const safeBody = escapeNotificationHtml(data.body || '');
-                    html += `
-                        <div style="padding: 10px; border-bottom: 1px solid var(--border); background: ${bg}; border-radius: 4px; margin-bottom: 5px;">
-                            <div style="font-weight:bold; font-size:0.95rem; margin-bottom:4px;">${safeTitle}</div>
-                            <div style="font-size:0.85rem; color:var(--text-secondary);">${safeBody}</div>
-                        </div>
-                    `;
-                });
-            }
-
-            const listEl = document.getElementById('notiList');
-            if (listEl) listEl.innerHTML = html;
-
-            const badge = document.getElementById('notiBadge');
-            if (badge) {
-                if (unreadCount > 0) {
-                    badge.style.display = 'inline-block';
-                    badge.innerText = String(unreadCount);
+                if (snapshot.empty) {
+                    html = '<p style="color:var(--text-secondary); text-align:center; font-size:0.9rem; padding: 10px 0;">알림이 없습니다.</p>';
                 } else {
-                    badge.style.display = 'none';
+                    snapshot.forEach(doc => {
+                        const data = doc.data() || {};
+                        if (!data.read) unreadCount++;
+                        const bg = data.read ? 'transparent' : 'rgba(37, 99, 235, 0.1)';
+                        const safeTitle = escapeNotificationHtml(data.title || '알림');
+                        const safeBody = escapeNotificationHtml(data.body || '');
+                        html += `
+                            <div style="padding: 10px; border-bottom: 1px solid var(--border); background: ${bg}; border-radius: 4px; margin-bottom: 5px;">
+                                <div style="font-weight:bold; font-size:0.95rem; margin-bottom:4px;">${safeTitle}</div>
+                                <div style="font-size:0.85rem; color:var(--text-secondary);">${safeBody}</div>
+                            </div>
+                        `;
+                    });
                 }
-            }
-        });
+
+                const listEl = document.getElementById('notiList');
+                if (listEl) listEl.innerHTML = html;
+
+                const badge = document.getElementById('notiBadge');
+                if (badge) {
+                    if (unreadCount > 0) {
+                        badge.style.display = 'inline-block';
+                        badge.innerText = String(unreadCount);
+                    } else {
+                        badge.style.display = 'none';
+                    }
+                }
+            }, (err) => {
+                console.warn('알림 리스너 오류:', err);
+            });
+    } catch (e) {
+        console.warn('알림 구독 설정 실패:', e);
+    }
 }
 
 function markAllNotisAsRead() {
-    if (typeof currentWorkerId === 'undefined' || !currentWorkerId || typeof db === 'undefined' || !db) return;
+    if (typeof currentWorkerId === 'undefined' || !currentWorkerId || typeof db === 'undefined' || !db || !db.collection) return;
     const readTimestamp = (typeof firebase !== 'undefined' && firebase.firestore && firebase.firestore.FieldValue)
         ? firebase.firestore.FieldValue.serverTimestamp()
         : new Date();
@@ -157,5 +166,11 @@ function markAllNotisAsRead() {
             });
             return batch.commit();
         })
-        .catch(err => console.log('Notification read update error', err));
+        .catch(err => console.warn('알림 읽기 조회/갱신 실패:', err));
+}
+
+if (typeof window !== 'undefined') {
+    window.toggleNotificationPanel = toggleNotificationPanel;
+    window.initNotifications = initNotifications;
+    window.markAllNotisAsRead = markAllNotisAsRead;
 }

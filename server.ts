@@ -6,7 +6,7 @@ import https from 'https';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { initializeApp, cert, getApps } from 'firebase-admin/app';
-import { getFirestore, FieldValue, Timestamp } from 'firebase-admin/firestore';
+import { getFirestore, FieldValue } from 'firebase-admin/firestore';
 import { getMessaging } from 'firebase-admin/messaging';
 import cron from 'node-cron';
 
@@ -1215,9 +1215,26 @@ app.get('*', (_req, res) => {
 });
 
 if (process.env.NODE_ENV !== 'test') {
-  app.listen(PORT, '0.0.0.0', () => {
+  const server = app.listen(PORT, '0.0.0.0', () => {
     console.log(`Server running at http://localhost:${PORT}/`);
     console.log(`Local: http://localhost:${PORT}/`);
     console.log(`Network: http://0.0.0.0:${PORT}/`);
+  });
+
+  server.on('error', (err: any) => {
+    if (err && err.code === 'EADDRINUSE') {
+      console.error(`[Server] Port ${PORT} is already in use. Existing process may already be running.`);
+      process.exit(1);
+    } else {
+      console.error('[Server] Unexpected server error:', err);
+      process.exit(1);
+    }
+  });
+
+  process.on('SIGTERM', () => {
+    server.close(() => process.exit(0));
+  });
+  process.on('SIGINT', () => {
+    server.close(() => process.exit(0));
   });
 }
