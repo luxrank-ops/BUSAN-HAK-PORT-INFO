@@ -616,7 +616,7 @@ img { max-width: 100%; height: auto; object-fit: cover; background: #eee; }
         .comment-img-thumb:hover { opacity: 0.9; transform: scale(1.02); }
         .comment-del-btn { background: #fee2e2; border: 1px solid #fca5a5; color: #ef4444; width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.95rem; font-weight: bold; cursor: pointer; flex-shrink: 0; transition: all 0.2s; padding: 0; margin-left: 8px; }
         
-        .comment-form { display: flex; flex-direction: column; gap: 5px; margin-top: 8px; background: #ffffff; border: 1px solid #e2e8f0; padding: 8px 10px; border-radius: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.03); }
+        .comment-form { width: 50%; min-width: min(100%, 320px); box-sizing: border-box; display: flex; flex-direction: column; gap: 5px; margin-top: 8px; background: #ffffff; border: 1px solid #e2e8f0; padding: 8px 10px; border-radius: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.03); }
         .comment-form-row { display: flex; gap: 6px; align-items: center; width: 100%; }
         .comment-input-sm { width: 110px; max-width: 45%; border-radius: 6px; border: 1px solid #d1d5db; padding: 4px 8px; font-size: 0.8rem; font-weight: 700; outline: none; transition: border 0.2s, box-shadow 0.2s; background: #f9fafb; height: 30px; box-sizing: border-box; }
         .comment-input-sm:focus { border-color: var(--primary); background: #ffffff; }
