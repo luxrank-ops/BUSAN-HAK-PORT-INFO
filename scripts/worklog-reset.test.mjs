@@ -1,0 +1,121 @@
+import { readFileSync } from 'node:fs';
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import vm from 'node:vm';
+
+// 근무일지 입력 폼 '초기화' 버튼(resetWorkLogForm) 검증.
+// 임금계산기의 초기화(resetWageForm)와 같이, 저장된 기록은 건드리지 않고 입력란만 비우는지 확인한다.
+const html = readFileSync(new URL('../public/index.html', import.meta.url), 'utf8');
+
+function extractFunction(name) {
+    let marker = html.indexOf(`async function ${name}(`);
+    if (marker < 0) marker = html.indexOf(`function ${name}(`);
+    if (marker < 0) throw new Error(`function not found: ${name}`);
+    const open = html.indexOf('{', marker);
+    let depth = 0;
+    for (let i = open; i < html.length; i++) {
+        if (html[i] === '{') depth++;
+        else if (html[i] === '}') {
+            depth--;
+            if (depth === 0) return html.slice(marker, i + 1);
+        }
+    }
+    throw new Error(`unterminated function: ${name}`);
+}
+
+const FIELD_IDS = ['logShipName', 'logWage1', 'logWage2', 'logCoworkers', 'logMemo'];
+
+function setup({ hidden = false, filled = false, confirmYes = true, withImagePreview = false } = {}) {
+    const elements = {};
+    const make = (id, value = '') => (elements[id] = {
+        id, value, innerText: '', innerHTML: '', textContent: '', src: '',
+        classList: {
+            values: new Set(hidden ? ['hidden'] : []),
+            add(n) { this.values.add(n); },
+            remove(n) { this.values.delete(n); },
+            contains(n) { return this.values.has(n); }
+        },
+        style: { display: withImagePreview && id === 'logImagePreview' ? 'block' : 'none', setProperty() {} }
+    });
+    [...FIELD_IDS, 'dailyLogForm', 'logImagePreview', 'logImageInput', 'quickCoworkerChipRow', 'worklogDoubleOrderStatus'].forEach(id => make(id));
+    if (filled) {
+        elements.logShipName.value = 'SHIP ALPHA / SHIP BETA';
+        elements.logWage1.value = '120000';
+        elements.logWage2.value = '90000';
+        elements.logCoworkers.value = '재경, 성철';
+        elements.logMemo.value = '🚢 더블오더 작업 (선박 2척 · 합계 5H)\n\n오늘 메모';
+        elements.logImageInput.value = 'C:\\fakepath\\site.jpg';
+    }
+
+    const confirmCalls = [];
+    const toasts = [];
+    const synced = [];
+    const context = vm.createContext({
+        document: { getElementById: id => elements[id] ?? null },
+        String, Array, Object,
+        confirm: msg => { confirmCalls.push(msg); return confirmYes; },
+        showToast: m => toasts.push(m),
+        autoGrowWorkLogMemo(el) { if (el) el.grown = true; },
+        syncCoworkerSelectionUI() { synced.push(true); },
+        updateWorklogDoubleOrderStatus() { elements.worklogDoubleOrderStatus.updated = true; }
+    });
+    vm.runInContext(extractFunction('resetWorkLogForm'), context);
+    return { context, elements, confirmCalls, toasts, synced };
+}
+
+test('the work-log form has an 초기화 button next to 저장하기 and 삭제', () => {
+    assert.match(html, /onclick="resetWorkLogForm\(\)"[^>]*>초기화</);
+    const row = html.match(/<div style="display:flex; gap:8px; margin-top:15px;">[\s\S]*?<\/div>/);
+    assert.ok(row, 'save/reset/delete button row not found');
+    const order = ['trySaveWorkLog()', 'resetWorkLogForm()', 'deleteWorkLog()'];
+    const at = order.map(fn => row[0].indexOf(fn));
+    assert.ok(at.every(i => i >= 0), 'all three actions must be in the same row');
+    assert.deepEqual([...at].sort((a, b) => a - b), at, 'order must be 저장하기 → 초기화 → 삭제');
+});
+
+test('reset clears every work-log input, the photo picker and shows a toast', () => {
+    const { context, elements, confirmCalls, toasts, synced } = setup({ filled: true, withImagePreview: true });
+    context.resetWorkLogForm();
+    for (const id of FIELD_IDS) assert.equal(elements[id].value, '', `${id} must be emptied`);
+    assert.equal(elements.logImageInput.value, '', 'the photo picker must be emptied');
+    assert.equal(elements.logImagePreview.src, '', 'the photo preview must be released');
+    assert.equal(elements.logImagePreview.style.display, 'none', 'the photo preview must be hidden');
+    assert.equal(elements.logMemo.grown, true, 'the memo box must shrink back');
+    assert.equal(synced.length, 1, 'coworker chips must re-sync');
+    assert.equal(elements.worklogDoubleOrderStatus.updated, true, 'double-order status line must refresh');
+    assert.equal(confirmCalls.length, 1, 'a confirm is required when the form has content');
+    assert.match(confirmCalls[0], /초기화|지우고/);
+    assert.match(toasts.at(-1), /초기화되었습니다/);
+});
+
+test('declining the confirm keeps the entered content untouched', () => {
+    const { context, elements, toasts } = setup({ filled: true, confirmYes: false });
+    context.resetWorkLogForm();
+    assert.equal(elements.logShipName.value, 'SHIP ALPHA / SHIP BETA');
+    assert.equal(elements.logMemo.value, '🚢 더블오더 작업 (선박 2척 · 합계 5H)\n\n오늘 메모');
+    assert.equal(elements.logCoworkers.value, '재경, 성철');
+    assert.equal(elements.logImageInput.value, 'C:\\fakepath\\site.jpg');
+    assert.equal(toasts.length, 0, 'no toast when the user cancels');
+});
+
+test('an empty form resets without any confirm dialog', () => {
+    const { context, elements, confirmCalls, toasts } = setup({ filled: false });
+    context.resetWorkLogForm();
+    assert.equal(confirmCalls.length, 0, 'no confirm for an already-empty form');
+    assert.match(toasts.at(-1), /초기화되었습니다/);
+});
+
+test('a hidden (closed) form is ignored entirely', () => {
+    const { context, elements, confirmCalls, toasts } = setup({ hidden: true, filled: true });
+    context.resetWorkLogForm();
+    assert.equal(confirmCalls.length, 0);
+    assert.equal(toasts.length, 0);
+    assert.equal(elements.logShipName.value, 'SHIP ALPHA / SHIP BETA', 'content must survive when the form is closed');
+});
+
+test('the same reset exists in the mirrored module public/js/worklog.js', () => {
+    const mod = readFileSync(new URL('../public/js/worklog.js', import.meta.url), 'utf8');
+    assert.match(mod, /function resetWorkLogForm\(\)/);
+    assert.match(mod, /logShipName', 'logWage1', 'logWage2', 'logCoworkers', 'logMemo/);
+    assert.match(mod, /근무일지 입력 내용이 초기화되었습니다/);
+});

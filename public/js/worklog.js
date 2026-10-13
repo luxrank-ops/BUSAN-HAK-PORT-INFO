@@ -644,4 +644,29 @@ function updateUserBar() { document.getElementById('userProfileBar').style.displ
 function logoutWorker() { if(confirm("로그아웃하시겠습니까?")) { currentWorkerId = null; localStorage.removeItem('myWorkerId'); updateUserBar(); renderCalendar(currentDate.getFullYear(), currentDate.getMonth()); document.getElementById('dailyLogForm').classList.add('hidden'); } }
 function deleteWorkLog(){ if(!currentWorkerId) return; if(!confirm("정말 삭제하시겠습니까?")) return; const dStr = document.getElementById('dailyLogForm').getAttribute('data-date'); db.collection('work_logs').doc(`${currentWorkerId}_${dStr}`).delete().then(()=>{ showToast("삭제되었습니다."); document.getElementById('logShipName').value=''; document.getElementById('logWage1').value=''; document.getElementById('logWage2').value=''; document.getElementById('logCoworkers').value=''; document.getElementById('logMemo').value=''; autoGrowWorkLogMemo(document.getElementById('logMemo')); document.getElementById('logImageInput').value = ''; const imgPreview = document.getElementById('logImagePreview'); if(imgPreview) { imgPreview.src = ''; imgPreview.style.display = 'none'; } renderCalendar(currentDate.getFullYear(), currentDate.getMonth()); }).catch(err => alert("삭제 실패: " + err.message)); }
 function changeMonth(s){ currentDate.setMonth(currentDate.getMonth()+s); renderCalendar(currentDate.getFullYear(), currentDate.getMonth()); }
+/* 근무일지 입력 폼 초기화: 임금계산기 초기화(resetWageForm)와 같은 역할.
+   저장된 기록은 건드리지 않고, 선택한 날짜 폼의 입력 내용(배 이름·임금·근무자·작업 내용·사진)만 비운다. */
+function resetWorkLogForm() {
+    const form = document.getElementById('dailyLogForm');
+    if (!form || form.classList.contains('hidden')) return;
+    const fieldIds = ['logShipName', 'logWage1', 'logWage2', 'logCoworkers', 'logMemo'];
+    const hasContent = fieldIds.some(id => {
+        const el = document.getElementById(id);
+        return !!el && String(el.value || '').trim() !== '';
+    }) || !!(document.getElementById('logImageInput')?.value)
+        || !!(document.getElementById('logImagePreview') && document.getElementById('logImagePreview').style.display !== 'none' && document.getElementById('logImagePreview').src);
+    if (hasContent && !confirm("현재 근무일지에 입력한 내용이 있습니다. 모두 지우고 새로 입력할까요?\n\n※ 이미 저장된 기록은 삭제되지 않습니다.")) return;
+    fieldIds.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.value = '';
+    });
+    const imgInput = document.getElementById('logImageInput');
+    if (imgInput) imgInput.value = '';
+    const imgPreview = document.getElementById('logImagePreview');
+    if (imgPreview) { imgPreview.src = ''; imgPreview.style.display = 'none'; }
+    if (typeof autoGrowWorkLogMemo === 'function') autoGrowWorkLogMemo(document.getElementById('logMemo'));
+    if (typeof syncCoworkerSelectionUI === 'function') syncCoworkerSelectionUI();
+    if (typeof updateWorklogDoubleOrderStatus === 'function') updateWorklogDoubleOrderStatus();
+    showToast("🔄 근무일지 입력 내용이 초기화되었습니다. 저장된 기록은 날짜를 다시 누르면 불러올 수 있습니다.");
+}
 function previewLogImage(input){ if(input.files&&input.files[0]){ const r=new FileReader(); r.onload=e=>{const i=document.getElementById('logImagePreview'); i.src=e.target.result; i.style.display='block';}; r.readAsDataURL(input.files[0]); } }
