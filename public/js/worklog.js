@@ -616,22 +616,25 @@ function saveWorkLog(){
         }); 
     }; 
 
-    // 사진 업로드 로직
+    // 사진 업로드 로직 (고화질 사진 자동 압축 후 업로드)
     if(file) { 
-        const storageRef = storage.ref(`logs/${currentWorkerId}/${Date.now()}_${file.name}`); 
-        const uploadTask = storageRef.put(file); 
-        uploadTask.on('state_changed', (snapshot) => { 
-            const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100; 
-            btn.innerText = `업로드 중... ${Math.round(progress)}%`; 
-        }, (error) => { 
-            alert("사진 업로드 실패: " + error.message); 
-            btn.innerText = "저장하기"; 
-            btn.disabled = false; 
-        }, () => { 
-            uploadTask.snapshot.ref.getDownloadURL().then((downloadURL) => { 
-                finalizeSave(downloadURL); 
-            }); 
-        }); 
+        Promise.resolve(typeof compressImageForUpload === 'function' ? compressImageForUpload(file) : file).then((optimizedFile) => {
+            const targetFile = optimizedFile || file;
+            const storageRef = storage.ref(`logs/${currentWorkerId}/${Date.now()}_${targetFile.name || file.name}`); 
+            const uploadTask = storageRef.put(targetFile); 
+            uploadTask.on('state_changed', (snapshot) => { 
+                const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100; 
+                btn.innerText = `업로드 중... ${Math.round(progress)}%`; 
+            }, (error) => { 
+                alert("사진 업로드 실패: " + error.message); 
+                btn.innerText = "저장하기"; 
+                btn.disabled = false; 
+            }, () => { 
+                uploadTask.snapshot.ref.getDownloadURL().then((downloadURL) => { 
+                    finalizeSave(downloadURL); 
+                }); 
+            });
+        });
     } else { 
         // 기존 사진 유지 또는 사진 없음 처리
         const existingUrl = (adminWorkLogs[dStr] && adminWorkLogs[dStr].imageUrl) ? adminWorkLogs[dStr].imageUrl : null; 

@@ -9,7 +9,8 @@
     "start": "tsx server.ts",
     "typecheck": "tsc --noEmit",
     "validate": "node scripts/validate.mjs",
-    "check": "npm run typecheck && npm run validate",
+    "test": "node --test scripts/*.test.mjs",
+    "check": "npm run typecheck && npm run validate && npm test",
     "lint": "npm run check"
   },
   "dependencies": {

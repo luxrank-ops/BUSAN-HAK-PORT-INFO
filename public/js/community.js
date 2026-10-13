@@ -1,4 +1,204 @@
-let currentEditNoticeId = null; let currentEditNoticeImg = null; function autoLink(text) { if (!text) return ""; const urlRegex = /(https?:\/\/[^\s]+)/g; return text.replace(urlRegex, function(url) { return `<a href="${url}" target="_blank" style="color:#2563eb; text-decoration:underline; font-weight:bold;">${url}</a>`; }); } async function startEditNotice(id, title, content, imgUrl, e) { e.stopPropagation(); if (!(await verifyAdmin())) return; currentEditNoticeId = id; currentEditNoticeImg = imgUrl; document.getElementById('noticeTitle').value = title; document.getElementById('noticeContent').value = content.replace(/\\n/g, '\n'); document.getElementById('noticeFileInput').value = ''; document.getElementById('noticeForm').classList.remove('hidden'); document.getElementById('noticeSubmitBtn').innerText = "수정 완료"; document.getElementById('noticeSubmitBtn').style.background = "var(--primary)"; document.getElementById('noticeCancelBtn').style.display = "block"; document.getElementById('noticeForm').scrollIntoView({behavior: 'smooth', block: 'center'}); } function cancelEditNotice() { currentEditNoticeId = null; currentEditNoticeImg = null; document.getElementById('noticeTitle').value = ''; document.getElementById('noticeContent').value = ''; document.getElementById('noticeFileInput').value = ''; document.getElementById('noticeSubmitBtn').innerText = "등록 완료"; document.getElementById('noticeSubmitBtn').style.background = "var(--success)"; document.getElementById('noticeCancelBtn').style.display = "none"; document.getElementById('noticeForm').classList.add('hidden'); } async function saveNotice() { if (!(await verifyAdmin())) return; const t = document.getElementById('noticeTitle').value.trim(); const c = document.getElementById('noticeContent').value.trim(); const f = document.getElementById('noticeFileInput').files[0]; const btn = document.getElementById('noticeSubmitBtn'); if (!t || !c) { alert("공지 제목과 내용을 입력해 주세요."); return; } btn.innerText = "서버 기록 중..."; btn.disabled = true; const finalize = (url) => { const data = { title: t, content: c, timestamp: firebase.firestore.FieldValue.serverTimestamp() }; if (url) { data.imageUrl = url; } else if (currentEditNoticeId && currentEditNoticeImg) { data.imageUrl = currentEditNoticeImg; } else { data.imageUrl = null; } let req; if (currentEditNoticeId) { req = db.collection("notices").doc(currentEditNoticeId).update(data); } else { req = db.collection("notices").add(data); } req.then(() => { const isEdit = !!currentEditNoticeId; cancelEditNotice(); showToast(isEdit ? "공지가 수정되었습니다." : "공지가 등록되었습니다."); }).catch(err => { alert("저장 실패: " + err.message); btn.innerText = currentEditNoticeId ? "수정 완료" : "등록 완료"; btn.disabled = false; }); }; if (f) { const storageRef = storage.ref(`notices/${Date.now()}_${f.name}`); const uploadTask = storageRef.put(f); uploadTask.on('state_changed', (snap) => { const percent = Math.round((snap.bytesTransferred / snap.totalBytes) * 100); btn.innerText = `사진 업로드 중... ${percent}%`; }, (err) => { alert("사진 업로드 실패: " + err.message); btn.disabled = false; btn.innerText = currentEditNoticeId ? "수정 완료" : "등록 완료"; }, () => { uploadTask.snapshot.ref.getDownloadURL().then(url => finalize(url)); }); } else { finalize(null); } } function delNotice(id,e){ e.stopPropagation(); verifyAdmin().then(r=>{ if(r) db.collection("notices").doc(id).delete(); }); }
+let currentEditNoticeId = null; let currentEditNoticeImg = null; function autoLink(text) { if (!text) return ""; const urlRegex = /(https?:\/\/[^\s]+)/g; return text.replace(urlRegex, function(url) { return `<a href="${url}" target="_blank" style="color:#2563eb; text-decoration:underline; font-weight:bold;">${url}</a>`; }); }
+
+// --- [3순위 자동화] 1) 이미지 용량 자동 최적화(1~2MB 이하 WebP/JPEG 압축) & 2) 금칙어·도배 자동 블라인드 ---
+const COMMUNITY_BANNED_WORDS = [
+    "씨발", "시발", "병신", "개새끼", "좆같", "미친놈", "꺼져라", "죽어라",
+    "쓰레기새끼", "지랄", "염병", "불법도박", "토토사이트", "카지노사이트", "바카라사이트", "성인용품"
+];
+const recentCommunitySubmissions = [];
+const COMMUNITY_FLOOD_WINDOW_MS = 3 * 60 * 1000;
+
+function normalizeModerationText(value) {
+    return String(value || "")
+        .normalize("NFKC")
+        .toLowerCase()
+        .replace(/[\s\u200B\u200C\u200D._\-~*!@#$%^&()+=|<>?/,;:'"`[\]{}\\]+/g, "");
+}
+
+function inspectCommunityContent(payload = {}) {
+    const rawTitle = String(payload.title || "").trim();
+    const rawText = String(payload.text || "").trim();
+    const combinedRaw = `${rawTitle} ${rawText}`.trim();
+    const normalized = normalizeModerationText(combinedRaw);
+    const category = String(payload.category || "community");
+    const author = String(payload.author || "익명").trim();
+    const nowMs = typeof payload.nowMs === "number" ? payload.nowMs : Date.now();
+
+    if (!combinedRaw) {
+        return { hidden: false, reason: null, matchedTerm: null };
+    }
+
+    // 1. 금칙어/비방/불법광고 키워드 검사
+    for (const badWord of COMMUNITY_BANNED_WORDS) {
+        const normBad = normalizeModerationText(badWord);
+        if (normBad && normalized.includes(normBad)) {
+            return {
+                hidden: true,
+                reason: "금칙어/비방 표현 감지",
+                matchedTerm: badWord
+            };
+        }
+    }
+
+    // 2. 과도한 문자 반복 또는 스팸 링크 도배 검사
+    if (/(.)\1{14,}/.test(combinedRaw)) {
+        return {
+            hidden: true,
+            reason: "동일 문자 반복(도배) 감지",
+            matchedTerm: "REPEATED_CHARS"
+        };
+    }
+    const urlCount = (combinedRaw.match(/https?:\/\/[^\s]+/gi) || []).length;
+    if (urlCount >= 4) {
+        return {
+            hidden: true,
+            reason: "과도한 외부 링크(스팸) 감지",
+            matchedTerm: "EXCESSIVE_URLS"
+        };
+    }
+
+    // 3. 단시간 동일 내용 반복 등록(도배) 검사
+    while (recentCommunitySubmissions.length > 0 && nowMs - recentCommunitySubmissions[0].timestampMs > COMMUNITY_FLOOD_WINDOW_MS) {
+        recentCommunitySubmissions.shift();
+    }
+    if (normalized.length >= 4) {
+        const duplicateCount = recentCommunitySubmissions.filter(
+            item => item.category === category && item.normalized === normalized
+        ).length;
+        recentCommunitySubmissions.push({
+            category,
+            author,
+            normalized,
+            timestampMs: nowMs
+        });
+        if (duplicateCount >= 1) {
+            return {
+                hidden: true,
+                reason: "동일 내용 반복 등록(도배) 감지",
+                matchedTerm: "DUPLICATE_FLOOD"
+            };
+        }
+    }
+
+    return { hidden: false, reason: null, matchedTerm: null };
+}
+
+function notifyAdminAutoBlind(info = {}) {
+    try {
+        if (typeof db === "undefined" || !db || typeof db.collection !== "function") return;
+        const createdAt = (typeof firebase !== "undefined" && firebase.firestore && firebase.firestore.FieldValue)
+            ? firebase.firestore.FieldValue.serverTimestamp()
+            : new Date();
+        const snippet = String(info.title || info.text || "").slice(0, 60);
+        db.collection("notifications").add({
+            userId: "ADMIN",
+            title: "🚨 커뮤니티 자동 블라인드 감지",
+            body: `[${info.category || "게시판"}] 작성자(${info.author || "익명"})의 게시물이 자동 숨김 처리되었습니다. 사유: ${info.reason || "규칙 위반"} (${snippet})`,
+            type: "AUTO_BLIND",
+            category: info.category || "board",
+            reason: info.reason || null,
+            read: false,
+            createdAt
+        }).catch(() => {});
+    } catch (e) {}
+}
+
+async function compressImageForUpload(file, options = {}) {
+    if (!file || typeof file !== "object") return file;
+    const mime = String(file.type || "").toLowerCase();
+    if (!mime.startsWith("image/") || mime === "image/gif" || mime === "image/svg+xml") {
+        return file;
+    }
+
+    const maxDimension = Number(options.maxDimension) || 1600;
+    const targetMaxBytes = Number(options.targetMaxBytes) || (1.5 * 1024 * 1024);
+    const skipUnderBytes = Number(options.skipUnderBytes) || (900 * 1024);
+
+    if (!options.force && typeof file.size === "number" && file.size > 0 && file.size <= skipUnderBytes) {
+        return file;
+    }
+
+    if (typeof document === "undefined" || typeof Image === "undefined") {
+        return file;
+    }
+
+    try {
+        const dataUrl = await new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = (e) => resolve(e.target && e.target.result);
+            reader.onerror = reject;
+            reader.readAsDataURL(file);
+        });
+        if (!dataUrl) return file;
+
+        const img = await new Promise((resolve, reject) => {
+            const image = new Image();
+            image.onload = () => resolve(image);
+            image.onerror = reject;
+            image.src = dataUrl;
+        });
+
+        const origW = Number(img.naturalWidth || img.width) || 0;
+        const origH = Number(img.naturalHeight || img.height) || 0;
+        if (!origW || !origH) return file;
+
+        let targetW = origW;
+        let targetH = origH;
+        if (Math.max(origW, origH) > maxDimension) {
+            if (origW >= origH) {
+                targetW = maxDimension;
+                targetH = Math.max(1, Math.round((origH * maxDimension) / origW));
+            } else {
+                targetH = maxDimension;
+                targetW = Math.max(1, Math.round((origW * maxDimension) / origH));
+            }
+        }
+
+        const canvas = document.createElement("canvas");
+        canvas.width = targetW;
+        canvas.height = targetH;
+        const ctx = canvas.getContext("2d");
+        if (!ctx || typeof canvas.toBlob !== "function") return file;
+        ctx.drawImage(img, 0, 0, targetW, targetH);
+
+        const preferredTypes = ["image/webp", "image/jpeg"];
+        const qualities = [0.82, 0.72, 0.6];
+        let bestBlob = null;
+
+        for (const outType of preferredTypes) {
+            for (const q of qualities) {
+                const blob = await new Promise((resolve) => {
+                    try {
+                        canvas.toBlob((b) => resolve(b), outType, q);
+                    } catch {
+                        resolve(null);
+                    }
+                });
+                if (!blob) continue;
+                bestBlob = blob;
+                if (blob.size <= targetMaxBytes) break;
+            }
+            if (bestBlob && bestBlob.size <= targetMaxBytes) break;
+        }
+
+        if (!bestBlob || (typeof file.size === "number" && bestBlob.size >= file.size)) {
+            return file;
+        }
+
+        const ext = bestBlob.type === "image/webp" ? ".webp" : ".jpg";
+        const baseName = String(file.name || "photo").replace(/\.[^.]+$/, "");
+        const newName = `${baseName}${ext}`;
+        if (typeof File === "function") {
+            return new File([bestBlob], newName, { type: bestBlob.type, lastModified: Date.now() });
+        }
+        bestBlob.name = newName;
+        return bestBlob;
+    } catch {
+        return file;
+    }
+}
+
+async function startEditNotice(id, title, content, imgUrl, e) { e.stopPropagation(); if (!(await verifyAdmin())) return; currentEditNoticeId = id; currentEditNoticeImg = imgUrl; document.getElementById('noticeTitle').value = title; document.getElementById('noticeContent').value = content.replace(/\\n/g, '\n'); document.getElementById('noticeFileInput').value = ''; document.getElementById('noticeForm').classList.remove('hidden'); document.getElementById('noticeSubmitBtn').innerText = "수정 완료"; document.getElementById('noticeSubmitBtn').style.background = "var(--primary)"; document.getElementById('noticeCancelBtn').style.display = "block"; document.getElementById('noticeForm').scrollIntoView({behavior: 'smooth', block: 'center'}); } function cancelEditNotice() { currentEditNoticeId = null; currentEditNoticeImg = null; document.getElementById('noticeTitle').value = ''; document.getElementById('noticeContent').value = ''; document.getElementById('noticeFileInput').value = ''; document.getElementById('noticeSubmitBtn').innerText = "등록 완료"; document.getElementById('noticeSubmitBtn').style.background = "var(--success)"; document.getElementById('noticeCancelBtn').style.display = "none"; document.getElementById('noticeForm').classList.add('hidden'); } async function saveNotice() { if (!(await verifyAdmin())) return; const t = document.getElementById('noticeTitle').value.trim(); const c = document.getElementById('noticeContent').value.trim(); const f = document.getElementById('noticeFileInput').files[0]; const btn = document.getElementById('noticeSubmitBtn'); if (!t || !c) { alert("공지 제목과 내용을 입력해 주세요."); return; } btn.innerText = "서버 기록 중..."; btn.disabled = true; const finalize = (url) => { const data = { title: t, content: c, timestamp: firebase.firestore.FieldValue.serverTimestamp() }; if (url) { data.imageUrl = url; } else if (currentEditNoticeId && currentEditNoticeImg) { data.imageUrl = currentEditNoticeImg; } else { data.imageUrl = null; } let req; if (currentEditNoticeId) { req = db.collection("notices").doc(currentEditNoticeId).update(data); } else { req = db.collection("notices").add(data); } req.then(() => { const isEdit = !!currentEditNoticeId; cancelEditNotice(); showToast(isEdit ? "공지가 수정되었습니다." : "공지가 등록되었습니다."); }).catch(err => { alert("저장 실패: " + err.message); btn.innerText = currentEditNoticeId ? "수정 완료" : "등록 완료"; btn.disabled = false; }); }; if (f) { const optimizedFile = await compressImageForUpload(f); const storageRef = storage.ref(`notices/${Date.now()}_${optimizedFile.name || f.name}`); const uploadTask = storageRef.put(optimizedFile); uploadTask.on('state_changed', (snap) => { const percent = Math.round((snap.bytesTransferred / snap.totalBytes) * 100); btn.innerText = `사진 업로드 중... ${percent}%`; }, (err) => { alert("사진 업로드 실패: " + err.message); btn.disabled = false; btn.innerText = currentEditNoticeId ? "수정 완료" : "등록 완료"; }, () => { uploadTask.snapshot.ref.getDownloadURL().then(url => finalize(url)); }); } else { finalize(null); } } function delNotice(id,e){ e.stopPropagation(); verifyAdmin().then(r=>{ if(r) db.collection("notices").doc(id).delete(); }); }
 
 const PORT_NICKNAME_STORAGE_KEY = "busanHakPortBoardNickname";
 const PORT_NICKNAME_OPTIONS = [
@@ -72,18 +272,35 @@ async function addPost() {
     btnEl.innerText = "처리 중...";
     btnEl.disabled = true;
     const pwHash = (/^[a-f0-9]{64}$/i.test(pwVal)) ? pwVal.toLowerCase() : (await sha256Hex(pwVal));
+    const modResult = inspectCommunityContent({
+        title: titleVal,
+        text: contentVal,
+        author: nickVal,
+        category: "왁자지껄 게시판"
+    });
     const postData = {
         nick: nickVal,
         title: titleVal,
         password: pwHash,
         content: contentVal,
+        hidden: Boolean(modResult.hidden),
+        blindReason: modResult.reason || null,
         timestamp: firebase.firestore.FieldValue.serverTimestamp()
     };
+    if (modResult.hidden) {
+        notifyAdminAutoBlind({
+            category: "왁자지껄 게시판",
+            author: nickVal,
+            title: titleVal,
+            text: contentVal,
+            reason: modResult.reason
+        });
+    }
 
     if (currentEditPostId) {
         db.collection("posts").doc(currentEditPostId).update(postData).then(() => {
             resetBoardForm();
-            showToast("게시글이 수정되었습니다.");
+            showToast(modResult.hidden ? "⚠️ 금칙어/도배 감지: 게시글이 자동 블라인드 처리되었습니다." : "게시글이 수정되었습니다.");
         }).catch(() => {
             alert("수정 실패");
             btnEl.innerText = "수정 완료";
@@ -92,7 +309,7 @@ async function addPost() {
     } else {
         db.collection("posts").add(postData).then(() => {
             resetBoardForm();
-            showToast("게시글이 등록되었습니다.");
+            showToast(modResult.hidden ? "⚠️ 금칙어/도배 감지: 게시글이 자동 블라인드 처리되었습니다." : "게시글이 등록되었습니다.");
         }).catch(() => {
             alert("등록 실패");
             btnEl.innerText = "등록";
@@ -103,11 +320,12 @@ async function addPost() {
 function resetBoardForm() { document.getElementById('inputNick').value = ''; document.getElementById('inputTitle').value = ''; document.getElementById('inputPw').value = ''; document.getElementById('inputContent').value = ''; document.getElementById('boardForm').classList.add('hidden'); const btnEl = document.querySelector('#boardForm .bg-submit'); if(btnEl) { btnEl.innerText = "등록"; btnEl.disabled = false; } currentEditPostId = null; }
 async function tryEditPost(id, savedPw, nick, title, content, e) { e.stopPropagation(); const inputPw = prompt("게시글 비밀번호를 입력하세요:"); if (inputPw === null) return; if (await verifyPasswordMatch(inputPw, savedPw)) { currentEditPostId = id; document.getElementById('inputNick').value = nick; document.getElementById('inputPw').value = inputPw.trim(); document.getElementById('inputTitle').value = title; document.getElementById('inputContent').value = content; document.getElementById('boardForm').classList.remove('hidden'); document.querySelector('#boardForm .bg-submit').innerText = "수정 완료"; document.getElementById('boardForm').scrollIntoView({behavior: 'smooth', block: 'center'}); showToast("수정 모드로 전환되었습니다."); } else alert("⚠️ 비밀번호가 일치하지 않습니다."); }
 async function deletePost(id,pw,e){ e.stopPropagation(); const inputPw = prompt("게시글 비밀번호를 입력하세요:"); if (inputPw === null) return; if(await verifyPasswordMatch(inputPw, pw) || await verifyAdmin()) db.collection("posts").doc(id).delete(); } 
-function uploadCommentImageFile(file, pathPrefix = "comments") {
+async function uploadCommentImageFile(file, pathPrefix = "comments") {
+    const optimizedFile = await compressImageForUpload(file);
     return new Promise((resolve, reject) => {
-        const safeName = (file.name || "comment_image.jpg").replace(/[^\w.\-가-힣]/g, "_");
+        const safeName = ((optimizedFile && optimizedFile.name) || file.name || "comment_image.jpg").replace(/[^\w.\-가-힣]/g, "_");
         const storageRef = storage.ref(`${pathPrefix}/${Date.now()}_${safeName}`);
-        const uploadTask = storageRef.put(file);
+        const uploadTask = storageRef.put(optimizedFile || file);
         uploadTask.on('state_changed', null, reject, () => {
             uploadTask.snapshot.ref.getDownloadURL().then(resolve).catch(reject);
         });
@@ -302,12 +520,27 @@ async function addComment(pid){
         }
 
         const commentsRef = db.collection('posts').doc(pid).collection('comments');
+        const modResult = inspectCommunityContent({
+            text: t,
+            author: n,
+            category: "게시판 댓글"
+        });
         const commentData = {
             name: n,
             password: pwHash,
             text: t,
+            hidden: Boolean(modResult.hidden),
+            blindReason: modResult.reason || null,
             timestamp: firebase.firestore.FieldValue.serverTimestamp()
         };
+        if (modResult.hidden) {
+            notifyAdminAutoBlind({
+                category: "게시판 댓글",
+                author: n,
+                text: t,
+                reason: modResult.reason
+            });
+        }
         if (imageUrl) {
             commentData.imageUrl = imageUrl;
         } else if (isEditing) {
@@ -317,13 +550,13 @@ async function addComment(pid){
         if (isEditing) {
             await commentsRef.doc(editingBoardComment.cid).update(commentData);
             cancelBoardCommentEdit(pid);
-            showToast("댓글이 수정되었습니다.");
+            showToast(modResult.hidden ? "⚠️ 금칙어/도배 감지: 댓글이 자동 블라인드 처리되었습니다." : "댓글이 수정되었습니다.");
         } else {
             await commentsRef.add(commentData);
             if (txtEl) txtEl.value = "";
             if (pwEl) pwEl.value = "";
             removeCommentFile(pid);
-            showToast("댓글이 등록되었습니다.");
+            showToast(modResult.hidden ? "⚠️ 금칙어/도배 감지: 댓글이 자동 블라인드 처리되었습니다." : "댓글이 등록되었습니다.");
         }
     } catch(err) {
         alert("댓글 저장 실패: " + (err?.message || err));
@@ -615,12 +848,28 @@ async function submitVesselInfoComment() {
         `[${context.sourceLabel}${context.date ? ` · ${context.date}` : ""}]`;
 
     try {
+        const fullText = `${sourcePrefix}\n${text}`;
+        const modResult = inspectCommunityContent({
+            text: fullText,
+            author: name,
+            category: "선박 댓글"
+        });
         const commentData = {
             name,
             password: await sha256Hex(password),
-            text: `${sourcePrefix}\n${text}`,
+            text: fullText,
+            hidden: Boolean(modResult.hidden),
+            blindReason: modResult.reason || null,
             timestamp: firebase.firestore.FieldValue.serverTimestamp()
         };
+        if (modResult.hidden) {
+            notifyAdminAutoBlind({
+                category: "선박 댓글",
+                author: name,
+                text: fullText,
+                reason: modResult.reason
+            });
+        }
 
         await db.collection("ships")
             .doc(context.ship.id)
@@ -631,7 +880,9 @@ async function submitVesselInfoComment() {
         document.getElementById("vesselInfoCommentText").value = "";
         closeVesselInfoLinkModal();
         showToast(
-            `💬 ${context.ship.shipName || context.vesselName} 선박 정보에 추가 댓글을 등록했습니다.`
+            modResult.hidden
+                ? "⚠️ 금칙어/도배 감지: 댓글이 자동 블라인드 처리되었습니다."
+                : `💬 ${context.ship.shipName || context.vesselName} 선박 정보에 추가 댓글을 등록했습니다.`
         );
     } catch (error) {
         console.error("선박 정보 댓글 등록 실패:", error);
@@ -812,8 +1063,9 @@ async function addShipInfo() {
         });
     };
     if (f) {
-        const storageRef = storage.ref(`ships/${Date.now()}_${f.name}`);
-        const uploadTask = storageRef.put(f);
+        const optimizedFile = await compressImageForUpload(f);
+        const storageRef = storage.ref(`ships/${Date.now()}_${optimizedFile.name || f.name}`);
+        const uploadTask = storageRef.put(optimizedFile);
         uploadTask.on('state_changed', null, null, () => {
             uploadTask.snapshot.ref.getDownloadURL().then(url => finalizeSave(url));
         });
@@ -887,7 +1139,7 @@ function filterShips() {
 }
 function addArchive() { const t = document.getElementById('archiveTitle').value.trim(); const f = document.getElementById('archiveFile').files[0]; const btn = document.getElementById('archiveSubmitBtn'); if(!t || !f) return alert("파일 설명과 파일을 모두 선택해 주세요."); btn.innerText = "서버 연결 중..."; btn.disabled = true; const ref = storage.ref(`archives/${Date.now()}_${f.name}`); const task = ref.put(f); task.on('state_changed', (s) => { const p = Math.round((s.bytesTransferred / s.totalBytes) * 100); btn.innerText = `업로드 중... ${p}%`; }, (e) => { alert("업로드 실패: " + e.message); btn.disabled = false; btn.innerText = "업로드 완료"; }, () => { task.snapshot.ref.getDownloadURL().then(url => { db.collection("archives").add({ title: t, url: url, timestamp: firebase.firestore.FieldValue.serverTimestamp() }).then(() => { document.getElementById('archiveTitle').value = ""; document.getElementById('archiveFile').value = ""; toggleHidden('archiveForm'); btn.innerText = "업로드 완료"; btn.disabled = false; showToast("파일이 성공적으로 등록되었습니다!"); }); }); } ); } async function deleteShip(id,e){e.stopPropagation(); if(await verifyAdmin()) db.collection("ships").doc(id).delete();} function delArchive(id,e){ e.stopPropagation(); verifyAdmin().then(r=>{ if(r) db.collection("archives").doc(id).delete(); }); } 
 
-function renderBoardPage(p){ currentBoardPage = p; const l = document.getElementById("boardList"); Object.values(commentUnsubscribes).forEach(unsub => { if (typeof unsub === "function") unsub(); }); commentUnsubscribes = {}; l.innerHTML = ""; const start = (p-1) * postsPerPage; const end = start + postsPerPage; const pageData = allPostsData.slice(start, end); if(pageData.length === 0) { l.innerHTML = "<tr><td colspan='4' style='text-align:center; padding:20px; color:var(--text-sub); font-weight:700;'>게시글이 없습니다.</td></tr>"; document.getElementById("pagination").innerHTML = ""; return; } const rowsHtml = []; pageData.forEach((x, i) => { let dateStr = ""; if(x.timestamp) { const d = x.timestamp.toDate(); const month = String(d.getMonth() + 1).padStart(2, '0'); const day = String(d.getDate()).padStart(2, '0'); const hour = String(d.getHours()).padStart(2, '0'); const min = String(d.getMinutes()).padStart(2, '0'); dateStr = `${month}/${day} ${hour}:${min}`; } const rowId = `p-${x.id}`; const authorName = x.nick || '익명'; const postNum = allPostsData.length - ((currentBoardPage - 1) * postsPerPage) - i; const safeTitle = (x.title || '').replace(/'/g, "\\'").replace(/"/g, "&quot;"); const safeContent = (x.content || '').replace(/'/g, "\\'").replace(/"/g, "&quot;").replace(/\n/g, "\\n"); rowsHtml.push(`<tr onclick="toggleBoardRow('${rowId}')" style="cursor:pointer;"> <td class="board-no">${postNum}</td> <td class="board-title">${x.title} <span id="cmt-badge-${x.id}" class="cmt-count-pill hidden"></span> <span style="font-size:0.75rem; color:var(--primary); margin-left:4px;">▼</span></td> <td class="board-date">${dateStr}</td> <td class="board-nick">${authorName}</td> </tr> <tr id="${rowId}" class="board-content-row"> <td colspan="4" class="board-content-box"> <div style="margin-bottom:15px; font-weight:600; background:var(--card-bg); padding:12px; border-radius:8px; border:1px solid var(--border);">${x.content}</div> <div style="text-align:right; border-bottom:1px dashed var(--border); padding-bottom:10px; margin-bottom:10px;"> <button class="mini-btn" style="background:var(--primary-light) !important; color:white !important;" onclick="tryEditPost('${x.id}', '${x.password}', '${authorName}', '${safeTitle}', '${safeContent}', event)">✏️ 수정</button> <button class="mini-btn btn-del" onclick="deletePost('${x.id}','${x.password}',event)">🗑️ 삭제</button> </div> <div id="cmt-list-${x.id}" class="comment-section"></div> <div class="comment-form"> <div class="comment-form-row"> <input id="cmt-name-${x.id}" class="comment-input-sm board-comment-nickname" placeholder="항만용어 닉네임" aria-label="댓글 닉네임 (직접 수정 가능)" maxlength="50"> <input id="cmt-pw-${x.id}" class="comment-input-sm" type="password" placeholder="비밀번호" aria-label="비밀번호" maxlength="30"> </div> <div id="cmt-preview-${x.id}" class="comment-preview-box" style="display:none;"></div> <div class="comment-form-row"> <input id="cmt-txt-${x.id}" class="comment-input-main" placeholder="따뜻한 댓글을 남겨주세요..." onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();addComment('${x.id}');}"> <label for="cmt-file-${x.id}" id="cmt-file-label-${x.id}" class="comment-attach-btn" title="사진 첨부">📷</label> <input type="file" id="cmt-file-${x.id}" accept="image/*" style="display:none;" onchange="handleCommentFileChange('${x.id}', this)"> <button id="cmt-submit-${x.id}" class="comment-submit" onclick="addComment('${x.id}')">등록</button> <button id="cmt-cancel-${x.id}" type="button" class="mini-btn btn-del" style="display:none; height:32px; padding:0 8px; border-radius:6px; font-size:0.8rem; margin:0; line-height:30px;" onclick="cancelBoardCommentEdit('${x.id}')">취소</button> </div> </div> </td> </tr>`); }); l.innerHTML = rowsHtml.join(""); pageData.forEach(x => { const nicknameInput = document.getElementById(`cmt-name-${x.id}`); if (nicknameInput && !nicknameInput.value.trim()) nicknameInput.value = getPortNickname(); loadComments(x.id); }); renderPagination(p); } 
+function renderBoardPage(p){ currentBoardPage = p; const l = document.getElementById("boardList"); Object.values(commentUnsubscribes).forEach(unsub => { if (typeof unsub === "function") unsub(); }); commentUnsubscribes = {}; l.innerHTML = ""; const start = (p-1) * postsPerPage; const end = start + postsPerPage; const pageData = allPostsData.slice(start, end); if(pageData.length === 0) { l.innerHTML = "<tr><td colspan='4' style='text-align:center; padding:20px; color:var(--text-sub); font-weight:700;'>게시글이 없습니다.</td></tr>"; document.getElementById("pagination").innerHTML = ""; return; } const rowsHtml = []; pageData.forEach((x, i) => { let dateStr = ""; if(x.timestamp) { const d = x.timestamp.toDate(); const month = String(d.getMonth() + 1).padStart(2, '0'); const day = String(d.getDate()).padStart(2, '0'); const hour = String(d.getHours()).padStart(2, '0'); const min = String(d.getMinutes()).padStart(2, '0'); dateStr = `${month}/${day} ${hour}:${min}`; } const rowId = `p-${x.id}`; const authorName = x.nick || '익명'; const postNum = allPostsData.length - ((currentBoardPage - 1) * postsPerPage) - i; const safeTitle = (x.title || '').replace(/'/g, "\\'").replace(/"/g, "&quot;"); const safeContent = (x.content || '').replace(/'/g, "\\'").replace(/"/g, "&quot;").replace(/\n/g, "\\n"); const isHidden = Boolean(x.hidden); const displayTitle = isHidden ? `🔒 자동 블라인드 처리된 게시글입니다.` : x.title; const displayContent = isHidden ? `🔒 커뮤니티 건전성 보호를 위해 자동 블라인드 처리된 게시글입니다. (${escapeShipCommentHtml(x.blindReason || '금칙어/도배 감지')})` : x.content; rowsHtml.push(`<tr onclick="toggleBoardRow('${rowId}')" style="cursor:pointer;"> <td class="board-no">${postNum}</td> <td class="board-title" style="${isHidden ? 'color:var(--text-sub); font-style:italic;' : ''}">${displayTitle} <span id="cmt-badge-${x.id}" class="cmt-count-pill hidden"></span> <span style="font-size:0.75rem; color:var(--primary); margin-left:4px;">▼</span></td> <td class="board-date">${dateStr}</td> <td class="board-nick">${authorName}</td> </tr> <tr id="${rowId}" class="board-content-row"> <td colspan="4" class="board-content-box"> <div style="margin-bottom:15px; font-weight:600; background:var(--card-bg); padding:12px; border-radius:8px; border:1px solid var(--border);">${displayContent}</div> <div style="text-align:right; border-bottom:1px dashed var(--border); padding-bottom:10px; margin-bottom:10px;"> <button class="mini-btn" style="background:var(--primary-light) !important; color:white !important;" onclick="tryEditPost('${x.id}', '${x.password}', '${authorName}', '${safeTitle}', '${safeContent}', event)">✏️ 수정</button> <button class="mini-btn btn-del" onclick="deletePost('${x.id}','${x.password}',event)">🗑️ 삭제</button> </div> <div id="cmt-list-${x.id}" class="comment-section"></div> <div class="comment-form"> <div class="comment-form-row"> <input id="cmt-name-${x.id}" class="comment-input-sm board-comment-nickname" placeholder="항만용어 닉네임" aria-label="댓글 닉네임 (직접 수정 가능)" maxlength="50"> <input id="cmt-pw-${x.id}" class="comment-input-sm" type="password" placeholder="비밀번호" aria-label="비밀번호" maxlength="30"> </div> <div id="cmt-preview-${x.id}" class="comment-preview-box" style="display:none;"></div> <div class="comment-form-row"> <input id="cmt-txt-${x.id}" class="comment-input-main" placeholder="따뜻한 댓글을 남겨주세요..." onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();addComment('${x.id}');}"> <label for="cmt-file-${x.id}" id="cmt-file-label-${x.id}" class="comment-attach-btn" title="사진 첨부">📷</label> <input type="file" id="cmt-file-${x.id}" accept="image/*" style="display:none;" onchange="handleCommentFileChange('${x.id}', this)"> <button id="cmt-submit-${x.id}" class="comment-submit" onclick="addComment('${x.id}')">등록</button> <button id="cmt-cancel-${x.id}" type="button" class="mini-btn btn-del" style="display:none; height:32px; padding:0 8px; border-radius:6px; font-size:0.8rem; margin:0; line-height:30px;" onclick="cancelBoardCommentEdit('${x.id}')">취소</button> </div> </div> </td> </tr>`); }); l.innerHTML = rowsHtml.join(""); pageData.forEach(x => { const nicknameInput = document.getElementById(`cmt-name-${x.id}`); if (nicknameInput && !nicknameInput.value.trim()) nicknameInput.value = getPortNickname(); loadComments(x.id); }); renderPagination(p); } 
 function renderShipPage(p) {
     const list = document.getElementById("shipList");
     const pagination = document.getElementById("shipPagination");
@@ -988,12 +1240,15 @@ function loadShipComments(shipId) {
         snapshot.forEach(doc => {
             const comment = { ...doc.data(), id: doc.id };
             shipCommentsById[shipId].push(comment);
+            const isHidden = Boolean(comment.hidden);
             const safeName = escapeShipCommentHtml(comment.name || "익명");
-            const safeText = escapeShipCommentHtml(comment.text || "");
-            const imgHtml = comment.imageUrl
+            const safeText = isHidden
+                ? `🔒 자동 블라인드 처리된 댓글입니다. (${escapeShipCommentHtml(comment.blindReason || '금칙어/도배 감지')})`
+                : escapeShipCommentHtml(comment.text || "");
+            const imgHtml = (!isHidden && comment.imageUrl)
                 ? `<div style="margin-top:4px;"><img src="${escapeShipCommentHtml(comment.imageUrl)}" loading="lazy" alt="댓글 첨부 이미지" class="comment-img-thumb" onclick="document.getElementById('imageModal').style.display='flex'; document.getElementById('modalImage').src=this.src;" title="클릭하여 원본 확대 보기"></div>`
                 : "";
-            list.innerHTML += `<div class="comment-item"><div style="flex:1; min-width:0; padding-right:6px;"><div><span class="comment-meta">${safeName}:</span> <span class="comment-text" style="white-space:pre-wrap;">${safeText}</span></div>${imgHtml}</div><div style="display:flex; gap:3px; flex-shrink:0;"><button class="mini-btn" style="padding:2px 8px; font-size:0.75rem; border-radius:4px;" onclick="editShipComment('${shipId}','${doc.id}')">수정</button><button class="mini-btn btn-del" style="padding:2px 8px; font-size:0.75rem; border-radius:4px;" onclick="deleteShipComment('${shipId}','${doc.id}')">삭제</button></div></div>`;
+            list.innerHTML += `<div class="comment-item"><div style="flex:1; min-width:0; padding-right:6px;"><div><span class="comment-meta">${safeName}:</span> <span class="comment-text" style="white-space:pre-wrap; ${isHidden ? 'color:var(--text-sub); font-style:italic;' : ''}">${safeText}</span></div>${imgHtml}</div><div style="display:flex; gap:3px; flex-shrink:0;"><button class="mini-btn" style="padding:2px 8px; font-size:0.75rem; border-radius:4px;" onclick="editShipComment('${shipId}','${doc.id}')">수정</button><button class="mini-btn btn-del" style="padding:2px 8px; font-size:0.75rem; border-radius:4px;" onclick="deleteShipComment('${shipId}','${doc.id}')">삭제</button></div></div>`;
         });
     }, error => {
         const list = document.getElementById(`ship-comment-list-${shipId}`);
@@ -1101,12 +1356,27 @@ async function submitShipComment(shipId) {
         }
 
         const comments = db.collection("ships").doc(shipId).collection("comments");
+        const modResult = inspectCommunityContent({
+            text,
+            author: name,
+            category: "선박 댓글"
+        });
         const commentData = {
             name,
             password: pwHash,
             text,
+            hidden: Boolean(modResult.hidden),
+            blindReason: modResult.reason || null,
             timestamp: firebase.firestore.FieldValue.serverTimestamp()
         };
+        if (modResult.hidden) {
+            notifyAdminAutoBlind({
+                category: "선박 댓글",
+                author: name,
+                text,
+                reason: modResult.reason
+            });
+        }
         if (imageUrl) {
             commentData.imageUrl = imageUrl;
         } else if (isEditing) {
@@ -1116,13 +1386,13 @@ async function submitShipComment(shipId) {
         if (isEditing) {
             await comments.doc(editingShipComment.commentId).update(commentData);
             cancelShipCommentEdit(shipId);
-            showToast("선박 댓글이 수정되었습니다.");
+            showToast(modResult.hidden ? "⚠️ 금칙어/도배 감지: 댓글이 자동 블라인드 처리되었습니다." : "선박 댓글이 수정되었습니다.");
         } else {
             await comments.add(commentData);
             if (txtEl) txtEl.value = "";
             if (pwEl) pwEl.value = "";
             removeShipCommentFile(shipId);
-            showToast("선박 댓글이 등록되었습니다.");
+            showToast(modResult.hidden ? "⚠️ 금칙어/도배 감지: 댓글이 자동 블라인드 처리되었습니다." : "선박 댓글이 등록되었습니다.");
         }
     } catch (error) {
         alert("댓글 저장 실패: " + (error?.message || error));
@@ -1134,5 +1404,5 @@ async function submitShipComment(shipId) {
     }
 }
 function renderPagination(curr) { const total = Math.ceil(allPostsData.length / postsPerPage); const el = document.getElementById('pagination'); if(!el) return; const html = []; for(let i=1; i<=total; i++){ html.push(`<span class="page-num ${i===curr?'active':''}" onclick="renderBoardPage(${i})" style="cursor:pointer; padding:5px 12px; margin:2px; background:#e5e7eb; border-radius:8px; font-weight:800; font-size:0.9rem;">${i}</span>`); } el.innerHTML = html.join(""); } 
-function loadComments(pid){if(commentUnsubscribes[pid]) commentUnsubscribes[pid](); commentUnsubscribes[pid]=db.collection('posts').doc(pid).collection('comments').orderBy('timestamp','asc').onSnapshot(s=>{const el=document.getElementById(`cmt-list-${pid}`); const badgeEl=document.getElementById(`cmt-badge-${pid}`); if(badgeEl){ if(s.size>0){ badgeEl.innerText=`💬 ${s.size}`; badgeEl.classList.remove('hidden'); } else { badgeEl.classList.add('hidden'); } } if(!el) return; boardCommentsById[pid]=[]; const items=[]; s.forEach(d=>{const c=d.data()||{}; boardCommentsById[pid].push({...c, id:d.id}); const safeName=escapeShipCommentHtml(c.name||"익명"); const safeText=escapeShipCommentHtml(c.text||""); const safePw=String(c.password||"").replace(/\\/g,"\\\\").replace(/'/g,"\\'").replace(/"/g,"&quot;"); const imgHtml=c.imageUrl ? `<div style="margin-top:4px;"><img src="${escapeShipCommentHtml(c.imageUrl)}" loading="lazy" alt="댓글 첨부 이미지" class="comment-img-thumb" onclick="document.getElementById('imageModal').style.display='flex'; document.getElementById('modalImage').src=this.src;" title="클릭하여 원본 확대 보기"></div>` : ""; items.push(`<div class="comment-item"><div style="flex:1; min-width:0; padding-right:6px;"><div><span class="comment-meta">${safeName}:</span> <span class="comment-text" style="white-space:pre-wrap;">${safeText}</span></div>${imgHtml}</div><div style="display:flex; gap:3px; flex-shrink:0;"><button class="mini-btn" style="padding:2px 8px; font-size:0.75rem; border-radius:4px;" onclick="editComment('${pid}','${d.id}')">수정</button><button class="mini-btn btn-del" style="padding:2px 8px; font-size:0.75rem; border-radius:4px;" onclick="deleteComment('${pid}','${d.id}','${safePw}')">삭제</button></div></div>`);}); el.innerHTML=items.join("");}, err=>{console.warn("댓글 로드 오류:",err);});} 
+function loadComments(pid){if(commentUnsubscribes[pid]) commentUnsubscribes[pid](); commentUnsubscribes[pid]=db.collection('posts').doc(pid).collection('comments').orderBy('timestamp','asc').onSnapshot(s=>{const el=document.getElementById(`cmt-list-${pid}`); const badgeEl=document.getElementById(`cmt-badge-${pid}`); if(badgeEl){ if(s.size>0){ badgeEl.innerText=`💬 ${s.size}`; badgeEl.classList.remove('hidden'); } else { badgeEl.classList.add('hidden'); } } if(!el) return; boardCommentsById[pid]=[]; const items=[]; s.forEach(d=>{const c=d.data()||{}; boardCommentsById[pid].push({...c, id:d.id}); const isHidden=Boolean(c.hidden); const safeName=escapeShipCommentHtml(c.name||"익명"); const safeText=isHidden ? `🔒 자동 블라인드 처리된 댓글입니다. (${escapeShipCommentHtml(c.blindReason||'금칙어/도배 감지')})` : escapeShipCommentHtml(c.text||""); const safePw=String(c.password||"").replace(/\\/g,"\\\\").replace(/'/g,"\\'").replace(/"/g,"&quot;"); const imgHtml=(!isHidden && c.imageUrl) ? `<div style="margin-top:4px;"><img src="${escapeShipCommentHtml(c.imageUrl)}" loading="lazy" alt="댓글 첨부 이미지" class="comment-img-thumb" onclick="document.getElementById('imageModal').style.display='flex'; document.getElementById('modalImage').src=this.src;" title="클릭하여 원본 확대 보기"></div>` : ""; items.push(`<div class="comment-item"><div style="flex:1; min-width:0; padding-right:6px;"><div><span class="comment-meta">${safeName}:</span> <span class="comment-text" style="white-space:pre-wrap; ${isHidden ? 'color:var(--text-sub); font-style:italic;' : ''}">${safeText}</span></div>${imgHtml}</div><div style="display:flex; gap:3px; flex-shrink:0;"><button class="mini-btn" style="padding:2px 8px; font-size:0.75rem; border-radius:4px;" onclick="editComment('${pid}','${d.id}')">수정</button><button class="mini-btn btn-del" style="padding:2px 8px; font-size:0.75rem; border-radius:4px;" onclick="deleteComment('${pid}','${d.id}','${safePw}')">삭제</button></div></div>`);}); el.innerHTML=items.join("");}, err=>{console.warn("댓글 로드 오류:",err);});} 
 
