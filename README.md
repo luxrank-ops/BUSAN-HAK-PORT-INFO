@@ -33,6 +33,30 @@
 
 > ⚠️ **데이터 저장소 유의**: 호스팅 위치와 무관하게 앱의 모든 Firestore·Storage 데이터(공지사항·공지 이미지, 근무일지, 게시판, 선박정보, 방문 통계)는 Firebase 프로젝트 **`busan-hak-port`**(프로젝트 번호 `616469111502`)에 저장됩니다. 이 프로젝트는 운영 데이터의 심장이므로 **삭제·보관 정지하면 안 됩니다.** 프로젝트 접근이 안 되는 계정(luxrank75@gmail.com 등)에서는 보이지 않을 수 있으며, 원본 소유 Google 계정에서의 접근 복구가 선행되어야 합니다.
 
+## 🎨 디자인 시스템 (v2027.4)
+
+색·간격·타이포·형태·모션을 **토큰 단일 소스**로 관리합니다. 화면 코드는 `var(--토큰)` 만 참조하고, 원시값은 오직 `scripts/design-tokens.mjs` 에만 존재합니다.
+
+![UI/UX 쇼케이스](docs/images/ui_ux_showcase_light.jpg)
+
+| 항목 | 내용 |
+| --- | --- |
+| 토큰 정본 | `scripts/design-tokens.mjs` — 188개 토큰(뉴트럴 램프 · 팔레트 · 시맨틱 · 간격 · 타이포 · 라운드 · 고도 · 모션 · Z축) |
+| 기준서 | [`docs/디자인_시스템_가이드.md`](docs/디자인_시스템_가이드.md) — 원칙, 스케일 표, 컴포넌트 규칙, 접근성 체크리스트 |
+| 쇼케이스 | [`docs/images/`](docs/images) — 라이트 / 다크 / 데스크톱 UI/UX 목업 |
+| 적용 | `npm run tokens:apply` (멱등 · 재실행 안전) |
+| 검증 | `npm run tokens:check` · 테스트 12종 (CI `npm run check` 에 포함) |
+| 문서 동기화 | `npm run tokens:docs` (가이드 부록 표 자동 재생성) |
+
+**마이그레이션 성과(2026-10-16)** — 하드코딩 값 **1,210건**을 토큰으로 치환했고, CSS 선언 구조 변화는 **0건**(선언 3,210개·선택자·순서 완전 동일)입니다. 값 변경은 타이포 스케일 정렬 67건(≤0.02rem)·라운드 정렬 14건(≤1px)·표기 정규화 16건(`#fff`=`#ffffff`, `bold`=`700`, `12px 12px`=`12px`)뿐으로, 화면 렌더링 결과는 동일합니다.
+
+**운영 규칙**
+
+1. 새 색·크기·간격이 필요하면 화면 코드가 아니라 `scripts/design-tokens.mjs` 에 토큰을 추가한 뒤 `npm run tokens:apply` 를 실행합니다.
+2. 같은 값을 2회 이상 하드코딩하면 CI가 차단합니다(팔레트 등록 또는 기존 토큰 재사용 필요).
+3. 다크 모드는 시맨틱 토큰(`--primary`, `--bg-color` 등)만 재정의하고, 팔레트 값은 변경하지 않습니다.
+4. 인라인 스타일 내 하드코딩 색상은 baseline(459건)을 넘길 수 없습니다 — 감소만 허용.
+
 ## 기술 스택
 
 - Frontend: HTML5, CSS3, Vanilla JavaScript (ES2022+), D3.js v7
@@ -44,8 +68,9 @@
 ```text
 BUSAN-HAK-PORT-INFO/
 ├── public/
-│   ├── index.html
-│   ├── admin.html
+│   ├── index.html            ← 화면 코드 + 디자인 토큰(:root, <style> 최상단)
+│   ├── admin.html            ← 정적 안내 페이지(토큰 부분 집합 사용)
+│   ├── css/app.css           ← index.html 스타일 블록 자동 미러(생성 파일)
 │   ├── manifest.json
 │   ├── service-worker.js
 │   ├── favicon.ico
@@ -54,6 +79,13 @@ BUSAN-HAK-PORT-INFO/
 │   ├── robots.txt
 │   ├── sitemap.xml
 │   └── ads.txt
+├── docs/
+│   ├── 디자인_시스템_가이드.md   ← 색·간격·타이포·형태·모션 기준서(토큰 표 자동 생성)
+│   └── images/                  ← UI/UX 쇼케이스 이미지
+├── scripts/
+│   ├── design-tokens.mjs        ← 🎨 디자인 토큰 정본(단일 소스)
+│   ├── apply-design-tokens.mjs  ← 토큰 적용·검증·문서 생성기
+│   └── design-tokens.test.mjs   ← 디자인 시스템 회귀 방지 테스트
 ├── server.ts
 ├── firestore.rules
 ├── firebase-blueprint.json
@@ -84,7 +116,7 @@ npm ci
 npm run check
 ```
 
-`npm run check`는 TypeScript 타입, 필수 배포 파일, JSON 형식, HTML 문서 및 인라인 JavaScript 문법을 검사합니다. 추가로 `.github/workflows/*.yml`의 YAML 문법과, Firebase 배포 시크릿을 참조하는 작업들의 `environment` 범위 일치 여부를 검사합니다. Pull Request와 `main`/`arena/**` 브랜치 푸시에서도 동일한 검사가 자동 실행됩니다.
+`npm run check`는 TypeScript 타입, 필수 배포 파일, JSON 형식, HTML 문서 및 인라인 JavaScript 문법을 검사합니다. 여기에 더해 **디자인 토큰 검증**(`npm run tokens:check`)이 포함되어, 하드코딩된 색·간격·타이포 값이 다시 늘어나거나 토큰 정의와 화면 코드가 어긋나면 CI가 실패합니다. 추가로 `.github/workflows/*.yml`의 YAML 문법과, Firebase 배포 시크릿을 참조하는 작업들의 `environment` 범위 일치 여부를 검사합니다. Pull Request와 `main`/`arena/**` 브랜치 푸시에서도 동일한 검사가 자동 실행됩니다.
 
 ## 승인형 Firebase 배포
 

@@ -7,39 +7,60 @@
   <meta name="theme-color" content="#0a1b3f">
   <title>운영 관리 안내 | 부산항 스마트 작업 가이드</title>
   <style>
+    /* 🎨 디자인 토큰 (부분 집합) — 정본: scripts/design-tokens.mjs
+       값 정합성은 scripts/design-tokens.test.mjs 에서 자동 검증됩니다. */
+    :root {
+      --n-000: #ffffff;
+      --n-100: #f1f5f9;
+      --n-250: #cbd5e1;
+      --n-500: #475569;
+      --n-900: #0f172a;
+      --navy-900: #0a1b3f;
+      --blue-400: #60a5fa;
+      --sp-12: 12px;
+      --sp-16: 16px;
+      --sp-20: 20px;
+      --sp-24: 24px;
+      --sp-32: 32px;
+      --radius-lg: 10px;
+      --radius-3xl: 16px;
+      --fs-18: 1.5rem;
+      --fw-extrabold: 800;
+      --shadow-panel: 0 12px 32px rgba(15, 23, 42, 0.1);
+    }
     * { box-sizing: border-box; }
     body {
       margin: 0;
       min-height: 100vh;
       display: grid;
       place-items: center;
-      padding: 24px;
-      background: #f1f5f9;
-      color: #0f172a;
+      padding: var(--sp-24);
+      background: var(--n-100);
+      color: var(--n-900);
       font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     }
     main {
       width: min(100%, 520px);
-      padding: 32px 24px;
-      border: 1px solid #cbd5e1;
-      border-radius: 16px;
-      background: #fff;
-      box-shadow: 0 12px 32px rgba(15, 23, 42, 0.1);
+      padding: var(--sp-32) var(--sp-24);
+      border: 1px solid var(--n-250);
+      border-radius: var(--radius-3xl);
+      background: var(--n-000);
+      box-shadow: var(--shadow-panel);
       text-align: center;
     }
-    h1 { margin: 0 0 16px; color: #0a1b3f; font-size: 1.5rem; }
-    p { margin: 0 0 24px; line-height: 1.7; color: #475569; }
+    h1 { margin: 0 0 var(--sp-16); color: var(--navy-900); font-size: var(--fs-18); }
+    p { margin: 0 0 var(--sp-24); line-height: 1.7; color: var(--n-500); }
     a {
       display: inline-block;
       min-height: 44px;
-      padding: 12px 20px;
-      border-radius: 10px;
-      background: #0a1b3f;
-      color: #fff;
-      font-weight: 800;
+      padding: var(--sp-12) var(--sp-20);
+      border-radius: var(--radius-lg);
+      background: var(--navy-900);
+      color: var(--n-000);
+      font-weight: var(--fw-extrabold);
       text-decoration: none;
     }
-    a:focus-visible { outline: 3px solid #60a5fa; outline-offset: 3px; }
+    a:focus-visible { outline: 3px solid var(--blue-400); outline-offset: 3px; }
   </style>
 </head>
 <body>

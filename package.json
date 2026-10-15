@@ -9,8 +9,11 @@
     "start": "tsx server.ts",
     "typecheck": "tsc --noEmit",
     "validate": "node scripts/validate.mjs",
+    "tokens:apply": "node scripts/apply-design-tokens.mjs",
+    "tokens:check": "node scripts/apply-design-tokens.mjs --check",
+    "tokens:docs": "node scripts/apply-design-tokens.mjs --docs",
     "test": "node --test scripts/*.test.mjs",
-    "check": "npm run typecheck && npm run validate && npm test",
+    "check": "npm run typecheck && npm run validate && npm run tokens:check && npm test",
     "lint": "npm run check"
   },
   "dependencies": {

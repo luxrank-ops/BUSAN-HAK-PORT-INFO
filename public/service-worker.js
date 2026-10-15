@@ -1,4 +1,4 @@
-const CACHE_VERSION = "busan-hak-port-v2027.3";
+const CACHE_VERSION = "busan-hak-port-v2027.4";
 const STATIC_PRECACHE_ASSETS = [
   "/",
   "/index.html",
