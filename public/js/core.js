@@ -522,12 +522,20 @@ function submitWorkLogPin() {
     }
 }
 function syncBottomNavActive(activeCardId) {
-    const map = {
-        'board-card': 'nav-board',
-        'ship-card': 'nav-ship',
-        'archive-card': 'nav-archive'
-    };
-    const targetNavId = map[activeCardId] || 'nav-home';
+    const bodyDatas = (document.body && document.body.dataset) || {};
+    const currentView = bodyDatas.appView || 'legacy';
+    let targetNavId = 'nav-home';
+    if (currentView === 'tab') {
+        // 방안 A 탭 뷰: 현재 선택된 탭을 하단 내비에 표시
+        const navByTab = {
+            'wage-log': 'nav-wage',
+            'ships': 'nav-ships',
+            'community': 'nav-community',
+            'guide': 'nav-guide'
+        };
+        targetNavId = navByTab[bodyDatas.appTab] || 'nav-home';
+    }
+    // 원본 홈(legacy) 뷰에서는 항상 🏠 홈 탭이 활성 상태를 유지합니다.
     document.querySelectorAll('.bottom-nav .nav-item').forEach(el => {
         el.classList.toggle('active', el.id === targetNavId);
     });
