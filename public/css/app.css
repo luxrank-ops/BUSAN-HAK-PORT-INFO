@@ -98,7 +98,7 @@
         --surface-muted: var(--n-050);
         --surface-sunken: var(--n-150);
 
-        /* ── 4. 색상 · 시맨틱 (다크 모드) ── */
+        /* ── 4. 색상 · 다크 모드 전용 원시값 ── */
         --surface-dark: rgba(30, 41, 59, 0.98);
         --border-dark: rgba(55, 65, 81, 0.7);
 
@@ -220,7 +220,7 @@
     }
 
     body.dark-mode {
-        /* ── 4. 색상 · 시맨틱 (다크 모드) ── */
+        /* 다크 모드: 시맨틱 역할 토큰만 재정의 (원시 팔레트는 불변) */
         --primary: var(--blue-400);
         --primary-light: var(--blue-300);
         --accent: var(--amber-400);

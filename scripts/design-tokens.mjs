@@ -113,7 +113,7 @@ export const TOKEN_CSS = `
             --surface-muted: var(--n-050);
             --surface-sunken: var(--n-150);
 
-            /* ── 4. 색상 · 시맨틱 (다크 모드) ── */
+            /* ── 4. 색상 · 다크 모드 전용 원시값 ── */
             --surface-dark: rgba(30, 41, 59, 0.98);
             --border-dark: rgba(55, 65, 81, 0.7);
 
@@ -235,7 +235,7 @@ export const TOKEN_CSS = `
         }
 
         body.dark-mode {
-            /* ── 4. 색상 · 시맨틱 (다크 모드) ── */
+            /* 다크 모드: 시맨틱 역할 토큰만 재정의 (원시 팔레트는 불변) */
             --primary: var(--blue-400);
             --primary-light: var(--blue-300);
             --accent: var(--amber-400);
@@ -500,7 +500,7 @@ export const SECTION_TITLES = {
     1: '색상 · 뉴트럴 램프',
     2: '색상 · 브랜드 & 상태 팔레트',
     3: '색상 · 시맨틱 (라이트 모드)',
-    4: '색상 · 시맨틱 (다크 모드)',
+    4: '색상 · 다크 모드 전용 원시값',
     5: '간격 (Spacing)',
     6: '타이포 · 크기 (Type Scale)',
     7: '타이포 · 유체(반응형) 크기',

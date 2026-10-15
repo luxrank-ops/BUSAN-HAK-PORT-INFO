@@ -308,14 +308,25 @@ export function analyzeCss(css) {
 export function parseTokenSections() {
     const sections = [];
     let current = null;
+    let inRoot = false; // 정본 토큰은 :root 블록에만 정의합니다(다크 모드 블록은 역할 토큰 재정의).
     for (const rawLine of TOKEN_CSS.split('\n')) {
         const line = rawLine.trim();
+        if (/^:root\s*\{$/.test(line)) {
+            inRoot = true;
+            continue;
+        }
+        if (inRoot && line === '}') {
+            inRoot = false;
+            current = null;
+            continue;
+        }
         const header = line.match(/^\/\* ── (\d+)\. (.+?) ── \*\/$/);
         if (header) {
             current = { index: Number(header[1]), title: header[2].replace(/\s*\(.*\)$/, ''), tokens: [] };
             sections.push(current);
             continue;
         }
+        if (!inRoot) continue;
         const decl = line.match(/^(--[a-zA-Z0-9-]+):\s*(.+?);$/);
         if (decl && current) {
             current.tokens.push({ name: decl[1], value: decl[2] });
