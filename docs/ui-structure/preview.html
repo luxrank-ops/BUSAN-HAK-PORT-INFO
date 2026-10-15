@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>화면구조 개선 미리보기 · BUSAN HAK PORT INFO</title>
+<style>
+  :root {
+    --navy: #0a1b3f; --navy2: #1d366f; --blue: #2563eb; --blue-soft: #dbeafe;
+    --emerald: #059669; --emerald-soft: #d1fae5; --amber: #d97706; --amber-soft: #fef3c7;
+    --red: #b91c1c; --red-soft: #fee2e2; --green: #047857; --green-soft: #ecfdf5;
+    --bg: #f1f5f9; --card: #ffffff; --text: #0f172a; --sub: #64748b; --border: #cbd5e1;
+    --radius: 16px;
+    --shadow: 0 4px 16px rgba(15, 23, 42, 0.07);
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: "Pretendard", "Apple SD Gothic Neo", "Noto Sans KR", "Malgun Gothic", sans-serif;
+    background: var(--bg); color: var(--text); line-height: 1.6; word-break: keep-all;
+  }
+  /* ---------- 헤더 ---------- */
+  .topbar {
+    position: sticky; top: 0; z-index: 100;
+    background: var(--navy); color: #fff;
+    padding: 14px 20px; display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+    box-shadow: 0 2px 12px rgba(10, 27, 63, 0.35);
+  }
+  .topbar .brand { font-weight: 900; font-size: 1.02rem; letter-spacing: -0.3px; }
+  .topbar .brand small { display: block; font-weight: 500; font-size: 0.72rem; color: #94a3b8; letter-spacing: 0; }
+  .topbar nav { margin-left: auto; display: flex; gap: 8px; flex-wrap: wrap; }
+  .topbar nav a {
+    color: #dbeafe; text-decoration: none; font-size: 0.83rem; font-weight: 700;
+    padding: 7px 13px; border-radius: 999px; border: 1px solid rgba(219, 234, 254, 0.35);
+    transition: background 0.15s;
+  }
+  .topbar nav a:hover { background: rgba(219, 234, 254, 0.16); }
+  .topbar nav a.primary { background: var(--blue); border-color: var(--blue); color: #fff; }
+
+  /* ---------- 히어로 ---------- */
+  .hero {
+    background: linear-gradient(150deg, var(--navy) 0%, var(--navy2) 70%, #274a92 100%);
+    color: #fff; padding: 56px 20px 64px; text-align: center;
+  }
+  .hero .badge {
+    display: inline-block; background: rgba(219, 234, 254, 0.15); border: 1px solid rgba(147, 197, 253, 0.5);
+    color: #bfdbfe; font-size: 0.8rem; font-weight: 800; padding: 6px 16px; border-radius: 999px; margin-bottom: 18px;
+  }
+  .hero h1 { font-size: clamp(1.7rem, 5.5vw, 2.6rem); font-weight: 900; letter-spacing: -0.8px; margin-bottom: 14px; }
+  .hero p { color: #cbd5e1; max-width: 720px; margin: 0 auto 26px; font-size: 1.02rem; }
+  .hero .cta-row { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+  .btn {
+    display: inline-block; padding: 13px 26px; border-radius: 12px; font-weight: 800;
+    text-decoration: none; font-size: 0.95rem; transition: transform 0.12s, box-shadow 0.12s;
+  }
+  .btn:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(0,0,0,0.25); }
+  .btn-fill { background: #fff; color: var(--navy); }
+  .btn-ghost { border: 2px solid rgba(255,255,255,0.55); color: #fff; }
+
+  /* ---------- 레이아웃 ---------- */
+  .wrap { max-width: 1180px; margin: 0 auto; padding: 0 20px; }
+  section.block { padding: 52px 0 8px; }
+  .sec-head { margin-bottom: 22px; }
+  .sec-head .kicker { color: var(--blue); font-weight: 900; font-size: 0.85rem; letter-spacing: 1.5px; }
+  .sec-head h2 { font-size: clamp(1.35rem, 4vw, 1.85rem); font-weight: 900; letter-spacing: -0.5px; margin-top: 4px; }
+  .sec-head p { color: var(--sub); margin-top: 8px; max-width: 760px; }
+
+  /* ---------- 지표 카드 ---------- */
+  .metric-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 14px; }
+  .metric {
+    background: var(--card); border-radius: var(--radius); padding: 20px 20px 18px; box-shadow: var(--shadow);
+    border: 1px solid var(--border);
+  }
+  .metric .num { font-size: 1.75rem; font-weight: 900; color: var(--navy); letter-spacing: -1px; }
+  .metric .num em { font-style: normal; font-size: 1.05rem; color: var(--sub); font-weight: 700; }
+  .metric .lbl { font-size: 0.86rem; color: var(--sub); margin-top: 4px; font-weight: 600; }
+
+  /* ---------- 보고서 요약 박스 ---------- */
+  .report-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 16px; }
+  .report-card {
+    background: var(--card); border-radius: var(--radius); border: 1px solid var(--border);
+    box-shadow: var(--shadow); overflow: hidden;
+  }
+  .report-card .rc-head {
+    padding: 16px 20px; font-weight: 900; font-size: 1.05rem; display: flex; align-items: center; gap: 10px;
+    border-bottom: 2px solid var(--border);
+  }
+  .report-card .rc-body { padding: 16px 20px 20px; font-size: 0.92rem; }
+  .rc-body ul { padding-left: 18px; }
+  .rc-body li { margin: 6px 0; }
+  .rc-body .muted { color: var(--sub); font-size: 0.84rem; }
+  table.plain { width: 100%; border-collapse: collapse; font-size: 0.86rem; margin-top: 6px; }
+  table.plain th, table.plain td { padding: 8px 10px; border-bottom: 1px solid var(--border); text-align: left; vertical-align: top; }
+  table.plain th { color: var(--sub); font-size: 0.78rem; font-weight: 800; background: #f8fafc; white-space: nowrap; }
+  table.plain td.good { color: var(--green); font-weight: 800; }
+  table.plain td.bad { color: var(--red); font-weight: 800; }
+  .chip {
+    display: inline-block; font-size: 0.75rem; font-weight: 800; padding: 3px 10px; border-radius: 999px;
+    margin: 2px 4px 2px 0;
+  }
+  .chip.rec { background: var(--blue-soft); color: #1d4ed8; }
+  .chip.warn { background: var(--amber-soft); color: #92400e; }
+  .chip.ok { background: var(--emerald-soft); color: var(--green); }
+
+  /* ---------- 갤러리 ---------- */
+  .filter-row { display: flex; gap: 8px; flex-wrap: wrap; margin: 6px 0 22px; }
+  .filter-row button {
+    border: 1.5px solid var(--border); background: var(--card); color: var(--sub);
+    font-weight: 800; font-size: 0.87rem; padding: 9px 18px; border-radius: 999px; cursor: pointer;
+    transition: all 0.15s;
+  }
+  .filter-row button.active { background: var(--navy); border-color: var(--navy); color: #fff; }
+  .gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(270px, 1fr)); gap: 18px; }
+  .shot {
+    background: var(--card); border-radius: var(--radius); overflow: hidden; border: 1px solid var(--border);
+    box-shadow: var(--shadow); cursor: zoom-in; transition: transform 0.15s, box-shadow 0.15s;
+    display: flex; flex-direction: column;
+  }
+  .shot:hover { transform: translateY(-4px); box-shadow: 0 14px 30px rgba(15, 23, 42, 0.14); }
+  .shot .thumb {
+    background: #e2e8f0; aspect-ratio: 780 / 1688; display: flex; align-items: center; justify-content: center;
+    overflow: hidden;
+  }
+  .shot.wide .thumb { aspect-ratio: 3280 / 2360; }
+  .shot .thumb img { width: 100%; height: 100%; object-fit: cover; object-position: top center; display: block; }
+  .shot.wide .thumb img { object-position: center; }
+  .shot .cap { padding: 13px 16px 15px; }
+  .shot .cap .tag {
+    display: inline-block; font-size: 0.7rem; font-weight: 900; padding: 3px 9px; border-radius: 6px; margin-bottom: 7px;
+  }
+  .tag.cur { background: var(--red-soft); color: var(--red); }
+  .tag.mock { background: var(--emerald-soft); color: var(--green); }
+  .tag.cmp { background: var(--blue-soft); color: #1d4ed8; }
+  .shot .cap h3 { font-size: 0.98rem; font-weight: 800; letter-spacing: -0.2px; }
+  .shot .cap p { font-size: 0.82rem; color: var(--sub); margin-top: 4px; }
+  .shot .cap .file { font-size: 0.72rem; color: #94a3b8; margin-top: 8px; font-family: ui-monospace, monospace; }
+
+  /* ---------- 비교 하이라이트 ---------- */
+  .compare-banner {
+    border-radius: 20px; overflow: hidden; border: 1px solid var(--border); box-shadow: var(--shadow);
+    background: var(--card); margin-top: 6px;
+  }
+  .compare-banner img { width: 100%; display: block; }
+
+  /* ---------- 라이트박스 ---------- */
+  .lightbox {
+    position: fixed; inset: 0; background: rgba(10, 27, 63, 0.88); z-index: 999;
+    display: none; align-items: center; justify-content: center; padding: 24px; cursor: zoom-out;
+  }
+  .lightbox.open { display: flex; }
+  .lightbox img { max-width: min(1100px, 94vw); max-height: 88vh; border-radius: 12px; background: #fff; }
+  .lightbox .lb-cap { position: absolute; bottom: 20px; left: 0; right: 0; text-align: center; color: #e2e8f0; font-size: 0.92rem; font-weight: 700; padding: 0 20px; }
+
+  /* ---------- 주의 박스/푸터 ---------- */
+  .note {
+    background: var(--amber-soft); border: 1.5px solid #fcd34d; border-radius: 14px;
+    padding: 15px 20px; font-size: 0.9rem; color: #92400e; margin-top: 22px;
+  }
+  footer {
+    margin-top: 60px; background: var(--navy); color: #94a3b8; text-align: center;
+    padding: 34px 20px 40px; font-size: 0.85rem;
+  }
+  footer strong { color: #e2e8f0; }
+  footer a { color: #bfdbfe; text-decoration: none; font-weight: 700; }
+
+  @media (max-width: 640px) {
+    .topbar nav a:not(.primary) { display: none; }
+    .hero { padding: 42px 18px 48px; }
+    section.block { padding: 38px 0 6px; }
+  }
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">BUSAN HAK PORT INFO<small>화면구조 개선 분석 · 미리보기</small></div>
+  <nav>
+    <a href="#report">보고서 요약</a>
+    <a href="#gallery">이미지 9장</a>
+    <a href="#compare">비교</a>
+    <a class="primary" href="../화면구조_개선_분석보고서.md">📄 보고서 원문</a>
+  </nav>
+</header>
+
+<section class="hero">
+  <div class="badge">2026-10-15 · 분석보고서 + 이미지 9장</div>
+  <h1>화면구조 개선, 한 화면에서 미리보기</h1>
+  <p>12개 카드의 긴 스크롤을 <strong>3단계 위계 + 5탭</strong>으로 재편합니다. 근거 수치부터 방안별 장단점, 단계별 계획, 목표 지표까지 — 보고서 요약과 현재 화면 5장·제안 목업 3장·비교 1장을 바로 확인하세요.</p>
+  <div class="cta-row">
+    <a class="btn btn-fill" href="#gallery">🖼️ 이미지 9장 보기</a>
+    <a class="btn btn-ghost" href="#report">📊 핵심 수치 보기</a>
+  </div>
+</section>
+
+<div class="wrap">
+
+  <!-- 핵심 지표 -->
+  <section class="block" id="report">
+    <div class="sec-head">
+      <div class="kicker">근거 수치 (실측)</div>
+      <h2>지금 화면을 이렇게 바꿔야 하는 이유</h2>
+      <p>아래 수치는 저장소 <code>public/index.html</code>, <code>app.css</code>, <code>js/*</code>에서 직접 측정한 값입니다.</p>
+    </div>
+    <div class="metric-grid">
+      <div class="metric"><div class="num">726<em>KB</em></div><div class="lbl">메인 HTML (12,009줄)</div></div>
+      <div class="metric"><div class="num">12<em>개 + 터미널 3그룹</em></div><div class="lbl">세로 일렬 카드</div></div>
+      <div class="metric"><div class="num">4~5<em>회</em></div><div class="lbl">핵심 기능 도달 스와이프</div></div>
+      <div class="metric"><div class="num">957<em>/ 262</em></div><div class="lbl">인라인 스타일 / 핸들러</div></div>
+      <div class="metric"><div class="num">4<em>탭</em></div><div class="lbl">하단 내비 (홈=스크롤↑)</div></div>
+    </div>
+  </section>
+
+  <!-- 보고서 4대 파트 -->
+  <section class="block">
+    <div class="sec-head">
+      <div class="kicker">보고서 요약</div>
+      <h2>방안별 장단점 · 단계별 계획 · 목표 지표</h2>
+    </div>
+    <div class="report-grid">
+
+      <div class="report-card">
+        <div class="rc-head">⚖️ 방안별 장단점</div>
+        <div class="rc-body">
+          <table class="plain">
+            <tr><th>방안</th><th>장점</th><th>단점</th></tr>
+            <tr>
+              <td><strong>A. 카드 위계 재조정</strong><br><span class="chip warn">경량 · 1~2주</span></td>
+              <td class="good">즉시 배포, 학습 부담 최소</td>
+              <td class="bad">긴 스크롤·내비 혼합 잔존</td>
+            </tr>
+            <tr>
+              <td><strong>B. 5탭 + FAB 재편</strong><br><span class="chip rec">권고 ★</span></td>
+              <td class="good">핵심 도달 1~2탭, 역할 명확</td>
+              <td class="bad">4~6주 공사, 뒤로가기 정의 필요</td>
+            </tr>
+            <tr>
+              <td><strong>C. SPA 전면 전환</strong><br><span class="chip warn">대규모 · 3~6개월</span></td>
+              <td class="good">근본 개선, 독립 배포</td>
+              <td class="bad">리스크·회귀 테스트 부담 최대</td>
+            </tr>
+          </table>
+          <p class="muted" style="margin-top:10px;">✅ <strong>권고:</strong> B축 + A의 상단 위계를 먼저 투입, C는 안정화 후 이관</p>
+        </div>
+      </div>
+
+      <div class="report-card">
+        <div class="rc-head">🗓️ 단계별 계획</div>
+        <div class="rc-body">
+          <ul>
+            <li><strong>1단계 (1~2주)</strong> — 홈 3단 위계(오늘의 작업 → 퀵 액션 → 입항·공지) + FAB 1개 선배포</li>
+            <li><strong>2단계 (3~4주)</strong> — 5탭 전환(홈/근무/선박/터미널/더보기), 근무일지 3단계 스텝 플로우, 통합 검색·알림 센터, 인라인 스타일 70% 정리</li>
+            <li><strong>3단계 (2~3주)</strong> — 뒤로가기·렌더 최적화, HTML 내 함수 모듈화, 자동화 테스트 보강 및 목표 지표 검증</li>
+          </ul>
+          <p class="muted" style="margin-top:10px;">총 6~9주 · 각 단계 종료 시 현장 피드백 반영</p>
+        </div>
+      </div>
+
+      <div class="report-card">
+        <div class="rc-head">🎯 목표 지표</div>
+        <div class="rc-body">
+          <table class="plain">
+            <tr><th>지표</th><th>현재</th><th>목표</th></tr>
+            <tr><td>핵심 기능 도달</td><td class="bad">스와이프 4~5회</td><td class="good">1~2탭</td></tr>
+            <tr><td>근무일지 1건 입력</td><td class="bad">3분 30초 (예시)</td><td class="good">2분 이내</td></tr>
+            <tr><td>초기 렌더 (LCP)</td><td>—</td><td class="good">2.5초 이내</td></tr>
+            <tr><td>메인 HTML</td><td class="bad">726KB</td><td class="good">3단계 400KB↓</td></tr>
+            <tr><td>인라인 스타일/핸들러</td><td class="bad">957 / 262</td><td class="good">각 200 이하</td></tr>
+          </table>
+        </div>
+      </div>
+
+      <div class="report-card">
+        <div class="rc-head">🧭 현재 화면구조 요약</div>
+        <div class="rc-body">
+          <p>헤더 → 안전 티커 → 단골 터미널 퀵바 → <strong>임금계산기·근무일지(히어로)</strong> → 터미널 3그룹(9곳) → 선박 도감 → 공지·영어·톡톡·자료 → 기상·안전·용어·개인정보 → 매뉴얼 → 하단 내비 4탭</p>
+          <p class="muted" style="margin-top:10px;">핵심 문제 4가지: <span class="chip warn">P1 긴 스크롤</span><span class="chip warn">P2 내비 혼합</span><span class="chip warn">P3 발견성</span><span class="chip warn">P4 구조 변경 비용</span></p>
+          <p class="muted">상세 근거·표는 <a href="../화면구조_개선_분석보고서.md" style="color:#1d4ed8;font-weight:800;">보고서 원문</a> 참조</p>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="note">
+      ⚠️ <strong>목업 안내:</strong> 제안 목업 3장과 비교 이미지의 숫자·문구(금액, 인원, 날짜 등)는 <strong>예시</strong>입니다. 실제 구현은 현장 데이터·운영 정책에 맞춰 확정합니다.
+    </div>
+  </section>
+
+  <!-- 비교 배너 -->
+  <section class="block" id="compare">
+    <div class="sec-head">
+      <div class="kicker">비교 한 장</div>
+      <h2>현재 vs 제안 — 바로 비교</h2>
+    </div>
+    <div class="compare-banner">
+      <img src="compare-01-current-vs-mockup.png" alt="현재 화면과 제안 목업 비교 — 왼쪽은 카드 12개 일렬 긴 스크롤, 오른쪽은 3단계 위계와 5탭 구조, 가운데 목표 지표 화살표">
+    </div>
+  </section>
+
+  <!-- 갤러리 -->
+  <section class="block" id="gallery">
+    <div class="sec-head">
+      <div class="kicker">이미지 9장 · docs/ui-structure/</div>
+      <h2>현재 화면 5장 · 제안 목업 3장 · 비교 1장</h2>
+      <p>이미지를 클릭하면 크게 볼 수 있습니다. (현재 화면 캡처는 실제 마크업 구조를 재구성한 렌더입니다.)</p>
+    </div>
+
+    <div class="filter-row" id="filters">
+      <button class="active" data-f="all">전체 9</button>
+      <button data-f="cur">현재 화면 5</button>
+      <button data-f="mock">제안 목업 3</button>
+      <button data-f="cmp">비교 1</button>
+    </div>
+
+    <div class="gallery" id="galleryGrid">
+
+      <figure class="shot" data-cat="cur">
+        <div class="thumb"><img src="current-01-home-top.png" alt="현재 홈 상단 — 헤더, 안전 티커, 단골 터미널 퀵바, 임금계산기·근무일지 카드"></div>
+        <figcaption class="cap"><span class="tag cur">현재 화면 ①</span><h3>홈 상단 — 퀵바와 히어로 카드</h3><p>헤더·안전 티커·단골 터미널 바, 이어서 임금계산기·근무일지·카드 일렬 시작</p><div class="file">current-01-home-top.png</div></figcaption>
+      </figure>
+
+      <figure class="shot" data-cat="cur">
+        <div class="thumb"><img src="current-02-wage-worklog.png" alt="현재 임금계산기와 근무일지 펼침 화면"></div>
+        <figcaption class="cap"><span class="tag cur">현재 화면 ②</span><h3>임금계산기·근무일지 펼침</h3><p>직종 선택·시급·시간 입력과 예상 임금, 근무일지 검색·입력 폼</p><div class="file">current-02-wage-worklog.png</div></figcaption>
+      </figure>
+
+      <figure class="shot" data-cat="cur">
+        <div class="thumb"><img src="current-03-notice-community.png" alt="현재 공지·현장영어·톡톡·자료 카드 구간"></div>
+        <figcaption class="cap"><span class="tag cur">현재 화면 ③</span><h3>공지·영어·톡톡·자료 구간</h3><p>중단 카드 4~5개가 계속 이어지는 일렬 배치</p><div class="file">current-03-notice-community.png</div></figcaption>
+      </figure>
+
+      <figure class="shot" data-cat="cur">
+        <div class="thumb"><img src="current-04-terminals-ship.png" alt="현재 터미널 그룹과 선박 도감 배너"></div>
+        <figcaption class="cap"><span class="tag cur">현재 화면 ④</span><h3>터미널 3그룹 · 선박 도감</h3><p>HJNC 상세 버튼(스케줄·차트·현황·베이플랜·식단)과 아코디언 터미널</p><div class="file">current-04-terminals-ship.png</div></figcaption>
+      </figure>
+
+      <figure class="shot" data-cat="cur">
+        <div class="thumb"><img src="current-05-lower-cards-nav.png" alt="현재 하단 카드들과 하단 내비게이션"></div>
+        <figcaption class="cap"><span class="tag cur">현재 화면 ⑤</span><h3>하단 카드 · 내비 4탭</h3><p>기상·안전·용어·개인정보·매뉴얼까지 스크롤 4~5회, 내비 4개</p><div class="file">current-05-lower-cards-nav.png</div></figcaption>
+      </figure>
+
+      <figure class="shot" data-cat="mock">
+        <div class="thumb"><img src="mockup-01-home-hierarchy.png" alt="제안 홈 화면 — 오늘의 작업 요약, 빠른 실행 버튼, 입항 선박 칩"></div>
+        <figcaption class="cap"><span class="tag mock">제안 목업 ①</span><h3>개선 홈 — 3단 위계</h3><p>① 오늘의 작업 요약·게이지 ② 빠른 실행 4버튼 ③ 오늘 입항 칩 (숫자·문구 예시)</p><div class="file">mockup-01-home-hierarchy.png</div></figcaption>
+      </figure>
+
+      <figure class="shot" data-cat="mock">
+        <div class="thumb"><img src="mockup-02-worklog-flow.png" alt="제안 근무일지 3단계 스텝 플로우"></div>
+        <figcaption class="cap"><span class="tag mock">제안 목업 ②</span><h3>근무일지 3단계 플로우</h3><p>기본정보 → 임금계산(자동) → 검토·저장 스텝 구성 (예시 금액)</p><div class="file">mockup-02-worklog-flow.png</div></figcaption>
+      </figure>
+
+      <figure class="shot" data-cat="mock">
+        <div class="thumb"><img src="mockup-03-navigation.png" alt="제안 내비게이션 구조 맵 — 5탭과 FAB"></div>
+        <figcaption class="cap"><span class="tag mock">제안 목업 ③</span><h3>5탭 + FAB 구조 맵</h3><p>홈/근무/선박/터미널/더보기 5탭과 FAB, 통합 검색·알림 센터</p><div class="file">mockup-03-navigation.png</div></figcaption>
+      </figure>
+
+      <figure class="shot wide" data-cat="cmp">
+        <div class="thumb"><img src="compare-01-current-vs-mockup.png" alt="현재와 제안을 나란히 비교한 이미지"></div>
+        <figcaption class="cap"><span class="tag cmp">비교</span><h3>현재 vs 제안 한 장 비교</h3><p>긴 스크롤(4~5회) → 1~2탭 도달, 카드 12개 → 3단 위계, 목표 지표 화살표</p><div class="file">compare-01-current-vs-mockup.png</div></figcaption>
+      </figure>
+
+    </div>
+  </section>
+
+</div>
+
+<div class="lightbox" id="lightbox" onclick="closeLB()">
+  <img id="lbImg" src="" alt="">
+  <div class="lb-cap" id="lbCap"></div>
+</div>
+
+<footer>
+  <p><strong>BUSAN HAK PORT INFO</strong> · 화면구조 개선 분석보고서 미리보기</p>
+  <p style="margin-top:8px;">
+    📄 <a href="../화면구조_개선_분석보고서.md">화면구조_개선_분석보고서.md</a> ·
+    🖼️ <a href="./">docs/ui-structure/</a> ·
+    상세 수치·장단점·계획·지표는 보고서 원문 참조
+  </p>
+  <p style="margin-top:12px; font-size:0.78rem;">목업의 숫자와 문구는 예시입니다 · 2026-10-15</p>
+</footer>
+
+<script>
+  // 필터
+  const filters = document.getElementById('filters');
+  const shots = document.querySelectorAll('.shot');
+  filters.addEventListener('click', (e) => {
+    const btn = e.target.closest('button');
+    if (!btn) return;
+    filters.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    const f = btn.dataset.f;
+    shots.forEach(s => {
+      s.style.display = (f === 'all' || s.dataset.cat === f) ? '' : 'none';
+    });
+  });
+
+  // 라이트박스
+  const lb = document.getElementById('lightbox');
+  const lbImg = document.getElementById('lbImg');
+  const lbCap = document.getElementById('lbCap');
+  document.getElementById('galleryGrid').addEventListener('click', (e) => {
+    const fig = e.target.closest('.shot');
+    if (!fig) return;
+    const img = fig.querySelector('img');
+    const h3 = fig.querySelector('h3');
+    lbImg.src = img.src;
+    lbImg.alt = img.alt;
+    lbCap.textContent = h3 ? h3.textContent : '';
+    lb.classList.add('open');
+  });
+  function closeLB() { lb.classList.remove('open'); }
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeLB(); });
+</script>
+
+</body>
+</html>
