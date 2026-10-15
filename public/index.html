@@ -5250,7 +5250,11 @@ function toggleDashItem(id) {
             setTimeout(() => card.scrollIntoView({ behavior: "smooth", block: "start" }), 60);
         }
     } else {
-        syncBottomNavActive("nav-home");
+        if (typeof goHomeView === "function") {
+            goHomeView({ skipHistory: true });
+        } else {
+            syncBottomNavActive("nav-home");
+        }
     }
     scheduleAppHistoryRecord();
 }
@@ -5264,6 +5268,16 @@ function toggleSection(id){
     if (parentCard) parentCard.classList.toggle('active-work-section', isExpanded);
     if (isExpanded) {
         trackAppEvent('blocks', id);
+    } else if (typeof getAppView === 'function' && getAppView() === 'tab' && typeof goHomeView === 'function') {
+        const anyCardOpen = Boolean(document.querySelector('.dash-card.expanded'));
+        const anySecOpen = ['t1-content', 't2-content', 't3-content'].some(secId => {
+            const s = document.getElementById(secId);
+            return s && !s.classList.contains('collapsed');
+        });
+        if (!anyCardOpen && !anySecOpen) {
+            goHomeView();
+            return;
+        }
     }
     scheduleAppHistoryRecord();
 }
@@ -12352,12 +12366,33 @@ function planANavTap(tab) {
 /* [임금·일지] 탭 내부 스위칭: [임금계산기] | [근무일지 달력] | [월간 정산 리포트] */
 function switchWageLogSubTab(sub) {
     if (!sub) return;
+    const currentView = getAppView();
+    const currentTab = (document.body.dataset && document.body.dataset.appTab) || '';
+    const currentSub = (document.body.dataset && document.body.dataset.appSubTab) || '';
+    const targetCardId = sub === 'wage' ? 'wage-card' : 'log-card';
+    const targetCard = document.getElementById(targetCardId);
+    if (
+        currentView === 'tab' &&
+        currentTab === 'wage-log' &&
+        currentSub === sub &&
+        sub !== 'report' &&
+        targetCard &&
+        targetCard.classList.contains('expanded')
+    ) {
+        goHomeView();
+        targetCard.classList.remove('expanded');
+        if (typeof targetCard.querySelector === 'function') {
+            const content = targetCard.querySelector('.dash-content');
+            if (content) content.style.display = 'none';
+        }
+        return;
+    }
     document.body.dataset.appView = 'tab';
     document.body.dataset.appTab = 'wage-log';
     document.body.dataset.appSubTab = sub;
     applyPlanAViewLayout();
     syncBottomNavActive('');
-    focusPlanACard(sub === 'wage' ? 'wage-card' : 'log-card');
+    focusPlanACard(targetCardId);
     if (sub === 'report') {
         scrollToWorkLogReport();
     } else {
@@ -12381,6 +12416,7 @@ function goHomeView(opts) {
         syncBottomNavActive('');
         window.scrollTo({ top: 0, behavior: 'smooth' });
     }
+    syncBottomNavActive('nav-home');
     if (opts.skipHistory !== true && typeof scheduleAppHistoryRecord === 'function') {
         scheduleAppHistoryRecord();
     }
@@ -12388,6 +12424,7 @@ function goHomeView(opts) {
 
 /* 기존 카드 헤더 클릭(toggleDashItem) → 방안 A 라우팅 판별
    · 원본 홈 + 핵심 기능 → 해당 탭 뷰로 전환
+   · 탭 뷰에서 이미 펼쳐진 카드를 다시 눌러 접으면 → 원본 홈 화면으로 복귀
    · 탭 뷰 + 다른 탭 소속 기능 → 해당 탭으로 자동 점프 (예: 계산 결과 → 근무일지)
    · 홈 전용 카드(날씨/보안/설명서) → 원본 홈에서 기존처럼 제자리 펼침 */
 function planARouteCardOpen(id, card) {
@@ -12402,6 +12439,15 @@ function planARouteCardOpen(id, card) {
     }
 
     if (view === 'tab') {
+        if (card && card.classList.contains('expanded')) {
+            goHomeView();
+            card.classList.remove('expanded');
+            if (typeof card.querySelector === 'function') {
+                const content = card.querySelector('.dash-content');
+                if (content) content.style.display = 'none';
+            }
+            return true;
+        }
         if (!isElementHiddenInLayout(card)) return false;
         if (plan) {
             switchPlanATab(plan.tab, plan.subtab || null, id, { silent: true });

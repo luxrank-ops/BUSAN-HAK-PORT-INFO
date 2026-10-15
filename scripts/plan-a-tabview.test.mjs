@@ -352,6 +352,40 @@ test('동작: 🏠 홈 복귀 시 원본 화면 + 전체 그룹 표시 + 홈 내
     assert.equal(app.calls.scrollToTop, 1);
 });
 
+test('동작: 홈화면에서 임금계산기·근무일지 등 블럭들을 펼쳤다가 다시 눌러 접으면 홈화면(legacy)으로 복귀한다', () => {
+    const cardIds = [
+        'wage-card',
+        'log-card',
+        'ship-card',
+        'notice-card',
+        'board-card',
+        'archive-card',
+        'safety-card',
+        'guide-card',
+        'daily-field-english-card'
+    ];
+
+    for (const cardId of cardIds) {
+        const app = setup();
+        // 1. 홈화면에서 블록 클릭하여 펼침 → 탭 뷰 전환 + 해당 카드 확장
+        const opened = vm.runInContext(`planARouteCardOpen('${cardId}', document.getElementById('${cardId}'))`, app.context);
+        assert.equal(opened, true, `${cardId} 펼침 시 탭 뷰로 전환되어야 합니다`);
+        assert.equal(app.body.dataset.appView, 'tab');
+        assert.ok(app.elements[cardId].classList.contains('expanded'), `${cardId}가 펼쳐져 있어야 합니다`);
+
+        // 2. 펼쳐진 블록 헤더를 다시 클릭하여 접음 → 카드 접힘 + 원본 홈 화면(legacy) 복귀
+        const collapsed = vm.runInContext(`planARouteCardOpen('${cardId}', document.getElementById('${cardId}'))`, app.context);
+        assert.equal(collapsed, true, `${cardId} 접기 시 홈 복귀 라우팅이 처리되어야 합니다`);
+        assert.equal(app.body.dataset.appView, 'legacy', `${cardId} 접기 후 홈화면(legacy)으로 복귀해야 합니다`);
+        assert.equal(app.body.dataset.appTab, undefined);
+        assert.equal(app.body.dataset.appSubTab, undefined);
+        assert.ok(!app.elements[cardId].classList.contains('expanded'), `${cardId}가 접혀 있어야 합니다`);
+        assert.deepEqual(hiddenGroups(app), [], '홈화면 복귀 후 모든 블록 그룹이 표시되어야 합니다');
+        assert.equal(app.elements['tabViewToolbar'].style.display, 'none');
+        assert.deepEqual(activeNavIds(app), ['nav-home']);
+    }
+});
+
 test('동작: 탭 뷰 상태에서 뒤로가기(stepBack)가 원본 홈으로 복귀한다', () => {
     const app = setup({ startView: 'tab', startTab: 'guide' });
     const stepped = vm.runInContext(`stepBackActiveUIInPlace()`, app.context);
