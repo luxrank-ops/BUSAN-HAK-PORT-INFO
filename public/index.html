@@ -1892,10 +1892,92 @@
             .terminal-body .terminal-actions .terminal-btn.terminal-btn { min-height: 40px !important; font-size: 0.86rem !important; }
             .terminal-body .terminal-actions .terminal-btn.hjnc-meal-button { grid-column: auto !important; }
         }
+
+        /* ============================================================
+           [방안 A] 5대 핵심 탭 뷰 하이브리드 (원본 홈 + 탭 전환 구조)
+           - 최초 진입: 기존 원본 메인 화면(아코디언 대시보드) 그대로
+           - 기능 클릭/하단 탭: 방안 A 탭 뷰로 전환 (선택된 탭만 표시)
+           ============================================================ */
+        .view-hidden { display: none !important; }
+        .tab-view-toolbar {
+            position: sticky;
+            top: var(--tab-chrome-offset, 56px);
+            z-index: 950;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 8px;
+            width: calc(100% - 24px);
+            max-width: 800px;
+            margin: 10px auto 2px;
+            padding: 9px 10px;
+            background: var(--card-bg);
+            border: 2px solid var(--primary);
+            border-radius: 12px;
+            box-shadow: 0 6px 18px rgba(10, 27, 63, 0.14);
+        }
+        .tab-back-btn {
+            flex-shrink: 0;
+            background: var(--primary);
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            padding: 9px 12px;
+            font-weight: 900;
+            font-size: 0.85rem;
+            cursor: pointer;
+            touch-action: manipulation;
+        }
+        .tab-view-title-wrap { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+        .tab-view-title { font-weight: 900; color: var(--primary); font-size: 1.02rem; line-height: 1.2; }
+        .tab-view-hint { font-size: 0.68rem; color: var(--text-sub); font-weight: 700; line-height: 1.25; }
+        .tab-sub-switch { display: flex; gap: 6px; width: 100%; padding-top: 2px; overflow-x: auto; }
+        .tab-sub-btn {
+            flex: 1 1 0;
+            min-width: 0;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            border: 1.5px solid var(--border);
+            background: var(--card-bg);
+            color: var(--text-sub);
+            border-radius: 8px;
+            padding: 8px 4px;
+            font-size: clamp(0.68rem, 2.5vw, 0.8rem);
+            font-weight: 800;
+            cursor: pointer;
+            touch-action: manipulation;
+            transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+        }
+        .tab-sub-btn.active {
+            background: var(--primary);
+            border-color: var(--primary);
+            color: #fff;
+            box-shadow: 0 2px 8px rgba(37, 99, 235, 0.28);
+        }
+        /* 임금·일지 탭: 서브탭 전환 시 한 번에 한 카드만 표시 (가독성 극대화) */
+        body[data-app-view="tab"] .dash-grid[data-view-group="wage-log"] { grid-template-columns: 1fr !important; }
+        /* 커뮤니티 탭: 왁자지껄 → 공지사항 → 자료실 순서 */
+        body[data-app-view="tab"][data-app-tab="community"] #board-card { order: 1; }
+        body[data-app-view="tab"][data-app-tab="community"] #notice-card { order: 2; }
+        body[data-app-view="tab"][data-app-tab="community"] #archive-card { order: 3; }
+        /* 현장가이드 탭: 실전안전지침 → 용어 가이드 → 생활영어 순서 */
+        body[data-app-view="tab"][data-app-tab="guide"] #safety-card { order: 1; }
+        body[data-app-view="tab"][data-app-tab="guide"] #guide-card { order: 2; }
+        body[data-app-view="tab"][data-app-tab="guide"] #daily-field-english-card { order: 3; }
+        /* 하단 5탭 내비게이션 (방안 A) */
+        .nav-item .nav-ico { font-size: 1.16rem; line-height: 1.05; }
+        .nav-item .nav-label {
+            display: block;
+            font-size: clamp(0.58rem, 2.2vw, 0.76rem);
+            font-weight: 800;
+            line-height: 1.15;
+            letter-spacing: -0.3px;
+        }
     </style>
     <link rel="apple-touch-icon" href="./icon-192.png">
 <script src="./js/notifications.js"></script></head>
-<body>
+<body data-app-view="legacy">
 <header>
     <div class="today-visitor-badge-slot" aria-hidden="true"></div>
     <div id="todayVisitorBadge" class="today-visitor-badge is-loading" role="status" aria-live="polite" tabindex="0"
@@ -1931,10 +2013,24 @@
     </div>
 </div>
 
+<!-- [방안 A] 탭 뷰 툴바: 원본 홈 복귀 버튼 + 탭 제목 + (임금·일지) 서브탭 전환 -->
+<div id="tabViewToolbar" class="tab-view-toolbar" style="display:none;" aria-live="polite">
+    <button type="button" class="tab-back-btn tap-effect" onclick="goHomeView()" title="기존 원본 메인 화면으로 돌아가기">🏠 원본 홈</button>
+    <div class="tab-view-title-wrap">
+        <span class="tab-view-title" id="tabViewTitle">임금·일지</span>
+        <span class="tab-view-hint" id="tabViewHint">임금계산기 · 근무일지 달력 · 월간 정산 리포트</span>
+    </div>
+    <div class="tab-sub-switch" id="wageLogSubTabs" style="display:none;">
+        <button type="button" class="tab-sub-btn active" data-subtab="wage" onclick="switchWageLogSubTab('wage')">🧮 임금계산기</button>
+        <button type="button" class="tab-sub-btn" data-subtab="log" onclick="switchWageLogSubTab('log')">📅 근무일지 달력</button>
+        <button type="button" class="tab-sub-btn" data-subtab="report" onclick="switchWageLogSubTab('report')">📊 월간 정산 리포트</button>
+    </div>
+</div>
+
 <div class="container">
     <div id="favoriteQuickBar" class="fav-quick-bar hidden"></div>
 
-    <div class="dash-grid" style="margin-bottom: 12px;">
+    <div class="dash-grid" data-view-group="wage-log" style="margin-bottom: 12px;">
         <div id="wage-card" class="dash-card" style="border: 2px solid var(--primary); border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.06);">
             <div class="dash-header tap-effect hero-header" onclick="toggleDashItem('wage-card')">
                 <span class="dash-icon-badge hero">🧮</span>
@@ -2389,7 +2485,7 @@
         </div>
     </div> 
 
-    <div class="card" style="margin-bottom: 8px; border: none; box-shadow: none; background: transparent;">
+    <div class="card" data-view-group="ships" style="margin-bottom: 8px; border: none; box-shadow: none; background: transparent;">
         <div class="section-header tap-effect port-banner-t3" onclick="toggleSection('t3-content', this)" style="color: white; border-radius: 10px; padding: 14px 15px; gap: 8px; flex-wrap: wrap;">
             <span class="section-title" style="font-size: 1.08rem; font-weight: 900;">🚢 3항업 (신항) ▼</span>
             <div class="port-chip-group">
@@ -2428,7 +2524,7 @@
         </div> 
     </div>
 
-    <div class="card" style="margin-bottom: 8px; border: none; box-shadow: none; background: transparent;">
+    <div class="card" data-view-group="ships" style="margin-bottom: 8px; border: none; box-shadow: none; background: transparent;">
         <div class="section-header tap-effect port-banner-t2" onclick="toggleSection('t2-content', this)" style="color: white; border-radius: 10px; padding: 14px 15px; gap: 8px; flex-wrap: wrap;">
             <span class="section-title" style="font-size: 1.08rem; font-weight: 900;">🏗️ 2항업 (신항) ▼</span>
             <div class="port-chip-group">
@@ -2445,7 +2541,7 @@
         </div>
     </div>
 
-    <div class="card" style="margin-bottom: 8px; border: none; box-shadow: none; background: transparent;">
+    <div class="card" data-view-group="ships" style="margin-bottom: 8px; border: none; box-shadow: none; background: transparent;">
         <div class="section-header tap-effect port-banner-t1" onclick="toggleSection('t1-content', this)" style="color: white; border-radius: 10px; padding: 14px 15px; gap: 8px; flex-wrap: wrap;">
             <span class="section-title" style="font-size: 1.08rem; font-weight: 900;">⚓ 1항업 (북항) ▼</span>
             <div class="port-chip-group">
@@ -2460,7 +2556,7 @@
         </div>
     </div>
 
-    <div id="ship-card" class="dash-card card" style="margin-bottom: 20px; border: none; box-shadow: none; background: transparent;">
+    <div id="ship-card" class="dash-card card" data-view-group="ships" style="margin-bottom: 20px; border: none; box-shadow: none; background: transparent;">
         <div class="section-header tap-effect port-banner-ship" onclick="toggleDashItem('ship-card')" style="border-radius: 10px; padding: 14px 15px; gap: 8px; flex-wrap: wrap; justify-content: center !important; text-align: center !important;">
             <span class="section-title" style="font-size: 1.05rem; font-weight: 900; text-align: center; line-height: 1.35;">🚢 작업 선박 정보<br><span style="font-size: 0.92rem;">(안전수칙/작업 정보 등록및검색) ▼</span></span>
             <div class="port-chip-group" style="margin-left: 0 !important; justify-content: center;">
@@ -2572,7 +2668,7 @@
 
     <div class="dash-grid" style="margin-bottom: 25px;">
         
-        <div id="notice-card" class="dash-card">
+        <div id="notice-card" class="dash-card" data-view-group="community">
             <div class="dash-header tap-effect" onclick="toggleDashItem('notice-card')" style="flex-direction: row !important; justify-content: flex-start !important; padding: 14px 12px; gap: 10px; min-height: auto;">
                 <span class="dash-icon-badge" style="background: #eff6ff; border: 1px solid #bfdbfe;">📢</span>
                 <div style="flex:1; min-width:0;">
@@ -2606,6 +2702,7 @@
 
         <div id="daily-field-english-card"
              class="dash-card daily-field-english-card"
+             data-view-group="guide"
              aria-labelledby="dailyFieldEnglishTitle">
 
             <div class="dash-header tap-effect daily-field-english-header"
@@ -2701,7 +2798,7 @@
             </div>
         </div>
 
-        <div id="board-card" class="dash-card">
+        <div id="board-card" class="dash-card" data-view-group="community">
             <div class="dash-header tap-effect" onclick="toggleDashItem('board-card')" style="flex-direction: row !important; justify-content: flex-start !important; padding: 14px 12px; gap: 10px; min-height: auto;">
                 <span class="dash-icon-badge" style="background: #eff6ff; border: 1px solid #bfdbfe;">💬</span>
                 <div style="flex:1; min-width:0;">
@@ -2737,7 +2834,7 @@
             </div>
         </div>
 
-        <div id="archive-card" class="dash-card">
+        <div id="archive-card" class="dash-card" data-view-group="community">
             <div class="dash-header tap-effect" onclick="toggleDashItem('archive-card')" style="flex-direction: row !important; justify-content: flex-start !important; padding: 14px 12px; gap: 10px; min-height: auto;">
                 <span class="dash-icon-badge" style="background: #fefce8; border: 1px solid #fde047;">📂</span>
                 <div style="flex:1; min-width:0; display:flex; align-items:center;">
@@ -2765,7 +2862,7 @@
             </div>
         </div>
 
-        <div id="weather-card" class="dash-card">
+        <div id="weather-card" class="dash-card" data-view-group="home">
             <div class="dash-header tap-effect" onclick="toggleDashItem('weather-card')" style="flex-direction: row !important; justify-content: flex-start !important; padding: 14px 12px; gap: 10px; min-height: auto;">
                 <span class="dash-icon-badge" style="background: #ecfeff; border: 1px solid #a5f3fc;">📡</span>
                 <div style="flex:1; min-width:0;">
@@ -2803,7 +2900,7 @@
             </div>
         </div>
 
-        <div id="safety-card" class="dash-card">
+        <div id="safety-card" class="dash-card" data-view-group="guide">
             <div class="dash-header tap-effect" onclick="toggleDashItem('safety-card')" style="flex-direction: row !important; justify-content: flex-start !important; padding: 14px 12px; gap: 10px; min-height: auto;">
                 <span class="dash-icon-badge" style="background: #ecfdf5; border: 1px solid #a7f3d0;">⛑️</span>
                 <div style="flex:1; min-width:0;">
@@ -2905,7 +3002,7 @@
             </div>
         </div>
 
-        <div id="guide-card" class="dash-card">
+        <div id="guide-card" class="dash-card" data-view-group="guide">
             <div class="dash-header tap-effect" onclick="toggleDashItem('guide-card')" style="flex-direction: row !important; justify-content: flex-start !important; padding: 14px 12px; gap: 10px; min-height: auto;">
                 <span class="dash-icon-badge" style="background: #f3e8ff; border: 1px solid #d8b4fe;">📖</span>
                 <div style="flex:1; min-width:0;">
@@ -3082,7 +3179,7 @@
             </div>
         </div>
 
-        <div id="privacy-center-card" class="dash-card">
+        <div id="privacy-center-card" class="dash-card" data-view-group="home">
             <div class="dash-header tap-effect" onclick="toggleDashItem('privacy-center-card')" style="flex-direction: row !important; justify-content: flex-start !important; padding: 14px 12px; gap: 10px; min-height: auto;">
                 <span class="dash-icon-badge" style="background: #f1f5f9; border: 1px solid #cbd5e1;">🛡️</span>
                 <div style="flex:1; min-width:0;">
@@ -3164,7 +3261,7 @@
 
     </div>
 
-    <div id="main-manual-card" class="dash-card" style="margin-bottom: 22px; border: 1.5px solid #f59e0b; border-radius: 12px; box-shadow: 0 3px 10px rgba(245, 158, 11, 0.12); background: var(--card-bg);">
+    <div id="main-manual-card" class="dash-card" data-view-group="home" style="margin-bottom: 22px; border: 1.5px solid #f59e0b; border-radius: 12px; box-shadow: 0 3px 10px rgba(245, 158, 11, 0.12); background: var(--card-bg);">
         <div class="dash-header tap-effect" onclick="toggleDashItem('main-manual-card')" style="background: linear-gradient(135deg, #0a1b3f 0%, #1e3a8a 100%) !important; padding: 15px 16px; border-radius: 10px; display: flex; align-items: center; justify-content: space-between;">
             <div style="display: flex; align-items: center; gap: 8px;">
                 <span style="font-size: 1.25rem;">🔅</span>
@@ -3260,10 +3357,21 @@
 </footer>
 
 <nav class="bottom-nav">
-    <div id="nav-home" class="nav-item active tap-effect" onclick="scrollToTop()">🏠 홈</div>
-    <div id="nav-board" class="nav-item tap-effect" onclick="toggleDashItem('board-card')">💬 톡톡</div>
-    <div id="nav-ship" class="nav-item tap-effect" onclick="toggleDashItem('ship-card')">🚢 선박</div>
-    <div id="nav-archive" class="nav-item tap-effect" onclick="toggleDashItem('archive-card')">📂 자료</div>
+    <div id="nav-home" class="nav-item active tap-effect" onclick="goHomeView()" title="기존 원본 메인 화면">
+        <span class="nav-ico">🏠</span><span class="nav-label">홈</span>
+    </div>
+    <div id="nav-wage" class="nav-item tap-effect" onclick="planANavTap('wage-log')" title="임금계산기 · 근무일지 · 월간 정산">
+        <span class="nav-ico">🧮</span><span class="nav-label">임금·일지</span>
+    </div>
+    <div id="nav-ships" class="nav-item tap-effect" onclick="planANavTap('ships')" title="터미널 스케줄 · 작업 선박 도감">
+        <span class="nav-ico">🚢</span><span class="nav-label">선박도감</span>
+    </div>
+    <div id="nav-community" class="nav-item tap-effect" onclick="planANavTap('community')" title="왁자지껄 · 공지사항 · 자료실">
+        <span class="nav-ico">💬</span><span class="nav-label">커뮤니티</span>
+    </div>
+    <div id="nav-guide" class="nav-item tap-effect" onclick="planANavTap('guide')" title="안전지침 · 용어 가이드 · 생활영어">
+        <span class="nav-ico">📖</span><span class="nav-label">현장가이드</span>
+    </div>
 </nav>
 <div id="toast">알림</div>
 
@@ -4946,12 +5054,20 @@ function submitWorkLogPin() {
     }
 }
 function syncBottomNavActive(activeCardId) {
-    const map = {
-        'board-card': 'nav-board',
-        'ship-card': 'nav-ship',
-        'archive-card': 'nav-archive'
-    };
-    const targetNavId = map[activeCardId] || 'nav-home';
+    const bodyDatas = (document.body && document.body.dataset) || {};
+    const currentView = bodyDatas.appView || 'legacy';
+    let targetNavId = 'nav-home';
+    if (currentView === 'tab') {
+        // 방안 A 탭 뷰: 현재 선택된 탭을 하단 내비에 표시
+        const navByTab = {
+            'wage-log': 'nav-wage',
+            'ships': 'nav-ships',
+            'community': 'nav-community',
+            'guide': 'nav-guide'
+        };
+        targetNavId = navByTab[bodyDatas.appTab] || 'nav-home';
+    }
+    // 원본 홈(legacy) 뷰에서는 항상 🏠 홈 탭이 활성 상태를 유지합니다.
     document.querySelectorAll('.bottom-nav .nav-item').forEach(el => {
         el.classList.toggle('active', el.id === targetNavId);
     });
@@ -5066,6 +5182,15 @@ document.addEventListener('click', () => {
 function toggleDashItem(id) {
     const card = document.getElementById(id);
     if (!card) return;
+
+    /* [방안 A 하이브리드 라우팅]
+       - 원본 홈(legacy)에서 핵심 기능 카드 클릭 → 해당 방안 A 탭 뷰로 전환
+       - 탭 뷰에서 다른 탭 소속 카드가 필요하면 → 해당 탭으로 자동 점프
+       - 홈 전용 카드(날씨/보안/설명서)는 원본 홈에서 기존처럼 제자리 펼침 */
+    if (typeof planARouteCardOpen === "function") {
+        const routed = planARouteCardOpen(id, card);
+        if (routed) return;
+    }
 
     const isExpanded = card.classList.contains("expanded");
 
@@ -5261,13 +5386,17 @@ function captureCurrentAppUIState() {
         openForms,
         openBoardRows,
         logDate,
-        wageResultVisible
+        wageResultVisible,
+        appView: (document.body && document.body.dataset && document.body.dataset.appView) || 'legacy',
+        appTab: (document.body && document.body.dataset && document.body.dataset.appTab) || '',
+        appSubTab: (document.body && document.body.dataset && document.body.dataset.appSubTab) || ''
     };
 }
 
 function isAppUIStateHome(state) {
     if (!state) return true;
     return (
+        (state.appView || 'legacy') !== 'tab' &&
         !state.expandedCard &&
         (!state.openSections || state.openSections.length === 0) &&
         (!state.openTerms || state.openTerms.length === 0) &&
@@ -5388,6 +5517,18 @@ function applyAppUIState(targetState) {
             }
         }
 
+        // 5-2. [방안 A] 원본 홈 / 탭 뷰 상태 복원
+        try {
+            const restoreView = targetState.appView === 'tab' ? 'tab' : 'legacy';
+            document.body.dataset.appView = restoreView;
+            if (targetState.appTab) document.body.dataset.appTab = targetState.appTab;
+            else delete document.body.dataset.appTab;
+            if (targetState.appSubTab) document.body.dataset.appSubTab = targetState.appSubTab;
+            else delete document.body.dataset.appSubTab;
+            if (typeof applyPlanAViewLayout === 'function') applyPlanAViewLayout();
+            syncBottomNavActive(targetState.expandedCard || '');
+        } catch (e) { console.warn('탭 뷰 상태 복원 오류:', e); }
+
         // 6. 임금계산기 결과창 표시 여부 복원
         const wageResultBox = document.getElementById("wageResultBox");
         if (wageResultBox) {
@@ -5410,6 +5551,15 @@ function applyAppUIState(targetState) {
 }
 
 function stepBackActiveUIInPlace() {
+    // 0순위: [방안 A] 탭 뷰에 있으면 원본 홈 화면으로 복귀
+    if ((document.body && document.body.dataset && document.body.dataset.appView) === 'tab') {
+        if (typeof goHomeView === 'function') {
+            goHomeView({ skipHistory: true });
+        } else {
+            document.body.dataset.appView = 'legacy';
+        }
+        return true;
+    }
     // 1순위: 열려 있는 모달 닫기
     for (const modalId of APP_MODAL_IDS) {
         const el = document.getElementById(modalId);
@@ -11997,6 +12147,282 @@ async function openShipDetailView(docId) {
         console.error("[Error] 상세 정보 로드 실패:", error);
         alert("상세 내용을 불러오는 데 실패했습니다.");
     }
+}
+</script>
+
+<script>
+/* ============================================================
+   [방안 A] 5대 핵심 탭 뷰 하이브리드 컨트롤러
+   ------------------------------------------------------------
+   · 최초 접속 시      : 기존 원본 메인 화면(아코디언 대시보드) 그대로
+   · 원본에서 기능 클릭 : 방안 A의 해당 탭 뷰로 전환 (예: 임금계산기 → [임금·일지] 탭)
+   · 하단 내비게이션   : 방안 A 5탭 (홈 / 임금·일지 / 선박도감 / 커뮤니티 / 현장가이드)
+   · 🏠 홈            : 언제든 기존 원본 메인 화면으로 복귀
+   · 기존 DOM·계산·연동 로직을 그대로 재사용하므로 데이터/기능 손실이 없습니다.
+   ============================================================ */
+
+const PLAN_A_TAB_META = {
+    'wage-log': {
+        title: '임금·일지',
+        hint: '임금계산기 · 근무일지 달력 · 월간 정산 리포트',
+        nav: 'nav-wage'
+    },
+    'ships': {
+        title: '선박도감',
+        hint: '터미널 입출항 스케줄 통합 조회 · 작업 선박 검색/등록',
+        nav: 'nav-ships'
+    },
+    'community': {
+        title: '커뮤니티',
+        hint: '왁자지껄(톡톡) · 공지사항 · 자료실',
+        nav: 'nav-community'
+    },
+    'guide': {
+        title: '현장가이드',
+        hint: '실전안전지침 · 현장 실무 용어 가이드 · 생활영어 한문장',
+        nav: 'nav-guide'
+    }
+};
+
+/* 원본 홈 카드 → 방안 A 탭 매핑 (미등록 카드 = 홈 전용, 제자리 펼침) */
+const PLAN_A_CARD_TABS = {
+    'wage-card': { tab: 'wage-log', subtab: 'wage' },
+    'log-card': { tab: 'wage-log', subtab: 'log' },
+    'ship-card': { tab: 'ships' },
+    'notice-card': { tab: 'community' },
+    'board-card': { tab: 'community' },
+    'archive-card': { tab: 'community' },
+    'safety-card': { tab: 'guide' },
+    'guide-card': { tab: 'guide' },
+    'daily-field-english-card': { tab: 'guide' }
+};
+
+/* 탭 진입 시 기본으로 펼칠 카드 */
+const PLAN_A_DEFAULT_FOCUS = {
+    'wage-log:wage': 'wage-card',
+    'wage-log:log': 'log-card',
+    'wage-log:report': 'log-card',
+    'ships': 'ship-card',
+    'community': 'board-card',
+    'guide': 'safety-card'
+};
+
+function getAppView() {
+    return (document.body && document.body.dataset && document.body.dataset.appView) || 'legacy';
+}
+
+function isElementHiddenInLayout(el) {
+    if (!el) return true;
+    if (el.classList && el.classList.contains('view-hidden')) return true;
+    let node = el.parentElement;
+    while (node && node !== document.body) {
+        if (node.classList && node.classList.contains('view-hidden')) return true;
+        node = node.parentElement;
+    }
+    return false;
+}
+
+function syncTabChromeOffset() {
+    try {
+        const header = document.querySelector('body > header');
+        if (header && header.offsetHeight) {
+            document.documentElement.style.setProperty('--tab-chrome-offset', (header.offsetHeight + 6) + 'px');
+        }
+    } catch (e) {}
+}
+
+/* 현재 뷰 모드/탭에 따라 표시 그룹·툴바·서브탭 UI를 한 번에 동기화 */
+function applyPlanAViewLayout() {
+    const view = getAppView();
+    const tab = (document.body.dataset && document.body.dataset.appTab) || '';
+    const sub = (document.body.dataset && document.body.dataset.appSubTab) || 'wage';
+
+    document.querySelectorAll('[data-view-group]').forEach(el => {
+        const group = el.getAttribute('data-view-group');
+        const show = (view === 'legacy') || (group === tab);
+        el.classList.toggle('view-hidden', !show);
+    });
+
+    /* 임금·일지 서브탭: [임금계산기] ↔ [근무일지 달력] ↔ [월간 정산 리포트] */
+    const wageCard = document.getElementById('wage-card');
+    const logCard = document.getElementById('log-card');
+    const inWageLogTab = (view === 'tab' && tab === 'wage-log');
+    if (wageCard) wageCard.classList.toggle('view-hidden', inWageLogTab && sub !== 'wage');
+    if (logCard) logCard.classList.toggle('view-hidden', inWageLogTab && sub === 'wage');
+
+    const bar = document.getElementById('tabViewToolbar');
+    if (bar) bar.style.display = (view === 'tab') ? 'flex' : 'none';
+
+    const meta = PLAN_A_TAB_META[tab];
+    const titleEl = document.getElementById('tabViewTitle');
+    if (titleEl) titleEl.textContent = (meta && meta.title) || '핵심 기능';
+    const hintEl = document.getElementById('tabViewHint');
+    if (hintEl) hintEl.textContent = (meta && meta.hint) || '';
+
+    const subWrap = document.getElementById('wageLogSubTabs');
+    if (subWrap) subWrap.style.display = inWageLogTab ? 'flex' : 'none';
+    document.querySelectorAll('#wageLogSubTabs .tab-sub-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.getAttribute('data-subtab') === sub);
+    });
+
+    syncTabChromeOffset();
+}
+
+/* 탭 뷰에서 대상 카드를 펼침 (이미 펼쳐져 있으면 토글로 닫히지 않도록 유지) */
+function focusPlanACard(cardId) {
+    const card = cardId ? document.getElementById(cardId) : null;
+    if (!card) return;
+    if (!card.classList.contains('expanded')) {
+        toggleDashItem(cardId);
+    }
+}
+
+/* [월간 정산 리포트] 서브탭: 통계/D3 차트 위치로 스크롤 */
+function scrollToWorkLogReport() {
+    const anchor = ['monthlyD3ChartSection', 'monthlyStatsSummary', 'd3ChartLockBanner']
+        .map(id => document.getElementById(id))
+        .find(el => el && !el.classList.contains('hidden') && el.style.display !== 'none');
+    if (anchor) {
+        setTimeout(() => anchor.scrollIntoView({ behavior: 'smooth', block: 'start' }), 80);
+    }
+}
+
+/* 선박도감 탭 진입 시 1·2·3항업 스케줄 섹션이 모두 접혀 있으면 한 번에 펼쳐 둠 */
+function openShipsSectionsForOverview() {
+    const els = ['t3-content', 't2-content', 't1-content'].map(id => document.getElementById(id)).filter(Boolean);
+    if (!els.length) return;
+    const allCollapsed = els.every(el => el.classList.contains('collapsed'));
+    if (!allCollapsed) return;
+    els.forEach(el => {
+        el.classList.remove('collapsed');
+        el.style.border = '2px solid var(--primary)';
+        const parentCard = el.closest('.card');
+        if (parentCard) parentCard.classList.add('active-work-section');
+    });
+}
+
+/* 방안 A 탭 뷰로 전환 (핵심 진입점) */
+function switchPlanATab(tab, subtab, focusCardId, opts) {
+    opts = opts || {};
+    const meta = PLAN_A_TAB_META[tab];
+    if (!meta) return;
+
+    if (tab === 'wage-log') {
+        const prevSub = (document.body.dataset && document.body.dataset.appSubTab) || '';
+        document.body.dataset.appSubTab = subtab || prevSub || 'wage';
+    } else if (document.body.dataset) {
+        delete document.body.dataset.appSubTab;
+    }
+
+    document.body.dataset.appView = 'tab';
+    document.body.dataset.appTab = tab;
+
+    applyPlanAViewLayout();
+    syncBottomNavActive('');
+
+    const sub = (document.body.dataset && document.body.dataset.appSubTab) || '';
+    const focus = focusCardId || PLAN_A_DEFAULT_FOCUS[tab + (sub ? ':' + sub : '')] || PLAN_A_DEFAULT_FOCUS[tab];
+    if (focus) focusPlanACard(focus);
+
+    if (tab === 'ships' && !focusCardId) openShipsSectionsForOverview();
+    if (tab === 'wage-log' && sub === 'report') scrollToWorkLogReport();
+
+    if (opts.scroll !== false) {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    if (opts.silent !== true) {
+        showToast(meta.title + ' 탭으로 이동했습니다 · 하단 [🏠 홈]에서 원본 화면 복귀');
+    }
+    if (opts.skipHistory !== true && typeof scheduleAppHistoryRecord === 'function') {
+        scheduleAppHistoryRecord();
+    }
+}
+
+/* 하단 5탭 내비게이션 탭 전환 */
+function planANavTap(tab) {
+    if (!tab || tab === 'home') {
+        goHomeView();
+        return;
+    }
+    const prevSub = (document.body.dataset && document.body.dataset.appSubTab) || '';
+    switchPlanATab(tab, tab === 'wage-log' ? (prevSub || 'wage') : null, null, { silent: true });
+}
+
+/* [임금·일지] 탭 내부 스위칭: [임금계산기] | [근무일지 달력] | [월간 정산 리포트] */
+function switchWageLogSubTab(sub) {
+    if (!sub) return;
+    document.body.dataset.appView = 'tab';
+    document.body.dataset.appTab = 'wage-log';
+    document.body.dataset.appSubTab = sub;
+    applyPlanAViewLayout();
+    syncBottomNavActive('');
+    focusPlanACard(sub === 'wage' ? 'wage-card' : 'log-card');
+    if (sub === 'report') {
+        scrollToWorkLogReport();
+    } else {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+    if (typeof scheduleAppHistoryRecord === 'function') scheduleAppHistoryRecord();
+}
+
+/* 🏠 홈: 기존 원본 메인 화면 복귀 (기존 홈 버튼 동작: 전체 접기 + 상단 이동) */
+function goHomeView(opts) {
+    opts = opts || {};
+    document.body.dataset.appView = 'legacy';
+    if (document.body.dataset) {
+        delete document.body.dataset.appTab;
+        delete document.body.dataset.appSubTab;
+    }
+    applyPlanAViewLayout();
+    if (typeof scrollToTop === 'function') {
+        scrollToTop();
+    } else {
+        syncBottomNavActive('');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+    if (opts.skipHistory !== true && typeof scheduleAppHistoryRecord === 'function') {
+        scheduleAppHistoryRecord();
+    }
+}
+
+/* 기존 카드 헤더 클릭(toggleDashItem) → 방안 A 라우팅 판별
+   · 원본 홈 + 핵심 기능 → 해당 탭 뷰로 전환
+   · 탭 뷰 + 다른 탭 소속 기능 → 해당 탭으로 자동 점프 (예: 계산 결과 → 근무일지)
+   · 홈 전용 카드(날씨/보안/설명서) → 원본 홈에서 기존처럼 제자리 펼침 */
+function planARouteCardOpen(id, card) {
+    const view = getAppView();
+    const plan = PLAN_A_CARD_TABS[id];
+
+    if (view === 'legacy') {
+        if (!plan) return false;
+        if (card.classList.contains('expanded')) return false;
+        switchPlanATab(plan.tab, plan.subtab || null, id);
+        return true;
+    }
+
+    if (view === 'tab') {
+        if (!isElementHiddenInLayout(card)) return false;
+        if (plan) {
+            switchPlanATab(plan.tab, plan.subtab || null, id, { silent: true });
+            return true;
+        }
+        goHomeView();
+        return false;
+    }
+    return false;
+}
+
+/* 초기화: 상단 고정 영역 높이 측정 + 리사이즈 대응 */
+window.addEventListener('resize', function () { syncTabChromeOffset(); });
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', function () {
+        syncTabChromeOffset();
+        applyPlanAViewLayout();
+    });
+} else {
+    syncTabChromeOffset();
+    applyPlanAViewLayout();
 }
 </script>
 </body>
