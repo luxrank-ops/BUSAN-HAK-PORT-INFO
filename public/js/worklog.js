@@ -673,3 +673,102 @@ function resetWorkLogForm() {
     showToast("🔄 근무일지 입력 내용이 초기화되었습니다. 저장된 기록은 날짜를 다시 누르면 불러올 수 있습니다.");
 }
 function previewLogImage(input){ if(input.files&&input.files[0]){ const r=new FileReader(); r.onload=e=>{const i=document.getElementById('logImagePreview'); i.src=e.target.result; i.style.display='block';}; r.readAsDataURL(input.files[0]); } }
+
+function selectBestCalcSegment(...args) {
+    const segments = [];
+    const targets = [];
+    const parseMemo = (memo) => {
+        const lines = String(memo || '').split(/\r?\n/);
+        const matched = lines
+            .map(l => l.trim())
+            .filter(l => /총\s*\d+(?:\.\d+)?\s*H/i.test(l));
+        return matched.length ? matched : lines.map(l => l.trim()).filter(Boolean);
+    };
+    const collect = (val) => {
+        if (val == null) return;
+        if (Array.isArray(val)) {
+            val.forEach(v => collect(v));
+            return;
+        }
+        if (typeof val === 'string') {
+            const parsed = parseMemo(val);
+            if (parsed.length && /총\s*\d+(?:\.\d+)?\s*H/i.test(val)) {
+                // If the whole string itself is a single segment, keep as one.
+                if (/총\s*\d+(?:\.\d+)?\s*H/i.test(val) && val.split(/\r?\n/).filter(l => /총\s*\d+(?:\.\d+)?\s*H/i.test(l)).length <= 1) {
+                    segments.push(val.trim());
+                    return;
+                }
+            }
+            const memoSegments = parseMemo(val);
+            if (memoSegments.length) segments.push(...memoSegments);
+            else segments.push(val.trim());
+            return;
+        }
+        if (typeof val === 'number') {
+            targets.push(val);
+            return;
+        }
+        if (typeof val === 'object') {
+            if (val.segments) collect(val.segments);
+            if (val.memo) collect(val.memo);
+            if (val.text) collect(val.text);
+            if (val.line) collect(val.line);
+            if (typeof val.targetPay === 'number') targets.push(val.targetPay);
+            if (typeof val.totalPay === 'number') targets.push(val.totalPay);
+            if (typeof val.wage1 === 'number') targets.push(val.wage1);
+            if (typeof val.wage2 === 'number') targets.push(val.wage2);
+            if (typeof val.pay === 'number') targets.push(val.pay);
+            if (typeof val.amount === 'number') targets.push(val.amount);
+            return;
+        }
+    };
+    args.forEach(collect);
+
+    // Remove empties and de-duplicate while keeping order (newest last).
+    const cleaned = segments.map(s => (typeof s === 'string' ? s.trim() : s)).filter(s => s !== '' && s != null);
+    const unique = [];
+    cleaned.forEach(s => {
+        const key = typeof s === 'string' ? s : JSON.stringify(s);
+        if (!unique.some(u => (typeof u === 'string' ? u.trim() : JSON.stringify(u)) === key)) {
+            unique.push(s);
+        }
+    });
+    const list = unique.length ? unique : cleaned;
+    if (list.length === 0) {
+        return args.length ? args[args.length - 1] : '';
+    }
+
+    const hoursOf = (seg) => {
+        const text = typeof seg === 'string' ? seg : (seg && (seg.summary || seg.text || seg.line)) || String(seg);
+        const m = String(text).match(/총\s*(\d+(?:\.\d+)?)\s*H/i);
+        return m ? parseFloat(m[1]) : 0;
+    };
+
+    // If no target pay is given, keep the latest (last) segment.
+    if (targets.length === 0) {
+        return list[list.length - 1];
+    }
+
+    // Score: prefer segment whose implied pay (hours * base rate) is closest to a target.
+    // Also slightly prefer later segments on ties.
+    const BASE = 10320;
+    let bestIdx = 0;
+    let bestScore = Infinity;
+    list.forEach((seg, idx) => {
+        const h = hoursOf(seg);
+        const implied = h * BASE;
+        let minDiff = Infinity;
+        targets.forEach(t => {
+            const diff = Math.abs(implied - Number(t));
+            if (diff < minDiff) minDiff = diff;
+        });
+        // Tie-break: later index wins (subtract tiny epsilon by index).
+        const score = minDiff - idx * 1e-9;
+        if (score < bestScore) {
+            bestScore = score;
+            bestIdx = idx;
+        }
+    });
+    return list[bestIdx];
+}
+
