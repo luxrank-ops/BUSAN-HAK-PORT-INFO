@@ -10368,10 +10368,55 @@ function resetShipFilters() {
     filterShips();
 }
 function extractShipTags(ship) {
+    if (!ship) return [];
     if (Array.isArray(ship.tags) && ship.tags.length > 0) return ship.tags;
-    const text = `${ship.shipName || ""} ${ship.onboardFeat || ""}`;
+    const text = `${getShipDisplayName(ship)} ${getShipMemoText(ship)} ${getShipLegacyOnshoreText(ship)}`;
     const known = ["#오토콘", "#수동콘", "#브릿지주의", "#라싱바무거움", "#턴버클뻑뻑함", "#통로협소"];
     return known.filter(t => text.includes(t) || text.includes(t.slice(1)));
+}
+/* ------------------------------------------------------------------
+   🚢 선박 도감 레거시(업데이트 이전 등록) 데이터 호환 헬퍼
+   - 초기 버전 선박 문서는 메모가 onboardFeat 대신 content/memo 에 있거나,
+     '육상 특징'(onshoreFeat) 필드를 별도로 가진 경우가 있어 함께 표시·검색합니다.
+   ------------------------------------------------------------------ */
+function getShipDisplayName(ship) {
+    if (!ship) return "";
+    const raw = ship.shipName || ship.name || ship.vesselName || "";
+    return String(raw).trim();
+}
+function getShipMemoText(ship) {
+    if (!ship) return "";
+    for (const key of ["onboardFeat", "content", "memo", "info"]) {
+        const value = ship[key];
+        if (value === undefined || value === null) continue;
+        const text = String(value);
+        if (text.trim()) return text;
+    }
+    return "";
+}
+function getShipLegacyOnshoreText(ship) {
+    const value = ship ? ship.onshoreFeat : null;
+    if (value === undefined || value === null) return "";
+    const text = String(value);
+    return text.trim() ? text : "";
+}
+function toShipDate(value) {
+    if (!value) return null;
+    const isDateObject = v => Object.prototype.toString.call(v) === "[object Date]";
+    try {
+        let date = null;
+        if (typeof value.toDate === "function") date = value.toDate();
+        else if (isDateObject(value)) date = value;
+        else if (typeof value === "number") date = new Date(value < 100000000000 ? value * 1000 : value);
+        else if (typeof value === "string") date = new Date(value);
+        else if (typeof value === "object" && (typeof value.seconds === "number" || typeof value._seconds === "number")) {
+            const seconds = typeof value.seconds === "number" ? value.seconds : value._seconds;
+            date = new Date(seconds * 1000);
+        }
+        return isDateObject(date) && !isNaN(date.getTime()) ? date : null;
+    } catch (e) {
+        return null;
+    }
 }
 function findDuplicateShipRecord(shipName, excludeId = null) {
     const normalized = normalizeVesselInfoName(shipName);
@@ -10515,8 +10560,8 @@ async function addShipInfo() {
 async function tryEditShip(id, name, feat, savedPw) {
     const shipObj = (allShipsData || []).find(s => s.id === id);
     const finalPw = shipObj ? (shipObj.password || "") : savedPw;
-    const finalName = shipObj ? (shipObj.shipName || "") : name;
-    const finalFeat = shipObj ? (shipObj.onboardFeat || "") : feat;
+    const finalName = shipObj ? getShipDisplayName(shipObj) : name;
+    const finalFeat = shipObj ? getShipMemoText(shipObj) : feat;
     const inputPw = prompt("비밀번호를 입력하세요 (작성자 또는 관리자):");
     if (!inputPw) return;
     const isAuthor = await verifyPasswordMatch(inputPw, finalPw);
@@ -10531,8 +10576,8 @@ async function tryEditShip(id, name, feat, savedPw) {
 function startEditShip(id, name, feat, verifiedPw = "") {
     currentEditShipId = id;
     const shipObj = allShipsData.find(s => s.id === id) || {};
-    document.getElementById('shipName').value = name !== undefined ? name : (shipObj.shipName || '');
-    document.getElementById('shipOnboard').value = feat !== undefined ? feat : (shipObj.onboardFeat || '');
+    document.getElementById('shipName').value = name !== undefined ? name : getShipDisplayName(shipObj);
+    document.getElementById('shipOnboard').value = feat !== undefined ? feat : getShipMemoText(shipObj);
     const pwEl = document.getElementById('shipPw');
     if (pwEl && verifiedPw) pwEl.value = verifiedPw;
     setShipDifficulty(shipObj.difficulty || 3);
@@ -10566,18 +10611,26 @@ function resetShipForm() {
     if (cancelBtn) cancelBtn.style.display = "none";
     currentEditShipId = null;
 }
-function filterShips() {
+function getShipSearchHaystack(ship, tags) {
+    const sTags = Array.isArray(tags) ? tags : extractShipTags(ship);
+    return `${getShipDisplayName(ship)} ${getShipMemoText(ship)} ${getShipLegacyOnshoreText(ship)} ${sTags.join(" ")}`;
+}
+// 현재 화면의 검색어·장비 태그·난이도 필터를 그대로 적용한 선박 목록을 돌려줍니다.
+// (실시간 스냅샷으로 목록을 다시 그릴 때도 같은 조건을 유지하기 위해 분리)
+function getFilteredShipList(source = allShipsData) {
     const searchTerm = (document.getElementById('shipSearch')?.value || '').trim().toUpperCase();
     const diffFilter = parseInt(document.getElementById('shipDifficultyFilter')?.value || '0', 10) || 0;
-    filteredShips = allShipsData.filter(ship => {
+    const filterTags = Array.isArray(activeShipFilterTags) ? activeShipFilterTags : [];
+    return (Array.isArray(source) ? source : []).filter(ship => {
+        if (!ship) return false;
         const sTags = extractShipTags(ship);
         const sDiff = Number(ship.difficulty) || 0;
         if (searchTerm !== "") {
-            const hay = `${ship.shipName || ""} ${ship.onboardFeat || ""} ${sTags.join(" ")}`.toUpperCase();
+            const hay = getShipSearchHaystack(ship, sTags).toUpperCase();
             if (!hay.includes(searchTerm)) return false;
         }
-        if (activeShipFilterTags.length > 0) {
-            const hasAllTags = activeShipFilterTags.every(t => sTags.includes(t));
+        if (filterTags.length > 0) {
+            const hasAllTags = filterTags.every(t => sTags.includes(t));
             if (!hasAllTags) return false;
         }
         if (diffFilter > 0) {
@@ -10589,10 +10642,122 @@ function filterShips() {
         }
         return true;
     });
+}
+function filterShips() {
+    filteredShips = getFilteredShipList();
     renderShipPage(1);
     if (typeof loadAndSearchAllShips === "function") {
         loadAndSearchAllShips(document.getElementById('shipSearch')?.value || '');
     }
+}
+/* ------------------------------------------------------------------
+   🚢 선박 도감 실시간 스냅샷 반영
+   [버그 원인] 선박을 펼치면 조회수(views)가 +1 저장되고, 그 즉시 ships 실시간
+   스냅샷이 다시 도착합니다. 기존 코드는 이때 filteredShips = allShipsData 로
+   검색 조건을 버리고 전체 목록을 다시 그려서, 전체 목록 1페이지(최신 5척)에
+   없는 선박(=업데이트 이전에 등록된 예전 선박)은 펼친 내용이 사라지고 전체
+   선박 목록만 보였습니다.
+   [수정] ① 조회수만 바뀐 스냅샷은 목록을 다시 그리지 않고 숫자만 갱신
+          ② 내용이 바뀐 스냅샷도 현재 검색·필터·페이지·펼친 선박을 유지
+   ------------------------------------------------------------------ */
+function getShipRowSignature(ship) {
+    try {
+        const normalize = (value, depth) => {
+            if (value === undefined || value === null) return null;
+            if (typeof value.toMillis === "function") return { __ts: value.toMillis() };
+            if (typeof value !== "object") return value;
+            if (depth > 4) return String(value);
+            if (Array.isArray(value)) return value.map(item => normalize(item, depth + 1));
+            const out = {};
+            Object.keys(value).sort().forEach(key => { out[key] = normalize(value[key], depth + 1); });
+            return out;
+        };
+        const rest = {};
+        Object.keys(ship || {}).forEach(key => {
+            if (key !== "views" && key !== "id") rest[key] = ship[key];
+        });
+        return JSON.stringify(normalize(rest, 0));
+    } catch (e) {
+        return null;
+    }
+}
+function isShipViewCountOnlyChange(prevList, nextList) {
+    if (!Array.isArray(prevList) || !Array.isArray(nextList)) return false;
+    if (prevList.length !== nextList.length) return false;
+    for (let i = 0; i < nextList.length; i++) {
+        const prev = prevList[i];
+        const next = nextList[i];
+        if (!prev || !next || prev.id !== next.id) return false;
+        const prevSig = getShipRowSignature(prev);
+        if (prevSig === null || prevSig !== getShipRowSignature(next)) return false;
+    }
+    return true;
+}
+function syncShipViewCountBadges(ships) {
+    (Array.isArray(ships) ? ships : []).forEach(ship => {
+        if (!ship || !ship.id) return;
+        const label = Math.max(0, Number(ship.views) || 0).toLocaleString();
+        const badgeEl = document.getElementById(`view-badge-s-${ship.id}`);
+        if (badgeEl) {
+            badgeEl.innerText = `👁️ ${label}`;
+            badgeEl.title = `조회수 ${label}회 (중복 조회 포함)`;
+        }
+        const detailEl = document.getElementById(`view-detail-s-${ship.id}`);
+        if (detailEl) detailEl.innerText = `👁️ 조회수 ${label}회`;
+        const fullTableBadgeEl = document.getElementById(`view-full-s-${ship.id}`);
+        if (fullTableBadgeEl) fullTableBadgeEl.innerText = `👁️ ${label}`;
+    });
+}
+function applyShipDirectorySnapshot(snapshot) {
+    const openIds = Array.from(document.querySelectorAll("#shipList .board-content-row.show")).map(el => el.id);
+    const nextShips = [];
+    snapshot.forEach(d => { nextShips.push({ ...d.data(), id: d.id }); });
+    const viewCountOnly = shipDirectorySnapshotLoaded && isShipViewCountOnlyChange(allShipsData, nextShips);
+    shipDirectorySnapshotLoaded = true;
+    allShipsData = nextShips;
+
+    const subMeta = document.getElementById("shipCardSubMeta");
+    if (subMeta) subMeta.innerText = allShipsData.length > 0 ? `등록 선박 ${allShipsData.length}척 · 장비 도감` : "난이도 · 필수 장비 도감";
+    const shipBadge = document.getElementById("shipBadge");
+    if (shipBadge) {
+        const nowMs = Date.now();
+        const hasNewShip = allShipsData.some(item => {
+            const date = toShipDate(item.timestamp);
+            return Boolean(date) && (nowMs - date.getTime() < 24 * 60 * 60 * 1000);
+        });
+        if (hasNewShip) shipBadge.classList.remove("hidden");
+        else shipBadge.classList.add("hidden");
+    }
+
+    // 검색어·태그·난이도 필터는 사용자가 바꾸기 전까지 그대로 유지
+    filteredShips = getFilteredShipList(allShipsData);
+
+    if (viewCountOnly) {
+        // 조회수만 바뀜 → 목록·펼친 상세·댓글 입력란을 건드리지 않고 숫자만 갱신
+        syncShipViewCountBadges(allShipsData);
+        return;
+    }
+
+    const maxPage = Math.max(1, Math.ceil(filteredShips.length / postsPerPage));
+    let targetPage = Math.min(currentShipPage || 1, maxPage);
+    // 펼쳐 둔 선박이 다른 페이지로 밀려났다면 그 선박이 있는 페이지를 유지
+    const openShipPages = openIds
+        .filter(rid => rid.startsWith("s-"))
+        .map(rid => filteredShips.findIndex(ship => `s-${ship.id}` === rid))
+        .filter(idx => idx >= 0)
+        .map(idx => Math.floor(idx / postsPerPage) + 1);
+    if (openShipPages.length > 0 && !openShipPages.includes(targetPage)) {
+        targetPage = openShipPages[0];
+    }
+    renderShipPage(targetPage);
+    openIds.forEach(rid => {
+        const r = document.getElementById(rid);
+        if (r) {
+            r.classList.add("show");
+            if (rid.startsWith("s-")) loadShipComments(rid.slice(2));
+        }
+    });
+    if (typeof loadAndSearchAllShips === "function") loadAndSearchAllShips(document.getElementById('shipSearch')?.value || '');
 }
 let currentEditArchiveId = null;
 let currentEditArchiveUrl = null;
@@ -10757,12 +10922,19 @@ function renderShipPage(p) {
     }
     const rowsHtml = [];
     pageData.forEach((ship, index) => {
-        const safeShipNameHtml = escapeShipCommentHtml(ship.shipName || "선박명 없음");
-        const safeShipFeatHtml = escapeShipCommentHtml(ship.onboardFeat || "");
+        const safeShipNameHtml = escapeShipCommentHtml(getShipDisplayName(ship) || "선박명 없음");
+        const shipMemoText = getShipMemoText(ship);
+        const legacyOnshoreText = getShipLegacyOnshoreText(ship);
+        const safeShipFeatHtml = shipMemoText
+            ? escapeShipCommentHtml(shipMemoText)
+            : (legacyOnshoreText ? "" : `<span style="color:var(--text-sub); font-size:0.82rem;">📝 등록된 작업 메모가 없습니다. 댓글로 정보를 추가해 주세요.</span>`);
+        const legacyOnshoreHtml = legacyOnshoreText
+            ? `<div style="margin-bottom:12px; background:rgba(2,132,199,0.06); border:1px solid var(--border); border-radius:8px; padding:8px 10px;"><div style="font-weight:900; color:var(--primary); font-size:0.82rem; margin-bottom:4px;">🚛 육상 작업 특징</div><div style="white-space:pre-wrap;">${escapeShipCommentHtml(legacyOnshoreText)}</div></div>`
+            : "";
         let dateStr = "";
         let isShipNew = false;
-        if (ship.timestamp) {
-            const date = ship.timestamp.toDate();
+        const date = toShipDate(ship.timestamp);
+        if (date) {
             dateStr = `${date.getFullYear()}/${String(date.getMonth() + 1).padStart(2, '0')}/${String(date.getDate()).padStart(2, '0')}`;
             if (Date.now() - date.getTime() < 24 * 60 * 60 * 1000) isShipNew = true;
         }
@@ -10788,7 +10960,7 @@ function renderShipPage(p) {
             : "";
         const rowId = `s-${ship.id}`;
         const postNum = filteredShips.length - ((p - 1) * postsPerPage) - index;
-        rowsHtml.push(`<tr onclick="toggleBoardRow('${rowId}')" style="cursor:pointer;"><td class="board-no">${postNum}</td><td class="board-title" style="white-space:normal; line-height:1.35;"><div>🚢 ${safeShipNameHtml} ${starBadge}${shipNewBadge}${viewBadgeHtml} <span style="font-size:0.75rem; color:var(--primary); margin-left:4px;">▼</span></div>${tagsInlineHtml}</td><td class="board-date">${dateStr}</td></tr><tr id="${rowId}" class="board-content-row"><td colspan="3" class="board-content-box">${detailMetaHtml}<div style="margin-bottom:12px; white-space:pre-wrap;">${safeShipFeatHtml}</div>${imageHtml}<div style="display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:6px; border-bottom:1px dashed var(--border); padding-bottom:10px; margin-bottom:10px;"><div style="display:flex; flex-wrap:wrap; align-items:center; gap:5px;"><button type="button" class="mini-btn" onclick="sendShipInfoToWage('${ship.id}', event)">🧮 임금계산기로</button><button type="button" class="mini-btn" onclick="sendShipInfoToWorkLog('${ship.id}', event)">📅 근무일지로</button><span id="view-detail-s-${ship.id}" style="font-size:0.75rem; color:var(--text-sub); font-weight:800; margin-left:4px;">👁️ 조회수 ${viewCnt.toLocaleString()}회</span></div><div style="display:flex; gap:5px; margin-left:auto;"><button class="mini-btn" style="background:var(--primary-light) !important; color:white !important;" onclick="tryEditShip('${ship.id}', '', '', '')">✏️ 수정</button><button class="mini-btn btn-del" onclick="deleteShip('${ship.id}',event)">🗑️ 삭제</button></div></div>${renderShipCommentMarkup(ship.id)}</td></tr>`);
+        rowsHtml.push(`<tr onclick="toggleBoardRow('${rowId}')" style="cursor:pointer;"><td class="board-no">${postNum}</td><td class="board-title" style="white-space:normal; line-height:1.35;"><div>🚢 ${safeShipNameHtml} ${starBadge}${shipNewBadge}${viewBadgeHtml} <span style="font-size:0.75rem; color:var(--primary); margin-left:4px;">▼</span></div>${tagsInlineHtml}</td><td class="board-date">${dateStr}</td></tr><tr id="${rowId}" class="board-content-row"><td colspan="3" class="board-content-box">${detailMetaHtml}<div style="margin-bottom:12px; white-space:pre-wrap;">${safeShipFeatHtml}</div>${legacyOnshoreHtml}${imageHtml}<div style="display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:6px; border-bottom:1px dashed var(--border); padding-bottom:10px; margin-bottom:10px;"><div style="display:flex; flex-wrap:wrap; align-items:center; gap:5px;"><button type="button" class="mini-btn" onclick="sendShipInfoToWage('${ship.id}', event)">🧮 임금계산기로</button><button type="button" class="mini-btn" onclick="sendShipInfoToWorkLog('${ship.id}', event)">📅 근무일지로</button><span id="view-detail-s-${ship.id}" style="font-size:0.75rem; color:var(--text-sub); font-weight:800; margin-left:4px;">👁️ 조회수 ${viewCnt.toLocaleString()}회</span></div><div style="display:flex; gap:5px; margin-left:auto;"><button class="mini-btn" style="background:var(--primary-light) !important; color:white !important;" onclick="tryEditShip('${ship.id}', '', '', '')">✏️ 수정</button><button class="mini-btn btn-del" onclick="deleteShip('${ship.id}',event)">🗑️ 삭제</button></div></div>${renderShipCommentMarkup(ship.id)}</td></tr>`);
     });
     list.innerHTML = rowsHtml.join("");
     const totalPages = Math.ceil(filteredShips.length / postsPerPage);
@@ -11570,7 +11742,7 @@ window.onload = async () => {
     try { 
         db.collection("notices").orderBy("timestamp","desc").onSnapshot(s => { const openIds = Array.from(document.querySelectorAll("#noticeList .board-content-row.show")).map(el => el.id); window.allNoticesCache = []; const badge = document.getElementById("noticeBadge"); const subMeta = document.getElementById("noticeCardSubMeta"); if (subMeta) subMeta.innerText = s.empty ? "운영 안내 및 주요 소식" : `등록된 공지 ${s.size}건`; if (s.empty) { renderNoticePage(1); if(badge) badge.classList.add("hidden"); return; } let isNew = false; const now = new Date(); const sortedNotices = []; s.forEach(d => { const item = { ...(d.data() || {}), id: d.id }; if (item.timestamp && item.timestamp.toDate) { if (now.getTime() - item.timestamp.toDate().getTime() < 24 * 60 * 60 * 1000) isNew = true; } sortedNotices.push(item); }); sortedNotices.sort((a, b) => { const pA = a.isPriority ? 1 : 0; const pB = b.isPriority ? 1 : 0; if (pA !== pB) return pB - pA; const tA = a.timestamp && a.timestamp.toMillis ? a.timestamp.toMillis() : 0; const tB = b.timestamp && b.timestamp.toMillis ? b.timestamp.toMillis() : 0; return tB - tA; }); window.allNoticesCache = sortedNotices; const maxPage = Math.max(1, Math.ceil(sortedNotices.length / postsPerPage)); renderNoticePage(Math.min(currentNoticePage || 1, maxPage)); openIds.forEach(rid => document.getElementById(rid)?.classList.add("show")); if(badge) { if(isNew) badge.classList.remove("hidden"); else badge.classList.add("hidden"); } }, err => { console.warn("공지사항 구독 오류:", err); }); 
         db.collection("posts").orderBy("timestamp","desc").onSnapshot(s => { const openIds = Array.from(document.querySelectorAll("#boardList .board-content-row.show")).map(el => el.id); allPostsData = []; s.forEach(d => { allPostsData.push({...d.data(), id:d.id}) }); const subMeta = document.getElementById("boardCardSubMeta"); if (subMeta) subMeta.innerText = allPostsData.length > 0 ? `자유 게시글 ${allPostsData.length}건` : "현장 동료 자유 소통방"; const badge = document.getElementById("boardBadge"); if (badge) { const nowMs = Date.now(); const hasNewPost = allPostsData.some(p => p.timestamp && (nowMs - p.timestamp.toDate().getTime() < 24 * 60 * 60 * 1000)); if (hasNewPost) badge.classList.remove("hidden"); else badge.classList.add("hidden"); } const maxPage = Math.max(1, Math.ceil(allPostsData.length / postsPerPage)); renderBoardPage(Math.min(currentBoardPage || 1, maxPage)); openIds.forEach(rid => document.getElementById(rid)?.classList.add("show")); }, err => { console.warn("자유게시판 구독 오류:", err); }); 
-        db.collection("ships").orderBy("timestamp","desc").onSnapshot(s=>{ const openIds = Array.from(document.querySelectorAll("#shipList .board-content-row.show")).map(el => el.id); shipDirectorySnapshotLoaded = true; allShipsData=[]; s.forEach(d=>{allShipsData.push({...d.data(), id:d.id})}); const subMeta = document.getElementById("shipCardSubMeta"); if (subMeta) subMeta.innerText = allShipsData.length > 0 ? `등록 선박 ${allShipsData.length}척 · 장비 도감` : "난이도 · 필수 장비 도감"; const shipBadge = document.getElementById("shipBadge"); if (shipBadge) { const nowMs = Date.now(); const hasNewShip = allShipsData.some(item => item.timestamp && (nowMs - item.timestamp.toDate().getTime() < 24 * 60 * 60 * 1000)); if (hasNewShip) shipBadge.classList.remove("hidden"); else shipBadge.classList.add("hidden"); } filteredShips=allShipsData; const maxPage = Math.max(1, Math.ceil(filteredShips.length / postsPerPage)); renderShipPage(Math.min(currentShipPage || 1, maxPage)); openIds.forEach(rid => { const r = document.getElementById(rid); if (r) { r.classList.add("show"); if (rid.startsWith("s-")) loadShipComments(rid.slice(2)); } }); if(typeof loadAndSearchAllShips==="function") loadAndSearchAllShips(document.getElementById('shipSearch')?.value || '');}, err => { console.warn("선박도감 구독 오류:", err); }); 
+        db.collection("ships").orderBy("timestamp","desc").onSnapshot(s => { applyShipDirectorySnapshot(s); }, err => { console.warn("선박도감 구독 오류:", err); });
         db.collection("archives").orderBy("timestamp","desc").onSnapshot(s=>{window.allArchivesCount = s.size; window.allArchivesCache = []; const l=document.getElementById("fileList"); const archiveBadge = document.getElementById("archiveBadge"); let isArchiveNew = false; const nowMs = Date.now(); const rowsHtml=[]; s.forEach(d=>{const x=d.data()||{}; window.allArchivesCache.push({...x, id:d.id}); let isRowNew = false; if (x.timestamp) { const dt = x.timestamp.toDate(); if (nowMs - dt.getTime() < 24 * 60 * 60 * 1000) { isRowNew = true; isArchiveNew = true; } } const rowNewBadge = isRowNew ? `<span class="badge-new">NEW</span>` : ""; const safeUrl = escapeShipCommentHtml(x.url || "#"); const safeTitle = escapeShipCommentHtml(x.title || "파일"); rowsHtml.push(`<tr><td class="board-title" style="width: 68%; padding-left: 10px;"><a href="${safeUrl}" target="_blank" rel="noopener noreferrer" style="text-decoration:none; color:var(--primary); font-weight:800;">💾 ${safeTitle}</a>${rowNewBadge}</td><td style="width: 32%; text-align:center;"><div style="display:inline-flex; gap:4px; justify-content:center;"><button class="mini-btn" style="background:var(--primary-light) !important; color:white !important;" onclick="startEditArchive('${d.id}',event)">수정</button><button class="mini-btn btn-del" onclick="delArchive('${d.id}',event)">삭제</button></div></td></tr>`);}); l.innerHTML=rowsHtml.join(""); if (archiveBadge) { if (isArchiveNew) archiveBadge.classList.remove("hidden"); else archiveBadge.classList.add("hidden"); }}, err => { console.warn("자료실 구독 오류:", err); }); 
     } catch(err) { console.warn("실시간 연결 오류:", err); } 
     if(localStorage.getItem('myWorkerId')) { currentWorkerId = localStorage.getItem('myWorkerId'); updateUserBar(); if(typeof initNotifications === 'function') initNotifications(currentWorkerId); } 
@@ -11685,9 +11857,11 @@ async function loadAndSearchAllShips(searchKeyword = "") {
             const sTags = typeof extractShipTags === "function" ? extractShipTags(item) : (Array.isArray(item.tags) ? item.tags : []);
             const sDiff = Number(item.difficulty) || 0;
             if (keyword !== "") {
-                const shipName = (item.shipName || item.name || item.vesselName || item.title || "").toLowerCase();
-                const shipCode = (item.code || item.number || "").toLowerCase();
-                const shipMemo = (item.onboardFeat || item.memo || item.info || "").toLowerCase();
+                const shipName = String(item.shipName || item.name || item.vesselName || item.title || "").toLowerCase();
+                const shipCode = String(item.code || item.number || "").toLowerCase();
+                const shipMemo = (typeof getShipMemoText === "function"
+                    ? `${getShipMemoText(item)} ${getShipLegacyOnshoreText(item)}`
+                    : String(item.onboardFeat || item.memo || item.info || "")).toLowerCase();
                 const tagStr = sTags.join(" ").toLowerCase();
                 if (!shipName.includes(keyword) && !shipCode.includes(keyword) && !shipMemo.includes(keyword) && !tagStr.includes(keyword)) {
                     return false;
@@ -11726,7 +11900,10 @@ async function loadAndSearchAllShips(searchKeyword = "") {
 
         shipList.forEach((item, index) => {
             const title = escapeHtml(item.shipName || item.name || item.vesselName || item.title || `선박 정보 #${index + 1}`);
-            const subInfo = escapeHtml((item.onboardFeat || item.memo || item.schedule || item.info || "상세 내용 보기").replace(/\s+/g, " ").trim());
+            const memoSource = typeof getShipMemoText === "function"
+                ? (getShipMemoText(item) || getShipLegacyOnshoreText(item))
+                : (item.onboardFeat || item.memo || item.schedule || item.info || "");
+            const subInfo = escapeHtml(String(memoSource || "상세 내용 보기").replace(/\s+/g, " ").trim());
             const diff = Number(item.difficulty) || 0;
             const starHtml = diff > 0 ? `<span class="ship-badge-star" style="padding:0px 4px; font-size:0.66rem; margin-left:2px;">${"★".repeat(diff)}${"☆".repeat(5 - diff)}</span>` : "";
             const sTags = typeof extractShipTags === "function" ? extractShipTags(item) : (Array.isArray(item.tags) ? item.tags : []);
@@ -11804,13 +11981,16 @@ async function openShipDetailView(docId) {
             }
             data = docSnap.data();
         }
-        const name = data.shipName || data.name || "선박명 없음";
+        const hasShipHelpers = typeof getShipMemoText === "function";
+        const name = (hasShipHelpers ? getShipDisplayName(data) : (data.shipName || data.name)) || "선박명 없음";
         const diff = Number(data.difficulty) || 0;
         const diffText = diff > 0 ? `${"★".repeat(diff)}${"☆".repeat(5 - diff)} (${diff}점)` : "미지정";
         const sTags = typeof extractShipTags === "function" ? extractShipTags(data) : (Array.isArray(data.tags) ? data.tags : []);
-        const feat = data.onboardFeat || data.memo || "내용 없음";
+        const feat = (hasShipHelpers ? getShipMemoText(data) : (data.onboardFeat || data.memo)) || "내용 없음";
+        const onshoreFeat = hasShipHelpers ? getShipLegacyOnshoreText(data) : "";
         const views = Math.max(1, Number(data.views) || 1);
         let detailText = `🚢 [선박 상세 정보]\n\n• 선박명: ${name}\n• 작업 난이도: ${diffText}\n• 장비/특징 태그: ${sTags.length ? sTags.join(" ") : "없음"}\n• 조회수: ${views.toLocaleString()}회\n\n📝 [작업 내용 및 특이사항]\n${feat}`;
+        if (onshoreFeat) detailText += `\n\n🚛 [육상 작업 특징]\n${onshoreFeat}`;
         alert(detailText);
 
     } catch (error) {
