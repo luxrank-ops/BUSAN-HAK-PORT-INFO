@@ -816,6 +816,11 @@ async function toggleDashItem(id, options = {}) {
     const card = document.getElementById(id);
     if (!card) return;
 
+    if (!options.fromRouter && typeof planARouteCardOpen === "function") {
+        const routed = planARouteCardOpen(id, card);
+        if (routed) return;
+    }
+
     const isExpanded = card.classList.contains("expanded");
     const forceExpand = typeof options.forceExpand === "boolean" ? options.forceExpand : !isExpanded;
 
@@ -879,7 +884,11 @@ async function toggleDashItem(id, options = {}) {
             setTimeout(() => card.scrollIntoView({ behavior: "smooth", block: "start" }), 60);
         }
     } else {
-        syncBottomNavActive("nav-home");
+        if (typeof goHomeView === "function") {
+            goHomeView({ skipHistory: true });
+        } else {
+            syncBottomNavActive("nav-home");
+        }
         if (!options.fromRouter) syncRouteHashForTarget(id, false);
     }
 }
@@ -899,8 +908,20 @@ function toggleSection(id, triggerEl, options = {}) {
         if (options.fromRouter) {
             setTimeout(() => (el.parentElement || el).scrollIntoView({ behavior: "smooth", block: "start" }), 60);
         }
-    } else if (!options.fromRouter) {
-        syncRouteHashForTarget(id, false);
+    } else {
+        if (typeof getAppView === "function" && getAppView() === "tab" && typeof goHomeView === "function") {
+            const anyCardOpen = Boolean(document.querySelector(".dash-card.expanded"));
+            const anySecOpen = ["t1-content", "t2-content", "t3-content"].some(secId => {
+                const s = document.getElementById(secId);
+                return s && !s.classList.contains("collapsed");
+            });
+            if (!anyCardOpen && !anySecOpen) {
+                goHomeView();
+            }
+        }
+        if (!options.fromRouter) {
+            syncRouteHashForTarget(id, false);
+        }
     }
 }
 
