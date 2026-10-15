@@ -36,6 +36,16 @@ function generateReceiptCanvas(mode) {
         const goal = Math.max(100000, Number(monthlyGoalAmount) || 4500000);
         const pct = Math.round((latestMonthlyStatsCache.total / goal) * 100);
         lines.push({ label: "🎯 월 목표 달성률", value: `${pct}% (목표 ${(goal/10000).toFixed(0)}만 원)` });
+        if (typeof extractWorkLogTimeAndWageMetrics === "function" && typeof aggregateWorkTimeMetrics === "function") {
+            const wtMonth = aggregateWorkTimeMetrics(Object.values(adminWorkLogs || {}));
+            if (wtMonth.totalHours > 0) {
+                lines.push({ label: "⏱️ 총 작업시간", value: `${wtMonth.totalHours}H (일평균 ${wtMonth.days > 0 ? (wtMonth.totalHours / wtMonth.days).toFixed(1) : 0}H)` });
+                lines.push({ label: "☀️ 주간 시간 / 책정", value: `${wtMonth.dayHours}H · ${wtMonth.dayAmt.toLocaleString()}원` });
+                lines.push({ label: "🌙 야간 시간 / 책정", value: `${wtMonth.nightHours}H · ${wtMonth.nightAmt.toLocaleString()}원` });
+                lines.push({ label: "🗓️ 주말·공휴일 / 수당", value: `${wtMonth.weekendHours}H · ${wtMonth.weekendAmt.toLocaleString()}원` });
+                if ((wtMonth.extraAmt + wtMonth.skilledAmt) > 0) lines.push({ label: "🔧 기능공·기타 가산", value: `${(wtMonth.extraAmt + wtMonth.skilledAmt).toLocaleString()}원` });
+            }
+        }
         const sortedDates = Object.keys(adminWorkLogs || {}).sort().slice(-6);
         if (sortedDates.length > 0) {
             lines.push({ label: "── 최근 근무 내역 (최대 6건) ──", value: "" });
