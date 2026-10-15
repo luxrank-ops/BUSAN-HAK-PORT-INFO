@@ -125,3 +125,58 @@ test('월 단위 집계가 시간·금액·출근일수를 합산한다', () => 
     assert.equal(agg.totalPay, 252560);
     assert.equal(context.formatWorkHours(agg.totalHours), '21H');
 });
+
+const sumAmounts = wt => wt.dayAmt + wt.nightAmt + wt.weekendAmt + wt.skilledAmt + wt.extraAmt;
+
+test('재계산 메모는 임금 슬롯별 마지막 요약만 사용하고 더블오더는 보존한다', () => {
+    const wt = extract({ totalPay: 200000, memo: [
+        '총 12H (주간 10H / 야간 2H)',
+        '총 8H (주간 8H / 야간 0H)',
+        '[더블오더 · 임금 2 · B] 총 4H (주간 0H / 야간 4H)',
+        '[더블오더 · 임금 2 · B] 총 3H (주간 0H / 야간 3H)'
+    ].join('\n') });
+    assert.equal(wt.totalHours, 11);
+    assert.equal(wt.dayHours, 8);
+    assert.equal(wt.nightHours, 3);
+});
+
+test('공제·수기 수정·추정 기록의 책정액 합계는 실제 총액과 일치한다', () => {
+    for (const log of [
+        { totalPay: 80001, memo: '총 12H (주간 8H / 야간 4H / 주말·공휴일 12H)' },
+        { totalPay: 1000, memo: '[기능공] 주간 8시간' },
+        { date: '2026-01-05', totalPay: 80000, memo: '' },
+        { totalPay: 1, memo: '주간 8시간 야간 4시간' },
+        { totalPay: 500, memo: '' }
+    ]) {
+        const wt = extract(log);
+        assert.equal(sumAmounts(wt), log.totalPay);
+        for (const key of ['dayAmt', 'nightAmt', 'weekendAmt', 'skilledAmt', 'extraAmt']) {
+            assert.ok(Number.isInteger(wt[key]) && wt[key] >= 0, key);
+        }
+    }
+});
+
+test('명시적인 총액 0은 과거 임금 필드로 되살리지 않는다', () => {
+    const wt = extract({ totalPay: 0, wage1: 100000, memo: '주간 8시간' });
+    assert.equal(wt.totalPay, 0);
+    assert.equal(sumAmounts(wt), 0);
+    const legacy = extract({ wage1: 10000, wage2: 20000 });
+    assert.equal(legacy.totalPay, 30000);
+    assert.equal(sumAmounts(legacy), 30000);
+});
+
+test('분 단위 스케줄은 주야간 경계에서 정확히 나눈다', () => {
+    const wt = extract({ date: '2026-10-08', totalPay: 0,
+        memo: '① A · 입항 2026-10-08 16:30 → 출항 2026-10-08 18:00' });
+    assert.equal(wt.totalHours, 1.5);
+    assert.equal(wt.dayHours, 0.5);
+    assert.equal(wt.nightHours, 1);
+});
+
+test('인라인 및 지연 로드 모듈의 집계 함수는 동일하다', () => {
+    const moduleCode = readFileSync(new URL('../public/js/lazy-d3.js', import.meta.url), 'utf8');
+    for (const name of ['extractWorkLogTimeAndWageMetrics', 'aggregateWorkTimeMetrics']) {
+        const fn = extractFunction(name);
+        assert.ok(moduleCode.includes(fn), `${name} must stay in sync`);
+    }
+});

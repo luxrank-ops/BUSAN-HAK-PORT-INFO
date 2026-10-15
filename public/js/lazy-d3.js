@@ -47,14 +47,14 @@ function extractWorkLogTimeAndWageMetrics(log) {
     };
     const splitInterval = (startDt, hoursFloat) => {
         const out = { totalHours: 0, dayHours: 0, nightHours: 0, weekendHours: 0 };
-        const whole = Math.floor(Number(hoursFloat) || 0);
-        for (let i = 0; i < whole; i++) {
-            const slot = new Date(startDt.getTime() + i * 3600000);
+        const minutes = Math.max(0, Math.round((Number(hoursFloat) || 0) * 60));
+        for (let i = 0; i < minutes; i++) {
+            const slot = new Date(startDt.getTime() + i * 60000);
             const s = seasonFor(slot.getMonth() + 1);
             const h = slot.getHours();
-            if (h >= s.dayStart && h < s.dayEnd) out.dayHours += 1; else out.nightHours += 1;
-            if (isWknd(slot)) out.weekendHours += 1;
-            out.totalHours += 1;
+            if (h >= s.dayStart && h < s.dayEnd) out.dayHours += 1 / 60; else out.nightHours += 1 / 60;
+            if (isWknd(slot)) out.weekendHours += 1 / 60;
+            out.totalHours += 1 / 60;
         }
         return out;
     };
@@ -65,7 +65,10 @@ function extractWorkLogTimeAndWageMetrics(log) {
     try {
         if (typeof WAGE_HOURLY_BY_YEAR !== "undefined" && WAGE_HOURLY_BY_YEAR && WAGE_HOURLY_BY_YEAR[yearNum]) baseRate = WAGE_HOURLY_BY_YEAR[yearNum];
     } catch (e) {}
-    const totalPay = Number(d.totalPay) || ((Number(d.wage1) || 0) + (Number(d.wage2) || 0));
+    // Explicit zero is authoritative (e.g. an unpaid or cleared record).
+    const totalPay = d.totalPay != null && Number.isFinite(Number(d.totalPay))
+        ? Math.max(0, Math.round(Number(d.totalPay)))
+        : Math.max(0, Math.round((Number(d.wage1) || 0) + (Number(d.wage2) || 0)));
     const wage1 = Number(d.wage1) || 0;
     const wage2 = Number(d.wage2) || 0;
     const memo = String(d.memo || "");
@@ -91,10 +94,15 @@ function extractWorkLogTimeAndWageMetrics(log) {
         const calcRe = /총\s*(\d+(?:\.\d+)?)\s*H\s*\(\s*주간\s*(\d+(?:\.\d+)?)\s*H\s*\/\s*야간\s*(\d+(?:\.\d+)?)\s*H(?:\s*\/\s*주말·공휴일\s*(\d+(?:\.\d+)?)\s*H)?\s*\)/gi;
         let m = null;
         let found = null;
+        const slots = new Map();
         while ((m = calcRe.exec(memo)) !== null) {
             const part = { totalHours: parseFloat(m[1]) || 0, dayHours: parseFloat(m[2]) || 0, nightHours: parseFloat(m[3]) || 0, weekendHours: parseFloat(m[4]) || 0 };
-            found = found ? addTo(found, part) : part;
+            // Recalculations replace a wage slot; they are not additional shifts.
+            const line = memo.slice(memo.lastIndexOf("\n", m.index) + 1, m.index);
+            const slot = line.match(/더블오더\s*·\s*임금\s*([12])/);
+            slots.set(slot ? slot[1] : "1", part);
         }
+        slots.forEach(part => { found = found ? addTo(found, part) : { ...part }; });
         if (found && found.totalHours > 0) { acc = found; source = "calc"; }
     }
     // 2) 더블오더 선박 스케줄: ① 선박 · 입항 YYYY-MM-DD HH:MM → 출항 ... · XH
@@ -105,7 +113,7 @@ function extractWorkLogTimeAndWageMetrics(log) {
         while ((m = lineRe.exec(memo)) !== null) {
             const startDt = new Date(m[1] + "T" + m[2] + ":" + m[3] + ":00");
             const endDt = new Date(m[4] + "T" + m[5] + ":" + m[6] + ":00");
-            const hrs = Math.floor((endDt.getTime() - startDt.getTime()) / 3600000);
+            const hrs = (endDt.getTime() - startDt.getTime()) / 3600000;
             if (hrs > 0 && !isNaN(startDt.getTime())) {
                 const part = splitInterval(startDt, hrs);
                 found = found ? addTo(found, part) : part;
@@ -150,10 +158,18 @@ function extractWorkLogTimeAndWageMetrics(log) {
         }
         if (best.totalHours > 0) { acc = best; source = "estimate"; estimated = true; }
     }
-    if (!acc || acc.totalHours <= 0) return empty;
-    const dayAmt = Math.round(acc.dayHours * baseRate);
-    const nightAmt = Math.round(acc.nightHours * baseRate * 1.5);
-    const weekendAmt = Math.round(acc.weekendHours * baseRate * 0.5);
+    if (!acc || acc.totalHours <= 0) return { ...empty, extraAmt: totalPay };
+    // Allocate the recorded (possibly net) pay, not an uncapped theoretical gross.
+    const weights = [acc.dayHours * baseRate, acc.nightHours * baseRate * 1.5, acc.weekendHours * baseRate * 0.5];
+    const theoretical = weights.reduce((sum, value) => sum + value, 0);
+    const budget = Math.min(totalPay, Math.round(theoretical));
+    const scale = theoretical > 0 ? budget / theoretical : 0;
+    const amounts = weights.map(value => Math.floor(value * scale));
+    let remainder = budget - amounts.reduce((sum, value) => sum + value, 0);
+    weights.map((value, index) => ({ index, fraction: value * scale - amounts[index] }))
+        .sort((a, b) => b.fraction - a.fraction)
+        .forEach(({ index }) => { if (remainder > 0) { amounts[index]++; remainder--; } });
+    const [dayAmt, nightAmt, weekendAmt] = amounts;
     const residualAmt = Math.max(0, Math.round(totalPay - dayAmt - nightAmt - weekendAmt));
     const isSkilledLog = /기능공/.test(memo) || d.skilled === true || d.isSkilled === true;
     const skilledAmt = isSkilledLog
@@ -255,7 +271,7 @@ function renderMonthlyWorkTimeReport(data, year) {
         '</div>' +
         '<div style="margin-top:8px;"><div style="display:flex; height:12px; border-radius:6px; overflow:hidden; border:1px solid var(--border);"><div style="width:' + dayPct + '%; background:#f59e0b;"></div><div style="width:' + nightPct + '%; background:#2563eb;"></div></div>' +
         '<div style="display:flex; justify-content:space-between; font-size:0.7rem; font-weight:800; color:var(--text-sub); margin-top:3px;"><span>☀️ 주간 ' + dayPct + '%</span><span>🗓️ 주말·공휴일 비중 ' + wkndPct + '% (주·야간과 중복)</span><span>🌙 야간 ' + nightPct + '%</span></div></div>' +
-        '<div style="font-size:0.68rem; color:var(--text-sub); font-weight:700; margin-top:6px;">※ 야간은 1.5배, 주말·공휴일은 총액의 +50% 가산으로 책정했습니다. 주말 시간은 주·야간 시간과 겹치는 시간입니다.</div>' +
+        '<div style="font-size:0.68rem; color:var(--text-sub); font-weight:700; margin-top:6px;">※ 야간 1.5배·주말 기본시급의 +50% 비율로 배분하며, 책정 금액 합계는 기록된 총액에 맞춥니다. 주말 시간은 주·야간 시간과 겹치는 시간입니다.</div>' +
         '</div>';
 }
 
@@ -298,7 +314,7 @@ async function loadAndRenderYearlyD3Chart(year) {
                 if (d.workerId !== currentWorkerId || !d.date) return;
                 const mIdx = parseInt(d.date.split("-")[1], 10) - 1;
                 if (mIdx >= 0 && mIdx < 12) {
-                    const pay = Number(d.totalPay) || 0;
+                    const pay = extractWorkLogTimeAndWageMetrics(d).totalPay;
                     const w1 = Number(d.wage1) || 0;
                     const w2 = Number(d.wage2) || 0;
                     monthlyData[mIdx].totalPay += pay;
