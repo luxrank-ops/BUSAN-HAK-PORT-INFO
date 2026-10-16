@@ -2806,6 +2806,7 @@
                 <button type="button" class="ship-tag-chip" data-filter-tag="#손가락콘" onclick="toggleShipFilterTag('#손가락콘')">#손가락콘</button>
                 <button type="button" class="ship-tag-chip" data-filter-tag="#현대콘" onclick="toggleShipFilterTag('#현대콘')">#현대콘</button>
                 <button type="button" class="ship-tag-chip" data-filter-tag="#춘학 사랑해콘" onclick="toggleShipFilterTag('#춘학 사랑해콘')">#춘학 사랑해콘</button>
+                <button type="button" class="ship-tag-chip" data-filter-tag="#춘학사랑해" onclick="toggleShipFilterTag('#춘학사랑해')">#춘학사랑해</button>
                 <button type="button" class="ship-tag-chip" data-filter-tag="#브릿지주의" onclick="toggleShipFilterTag('#브릿지주의')">#브릿지주의</button>
                 <button type="button" class="ship-tag-chip" data-filter-tag="#라싱바무거움" onclick="toggleShipFilterTag('#라싱바무거움')">#라싱바무거움</button>
                 <button type="button" class="ship-tag-chip" data-filter-tag="#턴버클뻑뻑함" onclick="toggleShipFilterTag('#턴버클뻑뻑함')">#턴버클뻑뻑함</button>
@@ -2866,6 +2867,7 @@
                         <button type="button" class="ship-tag-chip" data-form-tag="#손가락콘" onclick="toggleShipFormTag('#손가락콘')">#손가락콘</button>
                         <button type="button" class="ship-tag-chip" data-form-tag="#현대콘" onclick="toggleShipFormTag('#현대콘')">#현대콘</button>
                         <button type="button" class="ship-tag-chip" data-form-tag="#춘학 사랑해콘" onclick="toggleShipFormTag('#춘학 사랑해콘')">#춘학 사랑해콘</button>
+                        <button type="button" class="ship-tag-chip" data-form-tag="#춘학사랑해" onclick="toggleShipFormTag('#춘학사랑해')">#춘학사랑해</button>
                         <button type="button" class="ship-tag-chip" data-form-tag="#브릿지주의" onclick="toggleShipFormTag('#브릿지주의')">#브릿지주의</button>
                         <button type="button" class="ship-tag-chip" data-form-tag="#라싱바무거움" onclick="toggleShipFormTag('#라싱바무거움')">#라싱바무거움</button>
                         <button type="button" class="ship-tag-chip" data-form-tag="#턴버클뻑뻑함" onclick="toggleShipFormTag('#턴버클뻑뻑함')">#턴버클뻑뻑함</button>
@@ -11113,10 +11115,14 @@ function extractShipTags(ship) {
     const text = `${getShipDisplayName(ship)} ${getShipMemoText(ship)} ${getShipLegacyOnshoreText(ship)}`;
     const known = [
         "#오토콘", "#수동콘",
-        "#외줄콘", "#더블콘", "#주먹콘", "#손가락콘", "#현대콘", "#춘학 사랑해콘",
+        "#외줄콘", "#더블콘", "#주먹콘", "#손가락콘", "#현대콘", "#춘학 사랑해콘", "#춘학사랑해",
         "#브릿지주의", "#라싱바무거움", "#턴버클뻑뻑함", "#통로협소"
     ];
-    return known.filter(t => text.includes(t) || text.includes(t.slice(1)) || (t === "#춘학 사랑해콘" && text.includes("춘학사랑해콘")));
+    return known.filter(t => {
+        // '#춘학사랑해'는 레거시 문구 '춘학사랑해콘'(기존 '#춘학 사랑해콘' 전용)과 이중 매칭되지 않게 제외
+        if (t === "#춘학사랑해") return (text.includes("#춘학사랑해") || text.includes("춘학사랑해")) && !text.includes("춘학사랑해콘");
+        return text.includes(t) || text.includes(t.slice(1)) || (t === "#춘학 사랑해콘" && text.includes("춘학사랑해콘"));
+    });
 }
 /* ------------------------------------------------------------------
    🚢 선박 도감 레거시(업데이트 이전 등록) 데이터 호환 헬퍼
@@ -13154,6 +13160,10 @@ function selectBestCalcSegment(...args) {
 </script>
 </body>
 </html>
+
+
+
+
 
 
 
