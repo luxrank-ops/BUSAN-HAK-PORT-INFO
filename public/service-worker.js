@@ -1,22 +1,16 @@
-const CACHE_VERSION = "busan-hak-port-v2027.4";
+const CACHE_VERSION = "busan-hak-port-v2027.5";
+// 실제로 화면에 로드되는 자산만 프리캐시합니다 (A-3).
+// index.html 은 인라인 스타일·스크립트를 직접 담고 있어 css/app.css 와 js/ 모듈은
+// 네트워크 요청이 발생하지 않습니다 → 매 설치마다 614KB 를 받던 낭비를 제거했습니다.
+// 아이콘 512px(509KB)는 매니페스트가 필요할 때 브라우저가 요청하고, 그때 아래
+// 정적 자산 캐시 규칙(cache-first + 백그라운드 갱신)이 자동으로 채웁니다.
 const STATIC_PRECACHE_ASSETS = [
   "/",
   "/index.html",
   "/manifest.json",
   "/favicon.ico",
   "/icon-192.png",
-  "/icon-512.png",
-  "/css/app.css?v=2027.3",
-  "/js/core.js?v=2027.3",
-  "/js/terminals.js?v=2027.3",
-  "/js/worklog.js?v=2027.3",
-  "/js/wage.js?v=2027.3",
-  "/js/community.js?v=2027.3",
-  "/js/app-init.js?v=2027.3",
-  "/js/lazy-guides.js?v=2027.1",
-  "/js/lazy-d3.js?v=2027.1",
-  "/js/lazy-ships.js?v=2027.1",
-  "/js/lazy-admin.js?v=2027.1"
+  "/js/notifications.js"
 ];
 
 self.addEventListener("install", (event) => {

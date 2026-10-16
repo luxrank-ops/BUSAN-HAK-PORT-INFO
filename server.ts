@@ -1,5 +1,6 @@
 import 'dotenv/config';
 import express from 'express';
+import compression from 'compression';
 import fs from 'fs/promises';
 import http from 'http';
 import https from 'https';
@@ -54,7 +55,13 @@ function initFirebaseAdmin(): boolean {
 
 initFirebaseAdmin();
 
-const hjncAgent = new https.Agent({ rejectUnauthorized: false, keepAlive: true, maxSockets: 16 });
+// 🔐 D-6: 터미널 사이트 인증서 검증을 기본 활성화합니다.
+// 특정 사이트에서만 불가피하게 예외가 필요하면 TERMINAL_TLS_INSECURE=1 로 명시적으로 켭니다.
+const TERMINAL_TLS_INSECURE = process.env.TERMINAL_TLS_INSECURE === '1';
+if (TERMINAL_TLS_INSECURE) {
+  console.warn('[보안 경고] TERMINAL_TLS_INSECURE=1 — 터미널 수집 요청의 TLS 인증서 검증이 해제됩니다.');
+}
+const hjncAgent = new https.Agent({ rejectUnauthorized: !TERMINAL_TLS_INSECURE, keepAlive: true, maxSockets: 16 });
 const httpKeepAliveAgent = new http.Agent({ keepAlive: true, maxSockets: 16 });
 
 export interface VesselScheduleItem {
@@ -1096,6 +1103,32 @@ if (process.env.NODE_ENV !== 'test') {
 }
 
 // --- Express 라우트 ---
+// ⚡ A-7: 텍스트 응답 gzip 압축 (index.html 820KB → 약 175KB)
+app.use(compression());
+
+// 🔐 D-6: API 는 자사 도메인에서만 호출하도록 허용 출처를 제한합니다.
+// (ALLOWED_ORIGINS 환경변수로 추가 지정 가능 — 쉼표 구분)
+const DEFAULT_ALLOWED_ORIGINS = [
+  'https://busan-hak-port-info.vercel.app',
+  'https://busan-hak-port.web.app',
+  'https://busan-hak-port.firebaseapp.com'
+];
+const ALLOWED_ORIGINS = [
+  ...DEFAULT_ALLOWED_ORIGINS,
+  ...String(process.env.ALLOWED_ORIGINS || '')
+    .split(',')
+    .map((v) => v.trim())
+    .filter(Boolean)
+];
+app.use('/api', (req, res, next) => {
+  const origin = req.headers.origin;
+  if (origin && ALLOWED_ORIGINS.includes(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+    res.setHeader('Vary', 'Origin');
+  }
+  next();
+});
+
 app.get('/api/config', (_req, res) => {
   res.json({
     ok: true,
@@ -1140,7 +1173,6 @@ app.get('/api/hjnc-schedule', async (req, res) => {
     }
 
     const result = await fetchTerminalScheduleVesselsWithMeta('hjnc', startDate, endDate);
-    res.setHeader('Access-Control-Allow-Origin', '*');
     res.json({
       ok: true,
       terminal: 'hjnc',
@@ -1176,7 +1208,6 @@ app.get('/api/terminal-schedule', async (req, res) => {
     }
 
     const result = await fetchTerminalScheduleVesselsWithMeta(terminal, startDate, endDate);
-    res.setHeader('Access-Control-Allow-Origin', '*');
     res.json({
       ok: true,
       terminal,

@@ -32,6 +32,8 @@ function extractLine(prefix) {
 
 const FUNCTIONS = [
     'renderHjncScheduledShipsUI', 'loadHjncScheduledShipsForDate',
+    // C-2: 스케줄 데이터 출처(실시간/저장본) 기준 시각 표기 헬퍼
+    'formatScheduleSourceLine',
     'getWorklogScheduleDate', 'setWorklogScheduleDateInput', 'openWorklogScheduleDatePicker',
     'onWorklogScheduleDateChange', 'shiftWorklogScheduleDate',
     'parseWorklogShipNames', 'normalizeWorklogShipKey', 'getWorklogPickedNames', 'refreshWorklogVesselList',
@@ -45,7 +47,8 @@ const DECLARATIONS = [
     'let worklogRenderedVessels = [];',
     'const worklogVesselMeta = new Map();',
     'const WORKLOG_DOUBLE_BLOCK_RE',
-    'const hjncScheduleMonthCache = {};'
+    'const hjncScheduleMonthCache = {};',
+    'const hjncScheduleSourceInfo = {};'
 ];
 
 const SCHEDULE = [
@@ -54,7 +57,7 @@ const SCHEDULE = [
     { VSL_NM: 'SHIP GAMMA', ATA: '2026-10-08 18:00', ATD: '2026-10-08 20:00', BERTH_NO: '3' }
 ];
 
-function setup({ logDate = '2026-10-08', shipName = '', memo = '' } = {}) {
+function setup({ logDate = '2026-10-08', shipName = '', memo = '', scheduleSource = null } = {}) {
     const elements = {};
     const make = (id, value = '') => (elements[id] = {
         id, value, innerText: '', innerHTML: '', textContent: '', dataset: {},
@@ -100,13 +103,49 @@ function setup({ logDate = '2026-10-08', shipName = '', memo = '' } = {}) {
     const decls = DECLARATIONS.map(extractLine).join('\n');
     const fns = FUNCTIONS.map(extractFunction).join('\n');
     // 앱과 같이 캐시는 스크립트 안의 const 객체이므로, 그 객체에 이번 달 스케줄을 넣는다.
-    vm.runInContext(`${decls}\n${fns}\nhjncScheduleMonthCache["hjnc_2026-10"] = ${JSON.stringify(SCHEDULE)};`, context);
+    // let/const 는 vm 컨텍스트의 어휘 선언이라 밖에서 못 건드린다 → 스크립트 안에서 채운다.
+    const sourceSeed = scheduleSource
+        ? `hjncScheduleSourceInfo["hjnc_2026-10"] = ${JSON.stringify(scheduleSource)};\n`
+        : '';
+    vm.runInContext(`${decls}\n${fns}\nhjncScheduleMonthCache["hjnc_2026-10"] = ${JSON.stringify(SCHEDULE)};\n${sourceSeed}`, context);
     return { context, elements, toasts, fetchCalls };
 }
 
 function renderDay(app, date = '2026-10-08') {
     app.context.renderHjncScheduledShipsUI(date, SCHEDULE, 'hjnc');
 }
+
+// C-2: 선석 스케줄 데이터 출처(실시간 / 저장본)를 화면에 기준 시각과 함께 표시한다.
+test('the schedule title states whether the data is live or a stored copy', () => {
+    const live = setup({ logDate: '2026-10-08', scheduleSource: { source: 'live', updatedAt: '2026-10-08T09:30:00.000Z' } });
+    renderDay(live);
+    assert.match(live.elements.hjncScheduleBoxTitle.innerText, /기준: 실시간 조회/);
+
+    const cached = setup({ logDate: '2026-10-08', scheduleSource: { source: 'cache', updatedAt: '2026-10-05T12:34:00.000Z' } });
+    renderDay(cached);
+    assert.match(cached.elements.hjncScheduleBoxTitle.innerText, /기준: 저장된 스케줄 \(\d{2}\/\d{2} \d{2}:\d{2} 저장\)/);
+
+    const unknown = setup({ logDate: '2026-10-08' });
+    renderDay(unknown);
+    assert.doesNotMatch(unknown.elements.hjncScheduleBoxTitle.innerText, /기준:/);
+});
+
+// B-1: 무음 실패 제거 — 스케줄 조회 실패는 콘솔 경고와 사용자 안내를 함께 남긴다.
+test('schedule failures are reported instead of being silently swallowed', () => {
+    assert.match(html, /function reportFailure\(scope, err, userMessage = ""\)/);
+    assert.match(html, /reportFailure\("실시간 선석 스케줄", e, "⚠️ 실시간 선석 정보를 불러오지 못했습니다\. 저장된 스케줄로 표시합니다\."\)/);
+    assert.match(html, /reportFailure\("실시간 기상", e, "⚠️ 부산항 실시간 기상 정보를 불러오지 못했습니다\."\)/);
+});
+
+// A-2: 무거운 SDK(d3·firebase-messaging)는 head 에서 즉시 받지 않고 필요할 때 지연 로드한다.
+test('heavy third-party SDKs are lazy loaded instead of blocking the first paint', () => {
+    assert.doesNotMatch(html, /<script src="https:\/\/cdn\.jsdelivr\.net\/npm\/d3@7\/dist\/d3\.min\.js"><\/script>/);
+    assert.doesNotMatch(html, /<script src="https:\/\/www\.gstatic\.com\/firebasejs\/8\.10\.1\/firebase-messaging\.js"><\/script>/);
+    assert.match(html, /function ensureD3LibraryLoaded\(\)/);
+    assert.match(html, /function ensureFirebaseMessagingLoaded\(\)/);
+    assert.match(html, /data-lazy-messaging="1"/);
+    assert.match(html, /const d3Ready = typeof ensureD3LibraryLoaded === "function" \? await ensureD3LibraryLoaded\(\) : null;/);
+});
 
 test('the schedule date is a calendar input that is separate from the work-log date', () => {
     assert.match(html, /id="worklogScheduleDatePicker"[\s\S]*?type="date"|type="date"[\s\S]*?id="worklogScheduleDatePicker"/);

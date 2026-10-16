@@ -47,22 +47,33 @@ function toggleNotificationPanel() {
     if (panel.style.display === 'none') {
         panel.style.display = 'block';
         markAllNotisAsRead();
+        // ⚡ 지연 로드(A-2): 알림 패널을 여는 시점에 메신저 SDK를 준비합니다.
+        if (typeof initMessagingPush === 'function') initMessagingPush();
     } else {
         panel.style.display = 'none';
     }
 }
 
-function initNotifications(userId) {
-    if (!userId) return;
+async function initMessagingPush(userId) {
+    const targetUser = userId || (typeof currentWorkerId !== 'undefined' ? currentWorkerId : null);
+    if (!targetUser) return;
 
-    // 1. FCM Push 권한 요청 및 토큰 발급
-    if (typeof window !== 'undefined' && 'Notification' in window && typeof firebase !== 'undefined' && firebase.messaging) {
-        try {
-            const messaging = firebase.messaging();
-            Notification.requestPermission().then((permission) => {
+    // ⚡ 지연 로드(A-2): 메신저 SDK가 아직 없으면 이 시점에 내려받습니다.
+    if (typeof ensureFirebaseMessagingLoaded === 'function') {
+        const sdkReady = await ensureFirebaseMessagingLoaded();
+        if (!sdkReady) return;
+    }
+    if (typeof window === 'undefined' || !('Notification' in window) || typeof firebase === 'undefined' || !firebase.messaging) return;
+
+    try {
+        const messaging = firebase.messaging();
+        const permissionPromise = (Notification.permission === 'granted')
+            ? Promise.resolve('granted')
+            : Notification.requestPermission();
+        permissionPromise.then((permission) => {
                 if (permission === 'granted') {
                     fetch('/api/config')
-                        .then(res => res.json())
+                        .then(res => (res.ok && (res.headers.get('content-type') || '').includes('application/json')) ? res.json() : null)
                         .then(config => {
                             const getTokenOptions = {};
                             if (config && config.vapidKey) getTokenOptions.vapidKey = config.vapidKey;
@@ -70,7 +81,7 @@ function initNotifications(userId) {
                             messaging.getToken(getTokenOptions)
                                 .then((currentToken) => {
                                     if (currentToken && typeof db !== 'undefined' && db && db.collection) {
-                                        db.collection('user_profiles').doc(userId).set({
+                                        db.collection('user_profiles').doc(targetUser).set({
                                             fcmToken: currentToken,
                                             updatedAt: firebase.firestore.FieldValue.serverTimestamp()
                                         }, { merge: true });
@@ -89,10 +100,13 @@ function initNotifications(userId) {
                     showToast(msg);
                 }
             });
-        } catch (err) {
-            console.warn('FCM Push 초기화 건너뜀:', err);
-        }
+    } catch (err) {
+        console.warn('FCM Push 초기화 건너뜀:', err);
     }
+}
+
+function initNotifications(userId) {
+    if (!userId) return;
 
     // 2. Firestore In-App Notification 리스너 등록
     if (typeof db === 'undefined' || !db || !db.collection) return;
@@ -172,5 +186,6 @@ function markAllNotisAsRead() {
 if (typeof window !== 'undefined') {
     window.toggleNotificationPanel = toggleNotificationPanel;
     window.initNotifications = initNotifications;
+    window.initMessagingPush = initMessagingPush;
     window.markAllNotisAsRead = markAllNotisAsRead;
 }

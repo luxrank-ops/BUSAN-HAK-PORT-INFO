@@ -22,8 +22,7 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-storage.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-messaging.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"></script>
+    <!-- ⚡ 지연 로드(A-2): FCM 메신저 SDK는 🔔 알림 최초 터치 시, d3.js는 연간 차트 진입 시 내려받습니다. -->
     <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6024353303588422" crossorigin="anonymous"></script>
 
     <link rel="icon" href="./favicon.ico">
@@ -2212,7 +2211,7 @@
         </div>
     </div>
     <h1 role="button" tabindex="0" onclick="openVisitorStats()" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openVisitorStats();}" style="cursor:pointer;" title="관리자 방문 통계">BUSAN HAK PORT</h1>
-    <button class="noti-toggle tap-effect" onclick="if(typeof toggleNotificationPanel==='function')toggleNotificationPanel()" style="position:relative; margin-right:8px; font-size:1.2rem;">
+    <button class="noti-toggle tap-effect" data-lazy-messaging="1" onclick="if(typeof toggleNotificationPanel==='function')toggleNotificationPanel()" style="position:relative; margin-right:8px; font-size:1.2rem;">
         🔔
         <span id="notiBadge" style="display:none; position:absolute; top:-4px; right:-4px; background:red; color:white; border-radius:50%; padding:2px 6px; font-size:0.7rem; font-weight:bold;">0</span>
     </button>
@@ -3828,6 +3827,82 @@
 const firebaseConfig = { apiKey: "AIzaSyBWFZr9TE9yybZJCJjEXSsv1YCpGkVb0kA", authDomain: "busan-hak-port.firebaseapp.com", projectId: "busan-hak-port", storageBucket: "busan-hak-port.firebasestorage.app", messagingSenderId: "616469111502", appId: "1:616469111502:web:6f3c94b15e444e04c7669f", measurementId: "G-QQ728TDFJ2" };
 if (!firebase.apps.length) { firebase.initializeApp(firebaseConfig); }
 const db = firebase.firestore(); const storage = firebase.storage();
+
+/* ══════════════════════════════════════════════════════════════════════
+   Phase 0 개선 헬퍼 (2026-10-16) — 화면 디자인 변경 없음
+   · reportFailure        : 조용히 삼켜지던 실패를 콘솔+기존 토스트로 알림
+   · formatScheduleSource : 선석 스케줄이 실시간인지 저장본인지 기준 시각 표기
+   · ensureFirebaseMessagingLoaded / ensureD3LibraryLoaded : 무거운 SDK 지연 로드
+   ══════════════════════════════════════════════════════════════════════ */
+let isScheduleFailureReported = false;
+
+function reportFailure(scope, err, userMessage = "") {
+    try { console.warn(`[${scope}] 처리 실패:`, err); } catch (e) {}
+    if (userMessage && typeof showToast === "function") showToast(userMessage);
+}
+
+function formatScheduleSourceLine(info) {
+    if (!info) return "";
+    const pad = n => String(n).padStart(2, "0");
+    if (info.source === "live") {
+        const d = info.updatedAt ? new Date(info.updatedAt) : new Date();
+        return `\n기준: 실시간 조회 ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    }
+    if (!info.updatedAt) return "\n기준: 저장된 스케줄 (갱신 시각 미상)";
+    const d = new Date(info.updatedAt);
+    if (!d || isNaN(d.getTime())) return "\n기준: 저장된 스케줄";
+    return `\n기준: 저장된 스케줄 (${pad(d.getMonth() + 1)}/${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())} 저장)`;
+}
+
+let __d3SdkPromise = null;
+function ensureD3LibraryLoaded() {
+    if (typeof window.d3 !== "undefined") return Promise.resolve(window.d3);
+    if (__d3SdkPromise) return __d3SdkPromise;
+    __d3SdkPromise = new Promise((resolve) => {
+        const script = document.createElement("script");
+        script.src = "https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js";
+        script.async = true;
+        script.onload = () => resolve(window.d3 || true);
+        script.onerror = () => { __d3SdkPromise = null; resolve(null); };
+        document.head.appendChild(script);
+    });
+    return __d3SdkPromise;
+}
+
+let __fcmSdkPromise = null;
+function ensureFirebaseMessagingLoaded() {
+    if (window.firebase && firebase.messaging) return Promise.resolve(true);
+    if (__fcmSdkPromise) return __fcmSdkPromise;
+    __fcmSdkPromise = new Promise((resolve) => {
+        const script = document.createElement("script");
+        script.src = "https://www.gstatic.com/firebasejs/8.10.1/firebase-messaging.js";
+        script.async = true;
+        script.onload = () => resolve(true);
+        script.onerror = () => { __fcmSdkPromise = null; resolve(false); };
+        document.head.appendChild(script);
+    });
+    return __fcmSdkPromise;
+}
+
+// 🔔 알림 버튼 최초 터치: 사용자 제스처 안에서 권한을 묻고, 그 뒤 SDK를 받아 원래 동작을 실행합니다.
+let __fcmGatePassed = false;
+document.addEventListener("click", async (ev) => {
+    const target = ev.target;
+    const trigger = target && target.closest ? target.closest("[data-lazy-messaging]") : null;
+    if (!trigger) return;
+    if (__fcmGatePassed || (window.firebase && firebase.messaging)) return;
+    ev.preventDefault();
+    ev.stopPropagation();
+    try {
+        if ("Notification" in window && Notification.permission === "default" && typeof Notification.requestPermission === "function") {
+            Notification.requestPermission().catch(() => {});
+        }
+    } catch (e) {}
+    const loaded = await ensureFirebaseMessagingLoaded();
+    __fcmGatePassed = true;
+    if (!loaded) reportFailure("알림 SDK", new Error("firebase-messaging 로드 실패"), "⚠️ 알림 기능을 준비하지 못했습니다. 네트워크 상태를 확인해 주세요.");
+    trigger.click();
+}, true);
 const auth = typeof firebase.auth === "function" ? firebase.auth() : null;
 db.enablePersistence({ synchronizeTabs: true }).catch(err => { console.warn("Persistence Error:", err.code); });
 
@@ -7020,7 +7095,8 @@ function renderShipFormScheduledShipsUI(dateStr, allVessels, terminalId = select
         uniqueMatched.push(v);
     });
 
-    titleEl.innerText = `⚓ ${dateStr} ${meta.label} 입항·작업 선박 (${uniqueMatched.length}척)`;
+    const sourceLine = formatScheduleSourceLine(hjncScheduleSourceInfo[`${terminalId}_${dateStr.slice(0, 7)}`]);
+    titleEl.innerText = `⚓ ${dateStr} ${meta.label} 입항·작업 선박 (${uniqueMatched.length}척)${sourceLine}`;
 
     if (uniqueMatched.length === 0) {
         if (!meta.live) {
@@ -7134,6 +7210,8 @@ function isVesselActiveOnDate(vessel, dateStr) {
     }
     return false;
 }
+/* 🕒 선석 스케줄 데이터 출처 기록 (C-2): 실시간 조회인지 저장본인지 화면에 함께 표시 */
+const hjncScheduleSourceInfo = {};
 function getScheduleDocKey(terminalId, yearMonth) {
     return terminalId === "hjnc" ? yearMonth : `${terminalId}_${yearMonth}`;
 }
@@ -7166,8 +7244,11 @@ async function fetchHjncScheduleForMonth(yearMonth, forceRefresh = false, termin
                 } else if (Array.isArray(data.vessels)) {
                     vessels = data.vessels;
                 }
+                hjncScheduleSourceInfo[cacheKey] = { source: "cache", updatedAt: (typeof data.updatedAt === "string" ? data.updatedAt : null) };
             }
-        } catch (e) {}
+        } catch (e) {
+            reportFailure("저장된 선석 스케줄", e);
+        }
     }
 
     // 백그라운드 또는 강제 새로고침 시 실시간 /api/terminal-schedule 동기화
@@ -7196,17 +7277,24 @@ async function fetchHjncScheduleForMonth(yearMonth, forceRefresh = false, termin
                         ATD: v.ATD || ""
                     }));
                     hjncScheduleMonthCache[cacheKey] = slim;
+                    hjncScheduleSourceInfo[cacheKey] = { source: "live", updatedAt: new Date().toISOString() };
                     db.collection("hjnc_schedules").doc(docKey).set({
                         terminal: tid,
                         yearMonth,
                         vesselsJson: JSON.stringify(slim),
                         count: slim.length,
                         updatedAt: new Date().toISOString()
-                    }, { merge: true }).catch(() => {});
+                    }, { merge: true }).catch((e) => { reportFailure("선석 스케줄 저장", e); });
+                    isScheduleFailureReported = false;
                     return slim;
                 }
             }
-        } catch (e) {}
+        } catch (e) {
+            if (!isScheduleFailureReported) {
+                isScheduleFailureReported = true;
+                reportFailure("실시간 선석 스케줄", e, "⚠️ 실시간 선석 정보를 불러오지 못했습니다. 저장된 스케줄로 표시합니다.");
+            }
+        }
         return null;
     };
 
@@ -7249,7 +7337,9 @@ async function fetchHjncScheduleForMonth(yearMonth, forceRefresh = false, termin
             }
             if (vessels.length > 0) hjncScheduleMonthCache[cacheKey] = vessels;
         }
-    } catch (e) {}
+    } catch (e) {
+        reportFailure("선석 스케줄 폴백", e);
+    }
 
     return vessels;
 }
@@ -7283,7 +7373,8 @@ function renderHjncScheduledShipsUI(dateStr, allVessels, terminalId = selectedSc
         uniqueMatched.push(v);
     });
 
-    titleEl.innerText = `⚓ ${dateStr} ${meta.label}\n입항·작업 선박 (${uniqueMatched.length}척) — 터치: 선택·해제 (최대 2척 더블오더)`;
+    const sourceLine = formatScheduleSourceLine(hjncScheduleSourceInfo[`${terminalId}_${dateStr.slice(0, 7)}`]);
+    titleEl.innerText = `⚓ ${dateStr} ${meta.label}\n입항·작업 선박 (${uniqueMatched.length}척) — 터치: 선택·해제 (최대 2척 더블오더)${sourceLine}`;
 
     if (uniqueMatched.length === 0) {
         if (!meta.live) {
@@ -7885,7 +7976,9 @@ async function fetchBusanPortLiveWeather(force = false) {
         }
         if (force) showToast("🌬️ 부산항 신항·북항 실시간 기상 정보가 갱신되었습니다.");
     } catch (e) {
-        console.warn("실시간 기상 조회 오류:", e);
+        const weatherTimeEl = document.getElementById("weatherUpdatedTimeText");
+        if (weatherTimeEl) weatherTimeEl.innerText = "⚠️ 실시간 기상 조회에 실패했습니다. 잠시 후 다시 시도해 주세요.";
+        reportFailure("실시간 기상", e, "⚠️ 부산항 실시간 기상 정보를 불러오지 못했습니다.");
     }
 }
 function generateReceiptCanvas(mode) {
@@ -8463,6 +8556,19 @@ async function loadAndRenderYearlyD3Chart(year) {
     const titleEl = document.getElementById("d3ChartYearTitle");
     if (!container) return;
     if (titleEl) titleEl.innerText = `📊 ${year}년 월별 총수입 · 근로일수 그래프 & 연간 보고서`;
+
+    // ⚡ d3.js 지연 로드(A-2): 차트를 처음 그릴 때만 내려받습니다.
+    if (typeof window.d3 === "undefined") {
+        if (!container.innerHTML.trim()) {
+            container.innerHTML = `<div style="padding:18px; text-align:center; font-size:0.8rem; font-weight:800; color:var(--text-sub);">📊 그래프를 준비하는 중입니다...</div>`;
+        }
+        const d3Ready = typeof ensureD3LibraryLoaded === "function" ? await ensureD3LibraryLoaded() : null;
+        if (!d3Ready) {
+            container.innerHTML = `<div style="padding:18px; text-align:center; font-size:0.8rem; font-weight:800; color:var(--text-sub);">⚠️ 그래프 라이브러리를 불러오지 못했습니다. 네트워크 확인 후 다시 시도해 주세요.</div>`;
+            reportFailure("d3 그래프 라이브러리", new Error("d3 로드 실패"));
+            return;
+        }
+    }
 
     const monthlyData = Array.from({ length: 12 }, (_, idx) => ({
         month: idx + 1,

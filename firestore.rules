@@ -32,6 +32,11 @@ service cloud.firestore {
       return val is string && val.size() == 64 && val.matches('^[a-fA-F0-9]{64}$');
     }
 
+    // 앱이 자동 등록하는 업데이트 공지 문서 ID (화면 코드와 반드시 일치해야 합니다)
+    function isAutoNoticeId(id) {
+      return id == 'update_2026_10_04_v2027' || id == 'update_2026_10_10_hak_port_ver2';
+    }
+
     function isAdmin() {
       return isSignedIn() && (
         request.auth.uid in ['admin_luxrank', 'luxrank_admin_uid'] ||
@@ -153,8 +158,8 @@ service cloud.firestore {
 
     match /notices/{noticeId} {
       allow get, list: if isSignedIn();
-      allow create: if isSignedIn() && (isAdmin() || noticeId == 'update_2026_10_04_v2027');
-      allow update: if isSignedIn() && (isAdmin() || noticeId == 'update_2026_10_04_v2027' || isValidViewCountIncrement());
+      allow create: if isSignedIn() && (isAdmin() || isAutoNoticeId(noticeId));
+      allow update: if isSignedIn() && (isAdmin() || isAutoNoticeId(noticeId) || isValidViewCountIncrement());
       allow delete: if isAdmin();
     }
 
