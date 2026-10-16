@@ -1,4 +1,3 @@
-// Phase 3 Dynamic Import Module: Full Ship Directory Table & Detail View
 /**
  * 파이어베이스 'ships' 컬렉션에서 개수 제한 없이 모든 데이터를 가져와 
  * 게시판(테이블) 형태로 렌더링하고 검색 필터링을 수행하는 함수
@@ -57,9 +56,11 @@ async function loadAndSearchAllShips(searchKeyword = "") {
             const sTags = typeof extractShipTags === "function" ? extractShipTags(item) : (Array.isArray(item.tags) ? item.tags : []);
             const sDiff = Number(item.difficulty) || 0;
             if (keyword !== "") {
-                const shipName = (item.shipName || item.name || item.vesselName || item.title || "").toLowerCase();
-                const shipCode = (item.code || item.number || "").toLowerCase();
-                const shipMemo = (item.onboardFeat || item.memo || item.info || "").toLowerCase();
+                const shipName = String(item.shipName || item.name || item.vesselName || item.title || "").toLowerCase();
+                const shipCode = String(item.code || item.number || "").toLowerCase();
+                const shipMemo = (typeof getShipMemoText === "function"
+                    ? `${getShipMemoText(item)} ${getShipLegacyOnshoreText(item)}`
+                    : String(item.onboardFeat || item.memo || item.info || "")).toLowerCase();
                 const tagStr = sTags.join(" ").toLowerCase();
                 const compactTagStr = sTags.map(t => t.replace(/\s+/g, '')).join(" ").toLowerCase();
                 if (!shipName.includes(keyword) && !shipCode.includes(keyword) && !shipMemo.includes(keyword) && !tagStr.includes(keyword) && !compactTagStr.includes(keyword)) {
@@ -99,7 +100,10 @@ async function loadAndSearchAllShips(searchKeyword = "") {
 
         shipList.forEach((item, index) => {
             const title = escapeHtml(item.shipName || item.name || item.vesselName || item.title || `선박 정보 #${index + 1}`);
-            const subInfo = escapeHtml((item.onboardFeat || item.memo || item.schedule || item.info || "상세 내용 보기").replace(/\s+/g, " ").trim());
+            const memoSource = typeof getShipMemoText === "function"
+                ? (getShipMemoText(item) || getShipLegacyOnshoreText(item))
+                : (item.onboardFeat || item.memo || item.schedule || item.info || "");
+            const subInfo = escapeHtml(String(memoSource || "상세 내용 보기").replace(/\s+/g, " ").trim());
             const diff = Number(item.difficulty) || 0;
             const starHtml = diff > 0 ? `<span class="ship-badge-star" style="padding:0px 4px; font-size:0.66rem; margin-left:2px;">${"★".repeat(diff)}${"☆".repeat(5 - diff)}</span>` : "";
             const sTags = typeof extractShipTags === "function" ? extractShipTags(item) : (Array.isArray(item.tags) ? item.tags : []);
@@ -111,6 +115,7 @@ async function loadAndSearchAllShips(searchKeyword = "") {
                 const dt = item.timestamp.toDate();
                 dateStr = `${String(dt.getFullYear()).slice(2)}/${String(dt.getMonth() + 1).padStart(2, '0')}/${String(dt.getDate()).padStart(2, '0')}`;
             }
+            const viewCnt = Math.max(0, Number(item.views) || 0);
 
             boardHTML += `
                 <tr onclick="openShipDetailView('${item.id}')">
@@ -120,6 +125,7 @@ async function loadAndSearchAllShips(searchKeyword = "") {
                             <span style="font-weight:900; color:var(--text-main); font-size:0.83rem;">🚢 ${title}</span>
                             ${starHtml}
                             ${tagsHtml}
+                            <span id="view-full-s-${item.id}" class="view-count-pill" style="font-size:0.64rem; padding:0px 5px; margin-left:2px;">👁️ ${viewCnt.toLocaleString()}</span>
                             ${dateStr ? `<span style="font-size:0.68rem; color:var(--text-sub); font-weight:700; margin-left:auto;">${dateStr}</span>` : ""}
                         </div>
                         <div style="font-size:0.74rem; color:var(--text-sub); margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:56vw;">${subInfo}</div>
@@ -162,6 +168,9 @@ function escapeHtml(str) {
 
 async function openShipDetailView(docId) {
     try {
+        if (typeof incrementBoardItemViewCount === "function") {
+            incrementBoardItemViewCount("ships", docId, "s");
+        }
         let data = Array.isArray(allShipsData) ? allShipsData.find(s => s.id === docId) : null;
         if (!data) {
             const db = firebase.firestore();
@@ -172,12 +181,16 @@ async function openShipDetailView(docId) {
             }
             data = docSnap.data();
         }
-        const name = data.shipName || data.name || "선박명 없음";
+        const hasShipHelpers = typeof getShipMemoText === "function";
+        const name = (hasShipHelpers ? getShipDisplayName(data) : (data.shipName || data.name)) || "선박명 없음";
         const diff = Number(data.difficulty) || 0;
         const diffText = diff > 0 ? `${"★".repeat(diff)}${"☆".repeat(5 - diff)} (${diff}점)` : "미지정";
         const sTags = typeof extractShipTags === "function" ? extractShipTags(data) : (Array.isArray(data.tags) ? data.tags : []);
-        const feat = data.onboardFeat || data.memo || "내용 없음";
-        let detailText = `🚢 [선박 상세 정보]\n\n• 선박명: ${name}\n• 작업 난이도: ${diffText}\n• 장비/특징 태그: ${sTags.length ? sTags.join(" ") : "없음"}\n\n📝 [작업 내용 및 특이사항]\n${feat}`;
+        const feat = (hasShipHelpers ? getShipMemoText(data) : (data.onboardFeat || data.memo)) || "내용 없음";
+        const onshoreFeat = hasShipHelpers ? getShipLegacyOnshoreText(data) : "";
+        const views = Math.max(1, Number(data.views) || 1);
+        let detailText = `🚢 [선박 상세 정보]\n\n• 선박명: ${name}\n• 작업 난이도: ${diffText}\n• 장비/특징 태그: ${sTags.length ? sTags.join(" ") : "없음"}\n• 조회수: ${views.toLocaleString()}회\n\n📝 [작업 내용 및 특이사항]\n${feat}`;
+        if (onshoreFeat) detailText += `\n\n🚛 [육상 작업 특징]\n${onshoreFeat}`;
         alert(detailText);
 
     } catch (error) {
@@ -185,13 +198,3 @@ async function openShipDetailView(docId) {
         alert("상세 내용을 불러오는 데 실패했습니다.");
     }
 }
-
-export {
-  loadAndSearchAllShips,
-  escapeHtml,
-  openShipDetailView
-};
-
-window.loadAndSearchAllShips = loadAndSearchAllShips;
-window.escapeHtml = escapeHtml;
-window.openShipDetailView = openShipDetailView;

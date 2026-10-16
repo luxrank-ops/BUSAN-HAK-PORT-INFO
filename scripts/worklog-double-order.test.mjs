@@ -4,28 +4,39 @@ import assert from 'node:assert/strict';
 import vm from 'node:vm';
 
 // 근무일지 입·출항 선박 달력 조회 · 더블오더(2척) 선택 · 작업 내용 자동 입력 검증.
-// 실제 앱 코드(public/index.html 인라인 스크립트)에서 함수를 꺼내 가짜 DOM 위에서 실행한다.
+// 실제 앱 코드에서 함수를 꺼내 가짜 DOM 위에서 실행한다.
 const html = readFileSync(new URL('../public/index.html', import.meta.url), 'utf8');
+// A-1(인라인 분리): 인라인 스크립트가 app-main.js 로 이동했습니다.
+const appMainCode = readFileSync(new URL('../public/js/app-main.js', import.meta.url), 'utf8');
 
 function extractFunction(name) {
     // async 선언을 먼저 찾아야 `function name(` 이 `async function name(` 안에서 잘못 잡히지 않는다.
-    let marker = html.indexOf(`async function ${name}(`);
-    if (marker < 0) marker = html.indexOf(`function ${name}(`);
+    let marker = appMainCode.indexOf(`async function ${name}(`);
+    if (marker < 0) marker = appMainCode.indexOf(`function ${name}(`);
     if (marker < 0) throw new Error(`function not found: ${name}`);
-    const open = html.indexOf('{', marker);
+    const parenStart = appMainCode.indexOf('(', marker);
+    let parenDepth = 0, bodyStart = -1;
+    for (let i = parenStart; i < appMainCode.length; i++) {
+        if (appMainCode[i] === '(') parenDepth++;
+        else if (appMainCode[i] === ')') {
+            parenDepth--;
+            if (parenDepth === 0) { bodyStart = appMainCode.indexOf('{', i); break; }
+        }
+    }
+    if (bodyStart < 0) throw new Error(`could not find function body: ${name}`);
     let depth = 0;
-    for (let i = open; i < html.length; i++) {
-        if (html[i] === '{') depth++;
-        else if (html[i] === '}') {
+    for (let i = bodyStart; i < appMainCode.length; i++) {
+        if (appMainCode[i] === '{') depth++;
+        else if (appMainCode[i] === '}') {
             depth--;
-            if (depth === 0) return html.slice(marker, i + 1);
+            if (depth === 0) return appMainCode.slice(marker, i + 1);
         }
     }
     throw new Error(`unterminated function: ${name}`);
 }
 
 function extractLine(prefix) {
-    const line = html.split('\n').find(l => l.startsWith(prefix));
+    const line = appMainCode.split('\n').find(l => l.startsWith(prefix));
     if (!line) throw new Error(`line not found: ${prefix}`);
     return line;
 }
@@ -132,19 +143,19 @@ test('the schedule title states whether the data is live or a stored copy', () =
 
 // B-1: 무음 실패 제거 — 스케줄 조회 실패는 콘솔 경고와 사용자 안내를 함께 남긴다.
 test('schedule failures are reported instead of being silently swallowed', () => {
-    assert.match(html, /function reportFailure\(scope, err, userMessage = ""\)/);
-    assert.match(html, /reportFailure\("실시간 선석 스케줄", e, "⚠️ 실시간 선석 정보를 불러오지 못했습니다\. 저장된 스케줄로 표시합니다\."\)/);
-    assert.match(html, /reportFailure\("실시간 기상", e, "⚠️ 부산항 실시간 기상 정보를 불러오지 못했습니다\."\)/);
+    assert.match(appMainCode, /function reportFailure\(scope, err, userMessage = ""\)/);
+    assert.match(appMainCode, /reportFailure\("실시간 선석 스케줄", e, "⚠️ 실시간 선석 정보를 불러오지 못했습니다\. 저장된 스케줄로 표시합니다\."\)/);
+    assert.match(appMainCode, /reportFailure\("실시간 기상", e, "⚠️ 부산항 실시간 기상 정보를 불러오지 못했습니다\."\)/);
 });
 
 // A-2: 무거운 SDK(d3·firebase-messaging)는 head 에서 즉시 받지 않고 필요할 때 지연 로드한다.
 test('heavy third-party SDKs are lazy loaded instead of blocking the first paint', () => {
     assert.doesNotMatch(html, /<script src="https:\/\/cdn\.jsdelivr\.net\/npm\/d3@7\/dist\/d3\.min\.js"><\/script>/);
     assert.doesNotMatch(html, /<script src="https:\/\/www\.gstatic\.com\/firebasejs\/8\.10\.1\/firebase-messaging\.js"><\/script>/);
-    assert.match(html, /function ensureD3LibraryLoaded\(\)/);
-    assert.match(html, /function ensureFirebaseMessagingLoaded\(\)/);
+    assert.match(appMainCode, /function ensureD3LibraryLoaded\(\)/);
+    assert.match(appMainCode, /function ensureFirebaseMessagingLoaded\(\)/);
     assert.match(html, /data-lazy-messaging="1"/);
-    assert.match(html, /const d3Ready = typeof ensureD3LibraryLoaded === "function" \? await ensureD3LibraryLoaded\(\) : null;/);
+    assert.match(appMainCode, /const d3Ready = typeof ensureD3LibraryLoaded === "function" \? await ensureD3LibraryLoaded\(\) : null;/);
 });
 
 test('the schedule date is a calendar input that is separate from the work-log date', () => {
@@ -271,7 +282,8 @@ test('opening a work-log day moves the calendar to that day and keeps the saved 
 
 test('the work-log box renders the calendar, the double-order status and the toggle handlers', () => {
     assert.match(html, /<div id="worklogDoubleOrderStatus"/);
-    assert.match(html, /onclick="toggleWorklogVesselPick\(\$\{index\}\)"/);
+    // A-1(인라인 분리): 동적 생성 마크업은 app-main.js 에 있습니다.
+    assert.match(appMainCode, /onclick="toggleWorklogVesselPick\(\$\{index\}\)"/);
     assert.match(html, /placeholder="작업 선박명 \(2척 선택 시 더블오더\)" onchange="onWorklogShipNameEdited\(\)"/);
 });
 

@@ -8,33 +8,49 @@ import vm from 'node:vm';
 // - 원본에서 기능 클릭 → 방안 A 탭 뷰로 전환
 // - 하단 5탭 내비게이션 / 임금·일지 서브탭 / 탭 간 기능 점프 / 원본 홈 복귀
 const html = readFileSync(new URL('../public/index.html', import.meta.url), 'utf8');
+// A-1(인라인 분리): 함수 코드가 외부 JS 파일로 이동했습니다.
+const appMainCode = readFileSync(new URL('../public/js/app-main.js', import.meta.url), 'utf8');
+const tabControllerCode = readFileSync(new URL('../public/js/tab-controller.js', import.meta.url), 'utf8');
+// 검색 대상: app-main.js + tab-controller.js (탭 뷰 함수·상수는 tab-controller 에 있음)
+const combinedJsCode = appMainCode + '\n' + tabControllerCode;
 
 function extractFunction(name) {
-    let marker = html.indexOf(`async function ${name}(`);
-    if (marker < 0) marker = html.indexOf(`function ${name}(`);
+    let marker = combinedJsCode.indexOf(`async function ${name}(`);
+    if (marker < 0) marker = combinedJsCode.indexOf(`function ${name}(`);
     if (marker < 0) throw new Error(`function not found: ${name}`);
-    const open = html.indexOf('{', marker);
+    // Skip parameter list (may contain default-value braces)
+    const parenStart = combinedJsCode.indexOf('(', marker);
+    let parenDepth = 0, bodyStart = -1;
+    for (let i = parenStart; i < combinedJsCode.length; i++) {
+        if (combinedJsCode[i] === '(') parenDepth++;
+        else if (combinedJsCode[i] === ')') {
+            parenDepth--;
+            if (parenDepth === 0) { bodyStart = combinedJsCode.indexOf('{', i); break; }
+        }
+    }
+    if (bodyStart < 0) throw new Error(`could not find function body: ${name}`);
     let depth = 0;
-    for (let i = open; i < html.length; i++) {
-        if (html[i] === '{') depth++;
-        else if (html[i] === '}') {
+    for (let i = bodyStart; i < combinedJsCode.length; i++) {
+        if (combinedJsCode[i] === '{') depth++;
+        else if (combinedJsCode[i] === '}') {
             depth--;
-            if (depth === 0) return html.slice(marker, i + 1);
+            if (depth === 0) return combinedJsCode.slice(marker, i + 1);
         }
     }
     throw new Error(`unterminated function: ${name}`);
 }
 
 function extractConstObject(name) {
-    const marker = html.indexOf(`const ${name} =`);
+    const marker = combinedJsCode.indexOf(`const ${name} =`);
     if (marker < 0) throw new Error(`const not found: ${name}`);
-    const open = html.indexOf('{', marker);
+    const eqPos = combinedJsCode.indexOf('=', marker);
+    const open = combinedJsCode.indexOf('{', eqPos);
     let depth = 0;
-    for (let i = open; i < html.length; i++) {
-        if (html[i] === '{') depth++;
-        else if (html[i] === '}') {
+    for (let i = open; i < combinedJsCode.length; i++) {
+        if (combinedJsCode[i] === '{') depth++;
+        else if (combinedJsCode[i] === '}') {
             depth--;
-            if (depth === 0) return html.slice(marker, i + 1) + ';';
+            if (depth === 0) return combinedJsCode.slice(marker, i + 1) + ';';
         }
     }
     throw new Error(`unterminated const: ${name}`);
@@ -222,9 +238,10 @@ test('구조: 기존 카드가 방안 A 탭 그룹에 올바르게 배정되어 
 });
 
 test('구조: toggleDashItem에 하이브리드 라우팅 훅이 연결되어 있다', () => {
-    assert.match(html, /function toggleDashItem\(id\) \{[\s\S]{0,500}?planARouteCardOpen\(id, card\)/);
-    assert.match(html, /function stepBackActiveUIInPlace\(\) \{[\s\S]{0,400}?goHomeView\(\{ skipHistory: true \}\)/);
-    assert.match(html, /appView: \(document\.body && document\.body\.dataset && document\.body\.dataset\.appView\) \|\| 'legacy'/);
+    // A-1(인라인 분리): 함수 정의는 외부 JS 파일로 이동
+    assert.match(combinedJsCode, /function toggleDashItem\(id\) \{[\s\S]{0,500}?planARouteCardOpen\(id, card\)/);
+    assert.match(combinedJsCode, /function stepBackActiveUIInPlace\(\) \{[\s\S]{0,400}?goHomeView\(\{ skipHistory: true \}\)/);
+    assert.match(combinedJsCode, /appView: \(document\.body && document\.body\.dataset && document\.body\.dataset\.appView\) \|\| 'legacy'/);
 });
 
 // ---------- 동작 검증 (가짜 DOM 위에서 실제 컨트롤러 함수 실행) ----------

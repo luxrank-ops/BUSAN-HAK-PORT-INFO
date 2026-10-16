@@ -17,16 +17,10 @@ const requiredFiles = [
   'public/icon-512.png',
   'public/css/app.css',
   'public/js/notifications.js',
-  'public/js/core.js',
-  'public/js/terminals.js',
-  'public/js/worklog.js',
-  'public/js/wage.js',
-  'public/js/community.js',
-  'public/js/app-init.js',
-  'public/js/lazy-guides.js',
-  'public/js/lazy-d3.js',
-  'public/js/lazy-ships.js',
-  'public/js/lazy-admin.js'
+  'public/js/app-main.js',
+  'public/js/leader-access.js',
+  'public/js/ship-directory.js',
+  'public/js/tab-controller.js'
 ];
 
 const jsonFiles = ['.firebaserc', 'firebase.json', 'firestore.indexes.json', 'metadata.json', 'package.json', 'public/manifest.json'];
@@ -35,16 +29,10 @@ const jsFiles = [
   'public/service-worker.js',
   'public/firebase-messaging-sw.js',
   'public/js/notifications.js',
-  'public/js/core.js',
-  'public/js/terminals.js',
-  'public/js/worklog.js',
-  'public/js/wage.js',
-  'public/js/community.js',
-  'public/js/app-init.js',
-  'public/js/lazy-guides.js',
-  'public/js/lazy-d3.js',
-  'public/js/lazy-ships.js',
-  'public/js/lazy-admin.js'
+  'public/js/app-main.js',
+  'public/js/leader-access.js',
+  'public/js/ship-directory.js',
+  'public/js/tab-controller.js'
 ];
 const errors = [];
 
@@ -102,12 +90,10 @@ for (const file of jsFiles) {
 
 try {
   const globalScriptFiles = [
-    'public/js/core.js',
-    'public/js/terminals.js',
-    'public/js/worklog.js',
-    'public/js/wage.js',
-    'public/js/community.js',
-    'public/js/app-init.js'
+    'public/js/app-main.js',
+    'public/js/leader-access.js',
+    'public/js/ship-directory.js',
+    'public/js/tab-controller.js'
   ];
   const combinedGlobal = (
     await Promise.all(globalScriptFiles.map((file) => readFile(file, 'utf8')))

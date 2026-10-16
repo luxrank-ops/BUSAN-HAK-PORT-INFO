@@ -3,9 +3,48 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
 
-const communityCode = fs.readFileSync(new URL('../public/js/community.js', import.meta.url), 'utf8');
+const appMainCode = fs.readFileSync(new URL('../public/js/app-main.js', import.meta.url), 'utf8');
 const notificationsCode = fs.readFileSync(new URL('../public/js/notifications.js', import.meta.url), 'utf8');
 const serverCode = fs.readFileSync(new URL('../server.ts', import.meta.url), 'utf8');
+
+// A-1(인라인 분리): community.js → app-main.js 로 통합.
+// 테스트에 필요한 커뮤니티 관련 선언·함수만 동적으로 추출합니다.
+function extractBlock(source, name) {
+    let marker = source.indexOf(`async function ${name}(`);
+    if (marker < 0) marker = source.indexOf(`function ${name}(`);
+    if (marker < 0) throw new Error(`block not found: ${name}`);
+    // Skip parameter list (may contain default-value braces like `options = {}`)
+    const parenStart = source.indexOf('(', marker);
+    let parenDepth = 0;
+    let bodyStart = -1;
+    for (let i = parenStart; i < source.length; i++) {
+        if (source[i] === '(') parenDepth++;
+        else if (source[i] === ')') {
+            parenDepth--;
+            if (parenDepth === 0) { bodyStart = source.indexOf('{', i); break; }
+        }
+    }
+    if (bodyStart < 0) throw new Error(`could not find function body: ${name}`);
+    let depth = 0;
+    for (let i = bodyStart; i < source.length; i++) {
+        if (source[i] === '{') depth++;
+        else if (source[i] === '}') {
+            depth--;
+            if (depth === 0) return source.slice(marker, i + 1);
+        }
+    }
+    throw new Error(`unterminated block: ${name}`);
+}
+
+const communityCode = [
+    appMainCode.match(/const COMMUNITY_BANNED_WORDS = \[[\s\S]*?\];/)[0],
+    appMainCode.match(/const recentCommunitySubmissions = [^;]+;/)[0],
+    appMainCode.match(/const COMMUNITY_FLOOD_WINDOW_MS = [^;]+;/)[0],
+    extractBlock(appMainCode, 'normalizeModerationText'),
+    extractBlock(appMainCode, 'inspectCommunityContent'),
+    extractBlock(appMainCode, 'notifyAdminAutoBlind'),
+    extractBlock(appMainCode, 'compressImageForUpload')
+].join('\n');
 
 function createCommunitySandbox() {
   const addedNotifications = [];
@@ -42,7 +81,7 @@ function createCommunitySandbox() {
     }
   };
   vm.createContext(sandbox);
-  vm.runInContext(communityCode, sandbox, { filename: 'public/js/community.js' });
+  vm.runInContext(communityCode, sandbox, { filename: 'public/js/app-main.js (community section)' });
   return { sandbox, addedNotifications };
 }
 

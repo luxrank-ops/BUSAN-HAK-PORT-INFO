@@ -1,7 +1,9 @@
-const CACHE_VERSION = "busan-hak-port-v2027.5";
-// 실제로 화면에 로드되는 자산만 프리캐시합니다 (A-3).
-// index.html 은 인라인 스타일·스크립트를 직접 담고 있어 css/app.css 와 js/ 모듈은
-// 네트워크 요청이 발생하지 않습니다 → 매 설치마다 614KB 를 받던 낭비를 제거했습니다.
+const CACHE_VERSION = "busan-hak-port-v2027.6";
+// 실제로 화면에 로드되는 자산만 프리캐시합니다.
+// A-1(인라인 분리) 이후: index.html 인라인 스크립트 4블록을 외부 JS 파일로 추출 →
+// app-main.js · leader-access.js · ship-directory.js · tab-controller.js 를 함께 캐시합니다.
+// css/app.css 는 토큰 적용 스크립트(npm run tokens:apply)의 생성물이지만
+// 화면에서 직접 로드하지 않으므로 프리캐시 대상에서 제외합니다.
 // 아이콘 512px(509KB)는 매니페스트가 필요할 때 브라우저가 요청하고, 그때 아래
 // 정적 자산 캐시 규칙(cache-first + 백그라운드 갱신)이 자동으로 채웁니다.
 const STATIC_PRECACHE_ASSETS = [
@@ -10,7 +12,11 @@ const STATIC_PRECACHE_ASSETS = [
   "/manifest.json",
   "/favicon.ico",
   "/icon-192.png",
-  "/js/notifications.js"
+  "/js/notifications.js",
+  "/js/app-main.js",
+  "/js/leader-access.js",
+  "/js/ship-directory.js",
+  "/js/tab-controller.js"
 ];
 
 self.addEventListener("install", (event) => {

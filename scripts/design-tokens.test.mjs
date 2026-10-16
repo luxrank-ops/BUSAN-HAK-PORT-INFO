@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
@@ -82,9 +82,16 @@ test('CSS 무결성: 중괄호 균형 + 미정의 var() 참조 0건', () => {
     assert.equal(analysis.braceBalance, 0, '중괄호가 균형을 이루지 않습니다.');
     assert.ok(analysis.minDepth >= 0, '닫는 중괄호가 더 많습니다.');
     assert.deepEqual(analysis.duplicateDefinitions, [], '중복 정의된 토큰이 있습니다.');
-    const jsManaged = new Set(
-        [...html.matchAll(/setProperty\(\s*['"](--[a-zA-Z0-9-]+)['"]/g)].map((match) => match[1])
-    );
+    // A-1(인라인 분리): setProperty 호출은 HTML 뿐 아니라 JS 파일에도 있을 수 있습니다.
+    const jsDir = new URL('../public/js/', import.meta.url);
+    const jsManaged = new Set();
+    const allSources = [html];
+    for (const entry of readdirSync(jsDir)) {
+        if (entry.endsWith('.js')) allSources.push(readFileSync(new URL(entry, jsDir), 'utf8'));
+    }
+    for (const src of allSources) {
+        for (const match of src.matchAll(/setProperty\(\s*['"](--[a-zA-Z0-9-]+)['"]/g)) jsManaged.add(match[1]);
+    }
     const unresolved = analysis.unresolved.filter((name) => !jsManaged.has(name));
     assert.deepEqual(unresolved, [], `미정의 CSS 변수 참조: ${unresolved.join(', ')}`);
 });

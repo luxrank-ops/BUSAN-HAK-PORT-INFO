@@ -4,9 +4,11 @@ import assert from 'node:assert/strict';
 import vm from 'node:vm';
 
 const html = readFileSync(new URL('../public/index.html', import.meta.url), 'utf8');
-const segmentFn = html.split('function calculateWageSegment(')[1].split('function calculateWage() {')[0];
-const calculator = html.split('function calculateWage() {')[1].split('function onWageShipNameChange(')[0];
-const transfer = html.split('let wageToLogTransferPending = false;')[1].split('async function sendWorkLogShipToWage(')[0];
+// A-1(인라인 분리): 함수 코드가 app-main.js 로 이동했습니다.
+const appMain = readFileSync(new URL('../public/js/app-main.js', import.meta.url), 'utf8');
+const segmentFn = appMain.split('function calculateWageSegment(')[1].split('function calculateWage() {')[0];
+const calculator = appMain.split('function calculateWage() {')[1].split('function onWageShipNameChange(')[0];
+const transfer = appMain.split('let wageToLogTransferPending = false;')[1].split('async function sendWorkLogShipToWage(')[0];
 assert.ok(segmentFn && calculator && transfer, 'calculator and transfer code found');
 
 function setup({ doubleOrder = false, savedLog = null, sameDateDraft = false } = {}) {

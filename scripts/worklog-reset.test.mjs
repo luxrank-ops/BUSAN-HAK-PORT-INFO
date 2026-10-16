@@ -6,18 +6,29 @@ import vm from 'node:vm';
 // 근무일지 입력 폼 '초기화' 버튼(resetWorkLogForm) 검증.
 // 임금계산기의 초기화(resetWageForm)와 같이, 저장된 기록은 건드리지 않고 입력란만 비우는지 확인한다.
 const html = readFileSync(new URL('../public/index.html', import.meta.url), 'utf8');
+const appMainCode = readFileSync(new URL('../public/js/app-main.js', import.meta.url), 'utf8');
 
 function extractFunction(name) {
-    let marker = html.indexOf(`async function ${name}(`);
-    if (marker < 0) marker = html.indexOf(`function ${name}(`);
+    // 인라인 스크립트 분리(A-1) 이후 함수는 app-main.js 에 상주합니다.
+    let marker = appMainCode.indexOf(`async function ${name}(`);
+    if (marker < 0) marker = appMainCode.indexOf(`function ${name}(`);
     if (marker < 0) throw new Error(`function not found: ${name}`);
-    const open = html.indexOf('{', marker);
+    const parenStart = appMainCode.indexOf('(', marker);
+    let parenDepth = 0, bodyStart = -1;
+    for (let i = parenStart; i < appMainCode.length; i++) {
+        if (appMainCode[i] === '(') parenDepth++;
+        else if (appMainCode[i] === ')') {
+            parenDepth--;
+            if (parenDepth === 0) { bodyStart = appMainCode.indexOf('{', i); break; }
+        }
+    }
+    if (bodyStart < 0) throw new Error(`could not find function body: ${name}`);
     let depth = 0;
-    for (let i = open; i < html.length; i++) {
-        if (html[i] === '{') depth++;
-        else if (html[i] === '}') {
+    for (let i = bodyStart; i < appMainCode.length; i++) {
+        if (appMainCode[i] === '{') depth++;
+        else if (appMainCode[i] === '}') {
             depth--;
-            if (depth === 0) return html.slice(marker, i + 1);
+            if (depth === 0) return appMainCode.slice(marker, i + 1);
         }
     }
     throw new Error(`unterminated function: ${name}`);
@@ -129,8 +140,8 @@ test('a hidden (closed) form is ignored entirely', () => {
     assert.equal(elements.logShipName.value, 'SHIP ALPHA / SHIP BETA', 'content must survive when the form is closed');
 });
 
-test('the same reset exists in the mirrored module public/js/worklog.js', () => {
-    const mod = readFileSync(new URL('../public/js/worklog.js', import.meta.url), 'utf8');
+test('the same reset exists in the extracted module public/js/app-main.js', () => {
+    const mod = readFileSync(new URL('../public/js/app-main.js', import.meta.url), 'utf8');
     assert.match(mod, /function resetWorkLogForm\(\)/);
     assert.match(mod, /logShipName', 'logWage1', 'logWage2', 'logCoworkers', 'logMemo/);
     assert.match(mod, /근무일지 입력 내용이 초기화되었습니다/);

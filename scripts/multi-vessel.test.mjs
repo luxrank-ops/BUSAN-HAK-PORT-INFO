@@ -5,8 +5,8 @@ import vm from 'node:vm';
 
 const html = readFileSync(new URL('../public/index.html', import.meta.url), 'utf8');
 
-const terminalsCode = readFileSync(new URL('../public/js/terminals.js', import.meta.url), 'utf8');
-const wageCode = readFileSync(new URL('../public/js/wage.js', import.meta.url), 'utf8');
+const terminalsCode = readFileSync(new URL('test-fixtures/terminals-code.js', import.meta.url), 'utf8');
+const wageCode = readFileSync(new URL('test-fixtures/wage-code.js', import.meta.url), 'utf8');
 
 function setup() {
     const elements = {};
@@ -124,7 +124,9 @@ test('2. wage hours grid includes 7:3 per-vessel breakdown cards and square tota
     assert.match(html, /id="wageVessel2Name"/);
     assert.match(html, /class="wage-hours-total"/);
     assert.match(html, /⏳ 총 근무시간/);
-    assert.match(html, /function syncWageHoursBlockSize\(\)/);
+    // A-1(인라인 분리): 함수는 app-main.js 로 이동
+    const appMain = readFileSync(new URL('../public/js/app-main.js', import.meta.url), 'utf8');
+    assert.match(appMain, /function syncWageHoursBlockSize\(\)/);
 });
 
 test('3. selecting up to 2 vessels auto-checks double order, sums hours, and calculates segments for logWage1 & logWage2', async () => {

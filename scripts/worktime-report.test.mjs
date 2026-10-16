@@ -6,18 +6,29 @@ import vm from 'node:vm';
 // 월단위 작업시간 · 시간대별 책정 금액 리포트 검증.
 // 실제 앱 코드(public/index.html 인라인 스크립트)에서 함수를 꺼내 실행한다.
 const html = readFileSync(new URL('../public/index.html', import.meta.url), 'utf8');
+const appMainCode = readFileSync(new URL('../public/js/app-main.js', import.meta.url), 'utf8');
 
 function extractFunction(name) {
-    let marker = html.indexOf(`async function ${name}(`);
-    if (marker < 0) marker = html.indexOf(`function ${name}(`);
+    // 인라인 스크립트 분리(A-1) 이후 함수는 app-main.js 에 상주합니다.
+    let marker = appMainCode.indexOf(`async function ${name}(`);
+    if (marker < 0) marker = appMainCode.indexOf(`function ${name}(`);
     if (marker < 0) throw new Error(`function not found: ${name}`);
-    const open = html.indexOf('{', marker);
+    const parenStart = appMainCode.indexOf('(', marker);
+    let parenDepth = 0, bodyStart = -1;
+    for (let i = parenStart; i < appMainCode.length; i++) {
+        if (appMainCode[i] === '(') parenDepth++;
+        else if (appMainCode[i] === ')') {
+            parenDepth--;
+            if (parenDepth === 0) { bodyStart = appMainCode.indexOf('{', i); break; }
+        }
+    }
+    if (bodyStart < 0) throw new Error(`could not find function body: ${name}`);
     let depth = 0;
-    for (let i = open; i < html.length; i++) {
-        if (html[i] === '{') depth++;
-        else if (html[i] === '}') {
+    for (let i = bodyStart; i < appMainCode.length; i++) {
+        if (appMainCode[i] === '{') depth++;
+        else if (appMainCode[i] === '}') {
             depth--;
-            if (depth === 0) return html.slice(marker, i + 1);
+            if (depth === 0) return appMainCode.slice(marker, i + 1);
         }
     }
     throw new Error(`unterminated function: ${name}`);
@@ -34,9 +45,10 @@ const aggregate = context.aggregateWorkTimeMetrics;
 
 test('리포트 컨테이너와 월단위 종합표가 스마트 정산 리포트 안에 있다', () => {
     assert.match(html, /id="monthlyWorkTimeReportContainer"/);
-    assert.match(html, /월단위 작업시간 · 시간대별 책정 금액 종합표/);
-    assert.match(html, /작업시간 리포트 복사/);
-    assert.match(html, /1~12월 전체 보기/);
+    // A-1(인라인 분리): 동적 생성 마크업은 app-main.js 에 있습니다.
+    assert.match(appMainCode, /월단위 작업시간 · 시간대별 책정 금액 종합표/);
+    assert.match(appMainCode, /작업시간 리포트 복사/);
+    assert.match(appMainCode, /1~12월 전체 보기/);
 });
 
 test('임금계산기 연동 요약(총/주간/야간/주말)을 시간대별 금액으로 분리한다', () => {
@@ -173,10 +185,9 @@ test('분 단위 스케줄은 주야간 경계에서 정확히 나눈다', () =>
     assert.equal(wt.nightHours, 1);
 });
 
-test('인라인 및 지연 로드 모듈의 집계 함수는 동일하다', () => {
-    const moduleCode = readFileSync(new URL('../public/js/lazy-d3.js', import.meta.url), 'utf8');
+test('추출된 app-main.js 모듈에 집계 함수가 포함된다', () => {
     for (const name of ['extractWorkLogTimeAndWageMetrics', 'aggregateWorkTimeMetrics']) {
         const fn = extractFunction(name);
-        assert.ok(moduleCode.includes(fn), `${name} must stay in sync`);
+        assert.ok(appMainCode.includes(fn), `${name} must exist in app-main.js`);
     }
 });

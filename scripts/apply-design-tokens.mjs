@@ -18,6 +18,7 @@
  */
 
 import { readFile, writeFile } from 'node:fs/promises';
+import { readFileSync, readdirSync } from 'node:fs';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
 import {
@@ -337,8 +338,22 @@ export function parseTokenSections() {
 
 function readJsManagedVariables(html) {
     const names = new Set();
-    for (const match of html.matchAll(/setProperty\(\s*['"](--[a-zA-Z0-9-]+)['"]/g)) names.add(match[1]);
-    for (const match of html.matchAll(/style\.setProperty\(\s*['"](--[a-zA-Z0-9-]+)['"]/g)) names.add(match[1]);
+    // A-1(인라인 분리): setProperty 호출이 외부 JS 파일에도 있을 수 있으므로
+    // public/js/ 디렉터리의 모든 JS 파일을 함께 훑습니다.
+    const jsDir = new URL('../public/js/', import.meta.url);
+    const sources = [html];
+    try {
+        const entries = readdirSync(jsDir);
+        for (const entry of entries) {
+            if (entry.endsWith('.js')) {
+                try { sources.push(readFileSync(new URL(entry, jsDir), 'utf8')); } catch {}
+            }
+        }
+    } catch {}
+    for (const src of sources) {
+        for (const match of src.matchAll(/setProperty\(\s*['"](--[a-zA-Z0-9-]+)['"]/g)) names.add(match[1]);
+        for (const match of src.matchAll(/style\.setProperty\(\s*['"](--[a-zA-Z0-9-]+)['"]/g)) names.add(match[1]);
+    }
     return names;
 }
 

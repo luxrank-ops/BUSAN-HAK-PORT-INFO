@@ -8,18 +8,20 @@ import vm from 'node:vm';
 //       filteredShips = allShipsData 로 검색 조건을 버린 채 전체 목록 1페이지를 다시 그렸다.
 //       → 전체 목록 1페이지(최신 5척)에 없는 예전(업데이트 이전 등록) 선박은 펼친 내용이 사라졌다.
 const html = readFileSync(new URL('../public/index.html', import.meta.url), 'utf8');
+// A-1(인라인 분리): 함수 코드가 app-main.js 로 이동했습니다.
+const appMainCode = readFileSync(new URL('../public/js/app-main.js', import.meta.url), 'utf8');
 
 function extractFunction(name) {
-    let marker = html.indexOf(`async function ${name}(`);
-    if (marker < 0) marker = html.indexOf(`function ${name}(`);
+    let marker = appMainCode.indexOf(`async function ${name}(`);
+    if (marker < 0) marker = appMainCode.indexOf(`function ${name}(`);
     if (marker < 0) throw new Error(`function not found: ${name}`);
-    const open = html.indexOf('{', marker);
+    const open = appMainCode.indexOf('{', marker);
     let depth = 0;
-    for (let i = open; i < html.length; i++) {
-        if (html[i] === '{') depth++;
-        else if (html[i] === '}') {
+    for (let i = open; i < appMainCode.length; i++) {
+        if (appMainCode[i] === '{') depth++;
+        else if (appMainCode[i] === '}') {
             depth--;
-            if (depth === 0) return html.slice(marker, i + 1);
+            if (depth === 0) return appMainCode.slice(marker, i + 1);
         }
     }
     throw new Error(`unterminated function: ${name}`);
@@ -332,10 +334,10 @@ test('형식이 다른 예전 timestamp 값이 있어도 목록 갱신이 멈추
 });
 
 test('ships 실시간 구독은 검색 조건을 버리는 대신 applyShipDirectorySnapshot 으로 처리한다', () => {
-    const listenerLine = html.split('\n').find(line => line.includes('db.collection("ships").orderBy("timestamp","desc").onSnapshot('));
+    const listenerLine = appMainCode.split('\n').find(line => line.includes('db.collection("ships").orderBy("timestamp","desc").onSnapshot('));
     assert.ok(listenerLine, 'ships 실시간 구독 코드가 있어야 함');
     assert.match(listenerLine, /applyShipDirectorySnapshot\(s\)/);
-    const codeOnly = html.replace(/\/\*[\s\S]*?\*\//g, '');
+    const codeOnly = appMainCode.replace(/\/\*[\s\S]*?\*\//g, '');
     assert.doesNotMatch(codeOnly, /filteredShips\s*=\s*allShipsData\s*;/, '스냅샷에서 검색 결과를 전체 목록으로 덮어쓰지 않아야 함');
 });
 
