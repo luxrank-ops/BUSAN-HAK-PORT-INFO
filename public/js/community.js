@@ -1013,8 +1013,12 @@ function resetShipFilters() {
 function extractShipTags(ship) {
     if (Array.isArray(ship.tags) && ship.tags.length > 0) return ship.tags;
     const text = `${ship.shipName || ""} ${ship.onboardFeat || ""}`;
-    const known = ["#오토콘", "#수동콘", "#브릿지주의", "#라싱바무거움", "#턴버클뻑뻑함", "#통로협소"];
-    return known.filter(t => text.includes(t) || text.includes(t.slice(1)));
+    const known = [
+        "#오토콘", "#수동콘",
+        "#외줄콘", "#더블콘", "#주먹콘", "#손가락콘", "#현대콘", "#춘학 사랑해콘",
+        "#브릿지주의", "#라싱바무거움", "#턴버클뻑뻑함", "#통로협소"
+    ];
+    return known.filter(t => text.includes(t) || text.includes(t.slice(1)) || (t === "#춘학 사랑해콘" && text.includes("춘학사랑해콘")));
 }
 async function addShipInfo() {
     const n = document.getElementById('shipName').value.trim();
@@ -1116,7 +1120,8 @@ function filterShips() {
         const sTags = extractShipTags(ship);
         const sDiff = Number(ship.difficulty) || 0;
         if (searchTerm !== "") {
-            const hay = `${ship.shipName || ""} ${ship.onboardFeat || ""} ${sTags.join(" ")}`.toUpperCase();
+            const compactTags = sTags.map(t => t.replace(/\s+/g, '')).join(" ");
+            const hay = `${ship.shipName || ""} ${ship.onboardFeat || ""} ${sTags.join(" ")} ${compactTags}`.toUpperCase();
             if (!hay.includes(searchTerm)) return false;
         }
         if (activeShipFilterTags.length > 0) {

@@ -61,7 +61,8 @@ async function loadAndSearchAllShips(searchKeyword = "") {
                 const shipCode = (item.code || item.number || "").toLowerCase();
                 const shipMemo = (item.onboardFeat || item.memo || item.info || "").toLowerCase();
                 const tagStr = sTags.join(" ").toLowerCase();
-                if (!shipName.includes(keyword) && !shipCode.includes(keyword) && !shipMemo.includes(keyword) && !tagStr.includes(keyword)) {
+                const compactTagStr = sTags.map(t => t.replace(/\s+/g, '')).join(" ").toLowerCase();
+                if (!shipName.includes(keyword) && !shipCode.includes(keyword) && !shipMemo.includes(keyword) && !tagStr.includes(keyword) && !compactTagStr.includes(keyword)) {
                     return false;
                 }
             }
