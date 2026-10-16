@@ -1015,10 +1015,14 @@ function extractShipTags(ship) {
     const text = `${ship.shipName || ""} ${ship.onboardFeat || ""}`;
     const known = [
         "#오토콘", "#수동콘",
-        "#외줄콘", "#더블콘", "#주먹콘", "#손가락콘", "#현대콘", "#춘학 사랑해콘",
+        "#외줄콘", "#더블콘", "#주먹콘", "#손가락콘", "#현대콘", "#춘학 사랑해콘", "#춘학사랑해",
         "#브릿지주의", "#라싱바무거움", "#턴버클뻑뻑함", "#통로협소"
     ];
-    return known.filter(t => text.includes(t) || text.includes(t.slice(1)) || (t === "#춘학 사랑해콘" && text.includes("춘학사랑해콘")));
+    return known.filter(t => {
+        // '#춘학사랑해'는 레거시 문구 '춘학사랑해콘'(기존 '#춘학 사랑해콘' 전용)과 이중 매칭되지 않게 제외
+        if (t === "#춘학사랑해") return (text.includes("#춘학사랑해") || text.includes("춘학사랑해")) && !text.includes("춘학사랑해콘");
+        return text.includes(t) || text.includes(t.slice(1)) || (t === "#춘학 사랑해콘" && text.includes("춘학사랑해콘"));
+    });
 }
 async function addShipInfo() {
     const n = document.getElementById('shipName').value.trim();
