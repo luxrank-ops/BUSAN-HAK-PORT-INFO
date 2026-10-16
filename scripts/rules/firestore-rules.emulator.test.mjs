@@ -23,7 +23,7 @@ import {
 import { doc, setDoc, updateDoc, deleteDoc, collection, addDoc } from 'firebase/firestore';
 
 const PROJECT_ID = 'demo-busan-hak-port';
-const RULES_PATH = fileURLToPath(new URL('../../../firestore.rules', import.meta.url));
+const RULES_PATH = fileURLToPath(new URL('../../firestore.rules', import.meta.url));
 // Node 17+ 는 localhost 를 IPv6(::1)로 먼저 해석합니다. Firestore 에뮬레이터는 IPv4 로 뜨기 때문에
 // 그대로 두면 연결이 성립하지 않고 작업이 응답 없이 대기(멈춤)합니다. 그래서 IPv4 로 고정합니다.
 function emulatorEndpoint() {
