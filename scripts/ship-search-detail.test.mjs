@@ -29,7 +29,9 @@ const SHIP_FUNCTIONS = [
     'getShipDisplayName', 'getShipMemoText', 'getShipLegacyOnshoreText', 'toShipDate', 'extractShipTags',
     'getShipSearchHaystack', 'getFilteredShipList', 'filterShips', 'escapeShipCommentHtml', 'renderShipCommentMarkup',
     'renderShipPage', 'incrementBoardItemViewCount', 'toggleBoardRow', 'loadShipComments',
-    'getShipRowSignature', 'isShipViewCountOnlyChange', 'syncShipViewCountBadges', 'applyShipDirectorySnapshot'
+    'getShipRowSignature', 'isShipViewCountOnlyChange', 'syncShipViewCountBadges', 'applyShipDirectorySnapshot',
+    // D-2: 소프트 삭제 표시(deletedAt) 판별 헬퍼
+    'isDeletedRecord'
 ];
 
 // innerHTML 로 생성된 id 요소를 추적하는 최소한의 가짜 DOM (클래스·값·텍스트만 지원)
@@ -337,6 +339,7 @@ test('ships 실시간 구독은 검색 조건을 버리는 대신 applyShipDirec
     assert.doesNotMatch(codeOnly, /filteredShips\s*=\s*allShipsData\s*;/, '스냅샷에서 검색 결과를 전체 목록으로 덮어쓰지 않아야 함');
 });
 
+
 test('필수 장비 신규 콘 태그(외줄콘/더블콘/주먹콘/손가락콘/현대콘/춘학 사랑해콘)가 올바르게 추출·필터·검색된다', () => {
     const t = setup();
     t.docs = [
@@ -370,3 +373,29 @@ test('필수 장비 신규 콘 태그(외줄콘/더블콘/주먹콘/손가락콘
     assert.deepEqual(t.rowsShown(), ['s-tag4']);
 });
 
+
+// D-2: 소프트 삭제(deletedAt)된 선박은 목록에서 사라지고, 남은 선박은 그대로 유지된다.
+test('소프트 삭제된 선박은 목록에서 제외된다', () => {
+    const t = setup();
+    t.emit();
+    const before = t.rowsShown();
+    const totalBefore = t.context.allShipsData.length;
+    assert.ok(before.length >= 2, '테스트 전제: 선박이 2척 이상이어야 한다');
+    const removedId = before[0];
+    const removedDocId = removedId.replace(/^s-/, '');
+
+    // 화면의 삭제 동작과 동일한 형태의 소프트 삭제 표시를 서버 문서에 반영한다.
+    const target = t.docs.find(d => d.id === removedDocId);
+    assert.ok(target, '삭제 대상 선박 문서를 찾아야 한다');
+    target.deletedAt = t.now;
+    t.emit();
+
+    const after = t.rowsShown();
+    assert.ok(!after.includes(removedId), '삭제 표시된 선박은 목록에서 빠져야 한다');
+    assert.equal(t.context.allShipsData.length, totalBefore - 1, '전체 목록에서도 1척 줄어야 한다');
+    assert.ok(
+        !t.context.allShipsData.some(ship => ship.id === removedDocId),
+        'allShipsData 에도 삭제된 선박이 남지 않아야 한다'
+    );
+    assert.equal(t.document.getElementById('shipCardSubMeta').innerText, `등록 선박 ${totalBefore - 1}척 · 장비 도감`);
+});

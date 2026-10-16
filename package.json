@@ -13,19 +13,24 @@
     "tokens:check": "node scripts/apply-design-tokens.mjs --check",
     "tokens:docs": "node scripts/apply-design-tokens.mjs --docs",
     "test": "node --test scripts/*.test.mjs",
+    "test:rules": "node scripts/rules/run-rules-tests.mjs",
     "check": "npm run typecheck && npm run validate && npm run tokens:check && npm test",
     "lint": "npm run check"
   },
   "dependencies": {
+    "compression": "^1.8.2",
     "dotenv": "^18.0.7",
     "express": "^4.21.2",
     "firebase-admin": "^14.5.0",
     "node-cron": "^4.6.0"
   },
   "devDependencies": {
+    "@firebase/rules-unit-testing": "^5.0.2",
+    "@types/compression": "^1.8.1",
     "@types/express": "^5.0.0",
     "@types/node": "^22.0.0",
     "@types/node-cron": "^3.0.11",
+    "firebase-tools": "^15.34.0",
     "js-yaml": "^4.3.2",
     "tsx": "^4.19.2",
     "typescript": "^5.7.2"

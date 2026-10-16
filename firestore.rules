@@ -32,6 +32,36 @@ service cloud.firestore {
       return val is string && val.size() == 64 && val.matches('^[a-fA-F0-9]{64}$');
     }
 
+    // 소프트 삭제(되돌릴 수 있는 삭제)만 허용하는 형태 검사.
+    // 물리 삭제(delete)는 관리자 전용이므로, 작성자·관리자의 삭제 요청은 이 경로를 씁니다.
+    function isValidSoftDelete() {
+      return resource != null &&
+        incoming().diff(existing()).affectedKeys().hasOnly(['deletedAt', 'deletedBy']) &&
+        incoming().deletedAt is timestamp &&
+        (!('deletedBy' in incoming().diff(existing()).affectedKeys()) ||
+          (incoming().deletedBy is string && incoming().deletedBy.size() <= 64));
+    }
+
+    function isValidBoardPost(data) {
+      return data.nick is string && data.nick.size() <= 50 &&
+        data.title is string && data.title.size() <= 200 &&
+        data.content is string && data.content.size() <= 10000 &&
+        isSha256Hash(data.password);
+    }
+
+    function isValidBoardComment(data) {
+      return data.name is string && data.name.size() <= 50 &&
+        data.text is string && data.text.size() <= 2000 &&
+        isSha256Hash(data.password) &&
+        (!('imageUrl' in data) || data.imageUrl == null ||
+          (data.imageUrl is string && data.imageUrl.size() <= 2000));
+    }
+
+    // 앱이 자동 등록하는 업데이트 공지 문서 ID (화면 코드와 반드시 일치해야 합니다)
+    function isAutoNoticeId(id) {
+      return id == 'update_2026_10_04_v2027' || id == 'update_2026_10_10_hak_port_ver2';
+    }
+
     function isAdmin() {
       return isSignedIn() && (
         request.auth.uid in ['admin_luxrank', 'luxrank_admin_uid'] ||
@@ -124,11 +154,23 @@ service cloud.firestore {
     // ---------------------------------------------------------
     match /work_logs/{logId} {
       allow get: if isSignedIn() && isValidId(logId);
-      allow list: if isSignedIn() && resource.data.workerId is string && resource.data.workerId.size() <= 64;
-      allow create, update: if isSignedIn() && isValidId(logId) &&
+      // 목록 조회는 workerId 조건을 증명할 수 있어야 허용됩니다(규칙은 필터가 아닙니다).
+      // 화면은 본인 workerId 로만 조회하며, 실제 관리자(로그인 계정)는 전체를 볼 수 있습니다.
+      allow list: if isSignedIn() && (
+        isAdmin() ||
+        (resource.data.workerId is string && resource.data.workerId.size() <= 64)
+      );
+      allow create: if isSignedIn() && isValidId(logId) &&
         incoming().workerId is string && incoming().workerId.size() >= 1 && incoming().workerId.size() <= 64 &&
         incoming().date is string && incoming().date.size() == 10;
-      allow delete: if isSignedIn() && isValidId(logId);
+      // 갱신: 소유자(workerId)·날짜를 바꿔치기할 수 없습니다 (다른 사람 일지로 옮기기 차단).
+      allow update: if isSignedIn() && isValidId(logId) &&
+        incoming().workerId is string && incoming().workerId.size() >= 1 && incoming().workerId.size() <= 64 &&
+        incoming().date is string && incoming().date.size() == 10 &&
+        incoming().workerId == existing().workerId &&
+        incoming().date == existing().date;
+      // 물리 삭제는 관리자만. 화면의 '삭제'는 deletedAt 소프트 삭제로 동작하며 관리자가 복구할 수 있습니다.
+      allow delete: if isAdmin();
     }
 
     // ---------------------------------------------------------
@@ -153,36 +195,30 @@ service cloud.firestore {
 
     match /notices/{noticeId} {
       allow get, list: if isSignedIn();
-      allow create: if isSignedIn() && (isAdmin() || noticeId == 'update_2026_10_04_v2027');
-      allow update: if isSignedIn() && (isAdmin() || noticeId == 'update_2026_10_04_v2027' || isValidViewCountIncrement());
+      allow create: if isSignedIn() && (isAdmin() || isAutoNoticeId(noticeId));
+      allow update: if isSignedIn() && (isAdmin() || isAutoNoticeId(noticeId) || isValidViewCountIncrement());
       allow delete: if isAdmin();
     }
 
     match /posts/{postId} {
       allow get, list: if isSignedIn();
-      allow create: if isSignedIn() && isValidId(postId) &&
-        incoming().nick is string && incoming().nick.size() <= 50 &&
-        incoming().title is string && incoming().title.size() <= 200 &&
-        incoming().content is string && incoming().content.size() <= 10000 &&
-        isSha256Hash(incoming().password);
+      allow create: if isSignedIn() && isValidId(postId) && isValidBoardPost(incoming());
+      // 내용 수정은 비밀번호를 바꾸지 못합니다(비밀번호 선점·잠금 공격 차단). 삭제는 소프트 삭제만.
       allow update: if isSignedIn() && isValidId(postId) && (
-        isValidViewCountIncrement() || (
-          incoming().nick is string && incoming().nick.size() <= 50 &&
-          incoming().title is string && incoming().title.size() <= 200 &&
-          incoming().content is string && incoming().content.size() <= 10000 &&
-          isSha256Hash(incoming().password)
-        )
+        isValidViewCountIncrement() ||
+        (isValidBoardPost(incoming()) && incoming().password == existing().password) ||
+        isValidSoftDelete()
       );
-      allow delete: if isSignedIn() && isValidId(postId);
+      allow delete: if isAdmin();
 
       match /comments/{commentId} {
         allow get, list: if isSignedIn();
-        allow create, update: if isSignedIn() && isValidId(commentId) &&
-          incoming().name is string && incoming().name.size() <= 50 &&
-          incoming().text is string && incoming().text.size() <= 2000 &&
-          isSha256Hash(incoming().password) &&
-          (!('imageUrl' in incoming()) || incoming().imageUrl == null || (incoming().imageUrl is string && incoming().imageUrl.size() <= 2000));
-        allow delete: if isSignedIn() && isValidId(commentId);
+        allow create: if isSignedIn() && isValidId(commentId) && isValidBoardComment(incoming());
+        allow update: if isSignedIn() && isValidId(commentId) && (
+          (isValidBoardComment(incoming()) && incoming().password == existing().password) ||
+          isValidSoftDelete()
+        );
+        allow delete: if isAdmin();
       }
     }
 
@@ -192,21 +228,21 @@ service cloud.firestore {
         incoming().shipName is string && incoming().shipName.size() <= 120 &&
         isSha256Hash(incoming().password);
       allow update: if isSignedIn() && isValidId(shipId) && (
-        isValidViewCountIncrement() || (
-          incoming().shipName is string && incoming().shipName.size() <= 120 &&
-          isSha256Hash(incoming().password)
-        )
+        isValidViewCountIncrement() ||
+        (incoming().shipName is string && incoming().shipName.size() <= 120 &&
+          isSha256Hash(incoming().password) && incoming().password == existing().password) ||
+        isValidSoftDelete()
       );
       allow delete: if isAdmin();
 
       match /comments/{commentId} {
         allow get, list: if isSignedIn();
-        allow create, update: if isSignedIn() && isValidId(commentId) &&
-          incoming().name is string && incoming().name.size() <= 50 &&
-          incoming().text is string && incoming().text.size() <= 2000 &&
-          isSha256Hash(incoming().password) &&
-          (!('imageUrl' in incoming()) || incoming().imageUrl == null || (incoming().imageUrl is string && incoming().imageUrl.size() <= 2000));
-        allow delete: if isSignedIn() && isValidId(commentId);
+        allow create: if isSignedIn() && isValidId(commentId) && isValidBoardComment(incoming());
+        allow update: if isSignedIn() && isValidId(commentId) && (
+          (isValidBoardComment(incoming()) && incoming().password == existing().password) ||
+          isValidSoftDelete()
+        );
+        allow delete: if isAdmin();
       }
     }
 

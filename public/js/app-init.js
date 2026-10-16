@@ -62,7 +62,11 @@ async function ensureTodayUpdateNotice() {
             }, { merge: true });
         }
     } catch (e) {
+        // B-8: 규칙/권한 문제로 자동 공지가 거부되면 콘솔에만 남기지 않고 관리자에게 알립니다.
         console.warn("업데이트 공지 자동 등록 확인 중 오류:", e);
+        if (isAdminSessionVerified && typeof showToast === "function") {
+            showToast("⚠️ 업데이트 공지를 자동 등록하지 못했습니다. (권한/네트워크 확인)");
+        }
     }
 }
 
