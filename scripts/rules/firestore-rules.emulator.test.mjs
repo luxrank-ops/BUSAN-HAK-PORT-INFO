@@ -145,9 +145,12 @@ if (!EMULATOR_AVAILABLE) {
             await assertSucceeds(updateDoc(postRef(worker()), { deletedAt: new Date(), deletedBy: 'worker-a' }));
         });
 
-        it('삭제 표시와 무관한 필드를 함께 바꾸는 소프트 삭제는 거부된다', async () => {
+        it('삭제 표시를 빙자해 비밀번호를 바꾸는 요청은 거부된다', async () => {
             await seedPost();
-            await assertFails(updateDoc(postRef(worker()), { deletedAt: new Date(), title: '바꿔치기' }));
+            // deletedAt 만 바꾸는 형태(소프트 삭제)가 아니고, 비밀번호도 그대로가 아니므로 두 경로 모두 거부됩니다.
+            await assertFails(updateDoc(postRef(worker()), {
+                deletedAt: new Date(), password: OTHER_SHA
+            }));
         });
 
         it('내용을 수정해도 비밀번호는 바꿀 수 없다 (글 잠금 공격 차단)', async () => {
@@ -227,7 +230,7 @@ if (!EMULATOR_AVAILABLE) {
             await seed(async (db) => {
                 await setDoc(doc(db, 'settings/admin'), { passwordHash: SHA });
             });
-            await assertFails(worker().doc('settings/admin').get());
+            await assertFails(doc(worker(), 'settings/admin').get());
             await assertFails(setDoc(doc(worker(), 'settings/admin'), { passwordHash: OTHER_SHA }));
         });
     });
