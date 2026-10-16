@@ -8,9 +8,11 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
+import { readAppJs } from './app-source.mjs';
 
 const rules = readFileSync(new URL('../firestore.rules', import.meta.url), 'utf8');
-const html = readFileSync(new URL('../public/index.html', import.meta.url), 'utf8');
+// A-1 (2026-10-17): 화면 코드 검사 대상 = index.html 인라인 스크립트 → public/js/* 통합 소스
+const appJs = readAppJs();
 
 /** 컬렉션 블록 본문만 잘라낸다 (중첩 블록은 중괄호 균형으로 처리) */
 function blockBody(source, header) {
@@ -75,7 +77,7 @@ test('관리자 문서는 스스로 만들 수 없다 (권한 상승 차단)', (
 
 test('자동 업데이트 공지 문서 ID가 화면 코드와 규칙에서 일치한다', () => {
     const ruleIds = [...rules.matchAll(/'(update_\d{4}_\d{2}_\d{2}_[a-z0-9_]+)'/g)].map(m => m[1]);
-    const codeIds = [...html.matchAll(/"(update_\d{4}_\d{2}_\d{2}_[a-z0-9_]+)"/g)].map(m => m[1]);
+    const codeIds = [...appJs.matchAll(/"(update_\d{4}_\d{2}_\d{2}_[a-z0-9_]+)"/g)].map(m => m[1]);
     assert.ok(codeIds.length > 0, '화면 코드에서 자동 공지 문서 ID를 찾지 못했습니다');
     codeIds.forEach(id => {
         assert.ok(ruleIds.includes(id), `규칙에 없는 자동 공지 ID 입니다(저장 거부됨): ${id}`);
@@ -83,8 +85,8 @@ test('자동 업데이트 공지 문서 ID가 화면 코드와 규칙에서 일�
 });
 
 test('화면 코드는 게시판·근무일지에서 물리 삭제를 쓰지 않고 소프트 삭제를 쓴다', () => {
-    assert.match(html, /function softDeletePayload\(\)/);
-    assert.match(html, /deletedAt: firebase\.firestore\.FieldValue\.serverTimestamp\(\)/);
+    assert.match(appJs, /function softDeletePayload\(\)/);
+    assert.match(appJs, /deletedAt: firebase\.firestore\.FieldValue\.serverTimestamp\(\)/);
 
     const forbidden = [
         /collection\(["']work_logs["']\)\.doc\([^)]*\)\.delete\(\)/,
@@ -92,26 +94,26 @@ test('화면 코드는 게시판·근무일지에서 물리 삭제를 쓰지 않
         /collection\(["']ships["']\)\.doc\([^)]*\)\.delete\(\)/
     ];
     forbidden.forEach(pattern => {
-        assert.doesNotMatch(html, pattern, `물리 삭제 호출이 남아 있습니다: ${pattern}`);
+        assert.doesNotMatch(appJs, pattern, `물리 삭제 호출이 남아 있습니다: ${pattern}`);
     });
 
-    const softDeleteCalls = html.match(/\.update\(softDeletePayload\(\)\)/g) || [];
+    const softDeleteCalls = appJs.match(/\.update\(softDeletePayload\(\)\)/g) || [];
     assert.ok(softDeleteCalls.length >= 5, `소프트 삭제 호출이 부족합니다(현재 ${softDeleteCalls.length}건)`);
 });
 
 test('근무일지 조회는 본인 범위로 좁히고, 삭제된 기록은 목록에서 제외한다', () => {
-    assert.match(html, /async function queryWorkLogsByDateRange\(/);
+    assert.match(appJs, /async function queryWorkLogsByDateRange\(/);
     // 규칙이 workerId 조건을 요구하므로, 목록 조회에는 항상 workerId 조건이 붙어야 합니다.
-    assert.match(html, /collection\("work_logs"\)\.where\("workerId", "==", currentWorkerId\)/);
-    assert.doesNotMatch(html, /let q = db\.collection\("work_logs"\);/);
+    assert.match(appJs, /collection\("work_logs"\)\.where\("workerId", "==", currentWorkerId\)/);
+    assert.doesNotMatch(appJs, /let q = db\.collection\("work_logs"\);/);
     // 인덱스가 없을 때의 대체 조회도 workerId 조건을 유지하고 날짜는 화면에서 거릅니다.
-    assert.match(html, /buildQuery\(false\)/);
-    assert.match(html, /function isDeletedRecord\(/);
+    assert.match(appJs, /buildQuery\(false\)/);
+    assert.match(appJs, /function isDeletedRecord\(/);
 
-    const scopedCalls = html.match(/queryWorkLogsByDateRange\(/g) || [];
+    const scopedCalls = appJs.match(/queryWorkLogsByDateRange\(/g) || [];
     assert.ok(scopedCalls.length >= 4, `본인 범위 조회 적용 지점이 부족합니다(정의 1 + 호출 3 이상 필요, 현재 ${scopedCalls.length}건)`);
 
-    const deletedGuards = html.match(/isDeletedRecord\(/g) || [];
+    const deletedGuards = appJs.match(/isDeletedRecord\(/g) || [];
     assert.ok(deletedGuards.length >= 8, `삭제 표시 필터가 부족합니다(현재 ${deletedGuards.length}건)`);
 });
 

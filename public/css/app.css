@@ -1,235 +1,244 @@
-/* 자동 생성 파일 — public/index.html 의 <style> 블록과 100% 동일합니다. 직접 수정하지 마세요. */
-/* 재생성: npm run tokens:apply */
+/* ════════════════════════════════════════════════════════════════════
+   🎨 디자인 스타일 정본 (Source of Truth) — 부산항 스마트 작업 가이드
+   [A-1 · 2026-10-17] index.html 인라인 <style> 블록을 이 파일로 분리했습니다.
+   화면 표시 결과는 분리 전과 동일하며, index.html 은 아래를 <link> 로만 참조합니다.
+
+   · 파일 상단 "🎨 디자인 토큰" 시작~끝 블록은 scripts/design-tokens.mjs 정본에서
+     생성됩니다 (npm run tokens:apply). 직접 수정하지 마세요.
+   · 그 이하 스타일도 수정 시 토큰 규칙(색·간격·타이포 원시값 하드코딩 금지)을
+     지키고 npm run tokens:check 로 검증하세요.
+   ════════════════════════════════════════════════════════════════════
+ */
 /* ══════════════════════════════════════════════════════════════════════
    🎨 디자인 토큰 (Design Tokens) — 부산항 스마트 작업 가이드
    이 블록은 scripts/design-tokens.mjs 에서 생성됩니다. 직접 수정하지 마세요.
    화면 코드는 아래 토큰만 참조합니다 (원시값 하드코딩 금지).
    ══════════════════════════════════════════════════════════════════════ */
-    /* ── 1. 색상 · 뉴트럴 램프 (명도 0 → 1000) ── */
-    :root {
-        --n-000: #ffffff;
-        --n-025: #f9fafb;
-        --n-050: #f8fafc;
-        --n-075: #f3f4f6;
-        --n-100: #f1f5f9;
-        --n-150: #e2e8f0;
-        --n-200: #d1d5db;
-        --n-250: #cbd5e1;
-        --n-300: #9ca3af;
-        --n-350: #94a3b8;
-        --n-400: #64748b;
-        --n-500: #475569;
-        --n-600: #374151;
-        --n-650: #334155;
-        --n-800: #1e293b;
-        --n-900: #0f172a;
-        --n-1000: #000000;
+        /* ── 1. 색상 · 뉴트럴 램프 (명도 0 → 1000) ── */
+        :root {
+            --n-000: #ffffff;
+            --n-025: #f9fafb;
+            --n-050: #f8fafc;
+            --n-075: #f3f4f6;
+            --n-100: #f1f5f9;
+            --n-150: #e2e8f0;
+            --n-200: #d1d5db;
+            --n-250: #cbd5e1;
+            --n-300: #9ca3af;
+            --n-350: #94a3b8;
+            --n-400: #64748b;
+            --n-500: #475569;
+            --n-600: #374151;
+            --n-650: #334155;
+            --n-800: #1e293b;
+            --n-900: #0f172a;
+            --n-1000: #000000;
 
-        /* ── 2. 색상 · 브랜드 & 상태 팔레트 ── */
-        --navy-900: #0a1b3f;
-        --navy-700: #1d366f;
-        --blue-900: #1e3a8a;
-        --blue-800: #1e40af;
-        --blue-700: #1d4ed8;
-        --blue-600: #2563eb;
-        --blue-500: #3b82f6;
-        --blue-400: #60a5fa;
-        --blue-300: #93c5fd;
-        --blue-200: #bfdbfe;
-        --blue-100: #dbeafe;
-        --blue-50: #eff6ff;
-        --sky-700: #0369a1;
-        --sky-600: #0284c7;
-        --sky-400: #38bdf8;
-        --sky-200: #7dd3fc;
-        --sky-100: #e0f2fe;
-        --teal-600: #0d9488;
-        --emerald-700: #047857;
-        --emerald-600: #059669;
-        --emerald-500: #10b981;
-        --emerald-400: #34d399;
-        --emerald-300: #6ee7b7;
-        --emerald-50: #ecfdf5;
-        --green-600: #16a34a;
-        --red-600: #dc2626;
-        --red-500: #ef4444;
-        --red-300: #fca5a5;
-        --red-100: #fee2e2;
-        --red-50: #fef2f2;
-        --orange-800: #9a3412;
-        --orange-700: #c2410c;
-        --orange-600: #ea580c;
-        --orange-500: #f97316;
-        --orange-400: #fb923c;
-        --orange-300: #fdba74;
-        --orange-200: #fed7aa;
-        --orange-100: #ffedd5;
-        --orange-50: #fff7ed;
-        --amber-900: #713f12;
-        --amber-800: #92400e;
-        --amber-700: #b45309;
-        --amber-600: #d97706;
-        --amber-500: #f59e0b;
-        --amber-400: #fbbf24;
-        --amber-300: #fcd34d;
-        --amber-200: #fde68a;
-        --amber-100: #fef3c7;
-        --amber-50: #fffbeb;
-        --yellow-400: #facc15;
-        --yellow-300: #fde047;
-        --yellow-200: #fef08a;
+            /* ── 2. 색상 · 브랜드 & 상태 팔레트 ── */
+            --navy-900: #0a1b3f;
+            --navy-700: #1d366f;
+            --blue-900: #1e3a8a;
+            --blue-800: #1e40af;
+            --blue-700: #1d4ed8;
+            --blue-600: #2563eb;
+            --blue-500: #3b82f6;
+            --blue-400: #60a5fa;
+            --blue-300: #93c5fd;
+            --blue-200: #bfdbfe;
+            --blue-100: #dbeafe;
+            --blue-50: #eff6ff;
+            --sky-700: #0369a1;
+            --sky-600: #0284c7;
+            --sky-400: #38bdf8;
+            --sky-200: #7dd3fc;
+            --sky-100: #e0f2fe;
+            --teal-600: #0d9488;
+            --emerald-700: #047857;
+            --emerald-600: #059669;
+            --emerald-500: #10b981;
+            --emerald-400: #34d399;
+            --emerald-300: #6ee7b7;
+            --emerald-50: #ecfdf5;
+            --green-600: #16a34a;
+            --red-600: #dc2626;
+            --red-500: #ef4444;
+            --red-300: #fca5a5;
+            --red-100: #fee2e2;
+            --red-50: #fef2f2;
+            --orange-800: #9a3412;
+            --orange-700: #c2410c;
+            --orange-600: #ea580c;
+            --orange-500: #f97316;
+            --orange-400: #fb923c;
+            --orange-300: #fdba74;
+            --orange-200: #fed7aa;
+            --orange-100: #ffedd5;
+            --orange-50: #fff7ed;
+            --amber-900: #713f12;
+            --amber-800: #92400e;
+            --amber-700: #b45309;
+            --amber-600: #d97706;
+            --amber-500: #f59e0b;
+            --amber-400: #fbbf24;
+            --amber-300: #fcd34d;
+            --amber-200: #fde68a;
+            --amber-100: #fef3c7;
+            --amber-50: #fffbeb;
+            --yellow-400: #facc15;
+            --yellow-300: #fde047;
+            --yellow-200: #fef08a;
 
-        /* ── 3. 색상 · 시맨틱 (라이트 모드) ── */
-        --primary: var(--navy-900);
-        --primary-light: var(--navy-700);
-        --accent: var(--navy-900);
-        --bg-color: var(--n-100);
-        --card-bg: var(--n-000);
-        --text-main: var(--n-900);
-        --text-sub: var(--n-400);
-        --text-muted: var(--n-350);
-        --border: var(--n-250);
-        --border-strong: var(--n-200);
-        --line-soft: var(--n-150);
-        --danger: var(--red-500);
-        --success: var(--emerald-500);
-        --warning: var(--amber-500);
-        --info: var(--blue-600);
-        --surface-muted: var(--n-050);
-        --surface-sunken: var(--n-150);
+            /* ── 3. 색상 · 시맨틱 (라이트 모드) ── */
+            --primary: var(--navy-900);
+            --primary-light: var(--navy-700);
+            --accent: var(--navy-900);
+            --bg-color: var(--n-100);
+            --card-bg: var(--n-000);
+            --text-main: var(--n-900);
+            --text-sub: var(--n-400);
+            --text-muted: var(--n-350);
+            --border: var(--n-250);
+            --border-strong: var(--n-200);
+            --line-soft: var(--n-150);
+            --danger: var(--red-500);
+            --success: var(--emerald-500);
+            --warning: var(--amber-500);
+            --info: var(--blue-600);
+            --surface-muted: var(--n-050);
+            --surface-sunken: var(--n-150);
 
-        /* ── 4. 색상 · 다크 모드 전용 원시값 ── */
-        --surface-dark: rgba(30, 41, 59, 0.98);
-        --border-dark: rgba(55, 65, 81, 0.7);
+            /* ── 4. 색상 · 다크 모드 전용 원시값 ── */
+            --surface-dark: rgba(30, 41, 59, 0.98);
+            --border-dark: rgba(55, 65, 81, 0.7);
 
-        /* ── 5. 간격 (Spacing) · 2px 리듬 ── */
-        --sp-2: 2px;
-        --sp-3: 3px;
-        --sp-4: 4px;
-        --sp-5: 5px;
-        --sp-6: 6px;
-        --sp-7: 7px;
-        --sp-8: 8px;
-        --sp-9: 9px;
-        --sp-10: 10px;
-        --sp-11: 11px;
-        --sp-12: 12px;
-        --sp-14: 14px;
-        --sp-15: 15px;
-        --sp-16: 16px;
-        --sp-18: 18px;
-        --sp-20: 20px;
-        --sp-24: 24px;
-        --sp-32: 32px;
+            /* ── 5. 간격 (Spacing) · 2px 리듬 ── */
+            --sp-2: 2px;
+            --sp-3: 3px;
+            --sp-4: 4px;
+            --sp-5: 5px;
+            --sp-6: 6px;
+            --sp-7: 7px;
+            --sp-8: 8px;
+            --sp-9: 9px;
+            --sp-10: 10px;
+            --sp-11: 11px;
+            --sp-12: 12px;
+            --sp-14: 14px;
+            --sp-15: 15px;
+            --sp-16: 16px;
+            --sp-18: 18px;
+            --sp-20: 20px;
+            --sp-24: 24px;
+            --sp-32: 32px;
 
-        /* ── 6. 타이포 · 크기 (Type scale) ── */
-        --fs-1: 0.58rem;
-        --fs-2: 0.62rem;
-        --fs-3: 0.68rem;
-        --fs-4: 0.72rem;
-        --fs-5: 0.75rem;
-        --fs-6: 0.8rem;
-        --fs-7: 0.85rem;
-        --fs-8: 0.9rem;
-        --fs-9: 0.95rem;
-        --fs-10: 1rem;
-        --fs-11: 1.05rem;
-        --fs-12: 1.1rem;
-        --fs-13: 1.2rem;
-        --fs-14: 1.25rem;
-        --fs-15: 1.32rem;
-        --fs-16: 1.4rem;
-        --fs-17: 1.85rem;
-        --fs-18: 1.5rem;
+            /* ── 6. 타이포 · 크기 (Type scale) ── */
+            --fs-1: 0.58rem;
+            --fs-2: 0.62rem;
+            --fs-3: 0.68rem;
+            --fs-4: 0.72rem;
+            --fs-5: 0.75rem;
+            --fs-6: 0.8rem;
+            --fs-7: 0.85rem;
+            --fs-8: 0.9rem;
+            --fs-9: 0.95rem;
+            --fs-10: 1rem;
+            --fs-11: 1.05rem;
+            --fs-12: 1.1rem;
+            --fs-13: 1.2rem;
+            --fs-14: 1.25rem;
+            --fs-15: 1.32rem;
+            --fs-16: 1.4rem;
+            --fs-17: 1.85rem;
+            --fs-18: 1.5rem;
 
-        /* ── 7. 타이포 · 유체(반응형) 크기 ── */
-        --fs-fluid-1: clamp(0.95rem, 3.5vw, 1.1rem);
-        --fs-fluid-2: clamp(0.9rem, 3vw, 1rem);
-        --fs-fluid-3: clamp(1.275rem, 4.5vw, 1.425rem);
-        --fs-fluid-4: clamp(0.85rem, 3vw, 1rem);
-        --fs-fluid-5: clamp(0.85rem, 3vw, 0.95rem);
-        --fs-min-1: max(0.66rem, 10px);
+            /* ── 7. 타이포 · 유체(반응형) 크기 ── */
+            --fs-fluid-1: clamp(0.95rem, 3.5vw, 1.1rem);
+            --fs-fluid-2: clamp(0.9rem, 3vw, 1rem);
+            --fs-fluid-3: clamp(1.275rem, 4.5vw, 1.425rem);
+            --fs-fluid-4: clamp(0.85rem, 3vw, 1rem);
+            --fs-fluid-5: clamp(0.85rem, 3vw, 0.95rem);
+            --fs-min-1: max(0.66rem, 10px);
 
-        /* ── 8. 타이포 · 굵기 & 행간 ── */
-        --fw-medium: 500;
-        --fw-semibold: 600;
-        --fw-bold: 700;
-        --fw-extrabold: 800;
-        --fw-black: 900;
-        --lh-1: 1;
-        --lh-2: 1.1;
-        --lh-3: 1.15;
-        --lh-4: 1.2;
-        --lh-5: 1.25;
-        --lh-6: 1.3;
-        --lh-7: 1.35;
-        --lh-8: 1.4;
-        --lh-9: 1.45;
-        --lh-tight: var(--lh-4);
-        --lh-normal: var(--lh-7);
-        --lh-relaxed: var(--lh-8);
+            /* ── 8. 타이포 · 굵기 & 행간 ── */
+            --fw-medium: 500;
+            --fw-semibold: 600;
+            --fw-bold: 700;
+            --fw-extrabold: 800;
+            --fw-black: 900;
+            --lh-1: 1;
+            --lh-2: 1.1;
+            --lh-3: 1.15;
+            --lh-4: 1.2;
+            --lh-5: 1.25;
+            --lh-6: 1.3;
+            --lh-7: 1.35;
+            --lh-8: 1.4;
+            --lh-9: 1.45;
+            --lh-tight: var(--lh-4);
+            --lh-normal: var(--lh-7);
+            --lh-relaxed: var(--lh-8);
 
-        /* ── 9. 라운드 (Radius) ── */
-        --radius-xs: 4px;
-        --radius-sm: 6px;
-        --radius-md: 8px;
-        --radius-lg: 10px;
-        --radius-xl: 12px;
-        --radius-2xl: 14px;
-        --radius-3xl: 16px;
-        --radius-pill: 999px;
-        --radius-circle: 50%;
+            /* ── 9. 라운드 (Radius) ── */
+            --radius-xs: 4px;
+            --radius-sm: 6px;
+            --radius-md: 8px;
+            --radius-lg: 10px;
+            --radius-xl: 12px;
+            --radius-2xl: 14px;
+            --radius-3xl: 16px;
+            --radius-pill: 999px;
+            --radius-circle: 50%;
 
-        /* ── 10. 그림자 (Elevation) ── */
-        --shadow-elev-1: 0 2px 8px rgba(10, 27, 63, 0.06);
-        --shadow-elev-2: 0 1px 3px rgba(10, 27, 63, 0.1);
-        --shadow-elev-3: 0 3px 8px rgba(10, 27, 63, 0.12);
-        --shadow-elev-4: 0 6px 18px rgba(10, 27, 63, 0.14);
-        --shadow-elev-up: 0 -4px 16px rgba(10, 27, 63, 0.06);
-        --shadow-soft: 0 2px 6px rgba(15, 23, 42, 0.04);
-        --shadow-pop-blue: 0 2px 6px rgba(37, 99, 235, 0.35);
-        --shadow-pop-green: 0 2px 6px rgba(16, 185, 129, 0.35);
-        --shadow-focus-light: 0 0 0 4px rgba(37, 99, 235, 0.18), 0 10px 26px rgba(10, 27, 63, 0.16);
-        --shadow-focus-dark: 0 0 0 4px rgba(96, 165, 250, 0.24), 0 10px 26px rgba(0, 0, 0, 0.5);
-        --shadow-focus-ring: 0 0 0 3px rgba(37, 99, 235, 0.15);
+            /* ── 10. 그림자 (Elevation) ── */
+            --shadow-elev-1: 0 2px 8px rgba(10, 27, 63, 0.06);
+            --shadow-elev-2: 0 1px 3px rgba(10, 27, 63, 0.1);
+            --shadow-elev-3: 0 3px 8px rgba(10, 27, 63, 0.12);
+            --shadow-elev-4: 0 6px 18px rgba(10, 27, 63, 0.14);
+            --shadow-elev-up: 0 -4px 16px rgba(10, 27, 63, 0.06);
+            --shadow-soft: 0 2px 6px rgba(15, 23, 42, 0.04);
+            --shadow-pop-blue: 0 2px 6px rgba(37, 99, 235, 0.35);
+            --shadow-pop-green: 0 2px 6px rgba(16, 185, 129, 0.35);
+            --shadow-focus-light: 0 0 0 4px rgba(37, 99, 235, 0.18), 0 10px 26px rgba(10, 27, 63, 0.16);
+            --shadow-focus-dark: 0 0 0 4px rgba(96, 165, 250, 0.24), 0 10px 26px rgba(0, 0, 0, 0.5);
+            --shadow-focus-ring: 0 0 0 3px rgba(37, 99, 235, 0.15);
 
-        /* ── 11. 모션 (Motion) ── */
-        --dur-100: 0.1s;
-        --dur-120: 0.12s;
-        --dur-140: 0.14s;
-        --dur-150: 0.15s;
-        --dur-160: 0.16s;
-        --dur-200: 0.2s;
-        --dur-300: 0.3s;
-        --dur-350: 0.35s;
-        --dur-fast: var(--dur-150);
-        --dur-base: var(--dur-200);
-        --dur-slow: var(--dur-300);
+            /* ── 11. 모션 (Motion) ── */
+            --dur-100: 0.1s;
+            --dur-120: 0.12s;
+            --dur-140: 0.14s;
+            --dur-150: 0.15s;
+            --dur-160: 0.16s;
+            --dur-200: 0.2s;
+            --dur-300: 0.3s;
+            --dur-350: 0.35s;
+            --dur-fast: var(--dur-150);
+            --dur-base: var(--dur-200);
+            --dur-slow: var(--dur-300);
 
-        /* ── 12. Z축 (Layering) ── */
-        --z-content: 2;
-        --z-sticky-head: 20;
-        --z-header: 100;
-        --z-sticky-foot: 950;
-        --z-ticker: 999;
-        --z-bottom-nav: 1000;
-        --z-visitor-badge: 2500;
-        --z-modal: 3000;
-        --z-toast: 5000;
-        --z-hover-menu: 9999;
-    }
+            /* ── 12. Z축 (Layering) ── */
+            --z-content: 2;
+            --z-sticky-head: 20;
+            --z-header: 100;
+            --z-sticky-foot: 950;
+            --z-ticker: 999;
+            --z-bottom-nav: 1000;
+            --z-visitor-badge: 2500;
+            --z-modal: 3000;
+            --z-toast: 5000;
+            --z-hover-menu: 9999;
+        }
 
-    body.dark-mode {
-        /* 다크 모드: 시맨틱 역할 토큰만 재정의 (원시 팔레트는 불변) */
-        --primary: var(--blue-400);
-        --primary-light: var(--blue-300);
-        --accent: var(--amber-400);
-        --bg-color: var(--n-900);
-        --card-bg: var(--surface-dark);
-        --text-main: var(--n-075);
-        --text-sub: var(--n-300);
-        --border: var(--border-dark);
-    }
+        body.dark-mode {
+            /* 다크 모드: 시맨틱 역할 토큰만 재정의 (원시 팔레트는 불변) */
+            --primary: var(--blue-400);
+            --primary-light: var(--blue-300);
+            --accent: var(--amber-400);
+            --bg-color: var(--n-900);
+            --card-bg: var(--surface-dark);
+            --text-main: var(--n-075);
+            --text-sub: var(--n-300);
+            --border: var(--border-dark);
+        }
 /* ══════════════ 🎨 디자인 토큰 끝 ══════════════ */
     img { max-width: 100%; height: auto; object-fit: cover; background: #eee; }
     img:not([src]) { visibility: hidden; }

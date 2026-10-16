@@ -2,6 +2,16 @@ import { readFile, access, readdir } from 'node:fs/promises';
 import vm from 'node:vm';
 import yaml from 'js-yaml';
 
+// A-1 (2026-10-17): 인라인 스크립트·스타일을 외부 파일로 분리했습니다.
+// 전역 스크립트 로드 순서(index.html 과 동일) — scripts/app-source.mjs 와 일치해야 합니다.
+const appJsFiles = [
+  'public/js/notifications.js',
+  'public/js/app.js',
+  'public/js/leader-access.js',
+  'public/js/ships-board.js',
+  'public/js/tab-views.js'
+];
+
 const requiredFiles = [
   '.firebaserc',
   'firebase.json',
@@ -16,17 +26,7 @@ const requiredFiles = [
   'public/icon-192.png',
   'public/icon-512.png',
   'public/css/app.css',
-  'public/js/notifications.js',
-  'public/js/core.js',
-  'public/js/terminals.js',
-  'public/js/worklog.js',
-  'public/js/wage.js',
-  'public/js/community.js',
-  'public/js/app-init.js',
-  'public/js/lazy-guides.js',
-  'public/js/lazy-d3.js',
-  'public/js/lazy-ships.js',
-  'public/js/lazy-admin.js'
+  ...appJsFiles
 ];
 
 const jsonFiles = ['.firebaserc', 'firebase.json', 'firestore.indexes.json', 'metadata.json', 'package.json', 'public/manifest.json'];
@@ -34,17 +34,7 @@ const htmlFiles = ['public/index.html', 'public/admin.html'];
 const jsFiles = [
   'public/service-worker.js',
   'public/firebase-messaging-sw.js',
-  'public/js/notifications.js',
-  'public/js/core.js',
-  'public/js/terminals.js',
-  'public/js/worklog.js',
-  'public/js/wage.js',
-  'public/js/community.js',
-  'public/js/app-init.js',
-  'public/js/lazy-guides.js',
-  'public/js/lazy-d3.js',
-  'public/js/lazy-ships.js',
-  'public/js/lazy-admin.js'
+  ...appJsFiles
 ];
 const errors = [];
 
@@ -82,6 +72,11 @@ for (const file of htmlFiles) {
       } catch (error) {
         errors.push(`${file} 인라인 스크립트 ${index + 1} 문법 오류: ${error.message}`);
       }
+      // A-1 (2026-10-17): 앱 로직은 public/js/* 외부 파일에서 관리합니다.
+      // index.html 에 큰 인라인 블록이 다시 생기는 것을 차단합니다 (2KB 이하는 허용).
+      if (file === 'public/index.html' && match[1].trim().length > 2048) {
+        errors.push(`${file} 에 ${match[1].trim().length}바이트 인라인 스크립트가 있습니다 — public/js/* 로 분리하세요.`);
+      }
     }
   } catch (error) {
     errors.push(`${file} 검사 오류: ${error.message}`);
@@ -101,20 +96,30 @@ for (const file of jsFiles) {
 }
 
 try {
-  const globalScriptFiles = [
-    'public/js/core.js',
-    'public/js/terminals.js',
-    'public/js/worklog.js',
-    'public/js/wage.js',
-    'public/js/community.js',
-    'public/js/app-init.js'
-  ];
+  // 로드 순서로 통합: 파일 간 const/let 중복 선언이 있으면 실행 시점에 깨지므로 여기에서 차단합니다.
   const combinedGlobal = (
-    await Promise.all(globalScriptFiles.map((file) => readFile(file, 'utf8')))
+    await Promise.all(appJsFiles.map((file) => readFile(file, 'utf8')))
   ).join('\n');
   new vm.Script(combinedGlobal, { filename: 'combined-global-scripts.js' });
 } catch (error) {
   errors.push(`전역 스크립트 통합 검증 오류 (중복 선언 등): ${error.message}`);
+}
+
+// A-1 (2026-10-17): 외부화한 파일이 실제로 index.html 에서 로드되는지 확인합니다.
+// (E-3 — 파일 존재만 강제한 채 참조가 사라지는 "죽은 코드" 회귀 방지)
+try {
+  const indexHtml = await readFile('public/index.html', 'utf8');
+  for (const file of appJsFiles) {
+    const asset = file.replace('public/', '');
+    if (!new RegExp(`<script[^>]*src="\\.?/${asset.replace(/\\./g, '\\.')}(\\?[^"]*)?"`).test(indexHtml)) {
+      errors.push(`index.html 이 ${asset} 를 로드하지 않습니다 — 참조가 사라지면 죽은 코드가 됩니다.`);
+    }
+  }
+  if (!/<link\b[^>]*\bhref="\.?\/css\/app\.css(\?[^"]*)?"/i.test(indexHtml)) {
+    errors.push('index.html 이 public/css/app.css 를 <link> 로 참조하지 않습니다.');
+  }
+} catch (error) {
+  errors.push(`외부 자산 참조 검사 오류: ${error.message}`);
 }
 
 const firebaseConfig = JSON.parse(await readFile('firebase.json', 'utf8'));
