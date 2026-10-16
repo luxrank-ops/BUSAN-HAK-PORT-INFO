@@ -3870,11 +3870,13 @@ function isDeletedRecord(data) {
    복합 인덱스가 아직 배포되지 않은 환경에서는 기존 방식으로 자동 대체됩니다. */
 let workLogScopedQueryUnavailable = false;
 async function queryWorkLogsByDateRange(startDate, endDate, limitCount = 500) {
-    const buildQuery = (scoped) => {
-        let q = db.collection("work_logs");
-        if (scoped) q = q.where("workerId", "==", currentWorkerId);
-        if (startDate) q = q.where("date", ">=", startDate);
-        if (endDate) q = q.where("date", "<=", endDate);
+    const buildQuery = (withDateRange) => {
+        // 규칙상 work_logs 목록 조회에는 workerId 조건이 반드시 있어야 합니다(없으면 권한 거부).
+        let q = db.collection("work_logs").where("workerId", "==", currentWorkerId);
+        if (withDateRange) {
+            if (startDate) q = q.where("date", ">=", startDate);
+            if (endDate) q = q.where("date", "<=", endDate);
+        }
         return q.limit(limitCount);
     };
     if (!workLogScopedQueryUnavailable) {
@@ -3882,14 +3884,23 @@ async function queryWorkLogsByDateRange(startDate, endDate, limitCount = 500) {
             return await buildQuery(true).get();
         } catch (e) {
             workLogScopedQueryUnavailable = true;
-            try { console.warn("[근무일지 본인 조회] 인덱스 미배포로 기존 방식으로 전환:", e && e.message); } catch (_) {}
+            try { console.warn("[근무일지 본인 조회] 복합 인덱스 미배포로 대체 조회로 전환:", e && e.message); } catch (_) {}
             if (!localStorage.getItem("workLogIndexNoticeShown")) {
                 try { localStorage.setItem("workLogIndexNoticeShown", "1"); } catch (_) {}
-                if (typeof showToast === "function") showToast("ℹ️ 근무일지 조회를 예전 방식으로 전환했습니다. (관리자: 인덱스 배포 필요)");
+                if (typeof showToast === "function") showToast("ℹ️ 근무일지 조회를 대체 방식으로 전환했습니다. (관리자: 인덱스 배포 필요)");
             }
         }
     }
-    return await buildQuery(false).get();
+    // 대체 조회: workerId 조건만 걸어 본인 것만 받고(기본 인덱스로 충분), 날짜 범위는 화면에서 거릅니다.
+    const snap = await buildQuery(false).get();
+    const scopedDocs = snap.docs.filter((docItem) => {
+        const dateStr = String((docItem.data() || {}).date || "");
+        if (!dateStr) return false;
+        if (startDate && dateStr < startDate) return false;
+        if (endDate && dateStr > endDate) return false;
+        return true;
+    });
+    return { docs: scopedDocs, size: scopedDocs.length, empty: scopedDocs.length === 0, forEach: (fn) => scopedDocs.forEach(fn) };
 }
 
 let __d3SdkPromise = null;

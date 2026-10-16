@@ -154,7 +154,12 @@ service cloud.firestore {
     // ---------------------------------------------------------
     match /work_logs/{logId} {
       allow get: if isSignedIn() && isValidId(logId);
-      allow list: if isSignedIn() && resource.data.workerId is string && resource.data.workerId.size() <= 64;
+      // 목록 조회는 workerId 조건을 증명할 수 있어야 허용됩니다(규칙은 필터가 아닙니다).
+      // 화면은 본인 workerId 로만 조회하며, 실제 관리자(로그인 계정)는 전체를 볼 수 있습니다.
+      allow list: if isSignedIn() && (
+        isAdmin() ||
+        (resource.data.workerId is string && resource.data.workerId.size() <= 64)
+      );
       allow create: if isSignedIn() && isValidId(logId) &&
         incoming().workerId is string && incoming().workerId.size() >= 1 && incoming().workerId.size() <= 64 &&
         incoming().date is string && incoming().date.size() == 10;

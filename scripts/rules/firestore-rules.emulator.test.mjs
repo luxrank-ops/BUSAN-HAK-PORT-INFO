@@ -295,14 +295,25 @@ if (!EMULATOR_AVAILABLE) {
                 .get());
         });
 
-        test('인덱스가 아직 없을 때 쓰는 대체 조회(날짜 범위만)도 허용된다', async () => {
+        test('workerId 조건이 없는 조회는 규칙이 거부한다 (날짜 범위만으로는 조회 불가)', async () => {
             await seed(async (db) => {
                 await setDoc(doc(db, 'work_logs/a_2026-10-01'), { workerId: 'a', date: '2026-10-01' });
             });
-            await ok(stranger().collection('work_logs')
+            // 규칙은 필터가 아니므로, 규칙이 요구하는 조건(workerId)을 증명할 수 없는 쿼리는 거부됩니다.
+            // 그래서 인덱스가 아직 없을 때의 대체 조회도 workerId 조건을 유지하고 날짜는 화면에서 거릅니다.
+            await denied(stranger().collection('work_logs')
                 .where('date', '>=', '2026-10-01')
                 .where('date', '<=', '2026-10-31')
                 .get());
+        });
+
+        test('인덱스가 없을 때 쓰는 대체 조회(workerId 만)는 허용된다', async () => {
+            await seed(async (db) => {
+                await setDoc(doc(db, 'work_logs/a_2026-10-01'), { workerId: 'a', date: '2026-10-01' });
+                await setDoc(doc(db, 'work_logs/a_2026-09-30'), { workerId: 'a', date: '2026-09-30' });
+            });
+            const snap = await ok(stranger().collection('work_logs').where('workerId', '==', 'a').get());
+            assert.equal(snap.size, 2);
         });
 
         test('아직은 남의 workerId 로도 조회할 수 있다 (규칙 한계 — C-4 로그인 도입 시 해결)', async () => {

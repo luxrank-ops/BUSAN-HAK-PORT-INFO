@@ -101,7 +101,11 @@ test('화면 코드는 게시판·근무일지에서 물리 삭제를 쓰지 않
 
 test('근무일지 조회는 본인 범위로 좁히고, 삭제된 기록은 목록에서 제외한다', () => {
     assert.match(html, /async function queryWorkLogsByDateRange\(/);
-    assert.match(html, /q = q\.where\("workerId", "==", currentWorkerId\)/);
+    // 규칙이 workerId 조건을 요구하므로, 목록 조회에는 항상 workerId 조건이 붙어야 합니다.
+    assert.match(html, /collection\("work_logs"\)\.where\("workerId", "==", currentWorkerId\)/);
+    assert.doesNotMatch(html, /let q = db\.collection\("work_logs"\);/);
+    // 인덱스가 없을 때의 대체 조회도 workerId 조건을 유지하고 날짜는 화면에서 거릅니다.
+    assert.match(html, /buildQuery\(false\)/);
     assert.match(html, /function isDeletedRecord\(/);
 
     const scopedCalls = html.match(/queryWorkLogsByDateRange\(/g) || [];
