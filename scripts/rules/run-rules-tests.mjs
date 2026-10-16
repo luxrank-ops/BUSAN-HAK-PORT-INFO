@@ -31,9 +31,10 @@ const major = javaMajorVersion();
 if (major === null) skip(`Java(JDK ${MIN_JAVA}+) 가 없어 Firestore 에뮬레이터 테스트를 건너뜁니다.`);
 if (major < MIN_JAVA) skip(`Java ${major} 는 너무 낮습니다(Firestore 에뮬레이터는 JDK ${MIN_JAVA}+ 필요).`);
 
+// 연결 진단을 먼저 찍어 둡니다(실패 원인이 로그에 남도록). 진단이 실패해도 테스트는 계속합니다.
 const command = [
     'npx --no-install firebase emulators:exec --only firestore --project demo-busan-hak-port',
-    '"node --test --test-timeout=60000 scripts/rules/firestore-rules.emulator.test.mjs"'
+    '"node scripts/rules/emulator-diagnose.mjs; node --test --test-timeout=60000 scripts/rules/firestore-rules.emulator.test.mjs"'
 ].join(' ');
 
 const result = spawnSync(command, { stdio: 'inherit', shell: true });

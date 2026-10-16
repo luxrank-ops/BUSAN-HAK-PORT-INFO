@@ -43,12 +43,18 @@ jobs:
           java-version: '21'
 
       - name: Firestore 보안 규칙 테스트 (에뮬레이터)
+        env:
+          RULES_TEST_VERBOSE: '1'
         run: |
           set +e
           npm run test:rules 2>&1 | tee /tmp/rules.log
           status=${PIPESTATUS[0]}
           if [ $status -ne 0 ]; then
-            grep -E "not ok|AssertionError|Error:|error:" /tmp/rules.log | head -10 | while IFS= read -r line; do
+            {
+              grep -E "\[규칙테스트\]" /tmp/rules.log | head -6
+              grep -E "^# (tests|pass|fail|cancelled)" /tmp/rules.log
+              grep -E "error:|Error:" /tmp/rules.log | grep -v "did not finish before its parent" | head -4
+            } | while IFS= read -r line; do
               echo "::error::${line//$'\r'/}"
             done
           fi

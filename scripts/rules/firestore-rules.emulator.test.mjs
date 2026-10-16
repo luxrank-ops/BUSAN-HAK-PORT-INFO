@@ -36,6 +36,30 @@ function emulatorEndpoint() {
 const ENDPOINT = emulatorEndpoint();
 const EMULATOR_AVAILABLE = ENDPOINT !== null;
 
+const VERBOSE = process.env.RULES_TEST_VERBOSE === '1';
+const OP_TIMEOUT_MS = 20000;
+
+/** 진행 마커(진단용). RULES_TEST_VERBOSE=1 일 때만 출력합니다. */
+const test = (name, fn) => it(name, async () => {
+    if (VERBOSE) console.log(`[규칙테스트] \u25b6 ${name}`);
+    await fn();
+    if (VERBOSE) console.log(`[규칙테스트] \u2714 ${name}`);
+});
+
+/** 요청이 응답 없이 멈추는 사고를 실패로 바꿔 주는 시간 제한 */
+function guarded(promise) {
+    return Promise.race([
+        promise,
+        new Promise((_, reject) => setTimeout(
+            () => reject(new Error(`[규칙테스트] Firestore 요청이 ${OP_TIMEOUT_MS / 1000}초 안에 응답하지 않았습니다`)),
+            OP_TIMEOUT_MS
+        ))
+    ]);
+}
+
+const ok = (promise) => assertSucceeds(guarded(promise));
+const denied = (promise) => assertFails(guarded(promise));
+
 const SHA = 'a'.repeat(64);        // 형식만 맞는 SHA-256 해시(작성자 비밀번호)
 const OTHER_SHA = 'b'.repeat(64);  // 다른 비밀번호 해시
 
@@ -76,53 +100,53 @@ if (!EMULATOR_AVAILABLE) {
     };
 
     describe('work_logs (근무일지·임금 기록)', () => {
-        it('본인이 저장한 일지를 다시 저장할 수 있다', async () => {
+        test('본인이 저장한 일지를 다시 저장할 수 있다', async () => {
             await seed(async (db) => {
                 await setDoc(doc(db, 'work_logs/a_2026-10-01'), {
                     workerId: 'a', date: '2026-10-01', totalPay: 100000
                 });
             });
-            await assertSucceeds(updateDoc(doc(worker(), 'work_logs/a_2026-10-01'), { totalPay: 120000 }));
+            await ok(updateDoc(doc(worker(), 'work_logs/a_2026-10-01'), { totalPay: 120000 }));
         });
 
-        it('남의 일지를 물리 삭제할 수 없다 (삭제는 관리자 전용)', async () => {
+        test('남의 일지를 물리 삭제할 수 없다 (삭제는 관리자 전용)', async () => {
             await seed(async (db) => {
                 await setDoc(doc(db, 'work_logs/a_2026-10-01'), {
                     workerId: 'a', date: '2026-10-01', totalPay: 100000
                 });
             });
-            await assertFails(deleteDoc(doc(worker(), 'work_logs/a_2026-10-01')));
+            await denied(deleteDoc(doc(worker(), 'work_logs/a_2026-10-01')));
         });
 
-        it('일지의 소유자(workerId)를 바꿔치기할 수 없다', async () => {
+        test('일지의 소유자(workerId)를 바꿔치기할 수 없다', async () => {
             await seed(async (db) => {
                 await setDoc(doc(db, 'work_logs/a_2026-10-01'), {
                     workerId: 'a', date: '2026-10-01', totalPay: 100000
                 });
             });
-            await assertFails(updateDoc(doc(worker(), 'work_logs/a_2026-10-01'), { workerId: 'b' }));
+            await denied(updateDoc(doc(worker(), 'work_logs/a_2026-10-01'), { workerId: 'b' }));
         });
 
-        it('일지의 날짜를 바꿔 다른 날 기록으로 옮길 수 없다', async () => {
+        test('일지의 날짜를 바꿔 다른 날 기록으로 옮길 수 없다', async () => {
             await seed(async (db) => {
                 await setDoc(doc(db, 'work_logs/a_2026-10-01'), {
                     workerId: 'a', date: '2026-10-01', totalPay: 100000
                 });
             });
-            await assertFails(updateDoc(doc(worker(), 'work_logs/a_2026-10-01'), { date: '2026-10-02' }));
+            await denied(updateDoc(doc(worker(), 'work_logs/a_2026-10-01'), { date: '2026-10-02' }));
         });
 
-        it('소프트 삭제 표시(deletedAt)는 저장할 수 있다', async () => {
+        test('소프트 삭제 표시(deletedAt)는 저장할 수 있다', async () => {
             await seed(async (db) => {
                 await setDoc(doc(db, 'work_logs/a_2026-10-01'), {
                     workerId: 'a', date: '2026-10-01', totalPay: 100000
                 });
             });
-            await assertSucceeds(updateDoc(doc(worker(), 'work_logs/a_2026-10-01'), { deletedAt: new Date() }));
+            await ok(updateDoc(doc(worker(), 'work_logs/a_2026-10-01'), { deletedAt: new Date() }));
         });
 
-        it('작성자·날짜 형식이 없는 저장은 거부된다', async () => {
-            await assertFails(setDoc(doc(worker(), 'work_logs/broken'), { workerId: 'a', date: '2026-1-1' }));
+        test('작성자·날짜 형식이 없는 저장은 거부된다', async () => {
+            await denied(setDoc(doc(worker(), 'work_logs/broken'), { workerId: 'a', date: '2026-1-1' }));
         });
     });
 
@@ -134,60 +158,60 @@ if (!EMULATOR_AVAILABLE) {
             });
         });
 
-        it('누구나 글을 쓸 수 있다 (해시 비밀번호 형식 준수 시)', async () => {
+        test('누구나 글을 쓸 수 있다 (해시 비밀번호 형식 준수 시)', async () => {
             await seed(async () => {});
-            await assertSucceeds(addDoc(collection(worker(), 'posts'), {
+            await ok(addDoc(collection(worker(), 'posts'), {
                 nick: '익명', title: '제목', content: '내용', password: SHA
             }));
         });
 
-        it('해시가 아닌 비밀번호로는 글을 쓸 수 없다', async () => {
+        test('해시가 아닌 비밀번호로는 글을 쓸 수 없다', async () => {
             await seed(async () => {});
-            await assertFails(addDoc(collection(worker(), 'posts'), {
+            await denied(addDoc(collection(worker(), 'posts'), {
                 nick: '익명', title: '제목', content: '내용', password: '1234'
             }));
         });
 
-        it('남의 글을 물리 삭제할 수 없다 (누구나 삭제되던 구멍 차단)', async () => {
+        test('남의 글을 물리 삭제할 수 없다 (누구나 삭제되던 구멍 차단)', async () => {
             await seedPost();
-            await assertFails(deleteDoc(postRef(stranger())));
-            await assertFails(deleteDoc(postRef(worker())));
+            await denied(deleteDoc(postRef(stranger())));
+            await denied(deleteDoc(postRef(worker())));
         });
 
-        it('소프트 삭제(삭제 표시만)는 허용된다', async () => {
+        test('소프트 삭제(삭제 표시만)는 허용된다', async () => {
             await seedPost();
-            await assertSucceeds(updateDoc(postRef(worker()), { deletedAt: new Date(), deletedBy: 'worker-a' }));
+            await ok(updateDoc(postRef(worker()), { deletedAt: new Date(), deletedBy: 'worker-a' }));
         });
 
-        it('삭제 표시를 빙자해 비밀번호를 바꾸는 요청은 거부된다', async () => {
+        test('삭제 표시를 빙자해 비밀번호를 바꾸는 요청은 거부된다', async () => {
             await seedPost();
             // deletedAt 만 바꾸는 형태(소프트 삭제)가 아니고, 비밀번호도 그대로가 아니므로 두 경로 모두 거부됩니다.
-            await assertFails(updateDoc(postRef(worker()), {
+            await denied(updateDoc(postRef(worker()), {
                 deletedAt: new Date(), password: OTHER_SHA
             }));
         });
 
-        it('내용을 수정해도 비밀번호는 바꿀 수 없다 (글 잠금 공격 차단)', async () => {
+        test('내용을 수정해도 비밀번호는 바꿀 수 없다 (글 잠금 공격 차단)', async () => {
             await seedPost();
-            await assertFails(updateDoc(postRef(worker()), {
+            await denied(updateDoc(postRef(worker()), {
                 nick: '라싱반장', title: '수정', content: '수정 내용', password: OTHER_SHA
             }));
-            await assertSucceeds(updateDoc(postRef(worker()), {
+            await ok(updateDoc(postRef(worker()), {
                 nick: '라싱반장', title: '수정', content: '수정 내용', password: SHA
             }));
         });
 
-        it('조회수 1 증가는 누구나 할 수 있다', async () => {
+        test('조회수 1 증가는 누구나 할 수 있다', async () => {
             await seed(async (db) => {
                 await setDoc(doc(db, 'posts/p1'), {
                     nick: '라싱반장', title: '제목', content: '내용', password: SHA, views: 3
                 });
             });
-            await assertSucceeds(updateDoc(postRef(stranger()), { views: 4 }));
-            await assertFails(updateDoc(postRef(stranger()), { views: 9 }));
+            await ok(updateDoc(postRef(stranger()), { views: 4 }));
+            await denied(updateDoc(postRef(stranger()), { views: 9 }));
         });
 
-        it('댓글도 남이 삭제할 수 없고, 비밀번호는 바꿀 수 없다', async () => {
+        test('댓글도 남이 삭제할 수 없고, 비밀번호는 바꿀 수 없다', async () => {
             await seed(async (db) => {
                 await setDoc(doc(db, 'posts/p1'), {
                     nick: '라싱반장', title: '제목', content: '내용', password: SHA
@@ -197,11 +221,11 @@ if (!EMULATOR_AVAILABLE) {
                 });
             });
             const comment = (db) => doc(db, 'posts/p1/comments/c1');
-            await assertFails(deleteDoc(comment(stranger())));
-            await assertFails(updateDoc(comment(stranger()), {
+            await denied(deleteDoc(comment(stranger())));
+            await denied(updateDoc(comment(stranger()), {
                 name: '익명', text: '수정', password: OTHER_SHA
             }));
-            await assertSucceeds(updateDoc(comment(stranger()), { deletedAt: new Date(), deletedBy: 'x' }));
+            await ok(updateDoc(comment(stranger()), { deletedAt: new Date(), deletedBy: 'x' }));
         });
     });
 
@@ -211,52 +235,52 @@ if (!EMULATOR_AVAILABLE) {
             await setDoc(doc(db, 'ships/s1'), { shipName: 'HMM ALGECIRAS', password: SHA, difficulty: 3 });
         });
 
-        it('선박 정보도 물리 삭제는 관리자 전용이다', async () => {
+        test('선박 정보도 물리 삭제는 관리자 전용이다', async () => {
             await seedShip();
-            await assertFails(deleteDoc(shipRef(worker())));
+            await denied(deleteDoc(shipRef(worker())));
         });
 
-        it('선박 정보 수정 시 비밀번호는 그대로여야 한다', async () => {
+        test('선박 정보 수정 시 비밀번호는 그대로여야 한다', async () => {
             await seedShip();
-            await assertFails(updateDoc(shipRef(worker()), {
+            await denied(updateDoc(shipRef(worker()), {
                 shipName: 'HMM ALGECIRAS', password: OTHER_SHA, difficulty: 5
             }));
-            await assertSucceeds(updateDoc(shipRef(worker()), {
+            await ok(updateDoc(shipRef(worker()), {
                 shipName: 'HMM ALGECIRAS', password: SHA, difficulty: 5
             }));
         });
 
-        it('소프트 삭제는 허용된다', async () => {
+        test('소프트 삭제는 허용된다', async () => {
             await seedShip();
-            await assertSucceeds(updateDoc(shipRef(worker()), { deletedAt: new Date(), deletedBy: 'worker-a' }));
+            await ok(updateDoc(shipRef(worker()), { deletedAt: new Date(), deletedBy: 'worker-a' }));
         });
     });
 
     describe('admins · settings (권한 상승 차단)', () => {
-        it('스스로 관리자 문서를 만들어 권한을 얻을 수 없다', async () => {
+        test('스스로 관리자 문서를 만들어 권한을 얻을 수 없다', async () => {
             await seed(async () => {});
-            await assertFails(setDoc(doc(worker('stranger-uid'), 'admins/stranger-uid'), {
+            await denied(setDoc(doc(worker('stranger-uid'), 'admins/stranger-uid'), {
                 uid: 'stranger-uid', verifiedAt: new Date()
             }));
         });
 
-        it('관리자 비밀번호 문서는 읽을 수도 쓸 수도 없다', async () => {
+        test('관리자 비밀번호 문서는 읽을 수도 쓸 수도 없다', async () => {
             await seed(async (db) => {
                 await setDoc(doc(db, 'settings/admin'), { passwordHash: SHA });
             });
-            await assertFails(doc(worker(), 'settings/admin').get());
-            await assertFails(setDoc(doc(worker(), 'settings/admin'), { passwordHash: OTHER_SHA }));
+            await denied(doc(worker(), 'settings/admin').get());
+            await denied(setDoc(doc(worker(), 'settings/admin'), { passwordHash: OTHER_SHA }));
         });
     });
 
     describe('알려진 한계 (C-4 로그인 도입 시 함께 해결)', () => {
-        it('work_logs 목록 조회는 아직 인증된 세션이면 허용된다', async () => {
+        test('work_logs 목록 조회는 아직 인증된 세션이면 허용된다', async () => {
             await seed(async (db) => {
                 await setDoc(doc(db, 'work_logs/a_2026-10-01'), { workerId: 'a', date: '2026-10-01' });
             });
             // 화면은 본인 workerId 로만 조회하지만, 규칙 자체는 아직 전체 목록을 막지 못합니다.
             // 이 항목이 실패하기 시작하면 규칙이 강화된 것이므로 이 테스트를 갱신하세요.
-            await assertSucceeds(stranger().collection('work_logs').get());
+            await ok(stranger().collection('work_logs').get());
         });
     });
 }
