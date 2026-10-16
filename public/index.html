@@ -2800,6 +2800,12 @@
                 </div>
                 <button type="button" class="ship-tag-chip" data-filter-tag="#오토콘" onclick="toggleShipFilterTag('#오토콘')">#오토콘</button>
                 <button type="button" class="ship-tag-chip" data-filter-tag="#수동콘" onclick="toggleShipFilterTag('#수동콘')">#수동콘</button>
+                <button type="button" class="ship-tag-chip" data-filter-tag="#외줄콘" onclick="toggleShipFilterTag('#외줄콘')">#외줄콘</button>
+                <button type="button" class="ship-tag-chip" data-filter-tag="#더블콘" onclick="toggleShipFilterTag('#더블콘')">#더블콘</button>
+                <button type="button" class="ship-tag-chip" data-filter-tag="#주먹콘" onclick="toggleShipFilterTag('#주먹콘')">#주먹콘</button>
+                <button type="button" class="ship-tag-chip" data-filter-tag="#손가락콘" onclick="toggleShipFilterTag('#손가락콘')">#손가락콘</button>
+                <button type="button" class="ship-tag-chip" data-filter-tag="#현대콘" onclick="toggleShipFilterTag('#현대콘')">#현대콘</button>
+                <button type="button" class="ship-tag-chip" data-filter-tag="#춘학 사랑해콘" onclick="toggleShipFilterTag('#춘학 사랑해콘')">#춘학 사랑해콘</button>
                 <button type="button" class="ship-tag-chip" data-filter-tag="#브릿지주의" onclick="toggleShipFilterTag('#브릿지주의')">#브릿지주의</button>
                 <button type="button" class="ship-tag-chip" data-filter-tag="#라싱바무거움" onclick="toggleShipFilterTag('#라싱바무거움')">#라싱바무거움</button>
                 <button type="button" class="ship-tag-chip" data-filter-tag="#턴버클뻑뻑함" onclick="toggleShipFilterTag('#턴버클뻑뻑함')">#턴버클뻑뻑함</button>
@@ -2854,6 +2860,12 @@
                     <div id="shipFormTagList" style="display:flex; flex-wrap:wrap; gap:6px;">
                         <button type="button" class="ship-tag-chip" data-form-tag="#오토콘" onclick="toggleShipFormTag('#오토콘')">#오토콘</button>
                         <button type="button" class="ship-tag-chip" data-form-tag="#수동콘" onclick="toggleShipFormTag('#수동콘')">#수동콘</button>
+                        <button type="button" class="ship-tag-chip" data-form-tag="#외줄콘" onclick="toggleShipFormTag('#외줄콘')">#외줄콘</button>
+                        <button type="button" class="ship-tag-chip" data-form-tag="#더블콘" onclick="toggleShipFormTag('#더블콘')">#더블콘</button>
+                        <button type="button" class="ship-tag-chip" data-form-tag="#주먹콘" onclick="toggleShipFormTag('#주먹콘')">#주먹콘</button>
+                        <button type="button" class="ship-tag-chip" data-form-tag="#손가락콘" onclick="toggleShipFormTag('#손가락콘')">#손가락콘</button>
+                        <button type="button" class="ship-tag-chip" data-form-tag="#현대콘" onclick="toggleShipFormTag('#현대콘')">#현대콘</button>
+                        <button type="button" class="ship-tag-chip" data-form-tag="#춘학 사랑해콘" onclick="toggleShipFormTag('#춘학 사랑해콘')">#춘학 사랑해콘</button>
                         <button type="button" class="ship-tag-chip" data-form-tag="#브릿지주의" onclick="toggleShipFormTag('#브릿지주의')">#브릿지주의</button>
                         <button type="button" class="ship-tag-chip" data-form-tag="#라싱바무거움" onclick="toggleShipFormTag('#라싱바무거움')">#라싱바무거움</button>
                         <button type="button" class="ship-tag-chip" data-form-tag="#턴버클뻑뻑함" onclick="toggleShipFormTag('#턴버클뻑뻑함')">#턴버클뻑뻑함</button>
@@ -11099,8 +11111,12 @@ function extractShipTags(ship) {
     if (!ship) return [];
     if (Array.isArray(ship.tags) && ship.tags.length > 0) return ship.tags;
     const text = `${getShipDisplayName(ship)} ${getShipMemoText(ship)} ${getShipLegacyOnshoreText(ship)}`;
-    const known = ["#오토콘", "#수동콘", "#브릿지주의", "#라싱바무거움", "#턴버클뻑뻑함", "#통로협소"];
-    return known.filter(t => text.includes(t) || text.includes(t.slice(1)));
+    const known = [
+        "#오토콘", "#수동콘",
+        "#외줄콘", "#더블콘", "#주먹콘", "#손가락콘", "#현대콘", "#춘학 사랑해콘",
+        "#브릿지주의", "#라싱바무거움", "#턴버클뻑뻑함", "#통로협소"
+    ];
+    return known.filter(t => text.includes(t) || text.includes(t.slice(1)) || (t === "#춘학 사랑해콘" && text.includes("춘학사랑해콘")));
 }
 /* ------------------------------------------------------------------
    🚢 선박 도감 레거시(업데이트 이전 등록) 데이터 호환 헬퍼
@@ -11341,7 +11357,8 @@ function resetShipForm() {
 }
 function getShipSearchHaystack(ship, tags) {
     const sTags = Array.isArray(tags) ? tags : extractShipTags(ship);
-    return `${getShipDisplayName(ship)} ${getShipMemoText(ship)} ${getShipLegacyOnshoreText(ship)} ${sTags.join(" ")}`;
+    const compactTags = sTags.map(t => t.replace(/\s+/g, '')).join(" ");
+    return `${getShipDisplayName(ship)} ${getShipMemoText(ship)} ${getShipLegacyOnshoreText(ship)} ${sTags.join(" ")} ${compactTags}`;
 }
 // 현재 화면의 검색어·장비 태그·난이도 필터를 그대로 적용한 선박 목록을 돌려줍니다.
 // (실시간 스냅샷으로 목록을 다시 그릴 때도 같은 조건을 유지하기 위해 분리)
@@ -12591,7 +12608,8 @@ async function loadAndSearchAllShips(searchKeyword = "") {
                     ? `${getShipMemoText(item)} ${getShipLegacyOnshoreText(item)}`
                     : String(item.onboardFeat || item.memo || item.info || "")).toLowerCase();
                 const tagStr = sTags.join(" ").toLowerCase();
-                if (!shipName.includes(keyword) && !shipCode.includes(keyword) && !shipMemo.includes(keyword) && !tagStr.includes(keyword)) {
+                const compactTagStr = sTags.map(t => t.replace(/\s+/g, '')).join(" ").toLowerCase();
+                if (!shipName.includes(keyword) && !shipCode.includes(keyword) && !shipMemo.includes(keyword) && !tagStr.includes(keyword) && !compactTagStr.includes(keyword)) {
                     return false;
                 }
             }

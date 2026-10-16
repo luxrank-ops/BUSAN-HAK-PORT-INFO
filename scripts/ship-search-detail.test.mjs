@@ -336,3 +336,37 @@ test('ships 실시간 구독은 검색 조건을 버리는 대신 applyShipDirec
     const codeOnly = html.replace(/\/\*[\s\S]*?\*\//g, '');
     assert.doesNotMatch(codeOnly, /filteredShips\s*=\s*allShipsData\s*;/, '스냅샷에서 검색 결과를 전체 목록으로 덮어쓰지 않아야 함');
 });
+
+test('필수 장비 신규 콘 태그(외줄콘/더블콘/주먹콘/손가락콘/현대콘/춘학 사랑해콘)가 올바르게 추출·필터·검색된다', () => {
+    const t = setup();
+    t.docs = [
+        ...t.docs,
+        { id: 'tag1', shipName: 'CONE VESSEL 1', onboardFeat: '외줄콘 및 주먹콘 사용', views: 0, ts: 10 },
+        { id: 'tag2', shipName: 'CONE VESSEL 2', onboardFeat: '더블콘과 손가락콘 주의', views: 0, ts: 9 },
+        { id: 'tag3', shipName: 'CONE VESSEL 3', onboardFeat: '현대콘 작업 선박', views: 0, ts: 8 },
+        { id: 'tag4', shipName: 'CONE VESSEL 4', onboardFeat: '춘학 사랑해콘 장비', views: 0, ts: 7, tags: ['#춘학 사랑해콘'] }
+    ];
+    t.emit();
+
+    // extractShipTags 검증
+    const s1 = t.docs.find(d => d.id === 'tag1');
+    const tags1 = t.context.extractShipTags(s1);
+    assert.ok(tags1.includes('#외줄콘'), '외줄콘 태그 추출');
+    assert.ok(tags1.includes('#주먹콘'), '주먹콘 태그 추출');
+
+    const s4 = t.docs.find(d => d.id === 'tag4');
+    const tags4 = t.context.extractShipTags(s4);
+    assert.ok(tags4.includes('#춘학 사랑해콘'), '춘학 사랑해콘 태그 확인');
+
+    // 태그 필터 검증
+    vm.runInContext('activeShipFilterTags = ["#춘학 사랑해콘"];', t.context);
+    t.context.filterShips();
+    assert.deepEqual(t.rowsShown(), ['s-tag4']);
+
+    // 검색어 공백 유무 호환 검증 (춘학사랑해콘 검색)
+    vm.runInContext('activeShipFilterTags = [];', t.context);
+    t.search.value = '춘학사랑해콘';
+    t.context.filterShips();
+    assert.deepEqual(t.rowsShown(), ['s-tag4']);
+});
+
