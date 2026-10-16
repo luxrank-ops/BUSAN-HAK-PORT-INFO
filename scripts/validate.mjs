@@ -29,7 +29,7 @@ const requiredFiles = [
   'public/js/lazy-admin.js'
 ];
 
-const jsonFiles = ['.firebaserc', 'firebase.json', 'metadata.json', 'package.json', 'public/manifest.json'];
+const jsonFiles = ['.firebaserc', 'firebase.json', 'firestore.indexes.json', 'metadata.json', 'package.json', 'public/manifest.json'];
 const htmlFiles = ['public/index.html', 'public/admin.html'];
 const jsFiles = [
   'public/service-worker.js',

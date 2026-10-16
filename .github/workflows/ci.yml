@@ -36,5 +36,8 @@ jobs:
       - name: 품질 검사
         run: npm run check
 
+      - name: Firestore 보안 규칙 테스트 (에뮬레이터)
+        run: npm run test:rules
+
       - name: Firebase CLI 확인
         run: npx --yes firebase-tools@15.3.1 --version
