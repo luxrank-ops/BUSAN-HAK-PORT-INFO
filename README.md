@@ -68,9 +68,10 @@
 ```text
 BUSAN-HAK-PORT-INFO/
 ├── public/
-│   ├── index.html            ← 화면 코드 + 디자인 토큰(:root, <style> 최상단)
+│   ├── index.html            ← 화면 마크업(인라인 스타일·스크립트 분리됨 — A-1)
 │   ├── admin.html            ← 정적 안내 페이지(토큰 부분 집합 사용)
-│   ├── css/app.css           ← index.html 스타일 블록 자동 미러(생성 파일)
+│   ├── css/app.css           ← 디자인 토큰 정본(:root) + 전체 스타일(런타임 정본, ?v= 캐시)
+│   ├── js/                   ← 전역 스크립트(app.js 정본, notifications.js, …)
 │   ├── manifest.json
 │   ├── service-worker.js
 │   ├── favicon.ico

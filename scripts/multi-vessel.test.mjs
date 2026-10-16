@@ -2,11 +2,55 @@ import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import vm from 'node:vm';
+import { readAppJs, readAppCssRaw, extractFunction as extractFunctionShared, extractDeclaration as extractDeclarationShared } from './app-source.mjs';
 
 const html = readFileSync(new URL('../public/index.html', import.meta.url), 'utf8');
+const css = readAppCssRaw();
+// A-1 (2026-10-17): 앱 로직은 public/js/* 외부 파일로 분리.
+// 이전에는 구 스냅샷(public/js/terminals.js · wage.js) 전체를 실행했지만,
+// 이제 라이브 소스(app.js 등)에서 동일한 함수를 추출해 실행합니다.
+const appJs = readAppJs();
+const appAll = html + '\n' + appJs;
 
-const terminalsCode = readFileSync(new URL('../public/js/terminals.js', import.meta.url), 'utf8');
-const wageCode = readFileSync(new URL('../public/js/wage.js', import.meta.url), 'utf8');
+function extractFunction(source, name) {
+    const body = extractFunctionShared(source, name);
+    if (body === null) throw new Error(`function not found: ${name}`);
+    return body;
+}
+
+function extractDeclaration(source, name) {
+    const body = extractDeclarationShared(source, name);
+    if (body === null) throw new Error(`declaration not found: ${name}`);
+    return body;
+}
+
+// calculateWage · applyWageScheduleShip · sendCalculatedWageToLog 가 전이적으로
+// 호출하는 라이브 함수 집합 (하니스가 스텁으로 대체하는 리프 함수는 제외).
+const WAGE_FUNCTIONS = [
+    'getTerminalMeta', 'updateTerminalScheduleLinksUI', 'renderTerminalScheduleTabBar',
+    'selectScheduleTerminal', 'invalidateCalculatedWage', 'periodHours',
+    'getSelectedVesselPeriod', 'syncWageHoursBlockSize', 'updateWageHoursBreakdown',
+    'refreshWageWorkHours', 'getWageScheduleDate', 'setWageScheduleDate',
+    'openWageScheduleDatePicker', 'onWageScheduleDateChange', 'getVesselScheduleDateTime',
+    'formatWageScheduleEvent', 'renderWageScheduledShipsUI', 'loadWageScheduledShipsForDate',
+    'refreshWageScheduleForSelectedDate', 'applyVesselPeriodToWageInputs',
+    'applyWageScheduleShip', 'initShipFormSchedulePicker', 'onShipFormScheduleDateChange',
+    'refreshShipFormScheduleForSelectedDate', 'renderShipFormScheduledShipsUI',
+    'syncCoworkerSelectionUI', 'renderRow', 'getSeasonScheduleByMonth',
+    'applySeasonDefaultHours', 'isWeekendOrPublicHolidayDate', 'highlightSeasonRow',
+    'calcTimeAndFill', 'autoFillWeekendHoliday', 'changeWageAllowanceType',
+    'updateSelectedWageAllowanceHours', 'calculateWageSegment', 'calculateWage',
+    'onWageShipNameChange', 'autoGrowWorkLogMemo', 'sendCalculatedWageToLog',
+    'sendWorkLogShipToWage', 'resetWageForm', 'selectBestCalcSegment'
+];
+
+const appBundle = [
+    'let lastCalculatedWageData = null;',
+    'let wageToLogTransferPending = false;',
+    extractDeclaration(appJs, 'publicHolidays'),
+    extractDeclaration(appJs, 'hjncScheduleMonthCache'),
+    ...WAGE_FUNCTIONS.map((name) => extractFunction(appJs, name))
+].join('\n');
 
 function setup() {
     const elements = {};
@@ -59,6 +103,10 @@ function setup() {
         currentWorkerId: 'worker',
         adminWorkLogs: logs,
         terminalQuickConfig: { hjnc: { schedule: '', chart: '' } },
+        selectedWageScheduleShipName: '',
+        selectedWageVessels: [],
+        selectedScheduleTerminal: 'HJNC',
+        db: { collection: () => ({ doc: () => ({ get: async () => ({ exists: false, data: () => null }) }) }) },
         extractDatePrefix(str) {
             const m = String(str || '').match(/^(\d{4}-\d{2}-\d{2})/);
             return m ? m[1] : '';
@@ -83,13 +131,13 @@ function setup() {
         console: { error() {}, warn() {} }
     });
 
-    vm.runInContext(`${terminalsCode}\n${wageCode}`, context);
+    vm.runInContext(appBundle, context);
 
     return { context, elements, messages, scheduleVessels };
 }
 
 test('no freelancer/insurance selector or withholding is applied to calculated wages', () => {
-    assert.doesNotMatch(html, /id="wageTaxType"|프리랜서 \(3\.3%\)|4대 보험 \(9\.4%\)/);
+    assert.doesNotMatch(appAll, /id="wageTaxType"|프리랜서 \(3\.3%\)|4대 보험 \(9\.4%\)/);
 
     const { context, elements } = setup();
     elements.wageTotalHours.value = '2';
@@ -106,13 +154,13 @@ test('double-order block has flashing red hint, wage allowance is collapsible <d
     assert.match(html, /class="wage-action-grid"/);
     assert.match(html, /class="wage-double-card"/);
     assert.match(html, /class="wage-double-hint"[^>]*>\(2번째 작업선박 체크\)/);
-    assert.match(html, /@keyframes double-order-flash/);
+    assert.match(css, /@keyframes double-order-flash/);
     assert.match(html, /<details class="wage-allowance-card" aria-labelledby="wageAllowanceTitle">/);
     assert.match(html, /<summary class="wage-allowance-toggle">/);
     assert.match(html, /class="wage-allowance-chevron"[^>]*>▼<\/span>/);
     assert.match(html, /class="wage-header-schedule"/);
     assert.match(html, /aria-label="월별 주간·야간 시간표"/);
-    assert.doesNotMatch(html, /id="wageLayoutToggleBtn"/);
+    assert.doesNotMatch(appAll, /id="wageLayoutToggleBtn"/);
 });
 
 test('2. wage hours grid includes 7:3 per-vessel breakdown cards and square total hours block', () => {
@@ -124,7 +172,7 @@ test('2. wage hours grid includes 7:3 per-vessel breakdown cards and square tota
     assert.match(html, /id="wageVessel2Name"/);
     assert.match(html, /class="wage-hours-total"/);
     assert.match(html, /⏳ 총 근무시간/);
-    assert.match(html, /function syncWageHoursBlockSize\(\)/);
+    assert.match(appJs, /function syncWageHoursBlockSize\(\)/);
 });
 
 test('3. selecting up to 2 vessels auto-checks double order, sums hours, and calculates segments for logWage1 & logWage2', async () => {

@@ -2,11 +2,14 @@ import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import vm from 'node:vm';
+import { readAppJs } from './app-source.mjs';
 
 const html = readFileSync(new URL('../public/index.html', import.meta.url), 'utf8');
-const segmentFn = html.split('function calculateWageSegment(')[1].split('function calculateWage() {')[0];
-const calculator = html.split('function calculateWage() {')[1].split('function onWageShipNameChange(')[0];
-const transfer = html.split('let wageToLogTransferPending = false;')[1].split('async function sendWorkLogShipToWage(')[0];
+// A-1 (2026-10-17): 앱 로직은 인라인 스크립트에서 public/js/* 로 이동 — 함수 추출은 통합 JS 에서.
+const appJs = readAppJs();
+const segmentFn = appJs.split('function calculateWageSegment(')[1].split('function calculateWage() {')[0];
+const calculator = appJs.split('function calculateWage() {')[1].split('function onWageShipNameChange(')[0];
+const transfer = appJs.split('let wageToLogTransferPending = false;')[1].split('async function sendWorkLogShipToWage(')[0];
 assert.ok(segmentFn && calculator && transfer, 'calculator and transfer code found');
 
 function setup({ doubleOrder = false, savedLog = null, sameDateDraft = false } = {}) {

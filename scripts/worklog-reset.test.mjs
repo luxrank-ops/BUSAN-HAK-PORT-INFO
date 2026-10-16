@@ -2,25 +2,19 @@ import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import vm from 'node:vm';
+import { APP_JS_FILES, readAppJs, readAppFile, readAppCssRaw, extractFunction as extractFunctionShared } from './app-source.mjs';
 
 // 근무일지 입력 폼 '초기화' 버튼(resetWorkLogForm) 검증.
 // 임금계산기의 초기화(resetWageForm)와 같이, 저장된 기록은 건드리지 않고 입력란만 비우는지 확인한다.
 const html = readFileSync(new URL('../public/index.html', import.meta.url), 'utf8');
+// A-1 (2026-10-17): 앱 로직은 인라인 스크립트에서 public/js/* 로 이동 — 함수 추출은 통합 JS 에서.
+const appJs = readAppJs();
+const css = readAppCssRaw();
 
 function extractFunction(name) {
-    let marker = html.indexOf(`async function ${name}(`);
-    if (marker < 0) marker = html.indexOf(`function ${name}(`);
-    if (marker < 0) throw new Error(`function not found: ${name}`);
-    const open = html.indexOf('{', marker);
-    let depth = 0;
-    for (let i = open; i < html.length; i++) {
-        if (html[i] === '{') depth++;
-        else if (html[i] === '}') {
-            depth--;
-            if (depth === 0) return html.slice(marker, i + 1);
-        }
-    }
-    throw new Error(`unterminated function: ${name}`);
+    const body = extractFunctionShared(appJs, name);
+    if (body === null) throw new Error(`function not found: ${name}`);
+    return body;
 }
 
 const FIELD_IDS = ['logShipName', 'logWage1', 'logWage2', 'logCoworkers', 'logMemo'];
@@ -82,8 +76,9 @@ test('the three action buttons are the same size (one shared rule, no per-button
         assert.match(markup, /class="action-btn/, 'every button keeps the shared action-btn style');
         assert.doesNotMatch(markup, /style="[^"]*(flex|padding|margin|height|width)/, 'a button must not override its size inline');
     }
+    // A-1 (2026-10-17): 스타일 룰은 index.html 에서 css/app.css 로 이동
     assert.match(
-        html,
+        css,
         /\.worklog-action-row > \.action-btn \{[^}]*flex: 1 1 0;[^}]*height: 52px;/,
         'one rule must give all three buttons the same width and height'
     );
@@ -129,9 +124,14 @@ test('a hidden (closed) form is ignored entirely', () => {
     assert.equal(elements.logShipName.value, 'SHIP ALPHA / SHIP BETA', 'content must survive when the form is closed');
 });
 
-test('the same reset exists in the mirrored module public/js/worklog.js', () => {
-    const mod = readFileSync(new URL('../public/js/worklog.js', import.meta.url), 'utf8');
-    assert.match(mod, /function resetWorkLogForm\(\)/);
-    assert.match(mod, /logShipName', 'logWage1', 'logWage2', 'logCoworkers', 'logMemo/);
-    assert.match(mod, /근무일지 입력 내용이 초기화되었습니다/);
+test('A-1: reset 로직은 전역 스크립트(app.js)에 단일 사본으로 유지된다', () => {
+    assert.match(appJs, /function resetWorkLogForm\(\)/);
+    assert.match(appJs, /logShipName', 'logWage1', 'logWage2', 'logCoworkers', 'logMemo/);
+    assert.match(appJs, /근무일지 입력 내용이 초기화되었습니다/);
+    // 분리 이전에는 인라인+모듈 2벌이 갈라져 있었지만, 이제 app.js 가 정본입니다.
+    // 다른 전역 스크립트에 사본이 생기면 동기화 회귀가 되므로 차단합니다.
+    const copies = APP_JS_FILES
+        .filter((file) => file.endsWith('app.js') === false)
+        .filter((file) => readAppFile(file).includes('function resetWorkLogForm()'));
+    assert.deepEqual(copies, [], `resetWorkLogForm 사본이 다른 전역 스크립트에 있습니다: ${copies.join(', ')}`);
 });

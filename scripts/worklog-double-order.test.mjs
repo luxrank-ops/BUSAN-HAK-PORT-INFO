@@ -2,30 +2,23 @@ import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import vm from 'node:vm';
+import { readAppJs, extractFunction as extractFunctionShared } from './app-source.mjs';
 
 // 근무일지 입·출항 선박 달력 조회 · 더블오더(2척) 선택 · 작업 내용 자동 입력 검증.
-// 실제 앱 코드(public/index.html 인라인 스크립트)에서 함수를 꺼내 가짜 DOM 위에서 실행한다.
+// 실제 앱 코드(public/js/* 전역 스크립트, A-1 분리 전에는 index.html 인라인)에서
+// 함수를 꺼내 가짜 DOM 위에서 실행한다.
 const html = readFileSync(new URL('../public/index.html', import.meta.url), 'utf8');
+const appJs = readAppJs();
+const appAll = html + '\n' + appJs; // 분리 전 "문서 전체"와 동일한 부재 검사 대상
 
 function extractFunction(name) {
-    // async 선언을 먼저 찾아야 `function name(` 이 `async function name(` 안에서 잘못 잡히지 않는다.
-    let marker = html.indexOf(`async function ${name}(`);
-    if (marker < 0) marker = html.indexOf(`function ${name}(`);
-    if (marker < 0) throw new Error(`function not found: ${name}`);
-    const open = html.indexOf('{', marker);
-    let depth = 0;
-    for (let i = open; i < html.length; i++) {
-        if (html[i] === '{') depth++;
-        else if (html[i] === '}') {
-            depth--;
-            if (depth === 0) return html.slice(marker, i + 1);
-        }
-    }
-    throw new Error(`unterminated function: ${name}`);
+    const body = extractFunctionShared(appJs, name);
+    if (body === null) throw new Error(`function not found: ${name}`);
+    return body;
 }
 
 function extractLine(prefix) {
-    const line = html.split('\n').find(l => l.startsWith(prefix));
+    const line = appJs.split('\n').find(l => l.startsWith(prefix));
     if (!line) throw new Error(`line not found: ${prefix}`);
     return line;
 }
@@ -132,19 +125,19 @@ test('the schedule title states whether the data is live or a stored copy', () =
 
 // B-1: 무음 실패 제거 — 스케줄 조회 실패는 콘솔 경고와 사용자 안내를 함께 남긴다.
 test('schedule failures are reported instead of being silently swallowed', () => {
-    assert.match(html, /function reportFailure\(scope, err, userMessage = ""\)/);
-    assert.match(html, /reportFailure\("실시간 선석 스케줄", e, "⚠️ 실시간 선석 정보를 불러오지 못했습니다\. 저장된 스케줄로 표시합니다\."\)/);
-    assert.match(html, /reportFailure\("실시간 기상", e, "⚠️ 부산항 실시간 기상 정보를 불러오지 못했습니다\."\)/);
+    assert.match(appJs, /function reportFailure\(scope, err, userMessage = ""\)/);
+    assert.match(appJs, /reportFailure\("실시간 선석 스케줄", e, "⚠️ 실시간 선석 정보를 불러오지 못했습니다\. 저장된 스케줄로 표시합니다\."\)/);
+    assert.match(appJs, /reportFailure\("실시간 기상", e, "⚠️ 부산항 실시간 기상 정보를 불러오지 못했습니다\."\)/);
 });
 
 // A-2: 무거운 SDK(d3·firebase-messaging)는 head 에서 즉시 받지 않고 필요할 때 지연 로드한다.
 test('heavy third-party SDKs are lazy loaded instead of blocking the first paint', () => {
     assert.doesNotMatch(html, /<script src="https:\/\/cdn\.jsdelivr\.net\/npm\/d3@7\/dist\/d3\.min\.js"><\/script>/);
     assert.doesNotMatch(html, /<script src="https:\/\/www\.gstatic\.com\/firebasejs\/8\.10\.1\/firebase-messaging\.js"><\/script>/);
-    assert.match(html, /function ensureD3LibraryLoaded\(\)/);
-    assert.match(html, /function ensureFirebaseMessagingLoaded\(\)/);
+    assert.match(appJs, /function ensureD3LibraryLoaded\(\)/);
+    assert.match(appJs, /function ensureFirebaseMessagingLoaded\(\)/);
     assert.match(html, /data-lazy-messaging="1"/);
-    assert.match(html, /const d3Ready = typeof ensureD3LibraryLoaded === "function" \? await ensureD3LibraryLoaded\(\) : null;/);
+    assert.match(appJs, /const d3Ready = typeof ensureD3LibraryLoaded === "function" \? await ensureD3LibraryLoaded\(\) : null;/);
 });
 
 test('the schedule date is a calendar input that is separate from the work-log date', () => {
@@ -271,17 +264,18 @@ test('opening a work-log day moves the calendar to that day and keeps the saved 
 
 test('the work-log box renders the calendar, the double-order status and the toggle handlers', () => {
     assert.match(html, /<div id="worklogDoubleOrderStatus"/);
-    assert.match(html, /onclick="toggleWorklogVesselPick\(\$\{index\}\)"/);
+    // JS 템플릿에서 생성되는 마크업 문자열 — 분리 이후 app.js 에 존재
+    assert.match(appJs, /onclick="toggleWorklogVesselPick\(\$\{index\}\)"/);
     assert.match(html, /placeholder="작업 선박명 \(2척 선택 시 더블오더\)" onchange="onWorklogShipNameEdited\(\)"/);
 });
 
 // 사용자가 삭제를 요청한 두 블럭: "📌 근무일 날짜"(resetWorklogScheduleToLogDate) · "💰 임금계산기 선박"(importWageVesselsToWorklog)
 test('the "근무일 날짜" and "임금계산기 선박" blocks are gone, the schedule calendar stays', () => {
-    assert.doesNotMatch(html, /근무일 날짜/);
-    assert.doesNotMatch(html, /임금계산기 선박/);
-    assert.doesNotMatch(html, /resetWorklogScheduleToLogDate/);
-    assert.doesNotMatch(html, /importWageVesselsToWorklog/);
-    assert.doesNotMatch(html, /worklog-schedule-tool-btn/);
+    assert.doesNotMatch(appAll, /근무일 날짜/);
+    assert.doesNotMatch(appAll, /임금계산기 선박/);
+    assert.doesNotMatch(appAll, /resetWorklogScheduleToLogDate/);
+    assert.doesNotMatch(appAll, /importWageVesselsToWorklog/);
+    assert.doesNotMatch(appAll, /worklog-schedule-tool-btn/);
     // 날짜 달력(◀ ▶ · date 입력)과 더블오더 선택은 그대로 남아 있어야 한다.
     assert.match(html, /onclick="shiftWorklogScheduleDate\(-1\)"/);
     assert.match(html, /onclick="shiftWorklogScheduleDate\(1\)"/);

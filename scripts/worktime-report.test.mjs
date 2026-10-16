@@ -2,25 +2,17 @@ import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import vm from 'node:vm';
+import { APP_JS_FILES, readAppJs, readAppFile, extractFunction as extractFunctionShared } from './app-source.mjs';
 
 // 월단위 작업시간 · 시간대별 책정 금액 리포트 검증.
-// 실제 앱 코드(public/index.html 인라인 스크립트)에서 함수를 꺼내 실행한다.
+// 실제 앱 코드(public/js/* 전역 스크립트, A-1 분리 전에는 index.html 인라인)에서 함수를 꺼내 실행한다.
 const html = readFileSync(new URL('../public/index.html', import.meta.url), 'utf8');
+const appJs = readAppJs();
 
 function extractFunction(name) {
-    let marker = html.indexOf(`async function ${name}(`);
-    if (marker < 0) marker = html.indexOf(`function ${name}(`);
-    if (marker < 0) throw new Error(`function not found: ${name}`);
-    const open = html.indexOf('{', marker);
-    let depth = 0;
-    for (let i = open; i < html.length; i++) {
-        if (html[i] === '{') depth++;
-        else if (html[i] === '}') {
-            depth--;
-            if (depth === 0) return html.slice(marker, i + 1);
-        }
-    }
-    throw new Error(`unterminated function: ${name}`);
+    const body = extractFunctionShared(appJs, name);
+    if (body === null) throw new Error(`function not found: ${name}`);
+    return body;
 }
 
 const context = vm.createContext({ Number, String, Array, Object, Date, RegExp, Math, Set, Map, console });
@@ -33,10 +25,11 @@ const extract = context.extractWorkLogTimeAndWageMetrics;
 const aggregate = context.aggregateWorkTimeMetrics;
 
 test('리포트 컨테이너와 월단위 종합표가 스마트 정산 리포트 안에 있다', () => {
+    // A-1 (2026-10-17): 컨테이너는 정적 마크업(index.html), 테이블·버튼 라벨은 app.js 템플릿
     assert.match(html, /id="monthlyWorkTimeReportContainer"/);
-    assert.match(html, /월단위 작업시간 · 시간대별 책정 금액 종합표/);
-    assert.match(html, /작업시간 리포트 복사/);
-    assert.match(html, /1~12월 전체 보기/);
+    assert.match(appJs, /월단위 작업시간 · 시간대별 책정 금액 종합표/);
+    assert.match(appJs, /작업시간 리포트 복사/);
+    assert.match(appJs, /1~12월 전체 보기/);
 });
 
 test('임금계산기 연동 요약(총/주간/야간/주말)을 시간대별 금액으로 분리한다', () => {
@@ -173,10 +166,11 @@ test('분 단위 스케줄은 주야간 경계에서 정확히 나눈다', () =>
     assert.equal(wt.nightHours, 1);
 });
 
-test('인라인 및 지연 로드 모듈의 집계 함수는 동일하다', () => {
-    const moduleCode = readFileSync(new URL('../public/js/lazy-d3.js', import.meta.url), 'utf8');
+test('A-1: 집계 함수는 전역 스크립트(app.js)에 단일 사본으로 유지된다', () => {
     for (const name of ['extractWorkLogTimeAndWageMetrics', 'aggregateWorkTimeMetrics']) {
         const fn = extractFunction(name);
-        assert.ok(moduleCode.includes(fn), `${name} must stay in sync`);
+        assert.ok(fn, `${name} must exist in the live source`);
+        const copies = APP_JS_FILES.filter((file) => readAppFile(file).includes(`function ${name}(`));
+        assert.deepEqual(copies, ['public/js/app.js'], `${name} 사본 위치가 바뀌었습니다: ${copies.join(', ')}`);
     }
 });

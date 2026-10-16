@@ -9,17 +9,19 @@
  *   node scripts/apply-design-tokens.mjs --docs      # 가이드 문서의 토큰 부록 재생성
  *
  * 동작
- *   1) public/index.html <style> 블록 최상단에 TOKEN_CSS(:root 토큰) 를 삽입/갱신
+ *   1) public/css/app.css 상단 TOKEN_CSS(:root 토큰) 블록을 삽입/갱신
+ *      (A-1 · 2026-10-17 이후: 스타일 정본은 app.css, index.html 은 <link> 로만 참조)
  *   2) 하드코딩된 간격·라운드·타이포·색상·그림자·모션·Z축 값을 토큰 참조로 치환
  *      - 레이아웃에 영향을 주는 값(간격)은 "정확히 일치"할 때만 치환 (무회귀)
  *      - 라운드·그림자는 페인트 전용 속성이라 1px 스냅 허용
  *      - 타이포는 0.02rem(≈0.32px) 이내에서 스케일 단계로 정렬
- *   3) public/css/app.css 미러를 동일 내용으로 동기화
+ *   3) index.html 이 app.css 를 <link> 로 참조하고 인라인 <style> 이 없음을 검증
  */
 
 import { readFile, writeFile } from 'node:fs/promises';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
+import { APP_JS_FILES, readAppFile } from './app-source.mjs';
 import {
     TOKEN_CSS,
     TOKEN_MARKER_START,
@@ -41,11 +43,25 @@ import {
 } from './design-tokens.mjs';
 
 const INDEX_PATH = fileURLToPath(new URL('../public/index.html', import.meta.url));
-const MIRROR_PATH = fileURLToPath(new URL('../public/css/app.css', import.meta.url));
+const CSS_PATH = fileURLToPath(new URL('../public/css/app.css', import.meta.url));
 const GUIDE_PATH = fileURLToPath(new URL('../docs/디자인_시스템_가이드.md', import.meta.url));
 
-const STYLE_RE = /([ \t]*)<style>([\s\S]*?)<\/style>/;
 const DECL_RE = /([-a-zA-Z][-a-zA-Z0-9]*)\s*:\s*([^;{}]*?)(\s*!important)?(?=\s*[;}])/g;
+
+/* A-1 (2026-10-17): 스타일 정본은 public/css/app.css.
+ * 파일 형식 = 상단 헤더 블록 주석 + 스타일 본문. */
+function splitCssFile(raw) {
+    if (!raw.startsWith('/*')) return { header: '', body: raw };
+    const end = raw.indexOf('*/');
+    if (end < 0) return { header: '', body: raw };
+    const header = raw.slice(0, end + 2);
+    const body = raw.slice(end + 2).replace(/^\r?\n/, '');
+    return { header, body };
+}
+
+function buildCssFile(header, css) {
+    return `${header}\n${css.trim()}\n`;
+}
 
 /* ── 1. 안전 마스킹: 문자열·url() 내부는 치환 대상에서 제외 ── */
 function mask(text) {
@@ -335,37 +351,42 @@ export function parseTokenSections() {
     return sections;
 }
 
-function readJsManagedVariables(html) {
+function readJsManagedVariables(sources) {
     const names = new Set();
-    for (const match of html.matchAll(/setProperty\(\s*['"](--[a-zA-Z0-9-]+)['"]/g)) names.add(match[1]);
-    for (const match of html.matchAll(/style\.setProperty\(\s*['"](--[a-zA-Z0-9-]+)['"]/g)) names.add(match[1]);
+    for (const source of sources) {
+        for (const match of source.matchAll(/setProperty\(\s*['"](--[a-zA-Z0-9-]+)['"]/g)) names.add(match[1]);
+    }
     return names;
 }
 
 export async function checkDesignTokens() {
     const html = await readFile(INDEX_PATH, 'utf8');
-    const mirror = await readFile(MIRROR_PATH, 'utf8');
-    const match = html.match(STYLE_RE);
-    if (!match) return { errors: ['index.html 에서 <style> 블록을 찾을 수 없습니다.'], stats: null };
-
-    const indent = match[1];
-    const styleBody = match[2];
-    const { css: expected, stats } = buildStyleCss(styleBody);
-    const expectedMirror = buildMirror(indent, expected);
+    const cssRaw = await readFile(CSS_PATH, 'utf8');
+    const { body: styleBody } = splitCssFile(cssRaw);
 
     const errors = [];
+    if (!cssRaw.startsWith('/*')) {
+        errors.push('public/css/app.css 상단 헤더 주석이 없습니다. (A-1 이후 정본 파일 형식)');
+    }
+    if (/<style[\s>]/i.test(html)) {
+        errors.push('index.html 에 인라인 <style> 블록이 있습니다 — public/css/app.css 로 이동해야 합니다.');
+    }
+    if (!/<link\b[^>]*\bhref="\.?\/css\/app\.css(?:\?[^"]*)?"/i.test(html)) {
+        errors.push('index.html 이 public/css/app.css 를 <link rel="stylesheet"> 로 참조하지 않습니다.');
+    }
+
+    const { css: expected, stats } = buildStyleCss(styleBody);
+
     if (normalize(expected) !== normalize(styleBody)) {
-        errors.push('index.html 의 <style> 블록이 토큰 적용 상태와 다릅니다. `npm run tokens:apply` 를 실행하세요.');
+        errors.push('public/css/app.css 가 토큰 적용 상태와 다릅니다. `npm run tokens:apply` 를 실행하세요.');
     }
     if (!styleBody.includes(TOKEN_MARKER_START)) {
-        errors.push('index.html 에 디자인 토큰 블록이 없습니다.');
-    }
-    if (normalize(mirror) !== normalize(expectedMirror)) {
-        errors.push('public/css/app.css 미러가 index.html 과 다릅니다. `npm run tokens:apply` 를 실행하세요.');
+        errors.push('public/css/app.css 에 디자인 토큰 블록이 없습니다.');
     }
 
     const analysis = analyzeCss(styleBody);
-    const jsVars = readJsManagedVariables(html);
+    // JS 가 setProperty 로 관리하는 변수는 CSS 내에 정의되지 않아도 됩니다 (런타임 주입).
+    const jsVars = readJsManagedVariables([html, ...APP_JS_FILES.map((file) => readAppFile(file))]);
     const unresolved = analysis.unresolved.filter((name) => !jsVars.has(name));
     if (unresolved.length) {
         errors.push(`정의되지 않은 CSS 변수 참조: ${unresolved.join(', ')}`);
@@ -389,16 +410,8 @@ export async function checkDesignTokens() {
         // 정본 토큰 수: 토큰 블록에 정의된 이름 기준
         tokenCount: parseTokenSections().reduce((sum, section) => sum + section.tokens.length, 0),
         localVarCount: analysis.definedTokens.filter((name) => !name.startsWith('--n-')).length,
-        mirrorLength: mirror.length
+        cssLength: cssRaw.length
     };
-}
-
-function buildMirror(indent, css) {
-    const dedented = css
-        .split('\n')
-        .map((line) => (line.startsWith(indent) ? line.slice(indent.length) : line))
-        .join('\n');
-    return `/* 자동 생성 파일 — public/index.html 의 <style> 블록과 100% 동일합니다. 직접 수정하지 마세요. */\n/* 재생성: npm run tokens:apply */\n${dedented.trim()}\n`;
 }
 
 function normalize(text) {
@@ -456,30 +469,25 @@ async function main() {
             process.exitCode = 1;
             return;
         }
-        console.log(`✅ 디자인 토큰 검증 통과 — 토큰 ${result.tokenCount}개 · 미러 ${result.mirrorLength} bytes · CSS 무결성 OK`);
+        console.log(`✅ 디자인 토큰 검증 통과 — 토큰 ${result.tokenCount}개 · 정본 ${result.cssLength} bytes · CSS 무결성 OK`);
         return;
     }
 
-    const html = await readFile(INDEX_PATH, 'utf8');
-    const match = html.match(STYLE_RE);
-    if (!match) throw new Error('index.html 에서 <style> 블록을 찾을 수 없습니다.');
-
-    const indent = match[1];
-    const styleBody = match[2];
+    const cssRaw = await readFile(CSS_PATH, 'utf8');
+    if (!cssRaw.startsWith('/*')) {
+        throw new Error('css/app.css 상단 헤더 주석이 없습니다. (A-1 이후 정본 파일 형식)');
+    }
+    const { header, body: styleBody } = splitCssFile(cssRaw);
     const { css: nextCss, stats } = buildStyleCss(styleBody);
-    const nextHtml = html.replace(STYLE_RE, `${indent}<style>${nextCss}</style>`);
-    const nextMirror = buildMirror(indent, nextCss);
+    const nextCssFile = buildCssFile(header, nextCss);
 
-    const changed = nextHtml !== html;
-    const mirrorChanged = nextMirror !== (await readFile(MIRROR_PATH, 'utf8'));
-
+    const changed = nextCssFile !== cssRaw;
     const totalTokens = parseTokenSections().reduce((sum, section) => sum + section.tokens.length, 0);
 
     if (args.has('--dry-run')) {
         console.log('🔍 모의 실행(dry-run) 리포트');
     } else {
-        if (changed) await writeFile(INDEX_PATH, nextHtml, 'utf8');
-        if (mirrorChanged) await writeFile(MIRROR_PATH, nextMirror, 'utf8');
+        if (changed) await writeFile(CSS_PATH, nextCssFile, 'utf8');
         console.log('🎨 디자인 토큰 적용 완료');
     }
 
@@ -493,8 +501,7 @@ async function main() {
     console.log(`     - 그림자               : ${stats.shadow}건`);
     console.log(`     - 모션 지속시간        : ${stats.duration}건`);
     console.log(`     - 행간 / 굵기 / Z축    : ${stats.lineHeight} / ${stats.weight} / ${stats.zIndex}건`);
-    console.log(`   · index.html             : ${changed ? '수정됨' : '변경 없음(멱등)'}`);
-    console.log(`   · css/app.css 미러       : ${mirrorChanged ? '동기화됨' : '변경 없음'}`);
+    console.log(`   · css/app.css 정본       : ${changed ? '갱신됨' : '변경 없음(멱등)'}`);
 
     const result = await checkDesignTokens();
     if (result.errors.length) {

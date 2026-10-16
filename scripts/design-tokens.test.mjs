@@ -12,14 +12,16 @@ import {
     TOKEN_MARKER_END,
     TOKEN_CSS
 } from './design-tokens.mjs';
+import { APP_JS_FILES, readAppFile, readAppCssBody, readAppJs } from './app-source.mjs';
 
 // 🎨 디자인 시스템 회귀 방지 테스트
 // - 토큰이 단일 소스(scripts/design-tokens.mjs)에서 생성된 상태인지 검증합니다.
-// - 하드코딩 값 재유입, 미정의 변수 참조, 미러(css/app.css) 불일치를 CI에서 차단합니다.
+// - 하드코딩 값 재유입, 미정의 변수 참조, 스타일 정본(css/app.css) 불일치를 CI에서 차단합니다.
 
 const html = readFileSync(new URL('../public/index.html', import.meta.url), 'utf8');
 const adminHtml = readFileSync(new URL('../public/admin.html', import.meta.url), 'utf8');
-const styleBody = html.match(/<style>([\s\S]*?)<\/style>/)[1];
+// A-1 (2026-10-17): 스타일 정본은 public/css/app.css (index.html 은 <link> 로만 참조)
+const styleBody = readAppCssBody();
 
 test('디자인 토큰 검증(check)이 오류 없이 통과한다', async () => {
     const result = await checkDesignTokens();
@@ -82,9 +84,11 @@ test('CSS 무결성: 중괄호 균형 + 미정의 var() 참조 0건', () => {
     assert.equal(analysis.braceBalance, 0, '중괄호가 균형을 이루지 않습니다.');
     assert.ok(analysis.minDepth >= 0, '닫는 중괄호가 더 많습니다.');
     assert.deepEqual(analysis.duplicateDefinitions, [], '중복 정의된 토큰이 있습니다.');
-    const jsManaged = new Set(
-        [...html.matchAll(/setProperty\(\s*['"](--[a-zA-Z0-9-]+)['"]/g)].map((match) => match[1])
-    );
+    // A-1 이후 JS 가 외부 파일(public/js/*)로 이동 — html + 전역 스크립트 전체를 검사합니다.
+    const jsManaged = new Set();
+    for (const source of [html, readAppJs()]) {
+        for (const match of source.matchAll(/setProperty\(\s*['"](--[a-zA-Z0-9-]+)['"]/g)) jsManaged.add(match[1]);
+    }
     const unresolved = analysis.unresolved.filter((name) => !jsManaged.has(name));
     assert.deepEqual(unresolved, [], `미정의 CSS 변수 참조: ${unresolved.join(', ')}`);
 });
@@ -140,12 +144,13 @@ test('라운드·색상: 반복 하드코딩 값이 남아 있지 않다', () =>
     assert.deepEqual(paletteLeaks, [], `팔레트 토큰으로 치환되어야 할 색상: ${paletteLeaks.join(', ')}`);
 });
 
-test('public/css/app.css 미러가 index.html 과 완전히 동일하다', async () => {
-    const result = await checkDesignTokens();
-    assert.ok(
-        !result.errors.some((error) => error.includes('app.css')),
-        'app.css 미러가 index.html 과 다릅니다. npm run tokens:apply 를 실행하세요.'
-    );
+test('A-1: index.html 은 스타일·스크립트를 외부 파일로만 참조한다', () => {
+    assert.doesNotMatch(html, /<style[\s>]/i, 'index.html 에 인라인 <style> 블록이 있습니다 — css/app.css 로 이동해야 합니다.');
+    assert.match(html, /<link\b[^>]*\bhref="\.?\/css\/app\.css(\?[^"]*)?"/, 'app.css 의 <link> 참조가 없습니다.');
+    for (const file of APP_JS_FILES) {
+        const asset = file.replace('public/', '');
+        assert.ok(html.includes(`src="./${asset}`), `${asset} 로드 참조가 없습니다.`);
+    }
 });
 
 test('admin.html 은 시스템과 동일한 이름·값의 색상 토큰을 사용한다', () => {

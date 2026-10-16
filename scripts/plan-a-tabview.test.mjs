@@ -2,39 +2,32 @@ import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import vm from 'node:vm';
+import { readAppJs, extractFunction as extractFunctionShared } from './app-source.mjs';
 
 // [방안 A] 5대 핵심 탭 뷰 하이브리드 검증.
 // - 최초 접속: 기존 원본 메인 화면(legacy) 유지
 // - 원본에서 기능 클릭 → 방안 A 탭 뷰로 전환
 // - 하단 5탭 내비게이션 / 임금·일지 서브탭 / 탭 간 기능 점프 / 원본 홈 복귀
 const html = readFileSync(new URL('../public/index.html', import.meta.url), 'utf8');
+// A-1 (2026-10-17): 앱 로직은 인라인 스크립트에서 public/js/* 로 이동 — 함수·변수 추출은 통합 JS 에서.
+const appJs = readAppJs();
 
 function extractFunction(name) {
-    let marker = html.indexOf(`async function ${name}(`);
-    if (marker < 0) marker = html.indexOf(`function ${name}(`);
-    if (marker < 0) throw new Error(`function not found: ${name}`);
-    const open = html.indexOf('{', marker);
-    let depth = 0;
-    for (let i = open; i < html.length; i++) {
-        if (html[i] === '{') depth++;
-        else if (html[i] === '}') {
-            depth--;
-            if (depth === 0) return html.slice(marker, i + 1);
-        }
-    }
-    throw new Error(`unterminated function: ${name}`);
+    const body = extractFunctionShared(appJs, name);
+    if (body === null) throw new Error(`function not found: ${name}`);
+    return body;
 }
 
 function extractConstObject(name) {
-    const marker = html.indexOf(`const ${name} =`);
+    const marker = appJs.indexOf(`const ${name} =`);
     if (marker < 0) throw new Error(`const not found: ${name}`);
-    const open = html.indexOf('{', marker);
+    const open = appJs.indexOf('{', marker);
     let depth = 0;
-    for (let i = open; i < html.length; i++) {
-        if (html[i] === '{') depth++;
-        else if (html[i] === '}') {
+    for (let i = open; i < appJs.length; i++) {
+        if (appJs[i] === '{') depth++;
+        else if (appJs[i] === '}') {
             depth--;
-            if (depth === 0) return html.slice(marker, i + 1) + ';';
+            if (depth === 0) return appJs.slice(marker, i + 1) + ';';
         }
     }
     throw new Error(`unterminated const: ${name}`);
@@ -222,9 +215,9 @@ test('구조: 기존 카드가 방안 A 탭 그룹에 올바르게 배정되어 
 });
 
 test('구조: toggleDashItem에 하이브리드 라우팅 훅이 연결되어 있다', () => {
-    assert.match(html, /function toggleDashItem\(id\) \{[\s\S]{0,500}?planARouteCardOpen\(id, card\)/);
-    assert.match(html, /function stepBackActiveUIInPlace\(\) \{[\s\S]{0,400}?goHomeView\(\{ skipHistory: true \}\)/);
-    assert.match(html, /appView: \(document\.body && document\.body\.dataset && document\.body\.dataset\.appView\) \|\| 'legacy'/);
+    assert.match(appJs, /function toggleDashItem\(id\) \{[\s\S]{0,500}?planARouteCardOpen\(id, card\)/);
+    assert.match(appJs, /function stepBackActiveUIInPlace\(\) \{[\s\S]{0,400}?goHomeView\(\{ skipHistory: true \}\)/);
+    assert.match(appJs, /appView: \(document\.body && document\.body\.dataset && document\.body\.dataset\.appView\) \|\| 'legacy'/);
 });
 
 // ---------- 동작 검증 (가짜 DOM 위에서 실제 컨트롤러 함수 실행) ----------

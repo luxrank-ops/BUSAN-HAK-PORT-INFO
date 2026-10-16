@@ -2,8 +2,27 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
+import { readAppJs, extractFunction, extractDeclaration } from './app-source.mjs';
 
-const communityCode = fs.readFileSync(new URL('../public/js/community.js', import.meta.url), 'utf8');
+// A-1 (2026-10-17): 커뮤니티 검증 로직은 인라인 스크립트 → public/js/app.js 로 이동.
+// 라이브 소스에서 필요한 함수·상태만 추출해 샌드박스에 실행합니다.
+const appJs = readAppJs();
+const communityCode = [
+  extractDeclaration(appJs, 'COMMUNITY_BANNED_WORDS'),
+  extractDeclaration(appJs, 'recentCommunitySubmissions'),
+  extractDeclaration(appJs, 'COMMUNITY_FLOOD_WINDOW_MS'),
+  extractFunction(appJs, 'normalizeModerationText'),
+  extractFunction(appJs, 'inspectCommunityContent'),
+  extractFunction(appJs, 'notifyAdminAutoBlind'),
+  extractFunction(appJs, 'compressImageForUpload')
+].filter(Boolean).join('\n');
+for (const part of [
+  'COMMUNITY_BANNED_WORDS', 'recentCommunitySubmissions', 'COMMUNITY_FLOOD_WINDOW_MS',
+  'normalizeModerationText', 'inspectCommunityContent', 'notifyAdminAutoBlind', 'compressImageForUpload'
+]) {
+  if (!communityCode.includes(part)) throw new Error(`커뮤니티 검증 코드 추출 실패: ${part}`);
+}
+
 const notificationsCode = fs.readFileSync(new URL('../public/js/notifications.js', import.meta.url), 'utf8');
 const serverCode = fs.readFileSync(new URL('../server.ts', import.meta.url), 'utf8');
 

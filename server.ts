@@ -1238,6 +1238,11 @@ app.use(express.static(path.join(__dirname, 'public'), {
     if (/\.(png|jpg|jpeg|gif|ico|svg|webp)$/i.test(filePath)) {
       res.setHeader('Cache-Control', 'public, max-age=604800, immutable');
     }
+    // A-1 (2026-10-17): css/app.css 와 js/* 는 ?v= 버전 쿼리로 장기 캐시.
+    // 버전이 바뀌면 index.html(비캐시)에서 새 URL 이 되어 새로 받아옵니다.
+    if (/\.(css|js)$/i.test(filePath)) {
+      res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+    }
   }
 }));
 
