@@ -20,7 +20,7 @@ import {
     assertSucceeds,
     initializeTestEnvironment
 } from '@firebase/rules-unit-testing';
-import { doc, setDoc, updateDoc, deleteDoc, collection, addDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, updateDoc, deleteDoc, collection, addDoc } from 'firebase/firestore';
 
 const PROJECT_ID = 'demo-busan-hak-port';
 const RULES_PATH = fileURLToPath(new URL('../../firestore.rules', import.meta.url));
@@ -278,7 +278,7 @@ if (!EMULATOR_AVAILABLE) {
             await seed(async (db) => {
                 await setDoc(doc(db, 'settings/admin'), { passwordHash: SHA });
             });
-            await denied(doc(worker(), 'settings/admin').get());
+            await denied(getDoc(doc(worker(), 'settings/admin')));
             await denied(setDoc(doc(worker(), 'settings/admin'), { passwordHash: OTHER_SHA }));
         });
     });
@@ -290,6 +290,16 @@ if (!EMULATOR_AVAILABLE) {
             });
             await ok(stranger().collection('work_logs')
                 .where('workerId', '==', 'a')
+                .where('date', '>=', '2026-10-01')
+                .where('date', '<=', '2026-10-31')
+                .get());
+        });
+
+        test('인덱스가 아직 없을 때 쓰는 대체 조회(날짜 범위만)도 허용된다', async () => {
+            await seed(async (db) => {
+                await setDoc(doc(db, 'work_logs/a_2026-10-01'), { workerId: 'a', date: '2026-10-01' });
+            });
+            await ok(stranger().collection('work_logs')
                 .where('date', '>=', '2026-10-01')
                 .where('date', '<=', '2026-10-31')
                 .get());
