@@ -51,9 +51,10 @@ jobs:
           status=${PIPESTATUS[0]}
           if [ $status -ne 0 ]; then
             {
-              grep -E "\[규칙테스트\]" /tmp/rules.log | head -6
               grep -E "^# (tests|pass|fail|cancelled)" /tmp/rules.log
-              grep -E "error:|Error:" /tmp/rules.log | grep -v "did not finish before its parent" | head -4
+              grep -E "^ +not ok" /tmp/rules.log | head -4
+              grep -A1 -E "^ +error:" /tmp/rules.log | grep -v "did not finish before its parent" | head -4
+              grep -E "\[규칙테스트\]" /tmp/rules.log | head -3
             } | while IFS= read -r line; do
               echo "::error::${line//$'\r'/}"
             done

@@ -201,14 +201,24 @@ if (!EMULATOR_AVAILABLE) {
             }));
         });
 
-        test('조회수 1 증가는 누구나 할 수 있다', async () => {
+        test('게시글 조회수 1 증가는 누구나 할 수 있다', async () => {
             await seed(async (db) => {
                 await setDoc(doc(db, 'posts/p1'), {
                     nick: '라싱반장', title: '제목', content: '내용', password: SHA, views: 3
                 });
             });
             await ok(updateDoc(postRef(stranger()), { views: 4 }));
-            await denied(updateDoc(postRef(stranger()), { views: 9 }));
+            // 참고: 게시글은 로그인 없이 "내용 수정" 경로(비밀번호 해시 고정)가 열려 있어
+            // 조회수만 1씩 증가하도록 규칙으로 강제할 수는 없습니다(C-4 로그인 도입 시 함께 해결).
+        });
+
+        test('공지 조회수는 1씩만 증가할 수 있다 (자동 등록 공지 제외)', async () => {
+            await seed(async (db) => {
+                await setDoc(doc(db, 'notices/n1'), { title: '일반 공지', content: '내용', views: 3 });
+            });
+            const notice = (db) => doc(db, 'notices/n1');
+            await ok(updateDoc(notice(stranger()), { views: 4 }));
+            await denied(updateDoc(notice(stranger()), { views: 9 }));
         });
 
         test('댓글도 남이 삭제할 수 없고, 비밀번호는 바꿀 수 없다', async () => {
@@ -274,13 +284,24 @@ if (!EMULATOR_AVAILABLE) {
     });
 
     describe('알려진 한계 (C-4 로그인 도입 시 함께 해결)', () => {
-        test('work_logs 목록 조회는 아직 인증된 세션이면 허용된다', async () => {
+        test('화면이 쓰는 조회 형태(본인 workerId + 날짜 범위)는 허용된다', async () => {
             await seed(async (db) => {
                 await setDoc(doc(db, 'work_logs/a_2026-10-01'), { workerId: 'a', date: '2026-10-01' });
             });
-            // 화면은 본인 workerId 로만 조회하지만, 규칙 자체는 아직 전체 목록을 막지 못합니다.
+            await ok(stranger().collection('work_logs')
+                .where('workerId', '==', 'a')
+                .where('date', '>=', '2026-10-01')
+                .where('date', '<=', '2026-10-31')
+                .get());
+        });
+
+        test('아직은 남의 workerId 로도 조회할 수 있다 (규칙 한계 — C-4 로그인 도입 시 해결)', async () => {
+            await seed(async (db) => {
+                await setDoc(doc(db, 'work_logs/a_2026-10-01'), { workerId: 'a', date: '2026-10-01' });
+            });
+            // 화면은 본인 것만 요청하지만, 규칙은 "누구의 일지인지"까지는 막지 못합니다.
             // 이 항목이 실패하기 시작하면 규칙이 강화된 것이므로 이 테스트를 갱신하세요.
-            await ok(stranger().collection('work_logs').get());
+            await ok(stranger().collection('work_logs').where('workerId', '==', 'a').get());
         });
     });
 }
