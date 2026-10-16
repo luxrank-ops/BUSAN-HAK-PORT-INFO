@@ -33,7 +33,7 @@ if (major < MIN_JAVA) skip(`Java ${major} 는 너무 낮습니다(Firestore 에�
 
 const command = [
     'npx --no-install firebase emulators:exec --only firestore --project demo-busan-hak-port',
-    '"node --test scripts/rules/firestore-rules.emulator.test.mjs"'
+    '"node --test --test-timeout=60000 scripts/rules/firestore-rules.emulator.test.mjs"'
 ].join(' ');
 
 const result = spawnSync(command, { stdio: 'inherit', shell: true });
