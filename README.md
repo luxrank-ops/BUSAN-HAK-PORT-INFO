@@ -23,14 +23,15 @@
 | 빌드 | `npm run build:obfuscate` → `build/public/` 생성 (JS·CSS 압축 + 지역 식별자 난독화 + 저작권 배너 삽입) |
 | 검증 | 빌드가 끝나면 전역 함수 275개 보존 여부·통합 스크립트 문법을 자동 검사하고, 실패 시 배포를 중단합니다 |
 | 서빙 | `server.ts` 가 `build/public/` 을 우선 제공하고, 없으면 `public/` 으로 자동 대체합니다 (빌드 실패에도 화면 유지) |
-| 배포 | Vercel: `vercel.json` 이 `outputDirectory: build/public` 지정 (이 설정이 없으면 프리셋 기본값인 원본 `public/` 이 그대로 배포됩니다) · Firebase Hosting: `firebase.json` 의 `predeploy` 훅이 자동 실행 |
+| 배포 | Vercel: `vercel.json` 이 `outputDirectory: build/public` 지정 (이 설정이 없으면 프리셋 기본값인 원본 `public/` 이 그대로 배포됩니다) + `api/[...path].ts` 서버리스 함수가 `/api/*` 처리 · Firebase Hosting: `firebase.json` 의 `predeploy` 훅이 자동 실행 |
 
 원본 그대로 보고 싶을 때(로컬 개발)는 `npm run dev` 로 `public/` 을 그대로 사용하면 됩니다.
 
-> ⚠️ **Vercel 은 Express 서버(`server.ts`)를 실행하지 않고 `build/public` 을 정적 호스팅합니다.**
-> 따라서 `/api/*` 는 Vercel 에서 동작하지 않습니다(요청이 index.html 로 폴백됩니다).
-> 서버 기능(스케줄 API, 서버侧 PIN 검증 등)이 Vercel 에서도 필요하면 Vercel 프로젝트를
-> Node 런타임으로 변경해야 합니다.
+> ✅ **Vercel 은 이제 Node 런타임(서버리스 함수) 구성으로 배포됩니다.**
+> `/api/*` 는 `api/[...path].ts`(Vercel Function)가 `server.ts` 의 Express 앱을 그대로 실행해 처리하고,
+> 나머지 경로는 `build/public` 정적 산출물을 CDN 이 서빙합니다(과거처럼 index.html 로 폴백되지 않습니다).
+> 스케줄 감시·DB 정리·백업 등 주기 작업 트리거와 필요한 환경변수 등록은
+> 아래 **"Vercel 배포 구성 (Node 런타임 + 정적 하이브리드)"** 절을 참고하세요.
 
 ## 🔐 화면 잠금 비밀번호 (PIN) 관리
 
@@ -44,10 +45,11 @@
 | `SCREEN_LOCK_PIN` | 화면 잠금 비밀번호. **미설정 시 기존 기본값(`9445`)이 쓰이므로 반드시 변경하세요.** |
 | `UNLOCK_TOKEN_SECRET` | 잠금 해제 토큰 서명 키(32자 이상 권장). 미설정 시 `SCREEN_LOCK_PIN` 사용 |
 
-> **Vercel**: Project Settings → Environment Variables 에 등록하세요. Vercel 은 정적 호스팅이라
-> 서버 API 가 없으므로, 이 값은 **빌드 시점에 해시로 굽혀져 HTML 에 주입**됩니다.
-> 등록 후 **Redeploy** 를 한 번 실행해야 반영됩니다.
-> **Firebase Hosting** 도 동일하게 GitHub Actions 시크릿에 등록하세요. `.env` 는 커밋하지 않습니다.
+> **Vercel**: Project Settings → Environment Variables 에 등록하세요. 이제 Vercel 에서도 서버
+> API(Node 런타임 함수)가 동작하므로 **서버 검증(1순위)이 운영에서 실시간으로 작동**하고,
+> 오프라인 대비용 해시도 계속 빌드 시점에 HTML 에 주입됩니다. 등록 후 **Redeploy** 를 한 번 실행해야 반영됩니다.
+> **Firebase Hosting** 은 여전히 순수 정적이라 서버 API 가 없습니다 — 해시 폴백(2순위)이
+> 사용되므로 동일하게 GitHub Actions 시크릿에 등록하세요. `.env` 는 커밋하지 않습니다.
 >
 > ※ 이 화면 잠금은 **편의용 UI 게이트**입니다. 실제 데이터 접근 권한은 `firestore.rules` 의 `isAdmin()`(관리자 UID 화이트리스트)이 단독으로 통제합니다.
 
@@ -79,10 +81,57 @@
 
 | 구분 | URL | 배포 방식 | 상태 (2026-10-06 기준) |
 | --- | --- | --- | --- |
-| **운영 (1차)** | https://busan-hak-port-info.vercel.app | Vercel — GitHub `main` 브랜치 머지 시 **자동 프로덕션 배포** | ✅ 최신(v2027) 서비스 중. 현장 사용자 기준 운영 주소 |
+| **운영 (1차)** | https://busan-hak-port-info.vercel.app | Vercel — GitHub `main` 브랜치 머지 시 **자동 프로덕션 배포** (정적 `build/public` + Node 런타임 함수 `/api/*`) | ✅ 최신(v2027) 서비스 중. 현장 사용자 기준 운영 주소 |
 | 레거시 (보조) | https://busan-hak-port.web.app | Firebase Hosting — 승인형 GitHub Actions 워크플로 | ⚠️ v2026 구버전 게시 중. 원본 프로젝트 배포 키 미등록으로 갱신 중단 (아래 "승인형 Firebase 배포" 참고) |
 
 > ⚠️ **데이터 저장소 유의**: 호스팅 위치와 무관하게 앱의 모든 Firestore·Storage 데이터(공지사항·공지 이미지, 근무일지, 게시판, 선박정보, 방문 통계)는 Firebase 프로젝트 **`busan-hak-port`**(프로젝트 번호 `616469111502`)에 저장됩니다. 이 프로젝트는 운영 데이터의 심장이므로 **삭제·보관 정지하면 안 됩니다.** 프로젝트 접근이 안 되는 계정(luxrank75@gmail.com 등)에서는 보이지 않을 수 있으며, 원본 소유 Google 계정에서의 접근 복구가 선행되어야 합니다.
+
+## ☁️ Vercel 배포 구성 (Node 런타임 + 정적 하이브리드)
+
+운영 사이트는 **정적 자산 + 서버리스 Node 함수** 조합으로 배포됩니다.
+
+| 경로 | 처리 주체 |
+| --- | --- |
+| `/api/*` | `api/[...path].ts` (Vercel Function · Node 런타임) → `server.ts` 의 Express 앱에 위임. 인천 리전(`icn1`)에서 실행되어 국내 터미널 사이트 수집 지연이 짧습니다 |
+| 그 외 모든 경로 | Vercel CDN 이 `build/public`(압축·난독화 산출물)을 정적 서빙. 파일이 없는 경로는 `index.html` 로 폴백(SPA rewrite). 캐시·보안 헤더는 `vercel.json` `headers` 가 `firebase.json` 과 동일 정책으로 적용 |
+
+Vercel 에서 동작하는 서버 API(로컬 `npm run dev` 와 동일한 코드입니다):
+
+- `GET /api/health` — 서버·터미널 헬스체크. `platform: "vercel-serverless"` 이면 Vercel 함수가 살아 있다는 뜻입니다
+- `GET /api/config` — Web Push VAPID 키 등 공개 설정
+- `POST /api/screen-unlock` — 화면 잠금 PIN 서버 검증(1순위). `trust proxy` 설정으로 **실제 클라이언트 IP 기준** 속도 제한(IP당 10분 10회)이 동작합니다
+- `GET /api/hjnc-schedule` · `GET /api/terminal-schedule` — 7개 터미널 실시간 선석 스케줄(메모리 캐시 → Firestore 캐시 stale-while-revalidate 폴백)
+- `GET /api/cron/*` — 주기 작업 트리거(아래 참고, `CRON_SECRET` 인증 필수)
+
+### 주기 작업 (스케줄 감시 · DB 정리 · 백업)
+
+서버리스는 응답 후 프로세스가 동결되어 `node-cron` 타이머가 발화하지 않습니다. 상시 프로세스 서버(로컬·셀프호스팅)에서는 기존처럼 `node-cron` 이 돌고, **Vercel 에서는 외부 스케줄러가 `/api/cron/*` 엔드포인트를 호출**해 동일한 작업을 실행합니다. 모든 크론 엔드포인트는 `Authorization: Bearer <CRON_SECRET>` 헤더를 요구합니다(시크릿 미등록 503, 불일치 401 — 익명 트리거 불가).
+
+| 작업 | 엔드포인트 | 트리거 | 주기 |
+| --- | --- | --- | --- |
+| 선박 스케줄 변경 감지 + FCM 푸시 | `/api/cron/schedule-watch` | GitHub Actions `cron-schedule-watch.yml` | 매시간 5분 (UTC) |
+| DB 자가 정리(30일 캐시·14일 읽은 알림 TTL) | `/api/cron/daily-cleanup` | Vercel Cron (`vercel.json` crons) | 매일 03:00 (UTC) |
+| 주간 Firestore 백업 | `/api/cron/weekly-backup` | Vercel Cron (`vercel.json` crons) | 매주 일요일 00:00 (UTC) |
+
+> **왜 스케줄 감시만 GitHub Actions 인가** — 운영 Vercel 프로젝트는 **Hobby(무료) 플랜**이라
+> `vercel.json` crons 에 1일 1회 초과 빈도(`0 * * * *` 등)를 등록하면 **배포가 실패**합니다
+> ("Hobby accounts are limited to daily cron jobs"). Pro 플랜으로 이전한다면
+> `vercel.json` crons 에 `{ "path": "/api/cron/schedule-watch", "schedule": "0 * * * *" }` 를
+> 추가하고 이 워크플로를 삭제하면 됩니다.
+
+**환경변수 등록 (1회 필요)**
+
+1. **Vercel** Project Settings → Environment Variables: `SCREEN_LOCK_PIN`, `UNLOCK_TOKEN_SECRET`, `FIREBASE_SERVICE_ACCOUNT_KEY`(Base64), `VAPID_KEY`, `CRON_SECRET`(권장: `openssl rand -hex 32`) — 등록 후 **Redeploy**
+2. **GitHub** Settings → Secrets and variables → Actions: `CRON_SECRET` — Vercel 과 **동일한 값** (매시간 트리거 인증용). 미등록 시 매시간 워크플로가 실패 알림을 띄웁니다
+
+`CRON_SECRET`·`FIREBASE_SERVICE_ACCOUNT_KEY` 가 없어도 사이트와 화면 잠금(빌드 해시 폴백)은 동작하지만, 스케줄 API 의 Firestore 폴백·FCM 알림·주기 작업은 동작하지 않습니다.
+
+### 서버리스 특성·한계
+
+- 메모리 캐시(스케줄 stale 캐시)와 PIN 속도 제한 상태는 **함수 인스턴스 단위 best-effort** 입니다(인스턴스가 여러 개이거나 재활용되면 초기화됨). Firestore `vessel_schedules_cache` 폴백 체인은 기존과 동일하게 동작합니다.
+- 주간 백업은 Vercel 에서 `/tmp` 에만 쓸 수 있어 **파일이 영구 보존되지 않습니다**(응답에 `note` 필드로 표시). 영구 백업은 상시 프로세스 서버 배포(로컬 `backups/`)에서만 유효합니다.
+- 함수 실행 시간은 Vercel 기본값(Fluid compute, 전 플랜 300초)을 사용합니다 — 별도 `maxDuration` 설정 없음.
+- **Firebase Hosting(busan-hak-port.web.app)은 변경 없이 순수 정적**입니다 — 서버 API 가 없으므로 화면 잠금은 빌드 시 주입된 해시 폴백(2순위)으로 동작합니다.
 
 ## 🎨 디자인 시스템 (v2027.4)
 
@@ -111,8 +160,8 @@
 ## 기술 스택
 
 - Frontend: HTML5, CSS3, Vanilla JavaScript (ES2022+), D3.js v7
-- Backend Proxy: Node.js, Express (`server.ts` — 터미널 실시간 선석배정 수집 및 인메모리 캐싱)
-- Cloud & BaaS: Firebase Hosting, Firebase Authentication (Anonymous & Admin Auth), Cloud Firestore (`firestore.rules`), Firebase Storage
+- Backend Proxy: Node.js, Express (`server.ts` — 터미널 실시간 선석배정 수집 및 인메모리 캐싱). 로컬에서는 상시 프로세스로, Vercel 에서는 `api/[...path].ts` 를 통한 서버리스 Node 런타임 함수로 동일한 앱이 동작합니다
+- Cloud & BaaS: Vercel (정적 + Functions + Cron), Firebase Hosting, Firebase Authentication (Anonymous & Admin Auth), Cloud Firestore (`firestore.rules`), Firebase Storage, Firebase Cloud Messaging (FCM)
 
 ## 프로젝트 구조
 
@@ -135,11 +184,16 @@ BUSAN-HAK-PORT-INFO/
 │   ├── 디자인_시스템_가이드.md   ← 색·간격·타이포·형태·모션 기준서(토큰 표 자동 생성)
 │   ├── 앱_개선_전략_제안서.md    ← 디자인 변경 없이 진행하는 개선 방향·개선안·로드맵(2026-10-16)
 │   └── images/                  ← UI/UX 쇼케이스 이미지
+├── api/
+│   └── [...path].ts           ← Vercel 서버리스 함수 진입점 (/api/* 를 server.ts Express 앱에 위임)
+├── .github/
+│   └── workflows/             ← CI · 승인형 Firebase 배포 · 매시간 스케줄 감시(cron-schedule-watch.yml)
 ├── scripts/
 │   ├── design-tokens.mjs        ← 🎨 디자인 토큰 정본(단일 소스)
 │   ├── apply-design-tokens.mjs  ← 토큰 적용·검증·문서 생성기
 │   └── design-tokens.test.mjs   ← 디자인 시스템 회귀 방지 테스트
 ├── server.ts
+├── vercel.json                 ← Vercel 배포 설정(정적 build/public + crons + 헤더 + icn1 리전)
 ├── firestore.rules
 ├── firebase-blueprint.json
 ├── firebase.json
