@@ -23,9 +23,14 @@
 | 빌드 | `npm run build:obfuscate` → `build/public/` 생성 (JS·CSS 압축 + 지역 식별자 난독화 + 저작권 배너 삽입) |
 | 검증 | 빌드가 끝나면 전역 함수 275개 보존 여부·통합 스크립트 문법을 자동 검사하고, 실패 시 배포를 중단합니다 |
 | 서빙 | `server.ts` 가 `build/public/` 을 우선 제공하고, 없으면 `public/` 으로 자동 대체합니다 (빌드 실패에도 화면 유지) |
-| 배포 | Vercel: `npm run build` 자동 실행 · Firebase Hosting: `firebase.json` 의 `predeploy` 훅이 자동 실행 |
+| 배포 | Vercel: `vercel.json` 이 `outputDirectory: build/public` 지정 (이 설정이 없으면 프리셋 기본값인 원본 `public/` 이 그대로 배포됩니다) · Firebase Hosting: `firebase.json` 의 `predeploy` 훅이 자동 실행 |
 
 원본 그대로 보고 싶을 때(로컬 개발)는 `npm run dev` 로 `public/` 을 그대로 사용하면 됩니다.
+
+> ⚠️ **Vercel 은 Express 서버(`server.ts`)를 실행하지 않고 `build/public` 을 정적 호스팅합니다.**
+> 따라서 `/api/*` 는 Vercel 에서 동작하지 않습니다(요청이 index.html 로 폴백됩니다).
+> 서버 기능(스케줄 API, 서버侧 PIN 검증 등)이 Vercel 에서도 필요하면 Vercel 프로젝트를
+> Node 런타임으로 변경해야 합니다.
 
 ## 🔐 화면 잠금 비밀번호 (PIN) 관리
 
@@ -39,7 +44,10 @@
 | `SCREEN_LOCK_PIN` | 화면 잠금 비밀번호. **미설정 시 기존 기본값(`9445`)이 쓰이므로 반드시 변경하세요.** |
 | `UNLOCK_TOKEN_SECRET` | 잠금 해제 토큰 서명 키(32자 이상 권장). 미설정 시 `SCREEN_LOCK_PIN` 사용 |
 
-> Vercel: Project Settings → Environment Variables 에 등록하세요. `.env` 는 커밋하지 않습니다.
+> **Vercel**: Project Settings → Environment Variables 에 등록하세요. Vercel 은 정적 호스팅이라
+> 서버 API 가 없으므로, 이 값은 **빌드 시점에 해시로 굽혀져 HTML 에 주입**됩니다.
+> 등록 후 **Redeploy** 를 한 번 실행해야 반영됩니다.
+> **Firebase Hosting** 도 동일하게 GitHub Actions 시크릿에 등록하세요. `.env` 는 커밋하지 않습니다.
 >
 > ※ 이 화면 잠금은 **편의용 UI 게이트**입니다. 실제 데이터 접근 권한은 `firestore.rules` 의 `isAdmin()`(관리자 UID 화이트리스트)이 단독으로 통제합니다.
 

@@ -63,6 +63,25 @@ test('빌드 스크립트가 PIN 해시를 HTML 에 주입한다', () => {
   assert.match(buildScript, /SCREEN_LOCK_PIN/);
 });
 
+test('Vercel이 압축 산출물(build/public)을 배포하도록 설정되어 있다', () => {
+  // 과거 실수: vercel.json 이 없어 프리셋 기본값(Output Directory = public)으로 배포되면서
+  // 원본 소스가 그대로 올라갔고, PIN 해시가 주입되지 않아 화면 잠금이 풀리지 않았습니다.
+  const vercel = JSON.parse(readFileSync(new URL('../vercel.json', import.meta.url), 'utf8'));
+  assert.equal(vercel.outputDirectory, 'build/public');
+  assert.match(String(vercel.buildCommand), /build/);
+});
+
+test('검증 수단이 아예 없으면 조용히 실패하지 않고 원인을 알린다', () => {
+  assert.match(appJs, /reason === "no_verifier"/);
+  assert.match(appJs, /잠금을 확인할 수 없습니다/);
+  assert.match(appJs, /reason === "rate_limited"/);
+});
+
+test('서버가 명확히 거부(401/400/429)하면 폴백 없이 실패한다', () => {
+  assert.match(appJs, /res\.status === 401 \|\| res\.status === 400/);
+  assert.match(appJs, /res\.status === 429/);
+});
+
 test('빌드 산출물이 있으면 PIN 해시가 주입되어 있다', () => {
   const built = new URL('../build/public/index.html', import.meta.url);
   if (!existsSync(built)) return; // 빌드 전에는 건너뜀
