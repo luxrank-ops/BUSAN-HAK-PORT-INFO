@@ -1,3 +1,8 @@
+// ============================================================================
+// BUSAN HAK PORT INFO — Copyright (c) 2026 이춘학 (luxrank@gmail.com). All rights reserved.
+// 사유 소프트웨어입니다. 저작권자의 사전 서면 동의 없이 복제·배포·수정·2차적 저작물 작성·
+// 역분석·디컴파일을 할 수 없습니다. 자세한 내용은 저장소의 LICENSE 파일을 참고하세요.
+// ============================================================================
 
 const firebaseConfig = { apiKey: "AIzaSyBWFZr9TE9yybZJCJjEXSsv1YCpGkVb0kA", authDomain: "busan-hak-port.firebaseapp.com", projectId: "busan-hak-port", storageBucket: "busan-hak-port.firebasestorage.app", messagingSenderId: "616469111502", appId: "1:616469111502:web:6f3c94b15e444e04c7669f", measurementId: "G-QQ728TDFJ2" };
 if (!firebase.apps.length) { firebase.initializeApp(firebaseConfig); }
@@ -1501,8 +1506,70 @@ function copyAdminWorkLogReport() {
     }
 }
 
-let isWorkLogUnlocked = sessionStorage.getItem("workLogPinUnlocked") === "1";
+// 🔐 화면 잠금(보안 비밀번호) — PIN 은 더 이상 소스에 두지 않습니다.
+//   1순위: 서버 검증 POST /api/screen-unlock (PIN 은 서버 환경변수 SCREEN_LOCK_PIN)
+//   2순위: 정적 호스팅·오프라인 대비, 빌드 시 주입된 해시와 비교
+//   ※ 실제 데이터 보호는 firestore.rules 의 isAdmin() 이 담당합니다. 이 잠금은 화면 UX용입니다.
+const SCREEN_UNLOCK_ENDPOINT = "/api/screen-unlock";
+const SCREEN_UNLOCK_TOKEN_KEY = "workLogUnlockToken";
+const SCREEN_UNLOCK_EXPIRY_KEY = "workLogUnlockExpiry";
+const SCREEN_UNLOCK_TTL_MS = 12 * 60 * 60 * 1000; // 12시간
+
+function readSessionValue(key) {
+    try { return sessionStorage.getItem(key); } catch (e) { return null; }
+}
+function writeSessionValue(key, value) {
+    try { sessionStorage.setItem(key, value); } catch (e) { }
+}
+function isStoredUnlockValid() {
+    const token = readSessionValue(SCREEN_UNLOCK_TOKEN_KEY);
+    const expiry = Number(readSessionValue(SCREEN_UNLOCK_EXPIRY_KEY) || 0);
+    if (!token || !expiry) return false;
+    if (expiry <= Date.now()) return false;
+    return true;
+}
+let isWorkLogUnlocked = isStoredUnlockValid() || readSessionValue("workLogPinUnlocked") === "1";
 let pendingWorkLogAction = null;
+
+/**
+ * 입력한 PIN 을 서버에서 검증합니다.
+ * 서버가 응답하지 않으면(정적 호스팅·오프라인) 빌드 시 주입된 해시로 대체 검증합니다.
+ * @returns {Promise<{ok: boolean, token?: string, expiresAt?: number}>}
+ */
+async function verifyScreenLockPin(pin) {
+    const value = String(pin || "").trim();
+    if (!value) return { ok: false };
+
+    // 1순위 — 서버 검증 (PIN 평문은 서버 환경변수에만 존재)
+    try {
+        const res = await fetch(SCREEN_UNLOCK_ENDPOINT, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ pin: value })
+        });
+        if (res && res.ok) {
+            const data = await res.json().catch(() => null);
+            if (data && data.ok === true) {
+                const expiresAt = Number(data.expiresAt) || (Date.now() + SCREEN_UNLOCK_TTL_MS);
+                return { ok: true, token: String(data.token || "server"), expiresAt };
+            }
+        }
+    } catch (e) {
+        // 네트워크·정적 호스팅 환경 → 아래 폴백으로 진행
+    }
+
+    // 2순위 — 빌드 시 주입된 해시와 비교 (scripts/build-obfuscate.mjs 가 주입)
+    const expectedHash = (typeof window !== "undefined" && window.__SCREEN_LOCK_SHA256__) || "";
+    if (expectedHash) {
+        try {
+            const digest = await sha256Hex(value);
+            if (digest && digest === expectedHash) {
+                return { ok: true, token: "local", expiresAt: Date.now() + SCREEN_UNLOCK_TTL_MS };
+            }
+        } catch (e) { }
+    }
+    return { ok: false };
+}
 function syncWorkLogExtraUnlockUI() {
     const lockBanner = document.getElementById("logExtraLockBanner");
     const filterContent = document.getElementById("logExtraFilterContent");
@@ -1568,12 +1635,20 @@ function closeWorkLogPinModal() {
     if (modal) modal.style.display = "none";
     pendingWorkLogAction = null;
 }
-function submitWorkLogPin() {
+async function submitWorkLogPin() {
     const input = document.getElementById("workLogPinInput");
     const val = (input ? input.value : "").trim();
-    if (val === "9445") {
+    if (!val) {
+        showToast("⚠️ 비밀번호를 입력해 주세요.");
+        if (input) input.focus();
+        return;
+    }
+    const result = await verifyScreenLockPin(val);
+    if (result && result.ok) {
         isWorkLogUnlocked = true;
-        try { sessionStorage.setItem("workLogPinUnlocked", "1"); } catch (e) {}
+        writeSessionValue("workLogPinUnlocked", "1");
+        writeSessionValue(SCREEN_UNLOCK_TOKEN_KEY, result.token || "server");
+        writeSessionValue(SCREEN_UNLOCK_EXPIRY_KEY, String(result.expiresAt || (Date.now() + SCREEN_UNLOCK_TTL_MS)));
         syncWorkLogExtraUnlockUI();
         const callback = pendingWorkLogAction;
         closeWorkLogPinModal();

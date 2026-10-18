@@ -123,8 +123,14 @@ try {
 }
 
 const firebaseConfig = JSON.parse(await readFile('firebase.json', 'utf8'));
-if (firebaseConfig.hosting?.public !== 'public') {
-  errors.push('firebase.json의 hosting.public은 "public"이어야 합니다.');
+// 배포본은 scripts/build-obfuscate.mjs 가 만든 압축 산출물(build/public)을 사용합니다.
+// 원본 public/ 은 개발용 소스이므로, hosting.public 은 반드시 build/public 이어야 합니다.
+if (firebaseConfig.hosting?.public !== 'build/public') {
+  errors.push(`firebase.json의 hosting.public은 "build/public"이어야 합니다. (현재: ${String(firebaseConfig.hosting?.public)})`);
+}
+const hostingPredeploy = Array.isArray(firebaseConfig.hosting?.predeploy) ? firebaseConfig.hosting.predeploy : [];
+if (!hostingPredeploy.some((cmd) => String(cmd).includes('build:obfuscate'))) {
+  errors.push('firebase.json의 hosting.predeploy에 "npm run build:obfuscate"가 있어야 합니다.');
 }
 
 const DEPLOY_SECRET = 'FIREBASE_SERVICE_ACCOUNT_BUSAN_HAK_PORT';

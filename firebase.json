@@ -13,7 +13,10 @@
     }
   },
   "hosting": {
-    "public": "public",
+    "public": "build/public",
+    "predeploy": [
+      "npm run build:obfuscate"
+    ],
     "ignore": [
       "firebase.json",
       "**/.*",

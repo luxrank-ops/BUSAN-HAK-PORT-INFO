@@ -1,0 +1,70 @@
+BUSAN HAK PORT INFO — 사유 소프트웨어 이용 조건 (Proprietary License)
+Copyright (c) 2026 이춘학 (Chunhak Lee)
+운영자 문의: luxrank@gmail.com
+
+■ 요약 (약정이 아닌 안내입니다)
+
+본 저장소와 그 산출물은 오픈소스가 아닙니다. 라이선스가 부여되지 않았으며,
+저작권법상 별도 표시가 없는 경우와 동일하게 저작권자에게 모든 권리가 유보됩니다.
+아래 행위는 저작권자의 사전 서면 동의 없이 할 수 없습니다.
+
+■ 1. 정의
+
+- "본 소프트웨어"란 이 저장소에 포함된 모든 소스코드, 설정 파일, 문서, 이미지,
+  디자인 토큰, Firestore 보안 규칙, 그리고 이를 빌드·배포한 산출물 전체를 말합니다.
+- "배포 산출물"이란 scripts/build-obfuscate.mjs 등으로 생성된 압축·난독화 파일과
+  웹사이트(https://busan-hak-port-info.vercel.app 등)를 통해 제공되는 모든 파일을
+  말합니다.
+
+■ 2. 금지되는 행위 (저작권법 제16조·제18조·제19조·제136조 등)
+
+저작권자의 사전 서면 동의 없이 다음을 할 수 없습니다.
+
+  1. 본 소프트웨어의 전부 또는 일부를 복제·다운로드·캐시·스크랩하는 행위
+     (저장소 clone, fork, ZIP 내보내기, 코드 조각 발췌를 포함합니다)
+  2. 배포·전송·공중송신하거나 제3자가 접근할 수 있도록 제공하는 행위
+  3. 수정·번역·변형하거나 2차적 저작물을 작성하는 행위
+  4. 상업적 목적으로 사용·판매·임대·서비스화하는 행위
+  5. 배포 산출물을 역분석·디컴파일·리버스 엔지니어링하거나,
+     난독화·압축을 해제하여 원본 소스를 복원하려는 시도
+  6. 자동화된 수단(크롤러·스크래퍼·AI 학습용 수집기)으로 본 소프트웨어 또는
+     배포 산출물을 수집하는 행위
+  7. 저작권 표시, 본 이용 조건, 빌드 시 자동 삽입되는 저작권 배너를 제거·변경하는 행위
+
+■ 3. 허용되는 행위
+
+  1. 저작권자가 지정한 주소의 웹사이트를 브라우저로 열람·이용하는 행위
+  2. 저작권자와 별도의 서면 계약을 체결한 경우, 그 계약 범위 내의 이용
+  3. 검색엔진이 검색 결과 제공을 위해 공개 웹페이지를 색인하는 행위
+     (robots.txt 의 지시를 따라야 합니다)
+
+■ 4. 보증의 부인 및 책임의 제한
+
+본 소프트웨어는 "있는 그대로(AS IS)" 제공됩니다. 상품성, 특정 목적 적합성,
+비침해에 대한 보증을 포함하여 명시적이거나 묵시적인 어떠한 보증도 하지 않습니다.
+저작권자는 본 소프트웨어의 사용 또는 사용 불가로 인해 발생하는 어떠한 손해에
+대해서도 책임을 지지 않습니다.
+
+■ 5. 문의 및 권리 행사
+
+  이춘학 (Chunhak Lee)
+  이메일: luxrank@gmail.com
+
+--------------------------------------------------------------------------------
+English summary (not a substitute for the Korean text above)
+
+BUSAN HAK PORT INFO — Proprietary. Copyright (c) 2026 Chunhak Lee.
+All rights reserved. No license is granted.
+
+No part of this repository or its build artifacts may be reproduced, copied,
+downloaded, forked, distributed, transmitted, modified, adapted, translated,
+sublicensed, sold, or used to create derivative works, in whole or in part,
+without the prior written permission of the copyright holder. Reverse
+engineering, decompiling, de-obfuscating, or otherwise attempting to derive
+the source code of any build artifact is expressly prohibited, as is automated
+collection (crawling, scraping, or AI training ingestion) and the removal or
+alteration of copyright notices.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND.
+Contact: luxrank@gmail.com
+--------------------------------------------------------------------------------
