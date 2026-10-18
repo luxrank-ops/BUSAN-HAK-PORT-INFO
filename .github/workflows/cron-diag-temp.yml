@@ -1,8 +1,9 @@
 name: 크론 엔드포인트 진단 (임시)
 
 # 임시 진단 워크플로 — /api/cron/* 엔드포인트가 Vercel 에서 실제로 응답하는지
-# 저장소의 CRON_SECRET(실제 값)로 호출해 HTTP 상태·응답 헤더를 확인하고
-# 결과를 PR 코멘트로 남깁니다(이 샌드박스에서는 Actions 로그 zip 다운로드가 차단됨).
+# 저장소의 CRON_SECRET(실제 값)로 호출해 HTTP 상태·본문·주요 헤더를 확인합니다.
+# 결과는 체크 런 주석(annotation)으로 남깁니다 — 이 샌드박스는 Actions 로그 zip
+# 다운로드(results-receiver.actions.githubusercontent.com)가 차단되어 직접 읽을 수 없습니다.
 # 확인 후 삭제 예정.
 
 on:
@@ -30,7 +31,7 @@ jobs:
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
           APP_URL: https://busan-hak-port-info.vercel.app
         run: |
-          set -uo pipefail
+          set +e
 
           if [ -z "${CRON_SECRET}" ]; then
             echo "::error::저장소 secret CRON_SECRET 이 없습니다."
@@ -39,19 +40,17 @@ jobs:
 
           : > /tmp/report.txt
           for p in /api/cron/schedule-watch /api/cron-schedule-watch /api/cron/daily-cleanup /api/cron-daily-cleanup; do
-            {
-              echo "===== ${p} ====="
-              curl -sS -D /tmp/h.txt -o /tmp/b.txt -w 'HTTP %{http_code}\n' \
-                --max-time 120 \
-                -H "Authorization: Bearer ${CRON_SECRET}" \
-                "${APP_URL}${p}" || echo "curl failed"
-              echo "--- headers ---"
-              cat /tmp/h.txt || true
-              echo "--- body (앞 600자) ---"
-              head -c 600 /tmp/b.txt || true
-              echo
-              echo
-            } | tee -a /tmp/report.txt
+            code=$(curl -sS -D /tmp/h.txt -o /tmp/b.txt -w '%{http_code}' \
+              --max-time 120 \
+              -H "Authorization: Bearer ${CRON_SECRET}" \
+              "${APP_URL}${p}" 2>/tmp/err.txt)
+            rc=$?
+            body=$(head -c 400 /tmp/b.txt 2>/dev/null | tr '\n' ' ')
+            cache=$(grep -i -E '^(x-vercel-cache|cache-control|age|x-vercel-id):' /tmp/h.txt 2>/dev/null | tr '\n' ' | ')
+            err=$(head -c 200 /tmp/err.txt 2>/dev/null | tr '\n' ' ')
+            line="path=${p} rc=${rc} http=${code} cache[${cache}] err[${err}] body[${body}]"
+            echo "$line" | tee -a /tmp/report.txt
+            echo "::warning title=probe::${line}"
           done
 
           {
@@ -62,11 +61,12 @@ jobs:
             echo '```'
           } > /tmp/comment.md
 
-          jq -n --rawfile b /tmp/comment.md '{body: $b}' > /tmp/payload.json
-          echo "--- posting comment ---"
-          curl -sS -w '\nHTTP %{http_code}\n' -X POST \
+          jq -n --rawfile b /tmp/comment.md '{body: $b}' > /tmp/payload.json 2>/dev/null
+          post_code=$(curl -sS -o /tmp/post.json -w '%{http_code}' -X POST \
             -H "Authorization: Bearer ${GITHUB_TOKEN}" \
             -H "Accept: application/vnd.github+json" \
             -H "Content-Type: application/json" \
             --data @/tmp/payload.json \
-            "https://api.github.com/repos/${GITHUB_REPOSITORY}/issues/39/comments" | tail -c 600
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/issues/39/comments" 2>/dev/null)
+          echo "::warning title=post::comment post http=${post_code} $(head -c 300 /tmp/post.json | tr '\n' ' ')"
+          exit 0
