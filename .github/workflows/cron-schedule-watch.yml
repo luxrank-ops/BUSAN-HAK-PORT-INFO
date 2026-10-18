@@ -1,0 +1,70 @@
+name: 선박 스케줄 감시 (매시간)
+
+# 목적
+#   선박 출항/접안 시간의 1시간 이상 변동을 감지해 FCM 푸시 알림을 보내는
+#   /api/cron/schedule-watch 엔드포인트를 매시간 트리거합니다.
+#
+# 왜 GitHub Actions 인가
+#   운영 Vercel 프로젝트는 Hobby(무료) 플랜이라 1일 1회 초과 빈도의 크론을
+#   vercel.json 에 등록하면 배포 자체가 실패합니다("Hobby accounts are limited to
+#   daily cron jobs"). 그래서 매시간 작업만 이 워크플로가 담당하고,
+#   매일/매주 작업(0 3 * * * / 0 0 * * 0)은 vercel.json crons 가 담당합니다.
+#
+# 사전 준비 (1회)
+#   1. Vercel Project Settings → Environment Variables 에 CRON_SECRET 등록
+#      (긴 무작위 문자열 권장 — 예: `openssl rand -hex 32`)
+#   2. GitHub Settings → Secrets and variables → Actions 에 **동일한 값**을
+#      CRON_SECRET 이름의 secret 으로 등록
+#
+# 유의
+#   - 예약 워크플로는 기본 브랜치(main)에서만 실행됩니다.
+#   - GitHub 피크 시간에는 예약 실행이 수 분 지연될 수 있습니다.
+#   - Pro 플랜으로 이전하면 이 워크플로를 제거하고 vercel.json crons 에
+#     { "path": "/api/cron/schedule-watch", "schedule": "0 * * * *" } 를 추가하면 됩니다.
+
+on:
+  schedule:
+    - cron: '5 * * * *' # 매시간 5분 (UTC) — 정각 부하 분산을 위해 5분 오프셋
+  workflow_dispatch: {} # 수동 실행 허용
+
+permissions:
+  contents: read
+
+concurrency:
+  group: schedule-watch-cron
+  cancel-in-progress: false
+
+jobs:
+  trigger:
+    name: schedule-watch 엔드포인트 호출
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: /api/cron/schedule-watch 호출 (CRON_SECRET 인증)
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          APP_URL: ${{ vars.SCHEDULE_WATCH_URL || 'https://busan-hak-port-info.vercel.app' }}
+        run: |
+          set -euo pipefail
+
+          if [ -z "${CRON_SECRET}" ]; then
+            echo "::error::GitHub secret CRON_SECRET 이 등록되어 있지 않습니다."
+            echo "Vercel 환경변수와 GitHub Actions secret 에 동일한 CRON_SECRET 값을 등록하세요."
+            echo "등록 절차는 이 워크플로 파일(.github/workflows/cron-schedule-watch.yml) 상단 주석 참고."
+            exit 1
+          fi
+
+          echo "호출: ${APP_URL}/api/cron/schedule-watch"
+          status=$(curl -sS -o /tmp/schedule-watch.json -w '%{http_code}' \
+            --max-time 290 \
+            -H "Authorization: Bearer ${CRON_SECRET}" \
+            "${APP_URL}/api/cron/schedule-watch")
+
+          echo "HTTP ${status}"
+          cat /tmp/schedule-watch.json || true
+          echo ""
+
+          if [ "$status" != "200" ]; then
+            echo "::error::schedule-watch 가 HTTP ${status} 로 응답했습니다."
+            exit 1
+          fi

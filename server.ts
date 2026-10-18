@@ -5,6 +5,7 @@
 // ============================================================================
 import 'dotenv/config';
 import express from 'express';
+import type { Request, Response } from 'express';
 import compression from 'compression';
 import crypto from 'node:crypto';
 import fs from 'fs/promises';
@@ -23,6 +24,21 @@ const __dirname = path.dirname(__filename);
 
 export const app = express();
 const PORT = Number(process.env.PORT) || 3000;
+
+// --- 실행 환경 감지: Vercel 서버리스(Node 런타임) vs 상시 프로세스 서버 ---
+// Vercel 에서는 api/[...path].ts 가 이 파일을 임포트해 /api/* 요청만 함수로 처리합니다.
+// 정적 자산(HTML·CSS·JS·이미지)은 Vercel CDN 이 build/public 을 직접 서빙합니다
+// (vercel.json 의 outputDirectory 설정). 서버리스는 응답 후 프로세스가 동결되므로
+// app.listen() 과 node-cron 타이머가 동작하지 않습니다 — Vercel 에서는 이들을 비활성화하고,
+// 주기 작업은 Vercel Cron 과 GitHub Actions 가 /api/cron/* 엔드포인트를 호출해 대신 실행합니다.
+export const IS_VERCEL = Boolean(process.env.VERCEL);
+
+if (IS_VERCEL) {
+  // Vercel 엣지 프록시가 x-forwarded-for 의 마지막에 실제 클라이언트 IP 를 추가합니다.
+  // hop 1개만 신뢰해야 클라이언트가 헤더를 위조해 속도 제한을 우회할 수 없습니다.
+  // (미설정 시 req.ip 가 프록시 IP 가 되어 모든 사용자가 속도 제한 버킷 하나를 공유하게 됩니다)
+  app.set('trust proxy', 1);
+}
 
 export const SUPPORTED_TERMINALS = ['hjnc', 'bnct', 'dgt', 'hpnt', 'pnit', 'bptc', 'hbct'] as const;
 export const SCHEDULE_DIFF_THRESHOLD_MINUTES = Number(process.env.SCHEDULE_DIFF_THRESHOLD_MINUTES) || 60;
@@ -1144,8 +1160,13 @@ export async function runWeeklyFirestoreBackup(targetDir: string = path.join(__d
   }
 }
 
-// --- 크론 스케줄러 등록 (테스트 환경이 아닐 때만 백그라운드 실행) ---
-if (process.env.NODE_ENV !== 'test') {
+// --- 크론 스케줄러 등록 (상시 프로세스 서버에서만 백그라운드 실행) ---
+// 테스트 환경과 Vercel 서버리스에서는 등록하지 않습니다 — 서버리스는 응답 후 프로세스가
+// 동결되어 node-cron 타이머가 발화하지 않기 때문입니다. Vercel 배포에서는 대신
+// vercel.json crons(매일 DB 정리·매주 백업)와 GitHub Actions 예약 워크플로
+// (매시간 스케줄 감시 — .github/workflows/cron-schedule-watch.yml)가
+// 아래의 /api/cron/* 엔드포인트를 호출해 동일한 작업을 실행합니다.
+if (process.env.NODE_ENV !== 'test' && !IS_VERCEL) {
   // 1) 매 정각(0 * * * *) 터미널 스케줄 수집 및 1시간 이상 출항/접안 변동 푸시 알림
   cron.schedule('0 * * * *', () => {
     console.log('[CRON] 선박 출항/접안 스케줄 변경 감지 시작...', new Date().toISOString());
@@ -1229,6 +1250,7 @@ app.get('/api/health', (_req, res) => {
   res.json({
     ok: true,
     status: isolatedCount === terminals.length ? 'degraded' : 'healthy',
+    platform: IS_VERCEL ? 'vercel-serverless' : 'node-server',
     uptimeSec: Math.round(process.uptime()),
     firebaseAdminInitialized: getApps().length > 0,
     scheduleDiffThresholdMinutes: SCHEDULE_DIFF_THRESHOLD_MINUTES,
@@ -1313,31 +1335,132 @@ app.get('/api/terminal-schedule', async (req, res) => {
   }
 });
 
-app.use((_, res, next) => {
-  res.setHeader('X-Content-Type-Options', 'nosniff');
-  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
-  next();
-});
+// --- 주기 작업 트리거 엔드포인트 (Vercel Cron · GitHub Actions 용) ---
+// 서버리스(Vercel)에서는 node-cron 타이머를 쓸 수 없으므로 스케줄러가 이 엔드포인트를
+// 직접 호출합니다. 호출 주체는 두 가지입니다:
+//   1) Vercel Cron (vercel.json crons): CRON_SECRET 이 Vercel 프로젝트 환경변수에 등록되어
+//      있으면 `Authorization: Bearer ${CRON_SECRET}` 헤더가 자동 첨부됩니다.
+//   2) GitHub Actions (.github/workflows/cron-schedule-watch.yml): Vercel Hobby 플랜은
+//      1일 1회 초과 빈도의 크론 등록을 금지하므로, 매시간 스케줄 감시만 이곳에서 curl 로
+//      동일한 헤더를 보내 트리거합니다.
+// CRON_SECRET 미등록 시에는 503 으로 거부하여 익명 트리거를 원천 차단합니다.
+const CRON_SECRET = String(process.env.CRON_SECRET || '');
 
-app.use('/icons', express.static(path.join(__dirname, 'icons'), { maxAge: '7d' }));
-app.use(express.static(STATIC_ROOT, {
-  setHeaders: (res, filePath) => {
-    if (/\.(png|jpg|jpeg|gif|ico|svg|webp)$/i.test(filePath)) {
-      res.setHeader('Cache-Control', 'public, max-age=604800, immutable');
-    }
-    // A-1 (2026-10-17): css/app.css 와 js/* 는 ?v= 버전 쿼리로 장기 캐시.
-    // 버전이 바뀌면 index.html(비캐시)에서 새 URL 이 되어 새로 받아옵니다.
-    if (/\.(css|js)$/i.test(filePath)) {
-      res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
-    }
+/**
+ * Authorization 헤더의 Bearer 토큰을 CRON_SECRET 과 상수 시간 비교로 검증합니다.
+ * 시크릿을 인자로 받는 순수 함수입니다(테스트에서 샌드박스로 추출해 실행합니다).
+ */
+export function verifyCronAuthHeader(authHeader: string, secret: string): boolean {
+  if (!secret) return false;
+  const header = String(authHeader || '');
+  if (!/^Bearer\s+/i.test(header)) return false;
+  const token = header.replace(/^Bearer\s+/i, '').trim();
+  if (!token) return false;
+  const a = crypto.createHash('sha256').update(token, 'utf8').digest();
+  const b = crypto.createHash('sha256').update(secret, 'utf8').digest();
+  return crypto.timingSafeEqual(a, b);
+}
+
+function authorizeCronRequest(req: Request, res: Response): boolean {
+  if (!CRON_SECRET) {
+    res.status(503).json({ ok: false, error: 'cron_secret_not_configured' });
+    return false;
   }
-}));
+  if (!verifyCronAuthHeader(String(req.headers.authorization || ''), CRON_SECRET)) {
+    res.status(401).json({ ok: false, error: 'unauthorized' });
+    return false;
+  }
+  return true;
+}
 
-app.get('*', (_req, res) => {
-  res.sendFile(path.join(STATIC_ROOT, 'index.html'));
+/** 백업 저장 경로 — 서버리스에서는 /tmp 만 쓰기 가능하며 인스턴스 종료 시 사라집니다. */
+export function resolveBackupDir(): string {
+  return IS_VERCEL ? path.join('/tmp', 'backups') : path.join(__dirname, 'backups');
+}
+
+// 1) 선박 출항/접안 스케줄 변경 감지 + FCM 푸시 알림
+//    (매시간 — Vercel Hobby 플랜 제약으로 GitHub Actions 예약 워크플로가 트리거)
+app.get('/api/cron/schedule-watch', async (req, res) => {
+  if (!authorizeCronRequest(req, res)) return;
+  try {
+    const result = await runScheduleChangeDetection();
+    res.json({ ok: true, task: 'schedule-watch', ...result });
+  } catch (error: any) {
+    res.status(500).json({ ok: false, task: 'schedule-watch', error: error?.message || String(error) });
+  }
 });
 
-if (process.env.NODE_ENV !== 'test') {
+// 2) DB 자가 정리(30일 지난 스케줄 캐시 / 14일 지난 읽은 알림) — Vercel Cron 매일 03시
+app.get('/api/cron/daily-cleanup', async (req, res) => {
+  if (!authorizeCronRequest(req, res)) return;
+  try {
+    const result = await runDatabaseAutoCleanup();
+    res.json({ ok: true, task: 'daily-cleanup', ...result });
+  } catch (error: any) {
+    res.status(500).json({ ok: false, task: 'daily-cleanup', error: error?.message || String(error) });
+  }
+});
+
+// 3) 주간 Firestore 백업 — Vercel Cron 매주 일요일 00시
+//    ⚠️ 서버리스에서는 /tmp 에만 쓸 수 있고 인스턴스 종료 시 사라지므로 영구 보관이
+//    아닙니다(응답의 note 필드 참고). 영구 백업은 상시 프로세스 서버 배포에서만 유효합니다.
+app.get('/api/cron/weekly-backup', async (req, res) => {
+  if (!authorizeCronRequest(req, res)) return;
+  try {
+    const result = await runWeeklyFirestoreBackup(resolveBackupDir());
+    res.json({
+      ok: true,
+      task: 'weekly-backup',
+      ...result,
+      ...(IS_VERCEL
+        ? { note: 'ephemeral_filesystem: 서버리스 /tmp 백업은 함수 종료 후 유지되지 않습니다' }
+        : {})
+    });
+  } catch (error: any) {
+    res.status(500).json({ ok: false, task: 'weekly-backup', error: error?.message || String(error) });
+  }
+});
+
+// 매칭되지 않은 /api/* 경로는 index.html 이 아닌 JSON 404 를 반환합니다.
+// (정적 호스팅 시절 /api/* 가 index.html 로 폴백되던 문제를 명시적 오류로 대체)
+app.use('/api', (_req, res) => {
+  res.status(404).json({ ok: false, error: 'not_found' });
+});
+
+// --- 정적 자산 서빙 및 SPA 폴백 (상시 프로세스 서버 전용) ---
+// Vercel 에서는 CDN 이 대신 처리합니다: build/public 정적 배포(vercel.json outputDirectory)
+// + headers(캐시·보안 헤더) + rewrites(/api/ 제외 전 경로를 index.html 로 폴백).
+// 서버리스 함수 번들에는 public/ 파일이 포함되지 않으므로, 등록을 건너뛰어
+// sendFile 오류를 방지하고 번들 크기를 줄입니다.
+if (!IS_VERCEL) {
+  app.use((_, res, next) => {
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+    next();
+  });
+
+  app.use('/icons', express.static(path.join(__dirname, 'icons'), { maxAge: '7d' }));
+  app.use(express.static(STATIC_ROOT, {
+    setHeaders: (res, filePath) => {
+      if (/\.(png|jpg|jpeg|gif|ico|svg|webp)$/i.test(filePath)) {
+        res.setHeader('Cache-Control', 'public, max-age=604800, immutable');
+      }
+      // A-1 (2026-10-17): css/app.css 와 js/* 는 ?v= 버전 쿼리로 장기 캐시.
+      // 버전이 바뀌면 index.html(비캐시)에서 새 URL 이 되어 새로 받아옵니다.
+      if (/\.(css|js)$/i.test(filePath)) {
+        res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+      }
+    }
+  }));
+
+  app.get('*', (_req, res) => {
+    res.sendFile(path.join(STATIC_ROOT, 'index.html'));
+  });
+}
+
+// 포트 리스닝은 상시 프로세스 서버 전용 — Vercel 서버리스에서는 플랫폼이
+// api/[...path].ts 의 핸들러(Express 앱)를 직접 호출하므로 listen 하면 안 됩니다.
+if (!IS_VERCEL && process.env.NODE_ENV !== 'test') {
   const server = app.listen(PORT, '0.0.0.0', () => {
     console.log(`Server running at http://localhost:${PORT}/`);
     console.log(`Local: http://localhost:${PORT}/`);
