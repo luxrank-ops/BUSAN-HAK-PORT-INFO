@@ -12,6 +12,7 @@ on:
 
 permissions:
   contents: read
+  issues: write
   pull-requests: write
 
 concurrency:
@@ -22,7 +23,7 @@ jobs:
   probe:
     name: 크론 엔드포인트 응답 확인
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 10
     steps:
       - name: 상태 코드 · 헤더 · 본문 확인
         env:
@@ -36,9 +37,8 @@ jobs:
             exit 1
           fi
 
-          REPORT=""
+          : > /tmp/report.txt
           for p in /api/cron/schedule-watch /api/cron-schedule-watch /api/cron/daily-cleanup /api/cron-daily-cleanup; do
-            echo "===== ${p} ====="
             {
               echo "===== ${p} ====="
               curl -sS -D /tmp/h.txt -o /tmp/b.txt -w 'HTTP %{http_code}\n' \
@@ -50,18 +50,23 @@ jobs:
               echo "--- body (앞 600자) ---"
               head -c 600 /tmp/b.txt || true
               echo
+              echo
             } | tee -a /tmp/report.txt
           done
 
           {
-            echo "### 🩺 크론 엔드포인트 진단 결과"
+            echo "### 크론 엔드포인트 진단 결과"
             echo ""
             echo '```'
             cat /tmp/report.txt
             echo '```'
           } > /tmp/comment.md
 
-          GH_TOKEN="${GITHUB_TOKEN}" gh api \
-            "repos/${GITHUB_REPOSITORY}/issues/39/comments" \
-            -f body="$(cat /tmp/comment.md)" > /dev/null
-          echo "comment posted"
+          jq -n --rawfile b /tmp/comment.md '{body: $b}' > /tmp/payload.json
+          echo "--- posting comment ---"
+          curl -sS -w '\nHTTP %{http_code}\n' -X POST \
+            -H "Authorization: Bearer ${GITHUB_TOKEN}" \
+            -H "Accept: application/vnd.github+json" \
+            -H "Content-Type: application/json" \
+            --data @/tmp/payload.json \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/issues/39/comments" | tail -c 600
