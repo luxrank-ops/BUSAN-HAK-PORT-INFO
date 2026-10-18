@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "tsx server.ts",
-    "build": "tsc --noEmit server.ts --esModuleInterop --module esnext --moduleResolution bundler --target es2022 --skipLibCheck",
+    "build": "npm run typecheck && npm run build:obfuscate",
+    "build:obfuscate": "node scripts/build-obfuscate.mjs",
     "start": "tsx server.ts",
     "typecheck": "tsc --noEmit",
     "validate": "node scripts/validate.mjs",
@@ -30,6 +31,7 @@
     "@types/express": "^5.0.0",
     "@types/node": "^22.0.0",
     "@types/node-cron": "^3.0.11",
+    "esbuild": "^0.28.2",
     "firebase-tools": "^15.34.0",
     "js-yaml": "^4.3.2",
     "tsx": "^4.19.2",

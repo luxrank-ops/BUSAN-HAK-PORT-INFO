@@ -123,6 +123,12 @@ jobs:
       name: Production
       url: https://busan-hak-port.web.app
 
+    env:
+      # 정적 호스팅(Firebase)에서는 서버 검증 API가 없으므로,
+      # 빌드 시 PIN 해시를 HTML 에 주입해야 화면 잠금이 동작합니다.
+      # Settings → Secrets and variables → Actions 에 SCREEN_LOCK_PIN 등록.
+      SCREEN_LOCK_PIN: ${{ secrets.SCREEN_LOCK_PIN }}
+
     steps:
       - name: 소스 코드 받기
         uses: actions/checkout@v5

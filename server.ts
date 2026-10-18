@@ -1,9 +1,16 @@
+// ============================================================================
+// BUSAN HAK PORT INFO — Copyright (c) 2026 이춘학 (luxrank@gmail.com). All rights reserved.
+// 사유 소프트웨어입니다. 저작권자의 사전 서면 동의 없이 복제·배포·수정·2차적 저작물 작성·
+// 역분석·디컴파일을 할 수 없습니다. 자세한 내용은 저장소의 LICENSE 파일을 참고하세요.
+// ============================================================================
 import 'dotenv/config';
 import express from 'express';
 import compression from 'compression';
+import crypto from 'node:crypto';
 import fs from 'fs/promises';
 import http from 'http';
 import https from 'https';
+import { existsSync } from 'node:fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { initializeApp, cert, getApps } from 'firebase-admin/app';
@@ -22,6 +29,62 @@ export const SCHEDULE_DIFF_THRESHOLD_MINUTES = Number(process.env.SCHEDULE_DIFF_
 export const SCHEDULE_CACHE_TTL_DAYS = 30;
 export const READ_NOTIFICATION_TTL_DAYS = 14;
 export const BACKUP_COLLECTIONS = ['work_logs', 'ships', 'posts'] as const;
+
+// --- 정적 자산 루트: 난독화·압축 산출물(build/public) 우선, 없으면 원본(public) ---
+// scripts/build-obfuscate.mjs 가 만든 배포용 압축본이 있으면 그것을 제공하고,
+// 로컬 개발이나 빌드 실패 시에는 원본을 그대로 제공해 화면이 깨지지 않게 합니다.
+export const PUBLIC_SOURCE_DIR = path.join(__dirname, 'public');
+export const PUBLIC_BUILD_DIR = path.join(__dirname, 'build', 'public');
+export function resolveStaticRoot(): string {
+  try {
+    return existsSync(PUBLIC_BUILD_DIR) ? PUBLIC_BUILD_DIR : PUBLIC_SOURCE_DIR;
+  } catch {
+    return PUBLIC_SOURCE_DIR;
+  }
+}
+export const STATIC_ROOT = resolveStaticRoot();
+
+// --- 화면 잠금(보안 비밀번호) 설정 ---
+// PIN 은 저장소 소스가 아니라 서버 환경변수로만 관리합니다. (기본값 9445 는 하위 호환용)
+export const SCREEN_LOCK_PIN = String(process.env.SCREEN_LOCK_PIN || '9445');
+export const SCREEN_UNLOCK_TOKEN_TTL_MS = 12 * 60 * 60 * 1000; // 12시간
+const SCREEN_UNLOCK_TOKEN_SECRET = process.env.UNLOCK_TOKEN_SECRET || SCREEN_LOCK_PIN;
+// 무차별 대입 방지: IP 당 10분에 10회까지만 시도
+const SCREEN_UNLOCK_MAX_ATTEMPTS = 10;
+const SCREEN_UNLOCK_WINDOW_MS = 10 * 60 * 1000;
+const screenUnlockAttempts = new Map<string, { count: number; resetAt: number }>();
+
+function isScreenUnlockRateLimited(ip: string): boolean {
+  const now = Date.now();
+  const entry = screenUnlockAttempts.get(ip);
+  if (!entry || entry.resetAt <= now) {
+    screenUnlockAttempts.set(ip, { count: 1, resetAt: now + SCREEN_UNLOCK_WINDOW_MS });
+    if (screenUnlockAttempts.size > 5000) {
+      for (const [key, value] of screenUnlockAttempts) {
+        if (value.resetAt <= now) screenUnlockAttempts.delete(key);
+      }
+    }
+    return false;
+  }
+  entry.count += 1;
+  return entry.count > SCREEN_UNLOCK_MAX_ATTEMPTS;
+}
+
+/** 상수 시간 비교 — 길이가 달라도 비교 시간이 새어나가지 않도록 해시 후 비교합니다. */
+export function verifyScreenLockPin(pin: string): boolean {
+  const a = crypto.createHash('sha256').update(String(pin || ''), 'utf8').digest();
+  const b = crypto.createHash('sha256').update(SCREEN_LOCK_PIN, 'utf8').digest();
+  return crypto.timingSafeEqual(a, b);
+}
+
+export function issueScreenUnlockToken(): { token: string; expiresAt: number } {
+  const expiresAt = Date.now() + SCREEN_UNLOCK_TOKEN_TTL_MS;
+  const token = crypto
+    .createHmac('sha256', SCREEN_UNLOCK_TOKEN_SECRET)
+    .update(`screen-unlock:${expiresAt}`)
+    .digest('hex');
+  return { token, expiresAt };
+}
 
 // --- Firebase Admin 안전 초기화 (.env Base64 또는 JSON 원문 지원) ---
 function initFirebaseAdmin(): boolean {
@@ -1129,11 +1192,35 @@ app.use('/api', (req, res, next) => {
   next();
 });
 
+// JSON 본문 파싱 (화면 잠금 해제 요청용, 4KB 제한)
+app.use('/api', express.json({ limit: '4kb' }));
+
 app.get('/api/config', (_req, res) => {
   res.json({
     ok: true,
     vapidKey: process.env.VAPID_KEY || ''
   });
+});
+
+// 🔐 화면 잠금 해제 — PIN 을 브라우저 소스에서 완전히 분리합니다.
+// 저장소·배포 번들에는 PIN 이 존재하지 않고, 서버 환경변수 SCREEN_LOCK_PIN 만이 정답입니다.
+app.post('/api/screen-unlock', (req, res) => {
+  const ip = String(req.ip || req.socket?.remoteAddress || 'unknown');
+  if (isScreenUnlockRateLimited(ip)) {
+    res.status(429).json({ ok: false, error: 'too_many_attempts' });
+    return;
+  }
+  const pin = String((req.body && (req.body as { pin?: unknown }).pin) ?? '');
+  if (!pin) {
+    res.status(400).json({ ok: false, error: 'missing_pin' });
+    return;
+  }
+  if (!verifyScreenLockPin(pin)) {
+    res.status(401).json({ ok: false, error: 'invalid_pin' });
+    return;
+  }
+  const { token, expiresAt } = issueScreenUnlockToken();
+  res.json({ ok: true, token, expiresAt });
 });
 
 app.get('/api/health', (_req, res) => {
@@ -1233,7 +1320,7 @@ app.use((_, res, next) => {
 });
 
 app.use('/icons', express.static(path.join(__dirname, 'icons'), { maxAge: '7d' }));
-app.use(express.static(path.join(__dirname, 'public'), {
+app.use(express.static(STATIC_ROOT, {
   setHeaders: (res, filePath) => {
     if (/\.(png|jpg|jpeg|gif|ico|svg|webp)$/i.test(filePath)) {
       res.setHeader('Cache-Control', 'public, max-age=604800, immutable');
@@ -1247,7 +1334,7 @@ app.use(express.static(path.join(__dirname, 'public'), {
 }));
 
 app.get('*', (_req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+  res.sendFile(path.join(STATIC_ROOT, 'index.html'));
 });
 
 if (process.env.NODE_ENV !== 'test') {
@@ -1255,6 +1342,7 @@ if (process.env.NODE_ENV !== 'test') {
     console.log(`Server running at http://localhost:${PORT}/`);
     console.log(`Local: http://localhost:${PORT}/`);
     console.log(`Network: http://0.0.0.0:${PORT}/`);
+    console.log(`Static: ${STATIC_ROOT}${STATIC_ROOT === PUBLIC_BUILD_DIR ? ' (압축 빌드본)' : ' (원본 public — npm run build:obfuscate 실행 시 압축본 사용)'}`);
   });
 
   server.on('error', (err: any) => {
