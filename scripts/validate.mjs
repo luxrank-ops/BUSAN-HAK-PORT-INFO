@@ -15,6 +15,7 @@ const appJsFiles = [
 const requiredFiles = [
   '.firebaserc',
   'firebase.json',
+  'vercel.json',
   'public/index.html',
   'public/admin.html',
   'public/manifest.json',
@@ -29,7 +30,7 @@ const requiredFiles = [
   ...appJsFiles
 ];
 
-const jsonFiles = ['.firebaserc', 'firebase.json', 'firestore.indexes.json', 'metadata.json', 'package.json', 'public/manifest.json'];
+const jsonFiles = ['.firebaserc', 'firebase.json', 'vercel.json', 'firestore.indexes.json', 'metadata.json', 'package.json', 'public/manifest.json'];
 const htmlFiles = ['public/index.html', 'public/admin.html'];
 const jsFiles = [
   'public/service-worker.js',
@@ -131,6 +132,16 @@ if (firebaseConfig.hosting?.public !== 'build/public') {
 const hostingPredeploy = Array.isArray(firebaseConfig.hosting?.predeploy) ? firebaseConfig.hosting.predeploy : [];
 if (!hostingPredeploy.some((cmd) => String(cmd).includes('build:obfuscate'))) {
   errors.push('firebase.json의 hosting.predeploy에 "npm run build:obfuscate"가 있어야 합니다.');
+}
+
+// Vercel 은 프리셋 기본값(Output Directory = public) 으로 배포하면 원본 소스가 그대로
+// 올라갑니다. 압축·난독화된 build/public 을 배포하도록 vercel.json 이 정의되어야 합니다.
+const vercelConfig = JSON.parse(await readFile('vercel.json', 'utf8'));
+if (vercelConfig.outputDirectory !== 'build/public') {
+  errors.push(`vercel.json의 outputDirectory는 "build/public"이어야 합니다. (현재: ${String(vercelConfig.outputDirectory)})`);
+}
+if (!String(vercelConfig.buildCommand || '').includes('build')) {
+  errors.push('vercel.json의 buildCommand에 빌드(npm run build)가 포함되어야 합니다.');
 }
 
 const DEPLOY_SECRET = 'FIREBASE_SERVICE_ACCOUNT_BUSAN_HAK_PORT';

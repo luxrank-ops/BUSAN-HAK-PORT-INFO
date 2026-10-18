@@ -1538,7 +1538,7 @@ let pendingWorkLogAction = null;
  */
 async function verifyScreenLockPin(pin) {
     const value = String(pin || "").trim();
-    if (!value) return { ok: false };
+    if (!value) return { ok: false, reason: "empty" };
 
     // 1순위 — 서버 검증 (PIN 평문은 서버 환경변수에만 존재)
     try {
@@ -1547,15 +1547,20 @@ async function verifyScreenLockPin(pin) {
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ pin: value })
         });
-        if (res && res.ok) {
-            const data = await res.json().catch(() => null);
-            if (data && data.ok === true) {
-                const expiresAt = Number(data.expiresAt) || (Date.now() + SCREEN_UNLOCK_TTL_MS);
-                return { ok: true, token: String(data.token || "server"), expiresAt };
+        if (res) {
+            if (res.ok) {
+                const data = await res.json().catch(() => null);
+                if (data && data.ok === true) {
+                    const expiresAt = Number(data.expiresAt) || (Date.now() + SCREEN_UNLOCK_TTL_MS);
+                    return { ok: true, token: String(data.token || "server"), expiresAt };
+                }
             }
+            // 서버가 명확히 거부했다면 폴백하지 않고 그대로 실패 (서버가 정답을 아는 쪽)
+            if (res.status === 401 || res.status === 400) return { ok: false, reason: "invalid_pin" };
+            if (res.status === 429) return { ok: false, reason: "rate_limited" };
         }
     } catch (e) {
-        // 네트워크·정적 호스팅 환경 → 아래 폴백으로 진행
+        // 네트워크 오류·정적 호스팅 환경 → 아래 폴백으로 진행
     }
 
     // 2순위 — 빌드 시 주입된 해시와 비교 (scripts/build-obfuscate.mjs 가 주입)
@@ -1567,8 +1572,12 @@ async function verifyScreenLockPin(pin) {
                 return { ok: true, token: "local", expiresAt: Date.now() + SCREEN_UNLOCK_TTL_MS };
             }
         } catch (e) { }
+        return { ok: false, reason: "invalid_pin" };
     }
-    return { ok: false };
+
+    // 서버도 없고 주입된 해시도 없는 배포(예: 원본 public/ 을 그대로 정적 배포)는
+    // 잠금을 풀 방법이 없습니다. 조용히 실패하지 않고 원인을 알립니다.
+    return { ok: false, reason: "no_verifier" };
 }
 function syncWorkLogExtraUnlockUI() {
     const lockBanner = document.getElementById("logExtraLockBanner");
@@ -1655,7 +1664,17 @@ async function submitWorkLogPin() {
         showToast("🔓 추가 기능(검색·상세 통계) 잠금이 해제되었습니다.");
         if (typeof callback === "function") callback();
     } else {
-        showToast("⚠️ 비밀번호가 일치하지 않습니다.");
+        const reason = (result && result.reason) || "invalid_pin";
+        if (reason === "rate_limited") {
+            showToast("⚠️ 시도 횟수가 초과되었습니다. 잠시 후 다시 시도해 주세요.");
+        } else if (reason === "no_verifier") {
+            showToast("⚠️ 잠금을 확인할 수 없습니다. 운영자에게 문의해 주세요. (luxrank@gmail.com)");
+            try {
+                console.error("[보안] 화면 잠금 검증 수단이 없습니다 — 서버(/api/screen-unlock) 응답과 빌드 해시가 모두 없습니다. 압축 빌드(build/public)가 배포되었는지 확인하세요.");
+            } catch (e) { }
+        } else {
+            showToast("⚠️ 비밀번호가 일치하지 않습니다.");
+        }
         if (input) {
             input.value = "";
             input.focus();
