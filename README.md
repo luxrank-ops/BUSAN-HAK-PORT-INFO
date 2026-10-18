@@ -92,7 +92,8 @@
 
 | 경로 | 처리 주체 |
 | --- | --- |
-| `/api/*` | `api/[...path].ts` (Vercel Function · Node 런타임) → `server.ts` 의 Express 앱에 위임. 인천 리전(`icn1`)에서 실행되어 국내 터미널 사이트 수집 지연이 짧습니다 |
+| `/api/*` (단일 세그먼트) | `api/[...path].ts` (Vercel Function · Node 런타임) → `server.ts` 의 Express 앱에 위임. 인천 리전(`icn1`)에서 실행되어 국내 터미널 사이트 수집 지연이 짧습니다 |
+| `/api/cron/*` (2세그먼트) | `api/cron/{schedule-watch,daily-cleanup,weekly-backup}.ts` **개별 함수 파일** (아래 "Vercel 라우팅 제약" 참고) |
 | 그 외 모든 경로 | Vercel CDN 이 `build/public`(압축·난독화 산출물)을 정적 서빙. 파일이 없는 경로는 `index.html` 로 폴백(SPA rewrite). 캐시·보안 헤더는 `vercel.json` `headers` 가 `firebase.json` 과 동일 정책으로 적용 |
 
 Vercel 에서 동작하는 서버 API(로컬 `npm run dev` 와 동일한 코드입니다):
@@ -102,6 +103,22 @@ Vercel 에서 동작하는 서버 API(로컬 `npm run dev` 와 동일한 코드�
 - `POST /api/screen-unlock` — 화면 잠금 PIN 서버 검증(1순위). `trust proxy` 설정으로 **실제 클라이언트 IP 기준** 속도 제한(IP당 10분 10회)이 동작합니다
 - `GET /api/hjnc-schedule` · `GET /api/terminal-schedule` — 7개 터미널 실시간 선석 스케줄(메모리 캐시 → Firestore 캐시 stale-while-revalidate 폴백)
 - `GET /api/cron/*` — 주기 작업 트리거(아래 참고, `CRON_SECRET` 인증 필수)
+
+### ⚠️ Vercel 라우팅 제약 — 2세그먼트 경로는 개별 함수 파일이 필요합니다
+
+`api/[...path].ts` catch-all 은 **단일 세그먼트** 경로(`/api/health`, `/api/config`, …)에만 매칭됩니다.
+2세그먼트 이상 경로(`/api/cron/schedule-watch` 등)는 함수에 도달하지 못하고 **Vercel 플랫폼 라우터가
+404(NOT_FOUND)** 를 반환합니다. 즉 `api/` 디렉터리에 파일이 있어도 매칭되지 않는 경로가 생깁니다.
+
+| 증상 | 의미 | 조치 |
+| --- | --- | --- |
+| **404 + Vercel `NOT_FOUND` HTML 페이지** | 함수가 호출되지 않음(라우팅 실패). 비밀번호 문제 아님 | 경로를 개별 함수 파일로 노출 |
+| **401 + `{"ok":false,"error":"unauthorized"}`** | 함수 정상 호출, `CRON_SECRET` 값 불일치 | Vercel·GitHub 양쪽 시크릿 값 일치 |
+| **503 + `{"ok":false,"error":"cron_secret_not_configured"}`** | Vercel 에 `CRON_SECRET` 미등록 | 환경변수 등록 후 Redeploy |
+
+따라서 주기 작업 경로는 `api/cron/<task>.ts` **개별 함수 파일**로 노출하고(`server.ts` 의 Express 앱을 그대로
+위임), 단일 세그먼트 별칭 경로(`/api/cron-schedule-watch` 등)도 함께 등록해 어느 한쪽 라우팅에도 의존하지
+않도록 했습니다. 두 경로 모두 동일한 핸들러·인증(`CRON_SECRET`)을 사용합니다.
 
 ### 주기 작업 (스케줄 감시 · DB 정리 · 백업)
 
@@ -185,7 +202,11 @@ BUSAN-HAK-PORT-INFO/
 │   ├── 앱_개선_전략_제안서.md    ← 디자인 변경 없이 진행하는 개선 방향·개선안·로드맵(2026-10-16)
 │   └── images/                  ← UI/UX 쇼케이스 이미지
 ├── api/
-│   └── [...path].ts           ← Vercel 서버리스 함수 진입점 (/api/* 를 server.ts Express 앱에 위임)
+│   ├── [...path].ts           ← Vercel 서버리스 함수 진입점 (단일 세그먼트 /api/* 를 server.ts Express 앱에 위임)
+│   └── cron/                  ← 2세그먼트 주기 작업 경로용 개별 함수 (catch-all 은 2세그먼트 미매칭 → 플랫폼 404)
+│       ├── schedule-watch.ts  ← 매시간 FCM 스케줄 변경 감지 트리거
+│       ├── daily-cleanup.ts   ← 매일 DB 자가 정리 트리거 (Vercel Cron)
+│       └── weekly-backup.ts   ← 매주 Firestore 백업 트리거 (Vercel Cron)
 ├── .github/
 │   └── workflows/             ← CI · 승인형 Firebase 배포 · 매시간 스케줄 감시(cron-schedule-watch.yml)
 ├── scripts/

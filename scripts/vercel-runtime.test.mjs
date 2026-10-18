@@ -14,6 +14,8 @@
  *   4. vercel.json crons 는 Vercel Hobby 플랜 제약(1일 1회 이하 빈도)을 넘지 않는다
  *   5. /api/cron/* 엔드포인트는 CRON_SECRET Bearer 인증(상수 시간 비교) 없이는 실행되지 않는다
  *   6. 매시간 스케줄 감시를 담당하는 GitHub Actions 예약 워크플로가 존재한다
+ *   7. 2세그먼트 크론 경로는 개별 Vercel 함수 파일(api/cron/*.ts)로 노출된다
+ *      (catch-all 은 단일 세그먼트 경로에만 매칭 → 2세그먼트 경로는 플랫폼 404)
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -168,4 +170,35 @@ test('매시간 스케줄 감시용 GitHub Actions 예약 워크플로가 존재
   assert.match(text, /secrets\.CRON_SECRET/, 'CRON_SECRET 시크릿으로 인증해야 합니다');
   assert.match(text, /Authorization: Bearer/, 'Vercel Cron 과 동일한 Bearer 인증 헤더를 사용해야 합니다');
   assert.match(text, /workflow_dispatch/, '수동 실행도 가능해야 합니다');
+});
+
+test('2세그먼트 크론 경로는 개별 Vercel 함수 파일로 노출된다 (catch-all 라우팅 제약 우회)', () => {
+  // catch-all(api/[...path].ts)은 단일 세그먼트 경로에만 매칭되므로,
+  // 2세그먼트 경로는 Vercel 플랫폼 라우터가 404(NOT_FOUND)로 처리한다.
+  // → 주기 작업 경로는 반드시 개별 함수 파일로도 노출되어 있어야 한다.
+  const requiredPaths = new Set();
+  for (const job of vercelJson.crons || []) requiredPaths.add(job.path);
+  const wfText = readFileSync(workflowPath, 'utf8');
+  for (const m of wfText.matchAll(/\/api\/cron\/[a-z0-9-]+/g)) requiredPaths.add(m[0]);
+
+  assert.ok(requiredPaths.size >= 3, '주기 작업 경로가 3개 이상이어야 합니다');
+  for (const p of requiredPaths) {
+    const segments = p.split('/').filter(Boolean);
+    assert.ok(segments.length >= 2, `2세그먼트 이상 경로만 이 규칙의 대상입니다: ${p}`);
+    const relPath = `api/${segments.slice(1).join('/')}.ts`;
+    const fileUrl = new URL(`../${relPath}`, import.meta.url);
+    assert.ok(existsSync(fileUrl), `${p} 는 개별 Vercel 함수 파일이 필요합니다: ${relPath}`);
+    const entry = readFileSync(fileUrl, 'utf8');
+    assert.match(entry, /import\s*{\s*app\s*}\s*from\s*'\.\.\/\.\.\/server\.js'\s*;/, `${relPath} 의 app 임포트 형식`);
+    assert.match(entry, /export\s+default\s+app\s*;/, `${relPath} 는 app 을 기본 내보내야 합니다`);
+    // 서버에도 같은 경로가 등록되어 있어야 합니다
+    const escaped = p.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    assert.match(serverCode, new RegExp(`app\\.get\\('${escaped}'`), `서버에 ${p} 엔드포인트가 없습니다`);
+  }
+});
+
+test('주기 작업 트리거는 단일 세그먼트 별칭 경로도 함께 등록한다 (catch-all 매칭 대비)', () => {
+  for (const p of ['/api/cron-schedule-watch', '/api/cron-daily-cleanup', '/api/cron-weekly-backup']) {
+    assert.match(serverCode, new RegExp(`app\\.get\\('${p}'`), `별칭 경로 ${p} 가 필요합니다`);
+  }
 });

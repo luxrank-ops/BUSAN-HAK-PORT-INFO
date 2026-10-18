@@ -1378,9 +1378,15 @@ export function resolveBackupDir(): string {
   return IS_VERCEL ? path.join('/tmp', 'backups') : path.join(__dirname, 'backups');
 }
 
+// --- 주기 작업 트리거 경로(2중 경로 등록) ---
+//   정식 경로: /api/cron/<task>  → Vercel 에서는 api/cron/<task>.ts 개별 함수 파일로 노출
+//   별칭 경로: /api/<task>       → 단일 세그먼트라 catch-all(api/[...path].ts)로도 매칭됨
+//   두 경로 모두 동일 핸들러를 사용하며 CRON_SECRET 인증(401/503)이 동일하게 적용됩니다.
+//   (Vercel catch-all 은 2세그먼트 이상 경로를 함수로 매칭시키지 못해 플랫폼 404 가 납니다)
+
 // 1) 선박 출항/접안 스케줄 변경 감지 + FCM 푸시 알림
 //    (매시간 — Vercel Hobby 플랜 제약으로 GitHub Actions 예약 워크플로가 트리거)
-app.get('/api/cron/schedule-watch', async (req, res) => {
+const cronScheduleWatchHandler = async (req: Request, res: Response) => {
   if (!authorizeCronRequest(req, res)) return;
   try {
     const result = await runScheduleChangeDetection();
@@ -1388,10 +1394,12 @@ app.get('/api/cron/schedule-watch', async (req, res) => {
   } catch (error: any) {
     res.status(500).json({ ok: false, task: 'schedule-watch', error: error?.message || String(error) });
   }
-});
+};
+app.get('/api/cron/schedule-watch', cronScheduleWatchHandler);
+app.get('/api/cron-schedule-watch', cronScheduleWatchHandler);
 
 // 2) DB 자가 정리(30일 지난 스케줄 캐시 / 14일 지난 읽은 알림) — Vercel Cron 매일 03시
-app.get('/api/cron/daily-cleanup', async (req, res) => {
+const cronDailyCleanupHandler = async (req: Request, res: Response) => {
   if (!authorizeCronRequest(req, res)) return;
   try {
     const result = await runDatabaseAutoCleanup();
@@ -1399,12 +1407,14 @@ app.get('/api/cron/daily-cleanup', async (req, res) => {
   } catch (error: any) {
     res.status(500).json({ ok: false, task: 'daily-cleanup', error: error?.message || String(error) });
   }
-});
+};
+app.get('/api/cron/daily-cleanup', cronDailyCleanupHandler);
+app.get('/api/cron-daily-cleanup', cronDailyCleanupHandler);
 
 // 3) 주간 Firestore 백업 — Vercel Cron 매주 일요일 00시
 //    ⚠️ 서버리스에서는 /tmp 에만 쓸 수 있고 인스턴스 종료 시 사라지므로 영구 보관이
 //    아닙니다(응답의 note 필드 참고). 영구 백업은 상시 프로세스 서버 배포에서만 유효합니다.
-app.get('/api/cron/weekly-backup', async (req, res) => {
+const cronWeeklyBackupHandler = async (req: Request, res: Response) => {
   if (!authorizeCronRequest(req, res)) return;
   try {
     const result = await runWeeklyFirestoreBackup(resolveBackupDir());
@@ -1419,7 +1429,9 @@ app.get('/api/cron/weekly-backup', async (req, res) => {
   } catch (error: any) {
     res.status(500).json({ ok: false, task: 'weekly-backup', error: error?.message || String(error) });
   }
-});
+};
+app.get('/api/cron/weekly-backup', cronWeeklyBackupHandler);
+app.get('/api/cron-weekly-backup', cronWeeklyBackupHandler);
 
 // 매칭되지 않은 /api/* 경로는 index.html 이 아닌 JSON 404 를 반환합니다.
 // (정적 호스팅 시절 /api/* 가 index.html 로 폴백되던 문제를 명시적 오류로 대체)
