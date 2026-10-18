@@ -1,0 +1,49 @@
+name: 크론 엔드포인트 진단 (임시)
+
+# 임시 진단 워크플로 — /api/cron/* 엔드포인트가 Vercel 에서 실제로 응답하는지
+# 저장소의 CRON_SECRET(실제 값)로 호출해 HTTP 상태·응답 헤더를 확인합니다.
+# 확인 후 삭제 예정.
+
+on:
+  push:
+    branches:
+      - "arena/**"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cron-diag
+  cancel-in-progress: false
+
+jobs:
+  probe:
+    name: 크론 엔드포인트 응답 확인
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: 상태 코드 · 헤더 · 본문 확인
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          APP_URL: https://busan-hak-port-info.vercel.app
+        run: |
+          set -uo pipefail
+
+          if [ -z "${CRON_SECRET}" ]; then
+            echo "::error::저장소 secret CRON_SECRET 이 없습니다."
+            exit 1
+          fi
+
+          for p in /api/cron/schedule-watch /api/cron-schedule-watch /api/cron/daily-cleanup /api/cron-daily-cleanup; do
+            echo "===== ${p} ====="
+            curl -sS -D /tmp/h.txt -o /tmp/b.txt -w 'HTTP %{http_code}\n' \
+              --max-time 120 \
+              -H "Authorization: Bearer ${CRON_SECRET}" \
+              "${APP_URL}${p}" || echo "curl failed"
+            echo "--- headers ---"
+            cat /tmp/h.txt || true
+            echo "--- body (앞 600자) ---"
+            head -c 600 /tmp/b.txt || true
+            echo
+            echo
+          done
