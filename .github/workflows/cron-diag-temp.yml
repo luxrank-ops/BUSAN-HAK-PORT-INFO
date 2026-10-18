@@ -1,7 +1,8 @@
 name: 크론 엔드포인트 진단 (임시)
 
 # 임시 진단 워크플로 — /api/cron/* 엔드포인트가 Vercel 에서 실제로 응답하는지
-# 저장소의 CRON_SECRET(실제 값)로 호출해 HTTP 상태·응답 헤더를 확인합니다.
+# 저장소의 CRON_SECRET(실제 값)로 호출해 HTTP 상태·응답 헤더를 확인하고
+# 결과를 PR 코멘트로 남깁니다(이 샌드박스에서는 Actions 로그 zip 다운로드가 차단됨).
 # 확인 후 삭제 예정.
 
 on:
@@ -11,6 +12,7 @@ on:
 
 permissions:
   contents: read
+  pull-requests: write
 
 concurrency:
   group: cron-diag
@@ -34,16 +36,32 @@ jobs:
             exit 1
           fi
 
+          REPORT=""
           for p in /api/cron/schedule-watch /api/cron-schedule-watch /api/cron/daily-cleanup /api/cron-daily-cleanup; do
             echo "===== ${p} ====="
-            curl -sS -D /tmp/h.txt -o /tmp/b.txt -w 'HTTP %{http_code}\n' \
-              --max-time 120 \
-              -H "Authorization: Bearer ${CRON_SECRET}" \
-              "${APP_URL}${p}" || echo "curl failed"
-            echo "--- headers ---"
-            cat /tmp/h.txt || true
-            echo "--- body (앞 600자) ---"
-            head -c 600 /tmp/b.txt || true
-            echo
-            echo
+            {
+              echo "===== ${p} ====="
+              curl -sS -D /tmp/h.txt -o /tmp/b.txt -w 'HTTP %{http_code}\n' \
+                --max-time 120 \
+                -H "Authorization: Bearer ${CRON_SECRET}" \
+                "${APP_URL}${p}" || echo "curl failed"
+              echo "--- headers ---"
+              cat /tmp/h.txt || true
+              echo "--- body (앞 600자) ---"
+              head -c 600 /tmp/b.txt || true
+              echo
+            } | tee -a /tmp/report.txt
           done
+
+          {
+            echo "### 🩺 크론 엔드포인트 진단 결과"
+            echo ""
+            echo '```'
+            cat /tmp/report.txt
+            echo '```'
+          } > /tmp/comment.md
+
+          GH_TOKEN="${GITHUB_TOKEN}" gh api \
+            "repos/${GITHUB_REPOSITORY}/issues/39/comments" \
+            -f body="$(cat /tmp/comment.md)" > /dev/null
+          echo "comment posted"
