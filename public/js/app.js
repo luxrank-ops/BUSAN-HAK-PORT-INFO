@@ -8548,7 +8548,7 @@ if ("serviceWorker" in navigator) {
 
 async function ensureTodayUpdateNotice() {
     const noticeDocId = "update_2026_10_19_multi_vessel_emergency";
-    const noticeVersion = "multi_vessel_emergency_20261019_r1";
+    const noticeVersion = "multi_vessel_emergency_20261019_r2";
     const noticeTitle = "선박 4척(멀티오더) 지원 · 🚨 긴급 플로팅 공지 신설 업데이트";
     const noticeContent = [
         "부산항(신항·북항) 현장 근로자 여러분, 안녕하십니까! 운영관리자 이춘학입니다.",
@@ -8577,6 +8577,10 @@ async function ensureTodayUpdateNotice() {
         "• 게시 ON/OFF 전환과 게시 기간(시작·종료 시각) 지정이 가능하며, 기간이 끝나면 자동으로 사라집니다.",
         "• 표시 단계(🔴 긴급 / 🟠 주의 / 🔵 안내)를 고를 수 있고, 읽은 뒤 ✕ 로 접으면 오른쪽 아래 🚨 버튼으로 다시 열 수 있습니다.",
         "• 작성은 관리자 비밀번호 인증을 통과한 운영자만 가능합니다. (상단 톱니바퀴 ⚙️ 메뉴 → 🚨 긴급 플로팅 공지)",
+        "",
+        "⚠️ [꼭 확인] 임금 자동 입력 시간 기준",
+        "• 임금 자동 입력은 차트상(작업실제 시작시간)이 아닌 스케줄상(입출항시간)기준으로 시간이 자동 입력됩니다.",
+        "• 입항시간과 실제 작업시간(스타트 시간)이 차이나는 경우 시간을 수동으로 입력하시면 됩니다!",
         "",
         "언제나 현장에서 안전을 최우선으로 작업하시길 바라며, 이용 중 불편한 점이나 건의 사항은 운영관리자(이춘학 / 010-2846-8906)에게 연락 주시기 바랍니다. 오늘도 무사고 안전 작업하십시오!"
     ].join("\n");
