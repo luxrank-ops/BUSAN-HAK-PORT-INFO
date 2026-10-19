@@ -9234,6 +9234,7 @@ async function verifyEmergencyNoticePin(pin) {
     if (!value) return { ok: false, reason: "empty" };
 
     // 1순위 — 서버 검증 (평문은 서버 환경변수 EMERGENCY_NOTICE_PIN 에만 존재)
+    let rateLimited = false;
     try {
         const res = await fetch(EMERGENCY_UNLOCK_ENDPOINT, {
             method: "POST",
@@ -9245,24 +9246,46 @@ async function verifyEmergencyNoticePin(pin) {
                 const data = await res.json().catch(() => null);
                 if (data && data.ok === true) return { ok: true, token: String(data.token || "server") };
             }
+            // 서버가 "이 비밀번호는 틀렸다"고 명확히 판정하면 폴백하지 않습니다(서버가 정답을 아는 쪽).
             if (res.status === 401 || res.status === 400) return { ok: false, reason: "invalid_pin" };
-            if (res.status === 429) return { ok: false, reason: "rate_limited" };
+            // 429 는 "비밀번호가 틀렸다"가 아니라 "시도가 너무 잦다"는 뜻입니다.
+            // 올바른 비밀번호까지 잠기지 않도록, 아래 해시 폴백으로 한 번 더 확인합니다.
+            if (res.status === 429) rateLimited = true;
         }
     } catch (e) {
         // 정적 호스팅·오프라인 → 아래 해시 폴백
     }
 
     // 2순위 — 빌드 시 주입된 해시 (scripts/build-obfuscate.mjs)
-    const expectedHash =
-        (typeof window !== "undefined" && (window.__EMERGENCY_PIN_SHA256__ || window.__SCREEN_LOCK_SHA256__)) || "";
-    if (expectedHash) {
+    //   · __EMERGENCY_PIN_SHA256__        : EMERGENCY_NOTICE_PIN(또는 화면 잠금 PIN)
+    //   · __SCREEN_LOCK_SHA256__          : 근무일지 잠금 PIN — 같은 비밀번호로도 열 수 있게 함께 인정
+    //   · __EMERGENCY_DEFAULT_PIN_SHA256__: EMERGENCY_NOTICE_PIN 미설정 배포의 기본 관리자 PIN
+    //   서버(정적 호스팅·2세그먼트 라우팅 404)와 무관하게, 주입된 해시 중 하나와 일치하면 통과합니다.
+    const candidates = getEmergencyPinHashCandidates();
+    if (candidates.length > 0) {
         try {
-            const digest = await sha256Hex(value);
-            if (digest && digest === expectedHash) return { ok: true, token: "local" };
+            const digest = String(await sha256Hex(value) || "").toLowerCase();
+            if (digest && candidates.includes(digest)) return { ok: true, token: "local" };
         } catch (e) { }
-        return { ok: false, reason: "invalid_pin" };
+        return { ok: false, reason: rateLimited ? "rate_limited" : "invalid_pin" };
     }
-    return { ok: false, reason: "no_verifier" };
+    return { ok: false, reason: rateLimited ? "rate_limited" : "no_verifier" };
+}
+
+/** 빌드가 주입한 긴급 공지 PIN 해시 후보 목록 (중복·빈 값 제거) */
+function getEmergencyPinHashCandidates() {
+    if (typeof window === "undefined") return [];
+    const raw = [
+        window.__EMERGENCY_PIN_SHA256__,
+        window.__SCREEN_LOCK_SHA256__,
+        window.__EMERGENCY_DEFAULT_PIN_SHA256__
+    ];
+    const unique = [];
+    raw.forEach(value => {
+        const hash = String(value || "").trim().toLowerCase();
+        if (/^[a-f0-9]{64}$/.test(hash) && !unique.includes(hash)) unique.push(hash);
+    });
+    return unique;
 }
 
 function openEmergencyNoticeManager() {
@@ -9300,7 +9323,8 @@ async function submitEmergencyPin() {
         console.error("[보안] 긴급 공지 인증 수단이 없습니다 — 서버(/api/emergency-unlock)와 빌드 해시가 모두 없습니다.");
         return showToast("⚠️ 인증 서버에 연결할 수 없습니다. 관리자에게 문의해 주세요.");
     }
-    showToast("❌ 비밀번호가 올바르지 않습니다.");
+    // 어떤 비밀번호를 넣어야 하는지 현장에서 바로 알 수 있게 안내합니다.
+    showToast("❌ 비밀번호가 올바르지 않습니다. 근무일지 잠금 비밀번호 또는 관리자 기본 비밀번호로 시도해 주세요.");
 }
 
 function openEmergencyNoticeModal() {

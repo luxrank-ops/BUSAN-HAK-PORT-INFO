@@ -128,6 +128,8 @@ jobs:
       # 빌드 시 PIN 해시를 HTML 에 주입해야 화면 잠금이 동작합니다.
       # Settings → Secrets and variables → Actions 에 SCREEN_LOCK_PIN 등록.
       SCREEN_LOCK_PIN: ${{ secrets.SCREEN_LOCK_PIN }}
+      # 비워 두면 화면 잠금 PIN·기본 관리자 PIN(9445) 을 함께 인정하는 모드로 빌드됩니다.
+      EMERGENCY_NOTICE_PIN: ${{ secrets.EMERGENCY_NOTICE_PIN }}
 
     steps:
       - name: 소스 코드 받기

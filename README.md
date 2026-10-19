@@ -44,7 +44,7 @@
 | --- | --- |
 | `SCREEN_LOCK_PIN` | 화면 잠금 비밀번호. **미설정 시 기존 기본값(`9445`)이 쓰이므로 반드시 변경하세요.** |
 | `UNLOCK_TOKEN_SECRET` | 잠금 해제 토큰 서명 키(32자 이상 권장). 미설정 시 `SCREEN_LOCK_PIN` 사용 |
-| `EMERGENCY_NOTICE_PIN` | 🚨 긴급 플로팅 공지 작성 비밀번호. 미설정 시 `SCREEN_LOCK_PIN` 과 동일하게 동작합니다. 검증 경로는 `POST /api/emergency-unlock`(1순위) → 빌드 주입 해시 `window.__EMERGENCY_PIN_SHA256__`(2순위)로 화면 잠금과 동일합니다. |
+| `EMERGENCY_NOTICE_PIN` | 🚨 긴급 플로팅 공지 작성 비밀번호. **지정하면 그 값만** 인정됩니다(화면 잠금 PIN 과 분리 운영). **미설정 시에는 `SCREEN_LOCK_PIN` 과 기본 관리자 PIN(`9445`)을 함께 인정**합니다 — 근무일지 잠금 비밀번호를 다른 값으로 바꾼 배포에서도 안내된 기본 비밀번호로 열 수 있습니다. 검증 경로는 `POST /api/emergency-unlock`(1순위) → 빌드 주입 해시 `window.__EMERGENCY_PIN_SHA256__` · `window.__SCREEN_LOCK_SHA256__` · `window.__EMERGENCY_DEFAULT_PIN_SHA256__`(2순위)입니다. |
 
 > **Vercel**: Project Settings → Environment Variables 에 등록하세요. 이제 Vercel 에서도 서버
 > API(Node 런타임 함수)가 동작하므로 **서버 검증(1순위)이 운영에서 실시간으로 작동**하고,
@@ -104,6 +104,7 @@ Vercel 에서 동작하는 서버 API(로컬 `npm run dev` 와 동일한 코드�
 - `GET /api/health` — 서버·터미널 헬스체크. `platform: "vercel-serverless"` 이면 Vercel 함수가 살아 있다는 뜻입니다
 - `GET /api/config` — Web Push VAPID 키 등 공개 설정
 - `POST /api/screen-unlock` — 화면 잠금 PIN 서버 검증(1순위). `trust proxy` 설정으로 **실제 클라이언트 IP 기준** 속도 제한(IP당 10분 10회)이 동작합니다
+- `POST /api/emergency-unlock` — 🚨 긴급 플로팅 공지 작성 PIN 서버 검증(1순위). 화면 잠금과 **별도 시도 횟수 버킷**을 사용해, 근무일지 잠금 실패가 긴급 공지 인증을 막지 않습니다
 - `GET /api/hjnc-schedule` · `GET /api/terminal-schedule` — 7개 터미널 실시간 선석 스케줄(메모리 캐시 → Firestore 캐시 stale-while-revalidate 폴백)
 - `GET /api/cron/*` — 주기 작업 트리거(아래 참고, `CRON_SECRET` 인증 필수)
 
@@ -122,6 +123,15 @@ Vercel 에서 동작하는 서버 API(로컬 `npm run dev` 와 동일한 코드�
 따라서 주기 작업 경로는 `api/cron/<task>.ts` **개별 함수 파일**로 노출하고(`server.ts` 의 Express 앱을 그대로
 위임), 단일 세그먼트 별칭 경로(`/api/cron-schedule-watch` 등)도 함께 등록해 어느 한쪽 라우팅에도 의존하지
 않도록 했습니다. 두 경로 모두 동일한 핸들러·인증(`CRON_SECRET`)을 사용합니다.
+
+같은 이유로 **잠금 해제 경로도 개별 함수 파일**로 노출합니다.
+
+- `api/screen-unlock.ts` → `POST /api/screen-unlock`
+- `api/emergency-unlock.ts` → `POST /api/emergency-unlock`
+
+이 파일이 없으면 Vercel 이 404(`NOT_FOUND`)를 반환해, 화면에서 올바른 비밀번호를 입력해도
+서버 검증이 실행되지 않습니다(증상: "긴급 공지 비밀번호 인증이 안 됨"). 브라우저는 이때
+빌드 주입 해시(2순위)로 자동 대체 검증합니다.
 
 ### 주기 작업 (스케줄 감시 · DB 정리 · 백업)
 
