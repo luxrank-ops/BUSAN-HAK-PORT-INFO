@@ -7907,10 +7907,49 @@ function getShipSearchHaystack(ship, tags) {
     const compactTags = sTags.map(t => t.replace(/\s+/g, '')).join(" ");
     return `${getShipDisplayName(ship)} ${getShipMemoText(ship)} ${getShipLegacyOnshoreText(ship)} ${sTags.join(" ")} ${compactTags}`;
 }
+/* 🔍 선박 검색 — 한글 초성·영문 이니셜 매칭 (선박명_효율입력_제안서 후속 제안 #1)
+ * "ㅎㅁ" → "HMM ROTTERDAM", "ㅎㅈㅊ" → "한진초원" 처럼 초성만으로 후보를 찾습니다.
+ * ① 기존 부분문자열(대소문자 무시) → ② 한글 헤이스택의 초성 연속 일치
+ * ③ 영문 이니셜 — 초성 자음을 로마자로 매핑(ㄱ→G/K, ㅂ→B/P, ㅊ→C/CH …)해
+ *    선박명의 연속 글자("HMM"에서 "HM") 또는 단어 첫 글자("HR")와 일치
+ * 기존 부분문자열 검색 동작은 그대로 유지합니다. */
+const CHO_TO_LATIN_PATTERN = {
+    "ㄱ": "[GK]", "ㄲ": "[GK]", "ㄴ": "N", "ㄷ": "[DT]", "ㄸ": "[DT]", "ㄹ": "[LR]",
+    "ㅁ": "M", "ㅂ": "[BP]", "ㅃ": "[BP]", "ㅅ": "S", "ㅆ": "S", "ㅇ": "[OIY]",
+    "ㅈ": "[JZ]", "ㅉ": "[JZ]", "ㅊ": "C(?:H)?", "ㅋ": "[CKQ]", "ㅌ": "T", "ㅍ": "[FP]", "ㅎ": "H"
+};
+function matchesShipQuery(rawQuery, rawHaystack) {
+    const query = String(rawQuery ?? "").trim();
+    const haystack = String(rawHaystack ?? "");
+    if (query === "") return true;
+    const q = query.toUpperCase();
+    const hay = haystack.toUpperCase();
+    if (hay.includes(q)) return true;
+    // 초성·이니셜 확장 검색: 초성 자음이 포함된 쿼리에서만 (예: "ㅎㅁ" → HMM, "Hㅁ" → HMM)
+    // 완성형 한글 쿼리("샠시")는 기존 부분문자열 검색만 사용 — 초성으로 넓어지면
+    // "샠시"가 "ESSEN"의 SS 등 영문 오탐까지 붙잡는 문제 방지
+    if (!/[ㄱ-ㅎ]/.test(query) || /[가-힣]/.test(query)) return false;
+    const choQuery = getHangulChosung(query).toUpperCase();
+    if (getHangulChosung(haystack).toUpperCase().includes(choQuery)) return true;
+    const latinPattern = choQuery.split("").map(ch =>
+        CHO_TO_LATIN_PATTERN[ch] || (/[A-Z0-9]/.test(ch) ? ch : "")
+    ).join("");
+    if (latinPattern === "") return false;
+    let re;
+    try { re = new RegExp(latinPattern); } catch (_e) { return false; }
+    if (re.test(hay)) return true;
+    // 단어 첫 글자 이니셜 (예: "ㅎㄹ" → "HMM ROTTERDAM"의 H + R)
+    const wordInitials = haystack
+        .split(/[^0-9A-Za-z가-힣]+/)
+        .filter(Boolean)
+        .map(w => getHangulChosung(w.charAt(0)).toUpperCase())
+        .join("");
+    return re.test(wordInitials);
+}
 // 현재 화면의 검색어·장비 태그·난이도 필터를 그대로 적용한 선박 목록을 돌려줍니다.
 // (실시간 스냅샷으로 목록을 다시 그릴 때도 같은 조건을 유지하기 위해 분리)
 function getFilteredShipList(source = allShipsData) {
-    const searchTerm = (document.getElementById('shipSearch')?.value || '').trim().toUpperCase();
+    const searchTerm = (document.getElementById('shipSearch')?.value || '').trim();
     const diffFilter = parseInt(document.getElementById('shipDifficultyFilter')?.value || '0', 10) || 0;
     const filterTags = Array.isArray(activeShipFilterTags) ? activeShipFilterTags : [];
     return (Array.isArray(source) ? source : []).filter(ship => {
@@ -7918,8 +7957,8 @@ function getFilteredShipList(source = allShipsData) {
         const sTags = extractShipTags(ship);
         const sDiff = Number(ship.difficulty) || 0;
         if (searchTerm !== "") {
-            const hay = getShipSearchHaystack(ship, sTags).toUpperCase();
-            if (!hay.includes(searchTerm)) return false;
+            const hay = getShipSearchHaystack(ship, sTags);
+            if (!matchesShipQuery(searchTerm, hay)) return false;
         }
         if (filterTags.length > 0) {
             const hasAllTags = filterTags.every(t => sTags.includes(t));
