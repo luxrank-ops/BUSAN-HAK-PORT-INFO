@@ -955,7 +955,7 @@ async function loadAndRenderVisitorStats() {
                     workerLogSummary[wid] = { count: 0, totalPay: 0, lastDate: "", lastSavedMs: 0 };
                 }
                 workerLogSummary[wid].count += 1;
-                const pay = Number(d.totalPay) || ((Number(d.wage1) || 0) + (Number(d.wage2) || 0));
+                const pay = Number(d.totalPay) || ((Number(d.wage1) || 0) + (Number(d.wage2) || 0) + (Number(d.wage3) || 0) + (Number(d.wage4) || 0));
                 workerLogSummary[wid].totalPay += pay;
                 const dateStr = String(d.date || "");
                 if (dateStr && (!workerLogSummary[wid].lastDate || dateStr > workerLogSummary[wid].lastDate)) {
@@ -1188,7 +1188,9 @@ async function loadAdminWorkLogDetail(forceRefresh = false, initialWorker = "") 
                 const dateStr = String(d.date || "").trim() || (docId.includes("_") ? docId.split("_").slice(1).join("_") : "-");
                 const wage1 = Number(d.wage1) || 0;
                 const wage2 = Number(d.wage2) || 0;
-                const totalPay = Number(d.totalPay) || (wage1 + wage2);
+                const wage3 = Number(d.wage3) || 0;
+                const wage4 = Number(d.wage4) || 0;
+                const totalPay = Number(d.totalPay) || (wage1 + wage2 + wage3 + wage4);
                 const savedMs = d.timestamp && typeof d.timestamp.toMillis === "function" ? d.timestamp.toMillis() : 0;
                 const savedStr = formatAdminWorkLogDateTime(d.timestamp);
                 items.push({
@@ -1198,6 +1200,8 @@ async function loadAdminWorkLogDetail(forceRefresh = false, initialWorker = "") 
                     shipName: String(d.shipName || "").trim(),
                     wage1,
                     wage2,
+                    wage3,
+                    wage4,
                     totalPay,
                     coworkers: String(d.coworkers || "").trim(),
                     memo: String(d.memo || "").trim(),
@@ -1308,7 +1312,7 @@ function renderAdminWorkLogDetail() {
     const allLogs = adminWorkLogDetailCache.logs || [];
     const filtered = getAdminWorkLogFiltered();
 
-    let sumPay = 0, sumW1 = 0, sumW2 = 0, photoCnt = 0;
+    let sumPay = 0, sumW1 = 0, sumW2 = 0, sumW3 = 0, sumW4 = 0, photoCnt = 0;
     const workerMap = {};
     const shipMap = {};
     const dateSet = new Set();
@@ -1318,6 +1322,8 @@ function renderAdminWorkLogDetail() {
         sumPay += item.totalPay;
         sumW1 += item.wage1;
         sumW2 += item.wage2;
+        sumW3 += Number(item.wage3) || 0;
+        sumW4 += Number(item.wage4) || 0;
         if (item.imageUrl) photoCnt += 1;
         if (item.date && item.date !== "-") {
             dateSet.add(item.date);
@@ -1346,7 +1352,7 @@ function renderAdminWorkLogDetail() {
     setAdminWorkLogText("awlKpiCount", `${filtered.length.toLocaleString()}건`);
     setAdminWorkLogText("awlKpiCountSub", `전체 ${allLogs.length.toLocaleString()}건 중 ${filtered.length.toLocaleString()}건 표시`);
     setAdminWorkLogText("awlKpiTotalPay", `${sumPay.toLocaleString()}원`);
-    setAdminWorkLogText("awlKpiSplitSub", `임금1: ${sumW1.toLocaleString()}원 · 임금2: ${sumW2.toLocaleString()}원`);
+    setAdminWorkLogText("awlKpiSplitSub", `임금1: ${sumW1.toLocaleString()}원 · 임금2: ${sumW2.toLocaleString()}원 · 임금3: ${sumW3.toLocaleString()}원 · 임금4: ${sumW4.toLocaleString()}원`);
     setAdminWorkLogText("awlKpiWorkers", `${uniqueWorkers.toLocaleString()}명 / ${dateSet.size.toLocaleString()}일`);
     setAdminWorkLogText("awlKpiAvgSub", `건당 평균: ${avgPay.toLocaleString()}원`);
     setAdminWorkLogText("awlKpiShips", `${uniqueShips.toLocaleString()}척 / 📷 ${photoCnt.toLocaleString()}건`);
@@ -1421,6 +1427,8 @@ function renderAdminWorkLogDetail() {
                         <div style="font-weight:900; color:#c2410c; font-size:0.8rem;">${item.totalPay.toLocaleString()}원</div>
                         <div style="font-size:0.66rem; color:var(--text-sub); font-weight:700; margin-top:2px;">1: ${item.wage1.toLocaleString()}</div>
                         <div style="font-size:0.66rem; color:var(--text-sub); font-weight:700;">2: ${item.wage2.toLocaleString()}</div>
+                        ${Number(item.wage3) ? `<div style="font-size:0.66rem; color:var(--text-sub); font-weight:700;">3: ${Number(item.wage3).toLocaleString()}</div>` : ""}
+                        ${Number(item.wage4) ? `<div style="font-size:0.66rem; color:var(--text-sub); font-weight:700;">4: ${Number(item.wage4).toLocaleString()}</div>` : ""}
                     </td>
                 </tr>`;
             }).join("");
@@ -1444,7 +1452,7 @@ function renderAdminWorkLogDetail() {
         `• 조회 건수: ${filtered.length.toLocaleString()}건 (전체 ${allLogs.length.toLocaleString()}건)`,
         `• 조회 기간: ${minDate && maxDate ? `${minDate} ~ ${maxDate}` : "전체"}`,
         `• 참여 근로자: ${uniqueWorkers.toLocaleString()}명 / 활동 일수: ${dateSet.size.toLocaleString()}일`,
-        `• 합산 금액: ${sumPay.toLocaleString()}원 (임금1: ${sumW1.toLocaleString()}원 / 임금2: ${sumW2.toLocaleString()}원 / 건당 평균: ${avgPay.toLocaleString()}원)`,
+        `• 합산 금액: ${sumPay.toLocaleString()}원 (임금1: ${sumW1.toLocaleString()}원 / 임금2: ${sumW2.toLocaleString()}원 / 임금3: ${sumW3.toLocaleString()}원 / 임금4: ${sumW4.toLocaleString()}원 / 건당 평균: ${avgPay.toLocaleString()}원)`,
         `• 근로자 TOP 5: ` + (topWorkers.map(([w, st], i) => `${i + 1}위 ${w}(${st.count}건·${(st.pay / 10000).toFixed(0)}만)`).join(", ") || "없음"),
         `• 작업 선박 TOP 5: ` + (topShips.map(([s, st], i) => `${i + 1}위 ${s}(${st.count}회)`).join(", ") || "없음")
     ].join("\n");
@@ -1457,7 +1465,7 @@ function downloadAdminWorkLogCsv() {
         return;
     }
     const csvEscape = val => `"${String(val ?? "").replace(/"/g, '""')}"`;
-    const headers = ["No", "근무일", "근로자(ID)", "선박명", "임금1(원)", "임금2(원)", "총액(원)", "동반근무자", "작업메모", "사진여부", "저장일시"];
+    const headers = ["No", "근무일", "근로자(ID)", "선박명", "임금1(원)", "임금2(원)", "임금3(원)", "임금4(원)", "총액(원)", "동반근무자", "작업메모", "사진여부", "저장일시"];
     const lines = [headers.map(csvEscape).join(",")];
     filtered.forEach((item, idx) => {
         lines.push([
@@ -1467,6 +1475,8 @@ function downloadAdminWorkLogCsv() {
             item.shipName,
             item.wage1,
             item.wage2,
+            Number(item.wage3) || 0,
+            Number(item.wage4) || 0,
             item.totalPay,
             item.coworkers,
             item.memo.replace(/\r?\n/g, " "),
@@ -2697,8 +2707,8 @@ async function uploadHjncMealImage(input) {
     }
 }
 async function deleteTickerMsg(type, index){ if(!confirm("삭제하시겠습니까?")) return; if(type === 'admin') { delete globalTickerData.adminMessage; await db.collection('settings').doc('banner').update({ adminMessage: firebase.firestore.FieldValue.delete() }); } else { globalTickerData.userMessages.splice(index, 1); await db.collection('settings').doc('banner').update({ userMessages: globalTickerData.userMessages }); } renderTickerList(); showToast("삭제되었습니다."); }
-function downloadWorkLogsExcel() { if (!currentWorkerId || Object.keys(adminWorkLogs).length === 0) { return alert("다운로드할 근무 기록 데이터가 없습니다."); } trackAppEvent('actions', 'excel_dl'); let csvContent = "\uFEFF날짜,배 이름,임금 1,임금 2,총임금,근무자,메모\n"; const sortedDates = Object.keys(adminWorkLogs).sort(); sortedDates.forEach(date => { const d = adminWorkLogs[date]; const ship = d.shipName || ""; const w1 = d.wage1 || 0; const w2 = d.wage2 || 0; const total = d.totalPay || 0; const workers = (d.coworkers || "").replace(/,/g, " "); const memo = (d.memo || "").replace(/\n/g, " ").replace(/,/g, " "); csvContent += `${date},${ship},${w1},${w2},${total},${workers},${memo}\n`; }); const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' }); const url = URL.createObjectURL(blob); const link = document.createElement("a"); const monthTitle = document.getElementById('calMonthYear').innerText; link.href = url; link.download = `${currentWorkerId}_${monthTitle}_근무기록.csv`; document.body.appendChild(link); link.click(); document.body.removeChild(link); showToast("📊 엑셀 파일이 다운로드 폴더에 저장되었습니다!"); }
-let latestMonthlyStatsCache = { total: 0, w1Sum: 0, w2Sum: 0, days: 0, avg: 0 };
+function downloadWorkLogsExcel() { if (!currentWorkerId || Object.keys(adminWorkLogs).length === 0) { return alert("다운로드할 근무 기록 데이터가 없습니다."); } trackAppEvent('actions', 'excel_dl'); let csvContent = "\uFEFF날짜,배 이름,임금 1,임금 2,임금 3,임금 4,총임금,근무자,메모\n"; const sortedDates = Object.keys(adminWorkLogs).sort(); sortedDates.forEach(date => { const d = adminWorkLogs[date]; const ship = d.shipName || ""; const w1 = d.wage1 || 0; const w2 = d.wage2 || 0; const w3 = d.wage3 || 0; const w4 = d.wage4 || 0; const total = d.totalPay || (Number(w1) + Number(w2) + Number(w3) + Number(w4)); const workers = (d.coworkers || "").replace(/,/g, " "); const memo = (d.memo || "").replace(/\n/g, " ").replace(/,/g, " "); csvContent += `${date},${ship},${w1},${w2},${w3},${w4},${total},${workers},${memo}\n`; }); const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' }); const url = URL.createObjectURL(blob); const link = document.createElement("a"); const monthTitle = document.getElementById('calMonthYear').innerText; link.href = url; link.download = `${currentWorkerId}_${monthTitle}_근무기록.csv`; document.body.appendChild(link); link.click(); document.body.removeChild(link); showToast("📊 엑셀 파일이 다운로드 폴더에 저장되었습니다!"); }
+let latestMonthlyStatsCache = { total: 0, w1Sum: 0, w2Sum: 0, w3Sum: 0, w4Sum: 0, days: 0, avg: 0 };
 let monthlyGoalAmount = Number(localStorage.getItem("busanPortMonthlyGoal")) || 4500000;
 function updateMonthlyGoalGaugeUI(currentTotal = 0, currentDays = 0) {
     const goalTextEl = document.getElementById("monthlyGoalAmountText");
@@ -2747,7 +2757,7 @@ const hjncScheduleMonthCache = {};
 let worklogRenderedVessels = [];
 const worklogVesselMeta = new Map();
 // 작업 내용에 자동 입력한 '더블오더 작업' 블록(헤더 + ①② 줄)을 찾는 패턴
-const WORKLOG_DOUBLE_BLOCK_RE = /🚢 더블오더 작업 \(선박 2척[^\n]*\n(?:[①②] [^\n]*(?:\n|$))*\n?/;
+const WORKLOG_DOUBLE_BLOCK_RE = /🚢 (?:더블|트리플|쿼드|멀티)오더 작업 \(선박 [2-4]척[^\n]*\n(?:[①②③④] [^\n]*(?:\n|$))*\n?/;
 const TERMINAL_SCHEDULE_LIST = [
     { id: "hjnc", group: "3항업", label: "한진(HJNC)", badge: "HJNC", color: "#ea580c", live: true },
     { id: "bnct", group: "3항업", label: "고려(BNCT)", badge: "BNCT", color: "#2563eb", live: true },
@@ -2855,6 +2865,17 @@ function selectScheduleTerminal(terminalId) {
 let selectedWageScheduleShipName = "";
 let selectedWageVessels = [];
 
+/* ===== 당일 작업 선박 최대 4척(멀티오더) 공통 상수·헬퍼 =====
+   2척 = 더블오더 · 3척 = 트리플오더 · 4척 = 쿼드오더 */
+const MAX_WORK_VESSELS = 4;
+const MULTI_ORDER_LABELS = ["단일 작업", "단일 작업", "더블오더", "트리플오더", "쿼드오더"];
+const VESSEL_ORDER_MARKS = ["①", "②", "③", "④"];
+
+function getMultiOrderLabel(count) {
+    const n = Math.max(0, Math.min(MAX_WORK_VESSELS, Number(count) || 0));
+    return MULTI_ORDER_LABELS[n] || "멀티오더";
+}
+
 function invalidateCalculatedWage() {
     lastCalculatedWageData = null;
     document.getElementById("wageResultBox")?.classList.add("hidden");
@@ -2943,13 +2964,24 @@ if (typeof window !== "undefined" && typeof window.addEventListener === "functio
     window.addEventListener("resize", syncWageHoursBlockSize);
 }
 
-function updateWageHoursBreakdown() {
-    syncWageHoursBlockSize();
-    const v1NameEl = document.getElementById("wageVessel1Name");
-    const v1HoursEl = document.getElementById("wageVessel1Hours");
-    const v2NameEl = document.getElementById("wageVessel2Name");
-    const v2HoursEl = document.getElementById("wageVessel2Hours");
+/**
+ * 선박별 자동계산 블록(1~4번) 노출 제어.
+ * 평소에는 1·2번만 보이고, 선박을 3척 또는 4척 선택하면 3·4번 블록이 나타납니다.
+ * 보이는 블록은 CSS(grid-auto-rows:1fr + 고정 높이)로 총 근무시간 정사각형 높이를 균등 분할합니다.
+ */
+function syncWageVesselSlotVisibility(selectedCount) {
+    const visible = Math.max(2, Math.min(MAX_WORK_VESSELS, Number(selectedCount) || 0));
+    for (let slot = 1; slot <= MAX_WORK_VESSELS; slot++) {
+        const card = document.getElementById(`wageVessel${slot}Card`);
+        if (card && card.classList) card.classList.toggle("is-slot-hidden", slot > visible);
+    }
+    const pair = document.getElementById("wageHoursBreakdown");
+    if (pair && pair.classList) pair.classList.toggle("is-compact", visible > 2);
+    return visible;
+}
 
+/** 선택된 선박(최대 4척)의 화면 표기용 이름·시간 목록 */
+function getWageVesselSlotRows() {
     const firstHours = periodHours(
         document.getElementById("wageStartDate")?.value,
         document.getElementById("wageStartHour")?.value,
@@ -2958,35 +2990,40 @@ function updateWageHoursBreakdown() {
     );
     const manualTotal = parseFloat(document.getElementById("wageTotalHours")?.value) || 0;
 
-    if (v1NameEl && v1HoursEl && v2NameEl && v2HoursEl) {
-        if (selectedWageVessels.length > 1) {
-            const firstItem = selectedWageVessels[0];
-            const secondItem = selectedWageVessels[1];
-            const secondPeriod = getSelectedVesselPeriod(secondItem.vessel, secondItem.date);
-            v1NameEl.textContent = firstItem.name || "1번 선박";
-            v1HoursEl.textContent = firstHours > 0 ? `${firstHours}시간` : "확인 필요";
-            v2NameEl.textContent = secondItem.name || "2번 선박";
-            v2HoursEl.textContent = secondPeriod.hours > 0 ? `${secondPeriod.hours}시간` : "확인 필요";
-            return;
-        }
-
-        if (selectedWageVessels.length === 1) {
-            const firstItem = selectedWageVessels[0];
-            const displayHours = manualTotal || firstHours;
-            v1NameEl.textContent = firstItem.name || "1번 선박";
-            v1HoursEl.textContent = displayHours > 0 ? `${displayHours}시간` : "확인 필요";
-            v2NameEl.textContent = "미선택";
-            v2HoursEl.textContent = "-";
-            return;
-        }
-
+    if (selectedWageVessels.length === 0) {
         const shipInputVal = document.getElementById("wageShipName")?.value.trim() || "";
-        const displayHours = manualTotal || firstHours;
-        v1NameEl.textContent = shipInputVal || "미선택";
-        v1HoursEl.textContent = displayHours > 0 ? `${displayHours}시간` : "확인 필요";
-        v2NameEl.textContent = "미선택";
-        v2HoursEl.textContent = "-";
+        return [{ name: shipInputVal || "미선택", hours: manualTotal || firstHours }];
     }
+
+    return selectedWageVessels.slice(0, MAX_WORK_VESSELS).map((item, index) => {
+        if (index === 0) {
+            const hours = selectedWageVessels.length > 1 ? firstHours : (manualTotal || firstHours);
+            return { name: item.name || "1번 선박", hours };
+        }
+        const period = getSelectedVesselPeriod(item.vessel, item.date);
+        return { name: item.name || `${index + 1}번 선박`, hours: period.hours };
+    });
+}
+
+function updateWageHoursBreakdown() {
+    syncWageHoursBlockSize();
+    const rows = getWageVesselSlotRows();
+
+    for (let slot = 1; slot <= MAX_WORK_VESSELS; slot++) {
+        const nameEl = document.getElementById(`wageVessel${slot}Name`);
+        const hoursEl = document.getElementById(`wageVessel${slot}Hours`);
+        if (!nameEl || !hoursEl) continue;
+        const row = rows[slot - 1];
+        if (row) {
+            nameEl.textContent = row.name || `${slot}번 선박`;
+            hoursEl.textContent = row.hours > 0 ? `${row.hours}시간` : "확인 필요";
+        } else {
+            nameEl.textContent = "미선택";
+            hoursEl.textContent = "-";
+        }
+    }
+
+    syncWageVesselSlotVisibility(selectedWageVessels.length);
 }
 
 function refreshWageWorkHours() {
@@ -2999,13 +3036,14 @@ function refreshWageWorkHours() {
             document.getElementById("wageEndDate")?.value,
             document.getElementById("wageEndHour")?.value
         );
-        const second = getSelectedVesselPeriod(
-            selectedWageVessels[1].vessel,
-            selectedWageVessels[1].date
-        ).hours;
+        // 2~4번 선박은 스케줄 입·출항 시각으로 각각 계산해 합산합니다.
+        const restHours = selectedWageVessels.slice(1).map(item =>
+            getSelectedVesselPeriod(item.vessel, item.date).hours
+        );
+        const allValid = first > 0 && restHours.every(hours => hours > 0);
 
         if (total) {
-            total.value = first && second ? first + second : "";
+            total.value = allValid ? first + restHours.reduce((sum, hours) => sum + hours, 0) : "";
             total.readOnly = true;
         }
     } else if (total) {
@@ -3301,8 +3339,8 @@ function applyWageScheduleShip(
     const index = selectedWageVessels.findIndex(item => item.name === name);
     if (index >= 0) {
         selectedWageVessels.splice(index, 1); // 다시 누르면 선택 해제
-    } else if (selectedWageVessels.length >= 2) {
-        return showToast("⚠️ 선박은 최대 2척까지 선택할 수 있습니다.");
+    } else if (selectedWageVessels.length >= MAX_WORK_VESSELS) {
+        return showToast(`⚠️ 선박은 최대 ${MAX_WORK_VESSELS}척까지 선택할 수 있습니다.`);
     } else {
         selectedWageVessels.push({ name, vessel, date: dateStr, terminalId });
     }
@@ -3314,7 +3352,7 @@ function applyWageScheduleShip(
     if (wageShipNameInput) wageShipNameInput.value = names.join(" / ");
 
     const doubleOrderInput = document.getElementById("wageDoubleOrder");
-    if (doubleOrderInput) doubleOrderInput.checked = names.length === 2;
+    if (doubleOrderInput) doubleOrderInput.checked = names.length >= 2;
 
     invalidateCalculatedWage();
 
@@ -3351,13 +3389,17 @@ function applyWageScheduleShip(
             `🚢 ${firstEntry.name} 선택 · 시작 ${startLabel} · 종료 ${endLabel}${calcNote}${timingNote}`
         );
     } else {
-        const firstEntry = selectedWageVessels[0];
-        const secondEntry = selectedWageVessels[1];
-        const secondPeriod = getSelectedVesselPeriod(secondEntry.vessel, secondEntry.date);
+        const count = selectedWageVessels.length;
+        const orderLabel = getMultiOrderLabel(count);
         const totalVal = document.getElementById("wageTotalHours")?.value;
-        const missingNote = !secondPeriod.hours ? " · 2번째 선박 입·출항 시각 확인 필요" : "";
+        const missingNames = selectedWageVessels.slice(1)
+            .filter(item => !getSelectedVesselPeriod(item.vessel, item.date).hours)
+            .map(item => item.name);
+        const missingNote = missingNames.length
+            ? ` · ${missingNames.join("·")} 입·출항 시각 확인 필요`
+            : "";
         showToast(
-            `🚢 더블오더 2척 선택 (${firstEntry.name} / ${secondEntry.name})` +
+            `🚢 ${orderLabel} ${count}척 선택 (${names.join(" / ")})` +
             `${totalVal ? ` · 합산 ${totalVal}시간` : ""}${missingNote}`
         );
     }
@@ -3693,7 +3735,7 @@ function renderHjncScheduledShipsUI(dateStr, allVessels, terminalId = selectedSc
     });
 
     const sourceLine = formatScheduleSourceLine(hjncScheduleSourceInfo[`${terminalId}_${dateStr.slice(0, 7)}`]);
-    titleEl.innerText = `⚓ ${dateStr} ${meta.label}\n입항·작업 선박 (${uniqueMatched.length}척) — 터치: 선택·해제 (최대 2척 더블오더)${sourceLine}`;
+    titleEl.innerText = `⚓ ${dateStr} ${meta.label}\n입항·작업 선박 (${uniqueMatched.length}척) — 터치: 선택·해제 (최대 ${MAX_WORK_VESSELS}척 멀티오더)${sourceLine}`;
 
     if (uniqueMatched.length === 0) {
         if (!meta.live) {
@@ -4050,7 +4092,7 @@ function renderWorkLogQuickChips(dateStr) {
         }).join("") +
         `<button type="button" class="quick-chip-btn" style="background:${panelOpen ? 'var(--primary)' : '#eff6ff'}; color:${panelOpen ? '#ffffff' : '#1d4ed8'}; border-color:#60a5fa; font-weight:900;" onclick="toggleCoworkerRosterPanel()">📋 작업자 선택 (${HANJIN_COWORKER_ROSTER.length}명) ${panelOpen ? '▲' : '▼'}</button>`;
 }
-/* ===== 근무일지: 입·출항 선박 달력 조회 · 더블오더(2척) 선택 · 작업 내용 자동 입력 ===== */
+/* ===== 근무일지: 입·출항 선박 달력 조회 · 멀티오더(2~4척) 선택 · 작업 내용 자동 입력 ===== */
 function getWorklogScheduleDate() {
     return document.getElementById("worklogScheduleDatePicker")?.value || "";
 }
@@ -4095,6 +4137,31 @@ function normalizeWorklogShipKey(name) {
 function getWorklogPickedNames() {
     return parseWorklogShipNames(document.getElementById("logShipName")?.value).map(normalizeWorklogShipKey);
 }
+/**
+ * 근무일지 임금3·임금4 입력칸 노출 제어.
+ * 기본은 임금1·임금2만 보이고, 선박을 3~4척 선택하면 임금3·임금4가 나타납니다.
+ * 이미 값이 들어 있는 슬롯은 선박 수와 무관하게 계속 보여 줍니다(값 분실 방지).
+ */
+function syncWorklogWageSlotVisibility(vesselCount) {
+    const row = document.getElementById("worklogWageExtraRow");
+    const hint = document.getElementById("worklogWageSlotHint");
+    if (!row) return 2;
+    const count = Math.max(0, Math.min(MAX_WORK_VESSELS, Number(vesselCount) || 0));
+    const hasWage3 = Boolean(String(document.getElementById("logWage3")?.value || "").trim());
+    const hasWage4 = Boolean(String(document.getElementById("logWage4")?.value || "").trim());
+    const show = count >= 3 || hasWage3 || hasWage4;
+    if (row.classList) row.classList.toggle("is-slot-hidden", !show);
+    if (hint && hint.classList) {
+        hint.classList.toggle("is-slot-hidden", !show);
+        if (show) {
+            hint.textContent = count >= 3
+                ? `🚢 ${getMultiOrderLabel(count)}(${count}척) 작업 · 임금1~임금${Math.max(count, hasWage4 ? 4 : 3)}을 선박별로 입력하세요.`
+                : "🚢 임금3·임금4에 입력된 금액이 있어 계속 표시합니다. 비우면 다시 숨겨집니다.";
+        }
+    }
+    return show ? MAX_WORK_VESSELS : 2;
+}
+
 function refreshWorklogVesselList() {
     const dateStr = getWorklogScheduleDate();
     if (!dateStr) return;
@@ -4116,14 +4183,14 @@ function resolveWorklogVesselMeta(name) {
     return meta;
 }
 function buildWorklogDoubleOrderBlock(names) {
-    const circled = ["①", "②"];
-    const items = names.map(name => {
+    const circled = VESSEL_ORDER_MARKS;
+    const items = names.slice(0, MAX_WORK_VESSELS).map(name => {
         const meta = resolveWorklogVesselMeta(name);
         return { name, period: meta ? getSelectedVesselPeriod(meta.vessel, meta.date) : null };
     });
     const allHours = items.every(item => item.period && item.period.hours > 0);
     const totalHours = allHours ? items.reduce((sum, item) => sum + item.period.hours, 0) : 0;
-    const header = `🚢 더블오더 작업 (선박 2척${totalHours > 0 ? ` · 합계 ${totalHours}H` : ""})`;
+    const header = `🚢 ${getMultiOrderLabel(items.length)} 작업 (선박 ${items.length}척${totalHours > 0 ? ` · 합계 ${totalHours}H` : ""})`;
     const lines = items.map((item, index) => {
         if (!item.period) return `${circled[index]} ${item.name} · 입·출항 시각 확인 필요`;
         const arrival = formatWageScheduleEvent(item.period.arrival);
@@ -4133,7 +4200,7 @@ function buildWorklogDoubleOrderBlock(names) {
     });
     return [header, ...lines].join("\n");
 }
-// 배 이름이 정확히 2척이면 작업 내용 맨 위에 더블오더 블록을 넣고, 아니면 기존 블록만 제거한다.
+// 배 이름이 2~4척이면 작업 내용 맨 위에 멀티오더(더블·트리플·쿼드) 블록을 넣고, 아니면 기존 블록만 제거한다.
 // 사용자가 직접 쓴 작업 내용은 그대로 둔다.
 function syncWorklogDoubleOrderMemo() {
     const memo = document.getElementById("logMemo");
@@ -4142,7 +4209,7 @@ function syncWorklogDoubleOrderMemo() {
     const original = memo.value;
     const withoutBlock = original.replace(WORKLOG_DOUBLE_BLOCK_RE, "");
     let nextValue = withoutBlock;
-    if (names.length === 2) {
+    if (names.length >= 2 && names.length <= MAX_WORK_VESSELS) {
         const block = buildWorklogDoubleOrderBlock(names);
         const rest = withoutBlock.replace(/^\n+/, "");
         nextValue = rest ? `${block}\n\n${rest}` : block;
@@ -4159,16 +4226,17 @@ function updateWorklogDoubleOrderStatus() {
     const names = parseWorklogShipNames(document.getElementById("logShipName")?.value);
     let text;
     if (names.length === 0) {
-        text = "🔀 더블오더: 입·출항 선박을 2척 선택하면 작업 내용에 입·출항 시각과 근무시간이 자동 입력됩니다.";
+        text = `🔀 멀티오더: 입·출항 선박을 2~${MAX_WORK_VESSELS}척 선택하면 작업 내용에 입·출항 시각과 근무시간이 자동 입력됩니다.`;
     } else if (names.length === 1) {
         text = `🔀 더블오더 선택 1/2 · ${names[0]} · 한 척 더 선택해 주세요.`;
-    } else if (names.length === 2) {
-        text = `🔀 더블오더 선택 2/2 · ${names.join(" · ")} · 작업 내용 자동 입력됨`;
+    } else if (names.length <= MAX_WORK_VESSELS) {
+        text = `🔀 ${getMultiOrderLabel(names.length)} 선택 ${names.length}/${names.length} · ${names.join(" · ")} · 작업 내용 자동 입력됨`;
     } else {
-        text = "⚠️ 선박은 최대 2척까지 입력할 수 있습니다. 배 이름을 2척 이하로 줄여 주세요.";
+        text = `⚠️ 선박은 최대 ${MAX_WORK_VESSELS}척까지 입력할 수 있습니다. 배 이름을 ${MAX_WORK_VESSELS}척 이하로 줄여 주세요.`;
     }
     el.textContent = text;
-    el.classList.toggle("is-full", names.length === 2);
+    el.classList.toggle("is-full", names.length >= 2 && names.length <= MAX_WORK_VESSELS);
+    syncWorklogWageSlotVisibility(names.length);
 }
 function toggleWorklogVesselPick(index) {
     const item = worklogRenderedVessels[index];
@@ -4185,8 +4253,8 @@ function toggleWorklogVesselPick(index) {
         showToast(`🚢 ${item.name} 선택을 해제했습니다.`);
         return;
     }
-    if (names.length >= 2) {
-        showToast("⚠️ 더블오더는 선박 2척까지만 선택할 수 있습니다. 먼저 선택된 선박을 다시 눌러 해제해 주세요.");
+    if (names.length >= MAX_WORK_VESSELS) {
+        showToast(`⚠️ 멀티오더는 선박 ${MAX_WORK_VESSELS}척까지만 선택할 수 있습니다. 먼저 선택된 선박을 다시 눌러 해제해 주세요.`);
         return;
     }
     names.push(item.name);
@@ -4194,17 +4262,19 @@ function toggleWorklogVesselPick(index) {
     input.value = names.join(" / ");
     syncWorklogDoubleOrderMemo();
     refreshWorklogVesselList();
-    if (names.length === 2) {
-        showToast(`🔀 더블오더 2척 선택 완료 (${names.join(" / ")}) · 작업 내용을 자동 입력했습니다.`);
+    if (names.length >= 2) {
+        showToast(`🔀 ${getMultiOrderLabel(names.length)} ${names.length}척 선택 완료 (${names.join(" / ")}) · 작업 내용을 자동 입력했습니다.`);
     } else {
         showToast(`🚢 ${item.name} 선택 · 한 척 더 선택하면 더블오더 작업 내용이 자동 입력됩니다.`);
     }
 }
 function onWorklogShipNameEdited() {
     const names = parseWorklogShipNames(document.getElementById("logShipName")?.value);
-    if (names.length > 2) showToast("⚠️ 선박은 최대 2척까지 입력할 수 있습니다.");
+    if (names.length > MAX_WORK_VESSELS) showToast(`⚠️ 선박은 최대 ${MAX_WORK_VESSELS}척까지 입력할 수 있습니다.`);
     syncWorklogDoubleOrderMemo();
     refreshWorklogVesselList();
+    // 스케줄 캐시가 없어 목록을 다시 그리지 못해도 임금 3·4 칸 상태는 항상 맞춰 둡니다.
+    updateWorklogDoubleOrderStatus();
 }
 function applyQuickShipChip(shipName, berthNo = "", ptnrCode = "", termBadge = "") {
     const input = document.getElementById("logShipName");
@@ -4333,6 +4403,9 @@ function generateReceiptCanvas(mode) {
         lines.push({ label: "📈 일평균 수입", value: `${latestMonthlyStatsCache.avg.toLocaleString()}원` });
         lines.push({ label: "💵 임금 1 합계", value: `${latestMonthlyStatsCache.w1Sum.toLocaleString()}원` });
         lines.push({ label: "💴 임금 2 합계", value: `${latestMonthlyStatsCache.w2Sum.toLocaleString()}원` });
+        // 임금 3·4 는 트리플·쿼드오더 작업이 있는 달에만 표에 추가합니다.
+        if (Number(latestMonthlyStatsCache.w3Sum) > 0) lines.push({ label: "💶 임금 3 합계", value: `${Number(latestMonthlyStatsCache.w3Sum).toLocaleString()}원` });
+        if (Number(latestMonthlyStatsCache.w4Sum) > 0) lines.push({ label: "💷 임금 4 합계", value: `${Number(latestMonthlyStatsCache.w4Sum).toLocaleString()}원` });
         const goal = Math.max(100000, Number(monthlyGoalAmount) || 4500000);
         const pct = Math.round((latestMonthlyStatsCache.total / goal) * 100);
         lines.push({ label: "🎯 월 목표 달성률", value: `${pct}% (목표 ${(goal/10000).toFixed(0)}만 원)` });
@@ -4530,19 +4603,23 @@ async function shareOrCopyAppPromo() {
     }
 }
 function updateMonthlyStatsUI(logsMap) {
-    let total = 0, w1Sum = 0, w2Sum = 0, days = 0;
+    let total = 0, w1Sum = 0, w2Sum = 0, w3Sum = 0, w4Sum = 0, days = 0;
     Object.values(logsMap || {}).forEach(d => {
         if (!d) return;
-        const p = Number(d.totalPay) || 0;
         const w1 = Number(d.wage1) || 0;
         const w2 = Number(d.wage2) || 0;
+        const w3 = Number(d.wage3) || 0;
+        const w4 = Number(d.wage4) || 0;
+        const p = Number(d.totalPay) || (w1 + w2 + w3 + w4);
         if (p > 0 || d.shipName || d.memo || d.coworkers) days++;
         total += p;
         w1Sum += w1;
         w2Sum += w2;
+        w3Sum += w3;
+        w4Sum += w4;
     });
     const avg = days > 0 ? Math.round(total / days) : 0;
-    latestMonthlyStatsCache = { total, w1Sum, w2Sum, days, avg };
+    latestMonthlyStatsCache = { total, w1Sum, w2Sum, w3Sum, w4Sum, days, avg };
     const totalEl = document.getElementById('monthlyTotalDisplay');
     const daysEl = document.getElementById('monthlyWorkDays');
     const avgEl = document.getElementById('monthlyAvgPay');
@@ -4551,7 +4628,11 @@ function updateMonthlyStatsUI(logsMap) {
     if (totalEl) totalEl.innerText = `이번 달 총액: ${total.toLocaleString()}원`;
     if (daysEl) daysEl.innerText = `${days}일`;
     if (avgEl) avgEl.innerText = `${avg.toLocaleString()}원`;
-    if (splitEl) splitEl.innerText = `${(w1Sum/10000).toFixed(0)}만 / ${(w2Sum/10000).toFixed(0)}만`;
+    if (splitEl) {
+        const splitParts = [w1Sum, w2Sum, w3Sum, w4Sum];
+        const lastUsed = Math.max(1, ...splitParts.map((v, i) => (v > 0 ? i + 1 : 0)), 2);
+        splitEl.innerText = splitParts.slice(0, lastUsed).map(v => `${(v/10000).toFixed(0)}만`).join(" / ");
+    }
     if (logSubMeta) {
         logSubMeta.innerText = days > 0 ? `이번 달 출근 ${days}일 · ${(total/10000).toFixed(0)}만 원` : `날짜 클릭 기록 · 월간 정산 관리`;
     }
@@ -4664,11 +4745,13 @@ function extractWorkLogTimeAndWageMetrics(log) {
     // Explicit zero is authoritative (e.g. an unpaid or cleared record).
     const totalPay = d.totalPay != null && Number.isFinite(Number(d.totalPay))
         ? Math.max(0, Math.round(Number(d.totalPay)))
-        : Math.max(0, Math.round((Number(d.wage1) || 0) + (Number(d.wage2) || 0)));
+        : Math.max(0, Math.round((Number(d.wage1) || 0) + (Number(d.wage2) || 0) + (Number(d.wage3) || 0) + (Number(d.wage4) || 0)));
     const wage1 = Number(d.wage1) || 0;
     const wage2 = Number(d.wage2) || 0;
+    const wage3 = Number(d.wage3) || 0;
+    const wage4 = Number(d.wage4) || 0;
     const memo = String(d.memo || "");
-    const empty = { date: dateStr, totalHours: 0, dayHours: 0, nightHours: 0, weekendHours: 0, dayAmt: 0, nightAmt: 0, weekendAmt: 0, skilledAmt: 0, extraAmt: 0, totalPay, wage1, wage2, source: "none", estimated: false, hasTime: false };
+    const empty = { date: dateStr, totalHours: 0, dayHours: 0, nightHours: 0, weekendHours: 0, dayAmt: 0, nightAmt: 0, weekendAmt: 0, skilledAmt: 0, extraAmt: 0, totalPay, wage1, wage2, wage3, wage4, source: "none", estimated: false, hasTime: false };
     let acc = null;
     let source = "none";
     const addTo = (target, part) => {
@@ -4695,15 +4778,15 @@ function extractWorkLogTimeAndWageMetrics(log) {
             const part = { totalHours: parseFloat(m[1]) || 0, dayHours: parseFloat(m[2]) || 0, nightHours: parseFloat(m[3]) || 0, weekendHours: parseFloat(m[4]) || 0 };
             // Recalculations replace a wage slot; they are not additional shifts.
             const line = memo.slice(memo.lastIndexOf("\n", m.index) + 1, m.index);
-            const slot = line.match(/더블오더\s*·\s*임금\s*([12])/);
+            const slot = line.match(/(?:더블|트리플|쿼드|멀티)오더\s*·\s*임금\s*([1-4])/);
             slots.set(slot ? slot[1] : "1", part);
         }
         slots.forEach(part => { found = found ? addTo(found, part) : { ...part }; });
         if (found && found.totalHours > 0) { acc = found; source = "calc"; }
     }
-    // 2) 더블오더 선박 스케줄: ① 선박 · 입항 YYYY-MM-DD HH:MM → 출항 ... · XH
+    // 2) 멀티오더(2~4척) 선박 스케줄: ① 선박 · 입항 YYYY-MM-DD HH:MM → 출항 ... · XH
     if (!acc && memo) {
-        const lineRe = /[①②]\s*[^\n]*?입항\s*(\d{4}-\d{2}-\d{2})\s+(\d{2}):(\d{2})\s*→\s*출항\s*(\d{4}-\d{2}-\d{2})\s+(\d{2}):(\d{2})/g;
+        const lineRe = /[①②③④]\s*[^\n]*?입항\s*(\d{4}-\d{2}-\d{2})\s+(\d{2}):(\d{2})\s*→\s*출항\s*(\d{4}-\d{2}-\d{2})\s+(\d{2}):(\d{2})/g;
         let m = null;
         let found = null;
         while ((m = lineRe.exec(memo)) !== null) {
@@ -4781,21 +4864,21 @@ function extractWorkLogTimeAndWageMetrics(log) {
         dayAmt, nightAmt, weekendAmt,
         skilledAmt,
         extraAmt,
-        totalPay, wage1, wage2,
+        totalPay, wage1, wage2, wage3, wage4,
         source, estimated, hasTime: true
     };
 }
 function aggregateWorkTimeMetrics(logs) {
     const list = Array.isArray(logs) ? logs : Object.values(logs || {});
-    const out = { days: 0, totalHours: 0, dayHours: 0, nightHours: 0, weekendHours: 0, dayAmt: 0, nightAmt: 0, weekendAmt: 0, skilledAmt: 0, extraAmt: 0, totalPay: 0, wage1: 0, wage2: 0, estimatedDays: 0, timeRecordedDays: 0 };
+    const out = { days: 0, totalHours: 0, dayHours: 0, nightHours: 0, weekendHours: 0, dayAmt: 0, nightAmt: 0, weekendAmt: 0, skilledAmt: 0, extraAmt: 0, totalPay: 0, wage1: 0, wage2: 0, wage3: 0, wage4: 0, estimatedDays: 0, timeRecordedDays: 0 };
     list.forEach(log => {
         if (!log) return;
-        const pay = Number(log.totalPay) || ((Number(log.wage1) || 0) + (Number(log.wage2) || 0));
+        const pay = Number(log.totalPay) || ((Number(log.wage1) || 0) + (Number(log.wage2) || 0) + (Number(log.wage3) || 0) + (Number(log.wage4) || 0));
         if (pay > 0 || log.shipName || log.memo || log.coworkers) out.days += 1;
         const wt = extractWorkLogTimeAndWageMetrics(log);
         out.totalHours += wt.totalHours; out.dayHours += wt.dayHours; out.nightHours += wt.nightHours; out.weekendHours += wt.weekendHours;
         out.dayAmt += wt.dayAmt; out.nightAmt += wt.nightAmt; out.weekendAmt += wt.weekendAmt; out.skilledAmt += wt.skilledAmt; out.extraAmt += wt.extraAmt;
-        out.totalPay += wt.totalPay; out.wage1 += wt.wage1; out.wage2 += wt.wage2;
+        out.totalPay += wt.totalPay; out.wage1 += wt.wage1; out.wage2 += wt.wage2; out.wage3 += Number(wt.wage3) || 0; out.wage4 += Number(wt.wage4) || 0;
         if (wt.estimated) out.estimatedDays += 1;
         if (wt.hasTime) out.timeRecordedDays += 1;
     });
@@ -4859,7 +4942,7 @@ function renderMonthlyWorkTimeReport(data, year) {
         '<button type="button" onclick="copyWorkTimeReport()" style="background:var(--primary); color:#fff; border:none; border-radius:6px; padding:4px 10px; font-size:0.74rem; font-weight:800; cursor:pointer;">📋 작업시간 리포트 복사</button></div>' +
         '<div style="display:grid; grid-template-columns:repeat(2,1fr); gap:6px;">' +
         '<div style="background:var(--card-bg); border:1px solid var(--border); border-radius:8px; padding:8px 10px;"><div style="font-size:0.72rem; color:var(--text-sub); font-weight:800;">⏱️ 총 작업시간 / 총 책정액</div><div style="font-size:1rem; font-weight:900; color:var(--primary); margin-top:2px;">' + formatWorkHours(totalH) + ' · ' + cur.totalPay.toLocaleString() + '원</div><div style="font-size:0.7rem; color:var(--text-sub); font-weight:700; margin-top:2px;">출근 ' + cur.workDays + '일 · 일평균 ' + dailyAvgH + 'H · 시간당 평균 ' + hourlyAvg.toLocaleString() + '원</div></div>' +
-        '<div style="background:var(--card-bg); border:1px solid var(--border); border-radius:8px; padding:8px 10px;"><div style="font-size:0.72rem; color:var(--text-sub); font-weight:800;">💰 임금 1 / 임금 2</div><div style="font-size:0.92rem; font-weight:900; color:#047857; margin-top:2px;">' + (cur.wage1Sum || 0).toLocaleString() + '원 / ' + (cur.wage2Sum || 0).toLocaleString() + '원</div><div style="font-size:0.7rem; color:var(--text-sub); font-weight:700; margin-top:2px;">기능공 ' + (cur.skilledAmt || 0).toLocaleString() + '원 · 기타 가산 ' + (cur.extraAmt || 0).toLocaleString() + '원' + (cur.estimatedDays ? ' · 금액 기준 추정 ' + cur.estimatedDays + '일 포함' : '') + '</div></div>' +
+        '<div style="background:var(--card-bg); border:1px solid var(--border); border-radius:8px; padding:8px 10px;"><div style="font-size:0.72rem; color:var(--text-sub); font-weight:800;">💰 임금 1 / 임금 2' + ((cur.wage3Sum || cur.wage4Sum) ? ' / 임금 3 / 임금 4' : '') + '</div><div style="font-size:0.92rem; font-weight:900; color:#047857; margin-top:2px;">' + (cur.wage1Sum || 0).toLocaleString() + '원 / ' + (cur.wage2Sum || 0).toLocaleString() + '원' + ((cur.wage3Sum || cur.wage4Sum) ? ' / ' + (cur.wage3Sum || 0).toLocaleString() + '원 / ' + (cur.wage4Sum || 0).toLocaleString() + '원' : '') + '</div><div style="font-size:0.7rem; color:var(--text-sub); font-weight:700; margin-top:2px;">기능공 ' + (cur.skilledAmt || 0).toLocaleString() + '원 · 기타 가산 ' + (cur.extraAmt || 0).toLocaleString() + '원' + (cur.estimatedDays ? ' · 금액 기준 추정 ' + cur.estimatedDays + '일 포함' : '') + '</div></div>' +
         card("☀️ 주간 작업시간", cur.dayHours, cur.dayAmt, "#b45309", "rgba(245,158,11,0.07)", "#fde68a") +
         card("🌙 야간 작업시간 (할증 1.5배)", cur.nightHours, cur.nightAmt, "#1e40af", "rgba(59,130,246,0.07)", "#bfdbfe") +
         card("🗓️ 주말·공휴일 시간 (+50% 수당)", cur.weekendHours, cur.weekendAmt, "#be185d", "rgba(236,72,153,0.06)", "#fbcfe8") +
@@ -4896,6 +4979,8 @@ async function loadAndRenderYearlyD3Chart(year) {
         totalPay: 0,
         wage1Sum: 0,
         wage2Sum: 0,
+        wage3Sum: 0,
+        wage4Sum: 0,
         workDays: 0,
         totalHours: 0,
         dayHours: 0,
@@ -4926,9 +5011,13 @@ async function loadAndRenderYearlyD3Chart(year) {
                     const pay = extractWorkLogTimeAndWageMetrics(d).totalPay;
                     const w1 = Number(d.wage1) || 0;
                     const w2 = Number(d.wage2) || 0;
+                    const w3 = Number(d.wage3) || 0;
+                    const w4 = Number(d.wage4) || 0;
                     monthlyData[mIdx].totalPay += pay;
                     monthlyData[mIdx].wage1Sum += w1;
                     monthlyData[mIdx].wage2Sum += w2;
+                    monthlyData[mIdx].wage3Sum += w3;
+                    monthlyData[mIdx].wage4Sum += w4;
                     if (pay > 0 || d.shipName || d.memo || d.coworkers) {
                         monthlyData[mIdx].workDays += 1;
                     }
@@ -4988,6 +5077,12 @@ function renderYearlySummaryReport(data, year, shipCounts = {}, coworkerCounts =
     const totalYearPay = data.reduce((acc, d) => acc + d.totalPay, 0);
     const totalYearW1 = data.reduce((acc, d) => acc + d.wage1Sum, 0);
     const totalYearW2 = data.reduce((acc, d) => acc + d.wage2Sum, 0);
+    const totalYearW3 = data.reduce((acc, d) => acc + (d.wage3Sum || 0), 0);
+    const totalYearW4 = data.reduce((acc, d) => acc + (d.wage4Sum || 0), 0);
+    // 선박 3~4척(트리플·쿼드오더) 작업이 있는 해에만 임금 3·4를 덧붙여 표기합니다.
+    const extraWageLabel = (totalYearW3 > 0 || totalYearW4 > 0)
+        ? ` / 임금 3: ${totalYearW3.toLocaleString()}원 / 임금 4: ${totalYearW4.toLocaleString()}원`
+        : "";
     const totalYearDays = data.reduce((acc, d) => acc + d.workDays, 0);
     const activeMonths = data.filter(d => d.workDays > 0 || d.totalPay > 0).length;
     const avgMonthlyPay = activeMonths > 0 ? Math.round(totalYearPay / activeMonths) : 0;
@@ -5042,7 +5137,7 @@ function renderYearlySummaryReport(data, year, shipCounts = {}, coworkerCounts =
     latestYearlyReportText = [
         `[${year}년 근무일지 종합 정산 보고서]`,
         `- 근로자: ${currentWorkerId || "미로그인"}`,
-        `- 연간 총수입: ${totalYearPay.toLocaleString()}원 (임금 1: ${totalYearW1.toLocaleString()}원 / 임금 2: ${totalYearW2.toLocaleString()}원)`,
+        `- 연간 총수입: ${totalYearPay.toLocaleString()}원 (임금 1: ${totalYearW1.toLocaleString()}원 / 임금 2: ${totalYearW2.toLocaleString()}원${extraWageLabel})`,
         `- 연간 총 근로일수: ${totalYearDays}일 (가동 ${activeMonths}개월)`,
         `- 월평균 수입: ${avgMonthlyPay.toLocaleString()}원 / 일평균 수입: ${avgDailyPay.toLocaleString()}원`,
         `- 최고 수입월: ${bestPayMonth ? `${bestPayMonth.label} (${bestPayMonth.totalPay.toLocaleString()}원)` : "기록 없음"}`,
@@ -5060,7 +5155,7 @@ function renderYearlySummaryReport(data, year, shipCounts = {}, coworkerCounts =
         `- 야간(1.5배): ${formatWorkHours(totalYearNightHours)} / ${totalYearNightAmt.toLocaleString()}원`,
         `- 주말·공휴일(+50%): ${formatWorkHours(totalYearWeekendHours)} / ${totalYearWeekendAmt.toLocaleString()}원`,
         `- 기능공 수당: ${totalYearSkilledAmt.toLocaleString()}원 / 특근·기타 가산: ${(totalYearExtraAmt - totalYearSkilledAmt).toLocaleString()}원`,
-        `- 총 책정 금액: ${totalYearPay.toLocaleString()}원 (임금 1: ${totalYearW1.toLocaleString()}원 / 임금 2: ${totalYearW2.toLocaleString()}원)`,
+        `- 총 책정 금액: ${totalYearPay.toLocaleString()}원 (임금 1: ${totalYearW1.toLocaleString()}원 / 임금 2: ${totalYearW2.toLocaleString()}원${extraWageLabel})`,
         ``,
         ...data.filter(d => d.workDays > 0 || d.totalPay > 0 || (d.totalHours || 0) > 0).map(d => `- ${d.label}: 출근 ${d.workDays}일 · 총 ${formatWorkHours(d.totalHours)} (주간 ${formatWorkHours(d.dayHours)} ${ (d.dayAmt||0).toLocaleString()}원 / 야간 ${formatWorkHours(d.nightHours)} ${(d.nightAmt||0).toLocaleString()}원 / 주말·공휴일 ${formatWorkHours(d.weekendHours)} ${(d.weekendAmt||0).toLocaleString()}원 / 기타 ${((d.extraAmt||0)+(d.skilledAmt||0)).toLocaleString()}원) · 총책정 ${d.totalPay.toLocaleString()}원`)
     ].join("\n");
@@ -5094,7 +5189,7 @@ function renderYearlySummaryReport(data, year, shipCounts = {}, coworkerCounts =
             <div style="background:rgba(59,130,246,0.06); border:1px solid #bfdbfe; border-radius:8px; padding:8px 10px;">
                 <div style="font-size:0.72rem; color:#1e40af; font-weight:800;">💰 연간 누적 총수입</div>
                 <div style="font-size:1.02rem; font-weight:900; color:#1d4ed8; margin-top:2px;">${totalYearPay.toLocaleString()}원</div>
-                <div style="font-size:0.7rem; color:var(--text-sub); margin-top:2px;">임금 1 ${(totalYearW1/10000).toFixed(0)}만 · 임금 2 ${(totalYearW2/10000).toFixed(0)}만</div>
+                <div style="font-size:0.7rem; color:var(--text-sub); margin-top:2px;">임금 1 ${(totalYearW1/10000).toFixed(0)}만 · 임금 2 ${(totalYearW2/10000).toFixed(0)}만${(totalYearW3 > 0 || totalYearW4 > 0) ? ` · 임금 3 ${(totalYearW3/10000).toFixed(0)}만 · 임금 4 ${(totalYearW4/10000).toFixed(0)}만` : ""}</div>
             </div>
             <div style="background:rgba(16,185,129,0.06); border:1px solid #a7f3d0; border-radius:8px; padding:8px 10px;">
                 <div style="font-size:0.72rem; color:#065f46; font-weight:800;">🗓️ 연간 누적 근로일수</div>
@@ -5467,7 +5562,7 @@ function autoGrowWorkLogMemo(el) {
         target.style.setProperty('height', (target.scrollHeight + borderPx) + 'px', 'important');
     } catch (err) { /* 측정 실패 시 기본 스타일 유지 */ }
 }
-function clickDate(dStr){ document.getElementById('selectedDateText').innerText = dStr; document.getElementById('dailyLogForm').classList.remove('hidden'); document.getElementById('dailyLogForm').setAttribute('data-date', dStr); const d = adminWorkLogs[dStr]; document.getElementById('logShipName').value = d ? (d.shipName || '') : ''; document.getElementById('logWage1').value = d ? (d.wage1 || '') : ''; document.getElementById('logWage2').value = d ? (d.wage2 || '') : ''; document.getElementById('logCoworkers').value = d ? (d.coworkers || '') : ''; document.getElementById('logMemo').value = d ? d.memo : ''; autoGrowWorkLogMemo(document.getElementById('logMemo')); const img = document.getElementById('logImagePreview'); if(d && d.imageUrl){ img.src = d.imageUrl; img.style.display = 'block'; } else { img.style.display = 'none'; img.src = ""; } document.getElementById('logImageInput').value = ''; setWorklogScheduleDateInput(dStr); updateWorklogDoubleOrderStatus(); renderWorkLogQuickChips(dStr); }
+function clickDate(dStr){ document.getElementById('selectedDateText').innerText = dStr; document.getElementById('dailyLogForm').classList.remove('hidden'); document.getElementById('dailyLogForm').setAttribute('data-date', dStr); const d = adminWorkLogs[dStr]; document.getElementById('logShipName').value = d ? (d.shipName || '') : ''; document.getElementById('logWage1').value = d ? (d.wage1 || '') : ''; document.getElementById('logWage2').value = d ? (d.wage2 || '') : ''; const logWage3El = document.getElementById('logWage3'); if (logWage3El) logWage3El.value = d ? (d.wage3 || '') : ''; const logWage4El = document.getElementById('logWage4'); if (logWage4El) logWage4El.value = d ? (d.wage4 || '') : ''; document.getElementById('logCoworkers').value = d ? (d.coworkers || '') : ''; document.getElementById('logMemo').value = d ? d.memo : ''; autoGrowWorkLogMemo(document.getElementById('logMemo')); const img = document.getElementById('logImagePreview'); if(d && d.imageUrl){ img.src = d.imageUrl; img.style.display = 'block'; } else { img.style.display = 'none'; img.src = ""; } document.getElementById('logImageInput').value = ''; setWorklogScheduleDateInput(dStr); updateWorklogDoubleOrderStatus(); renderWorkLogQuickChips(dStr); }
 function trySaveWorkLog(){ if(currentWorkerId) saveWorkLog(); else document.getElementById('loginModal').style.display = 'flex'; }
 async function confirmLoginAndSave(evt) {
     const nick = document.getElementById('loginNick').value.trim();
@@ -5562,10 +5657,13 @@ function saveWorkLog(){
     const previousShipName = previousWorkLog.shipName || "";
     const w1 = parseFloat(document.getElementById('logWage1').value) || 0; 
     const w2 = parseFloat(document.getElementById('logWage2').value) || 0; 
+    // 선박 3~4척(트리플·쿼드오더) 작업일 때만 입력되는 임금 3·임금 4
+    const w3 = parseFloat(document.getElementById('logWage3')?.value) || 0; 
+    const w4 = parseFloat(document.getElementById('logWage4')?.value) || 0; 
     const coworkersInfo = document.getElementById('logCoworkers').value.trim(); 
     const memo = document.getElementById('logMemo').value; 
     const file = document.getElementById('logImageInput').files[0]; 
-    const pay = w1 + w2; 
+    const pay = w1 + w2 + w3 + w4; 
 
     const shouldOfferVesselInfoFollowUp =
         !!normalizeVesselInfoName(shipNameInfo) &&
@@ -5587,6 +5685,8 @@ function saveWorkLog(){
             shipName: shipNameInfo, 
             wage1: w1, 
             wage2: w2, 
+            wage3: w3, 
+            wage4: w4, 
             coworkers: coworkersInfo, 
             memo: memo, 
             totalPay: pay, 
@@ -5653,13 +5753,13 @@ function loginSuccess(name) { currentWorkerId = name; localStorage.setItem('myWo
 function closeLoginModal(){ document.getElementById('loginModal').style.display = 'none'; }
 function updateUserBar() { document.getElementById('userProfileBar').style.display = currentWorkerId ? 'flex' : 'none'; if(currentWorkerId) document.getElementById('currentUserDisplay').innerText = `👤 ${currentWorkerId}`; }
 function logoutWorker() { if(confirm("로그아웃하시겠습니까?")) { currentWorkerId = null; localStorage.removeItem('myWorkerId'); updateUserBar(); renderCalendar(currentDate.getFullYear(), currentDate.getMonth()); document.getElementById('dailyLogForm').classList.add('hidden'); } }
-function deleteWorkLog(){ if(!currentWorkerId) return; if(!confirm("정말 삭제하시겠습니까?")) return; const dStr = document.getElementById('dailyLogForm').getAttribute('data-date'); db.collection('work_logs').doc(`${currentWorkerId}_${dStr}`).update(softDeletePayload()).then(()=>{ showToast("삭제되었습니다."); document.getElementById('logShipName').value=''; document.getElementById('logWage1').value=''; document.getElementById('logWage2').value=''; document.getElementById('logCoworkers').value=''; document.getElementById('logMemo').value=''; autoGrowWorkLogMemo(document.getElementById('logMemo')); document.getElementById('logImageInput').value = ''; const imgPreview = document.getElementById('logImagePreview'); if(imgPreview) { imgPreview.src = ''; imgPreview.style.display = 'none'; } renderCalendar(currentDate.getFullYear(), currentDate.getMonth()); }).catch(err => alert("삭제 실패: " + err.message)); }
+function deleteWorkLog(){ if(!currentWorkerId) return; if(!confirm("정말 삭제하시겠습니까?")) return; const dStr = document.getElementById('dailyLogForm').getAttribute('data-date'); db.collection('work_logs').doc(`${currentWorkerId}_${dStr}`).update(softDeletePayload()).then(()=>{ showToast("삭제되었습니다."); document.getElementById('logShipName').value=''; document.getElementById('logWage1').value=''; document.getElementById('logWage2').value=''; const delWage3 = document.getElementById('logWage3'); if (delWage3) delWage3.value=''; const delWage4 = document.getElementById('logWage4'); if (delWage4) delWage4.value=''; if (typeof syncWorklogWageSlotVisibility === 'function') syncWorklogWageSlotVisibility(0); document.getElementById('logCoworkers').value=''; document.getElementById('logMemo').value=''; autoGrowWorkLogMemo(document.getElementById('logMemo')); document.getElementById('logImageInput').value = ''; const imgPreview = document.getElementById('logImagePreview'); if(imgPreview) { imgPreview.src = ''; imgPreview.style.display = 'none'; } renderCalendar(currentDate.getFullYear(), currentDate.getMonth()); }).catch(err => alert("삭제 실패: " + err.message)); }
 /* 근무일지 입력 폼 초기화: 임금계산기 초기화(resetWageForm)와 같은 역할.
    저장된 기록은 건드리지 않고, 선택한 날짜 폼의 입력 내용(배 이름·임금·근무자·작업 내용·사진)만 비운다. */
 function resetWorkLogForm() {
     const form = document.getElementById('dailyLogForm');
     if (!form || form.classList.contains('hidden')) return;
-    const fieldIds = ['logShipName', 'logWage1', 'logWage2', 'logCoworkers', 'logMemo'];
+    const fieldIds = ['logShipName', 'logWage1', 'logWage2', 'logWage3', 'logWage4', 'logCoworkers', 'logMemo'];
     const hasContent = fieldIds.some(id => {
         const el = document.getElementById(id);
         return !!el && String(el.value || '').trim() !== '';
@@ -5970,21 +6070,20 @@ function calculateWage() {
 
         const multi = selectedWageVessels.length > 1;
         let firstHours = parseFloat(document.getElementById('wageTotalHours').value) || 0;
-        let secondPeriod = null;
+        let restPeriods = [];
 
         if (multi) {
             firstHours = periodHours(sd, sh, wageEndDate, wageEndHour);
-            secondPeriod = getSelectedVesselPeriod(
-                selectedWageVessels[1].vessel,
-                selectedWageVessels[1].date
-            );
-            if (firstHours <= 0 || !secondPeriod.hours) {
-                alert("선택한 두 선박의 입·출항 근무 시간이 모두 확인되어야 합산 계산할 수 있습니다.");
+            // 2~4번 선박: 스케줄 입·출항 시각으로 각각 산정 후 합산
+            restPeriods = selectedWageVessels.slice(1, MAX_WORK_VESSELS)
+                .map(item => getSelectedVesselPeriod(item.vessel, item.date));
+            if (firstHours <= 0 || restPeriods.some(period => !period.hours)) {
+                alert(`선택한 ${selectedWageVessels.length}척 선박의 입·출항 근무 시간이 모두 확인되어야 합산 계산할 수 있습니다.`);
                 return;
             }
             const totalEl = document.getElementById('wageTotalHours');
             if (totalEl) {
-                totalEl.value = firstHours + secondPeriod.hours;
+                totalEl.value = firstHours + restPeriods.reduce((sum, period) => sum + period.hours, 0);
                 totalEl.readOnly = true;
             }
         } else if (firstHours <= 0) {
@@ -6042,18 +6141,20 @@ function calculateWage() {
         const segments = [{ ...first, name: firstName, hours: firstHours }];
 
         if (multi) {
-            const second = calculateWageSegment(secondPeriod, {
-                ...common,
-                holidayH: 0,
-                rainH: 0,
-                hotH: 0,
-                weekendH: null
-            });
+            restPeriods.forEach((period, restIndex) => {
+                const part = calculateWageSegment(period, {
+                    ...common,
+                    holidayH: 0,
+                    rainH: 0,
+                    hotH: 0,
+                    weekendH: null
+                });
 
-            segments.push({
-                ...second,
-                name: selectedWageVessels[1].name,
-                hours: secondPeriod.hours
+                segments.push({
+                    ...part,
+                    name: selectedWageVessels[restIndex + 1].name,
+                    hours: period.hours
+                });
             });
         }
 
@@ -6078,8 +6179,10 @@ function calculateWage() {
             totalPay: finalTotal,
             shipName: wageShipName,
             terminalId: selectedScheduleTerminal,
+            vesselCount: multi ? segments.length : 1,
+            orderLabel: multi ? getMultiOrderLabel(segments.length) : "",
             summary: multi
-                ? segments.map((part, idx) => `[더블오더 · 임금 ${idx + 1} · ${part.name}] ${part.summary}`).join('\n')
+                ? segments.map((part, idx) => `[${getMultiOrderLabel(segments.length)} · 임금 ${idx + 1} · ${part.name}] ${part.summary}`).join('\n')
                 : first.summary
         };
 
@@ -6095,7 +6198,7 @@ function calculateWage() {
         }
 
         document.getElementById('wageResultTitle').innerText = multi
-            ? '📋 더블오더 선박별 임금 산정 내역서 (임금 1 · 임금 2)'
+            ? `📋 ${getMultiOrderLabel(segments.length)} 선박별 임금 산정 내역서 (${segments.map((_, idx) => `임금 ${idx + 1}`).join(' · ')})`
             : (isDoubleOrder
                 ? '📋 더블오더 임금 산정 내역서 (임금 2)'
                 : '📋 임금 산정 내역서');
@@ -6165,17 +6268,23 @@ async function sendCalculatedWageToLog() {
         const logShipInput = document.getElementById("logShipName");
 
         if (calculatedData.isMultiVessel && Array.isArray(calculatedData.segments) && calculatedData.segments.length >= 2) {
-            const wage1El = document.getElementById("logWage1");
-            const wage2El = document.getElementById("logWage2");
-            if (wage1El) wage1El.value = calculatedData.segments[0].totalPay;
-            if (wage2El) wage2El.value = calculatedData.segments[1].totalPay;
+            const parts = calculatedData.segments.slice(0, MAX_WORK_VESSELS);
+            const orderLabel = getMultiOrderLabel(parts.length);
+            for (let slot = 1; slot <= MAX_WORK_VESSELS; slot++) {
+                const wageEl = document.getElementById(`logWage${slot}`);
+                if (!wageEl) continue;
+                const part = parts[slot - 1];
+                if (part) wageEl.value = part.totalPay;
+                else if (slot > 2) wageEl.value = "";
+            }
+            syncWorklogWageSlotVisibility(parts.length);
 
             if (logShipInput) {
-                logShipInput.value = calculatedData.segments.map(item => item.name).join(" / ");
+                logShipInput.value = parts.map(item => item.name).join(" / ");
             }
 
-            const lines = calculatedData.segments.map((part, index) =>
-                `[더블오더 · 임금 ${index + 1} · ${part.name}] ${part.summary}`
+            const lines = parts.map((part, index) =>
+                `[${orderLabel} · 임금 ${index + 1} · ${part.name}] ${part.summary}`
             );
             if (memoInput) {
                 lines.forEach(line => {
@@ -6189,7 +6298,7 @@ async function sendCalculatedWageToLog() {
             }
 
             if (typeof refreshWorklogVesselList === "function") refreshWorklogVesselList(); trackAppEvent("actions", "wage_to_log");
-            showToast("📅 더블오더 선박 2척의 금액을 임금 1·임금 2에 각각 입력했습니다. 저장을 눌러 기록하세요.");
+            showToast(`📅 ${orderLabel} 선박 ${parts.length}척의 금액을 ${parts.map((_, idx) => `임금 ${idx + 1}`).join("·")}에 각각 입력했습니다. 저장을 눌러 기록하세요.`);
             return;
         }
 
@@ -6243,7 +6352,7 @@ async function sendWorkLogShipToWage() {
         .split(/\s*\/\s*|\s*,\s*/)
         .map(s => s.trim())
         .filter(Boolean)
-        .slice(0, 2);
+        .slice(0, MAX_WORK_VESSELS);
 
     const card = document.getElementById("wage-card");
     if (card && !card.classList.contains("expanded")) {
@@ -6326,7 +6435,7 @@ async function sendWorkLogShipToWage() {
         if (input) input.value = shipNames.join(" / ");
         selectedWageScheduleShipName = shipNames.join(" / ");
         const doubleOrderEl = document.getElementById("wageDoubleOrder");
-        if (doubleOrderEl) doubleOrderEl.checked = shipNames.length === 2;
+        if (doubleOrderEl) doubleOrderEl.checked = shipNames.length >= 2;
         refreshWageWorkHours();
         if (logDate && typeof loadWageScheduledShipsForDate === "function") {
             loadWageScheduledShipsForDate(logDate, false);
@@ -8438,6 +8547,59 @@ if ("serviceWorker" in navigator) {
 }
 
 async function ensureTodayUpdateNotice() {
+    const noticeDocId = "update_2026_10_19_multi_vessel_emergency";
+    const noticeVersion = "multi_vessel_emergency_20261019_r1";
+    const noticeTitle = "선박 4척(멀티오더) 지원 · 🚨 긴급 플로팅 공지 신설 업데이트";
+    const noticeContent = [
+        "부산항(신항·북항) 현장 근로자 여러분, 안녕하십니까! 운영관리자 이춘학입니다.",
+        "하루에 선박을 3~4척까지 작업하는 날이 늘어남에 따라, 임금계산기와 근무일지를 선박 4척 기준으로 확장했습니다. 또한 급히 전달해야 할 현장 상황을 모든 접속자에게 즉시 띄우는 [🚨 긴급 플로팅 공지] 기능이 새로 추가되었습니다.",
+        "",
+        "🚢 1. 당일 작업 선박 최대 2척 → 최대 4척 확대 (더블·트리플·쿼드오더)",
+        "• 당일 입·출항 선박 스케줄에서 작업 선박을 최대 4척까지 선택할 수 있습니다. (2척=더블오더 · 3척=트리플오더 · 4척=쿼드오더)",
+        "• 선택한 선박의 입·출항 시각으로 각 선박 근무시간이 자동 계산되어 [⏳ 총 근무시간]에 모두 합산됩니다.",
+        "• 임금 산정 내역서도 선박별(임금 1~임금 4) 소계와 총액으로 나누어 표시됩니다.",
+        "",
+        "⏱️ 2. 선박별 자동계산 블록 4칸 · 총근무시간 블록과 높이 일치",
+        "• [⏱️ 선박별 자동계산] 영역이 1~4번 선박 4칸 구조로 바뀌었습니다.",
+        "• 평소에는 1·2번 선박 칸만 보이고, 선박을 3척 또는 4척 선택하면 3·4번 칸이 자동으로 나타납니다.",
+        "• 표시되는 칸은 항상 같은 크기로 균등 분할되며, 블록 전체 높이는 옆의 [⏳ 총 근무시간] 블록 높이와 정확히 일치하도록 맞췄습니다.",
+        "",
+        "💰 3. 근무일지 [임금 3] · [임금 4] 입력칸 추가 (평소에는 숨김)",
+        "• 근무일지에 임금 3·임금 4 입력칸이 추가되었습니다. 기본 화면에서는 임금 1·임금 2만 보입니다.",
+        "• 선박을 3~4척 선택하면 임금 3·임금 4 칸이 자동으로 열리고, 계산 결과를 근무일지로 보내면 선박별 금액이 임금 1~4로 각각 자동 입력됩니다.",
+        "• 월간 합계·총임금·목표 달성률, 연간 리포트, 관리자 누적 분석, CSV(엑셀) 내려받기 항목에도 임금 3·임금 4가 모두 반영됩니다.",
+        "",
+        "📝 4. 작업 내용 자동 입력 문구 확장",
+        "• 선박 2~4척 선택 시 작업 내용 맨 위에 [🚢 트리플오더 작업 (선박 3척 · 합계 OOH)] 형태의 요약 블록과 ①②③④ 선박별 입·출항 시각이 자동으로 입력됩니다.",
+        "",
+        "🚨 5. [신규] 긴급 플로팅 공지 — 상단 흐르는 문구(티커)와 별개 기능",
+        "• 관리자가 작성하면 모든 접속자 화면 상단에 공지 카드가 떠올라(floating) 즉시 읽을 수 있습니다.",
+        "• 게시 ON/OFF 전환과 게시 기간(시작·종료 시각) 지정이 가능하며, 기간이 끝나면 자동으로 사라집니다.",
+        "• 표시 단계(🔴 긴급 / 🟠 주의 / 🔵 안내)를 고를 수 있고, 읽은 뒤 ✕ 로 접으면 오른쪽 아래 🚨 버튼으로 다시 열 수 있습니다.",
+        "• 작성은 관리자 비밀번호 인증을 통과한 운영자만 가능합니다. (상단 톱니바퀴 ⚙️ 메뉴 → 🚨 긴급 플로팅 공지)",
+        "",
+        "언제나 현장에서 안전을 최우선으로 작업하시길 바라며, 이용 중 불편한 점이나 건의 사항은 운영관리자(이춘학 / 010-2846-8906)에게 연락 주시기 바랍니다. 오늘도 무사고 안전 작업하십시오!"
+    ].join("\n");
+    try {
+        const docRef = db.collection("notices").doc(noticeDocId);
+        const snap = await docRef.get();
+        if (!snap.exists || snap.data()?.version !== noticeVersion) {
+            await docRef.set({
+                title: noticeTitle,
+                content: noticeContent,
+                version: noticeVersion,
+                isPriority: true,
+                imageUrl: null,
+                timestamp: firebase.firestore.FieldValue.serverTimestamp()
+            }, { merge: true });
+        }
+    } catch (e) {
+        console.warn("업데이트 공지 자동 등록 확인 중 오류:", e);
+    }
+}
+
+/** 이전 버전(Ver.2) 업데이트 공지 — 기록 보존용. 신규 등록은 하지 않습니다. */
+async function ensureHakPortVer2UpdateNotice() {
     const noticeDocId = "update_2026_10_10_hak_port_ver2";
     const noticeVersion = "hak_port_ver2_20261010_r1";
     const noticeTitle = "HAK PORT Ver.2 업데이트";
@@ -8915,6 +9077,374 @@ async function toggleNoticePriority(id, e) {
     }).catch(err => alert("우선공지 설정 실패: " + err.message));
 }
 
+/* ══════════════════════════════════════════════════════════════════════
+   🚨 긴급 플로팅 공지 (상단 티커와 완전히 별개)
+   - 관리자가 작성 → 모든 접속자 화면 상단에 떠서(floating) 바로 읽힘
+   - 게시 ON/OFF + 게시 기간(시작/종료) 지정 가능
+   - 작성 권한은 관리자 비밀번호로 잠금 (평문 비밀번호는 코드에 두지 않음:
+     서버 환경변수 EMERGENCY_NOTICE_PIN / 빌드 주입 해시로만 검증)
+   - 저장 위치: Firestore settings/emergency_notice
+   ══════════════════════════════════════════════════════════════════════ */
+const EMERGENCY_NOTICE_DOC = "emergency_notice";
+const EMERGENCY_UNLOCK_ENDPOINT = "/api/emergency-unlock";
+const EMERGENCY_UNLOCK_SESSION_KEY = "emergencyNoticeUnlocked";
+const EMERGENCY_DISMISS_KEY = "emergencyNoticeDismissedRev";
+const EMERGENCY_TITLE_MAX = 60;
+const EMERGENCY_MESSAGE_MAX = 600;
+let emergencyNoticeData = null;
+let emergencyNoticeTimer = null;
+let isEmergencyAuthorUnlocked = readSessionValue(EMERGENCY_UNLOCK_SESSION_KEY) === "1";
+
+/** 저장 데이터와 현재 시각으로 "지금 띄워야 하는 공지인지" 판정 (순수 함수 · 테스트 대상) */
+function isEmergencyNoticeActive(data, now = Date.now()) {
+    if (!data || data.enabled !== true) return false;
+    const message = String(data.message || "").trim();
+    if (!message) return false;
+    const nowMs = now instanceof Date ? now.getTime() : Number(now) || Date.now();
+    const startMs = emergencyTimeToMs(data.startAt);
+    const endMs = emergencyTimeToMs(data.endAt);
+    if (startMs && nowMs < startMs) return false;   // 아직 게시 시작 전
+    if (endMs && nowMs > endMs) return false;       // 게시 기간 종료
+    return true;
+}
+
+/** Firestore Timestamp · ISO 문자열 · 숫자 모두 ms 로 변환 */
+function emergencyTimeToMs(value) {
+    if (!value) return 0;
+    if (typeof value === "number") return Number.isFinite(value) ? value : 0;
+    if (typeof value === "string") {
+        const t = new Date(value).getTime();
+        return Number.isFinite(t) ? t : 0;
+    }
+    if (typeof value.toMillis === "function") {
+        try { return value.toMillis(); } catch (e) { return 0; }
+    }
+    if (typeof value.toDate === "function") {
+        try { return value.toDate().getTime(); } catch (e) { return 0; }
+    }
+    if (value instanceof Date) return value.getTime();
+    return 0;
+}
+
+function formatEmergencyDateTimeLabel(value) {
+    const ms = emergencyTimeToMs(value);
+    if (!ms) return "";
+    const d = new Date(ms);
+    const pad = n => String(n).padStart(2, "0");
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+function formatEmergencyPeriodLabel(data) {
+    const start = formatEmergencyDateTimeLabel(data?.startAt);
+    const end = formatEmergencyDateTimeLabel(data?.endAt);
+    if (start && end) return `🕒 게시 기간: ${start} ~ ${end}`;
+    if (start) return `🕒 게시 시작: ${start} (종료 시각 미지정)`;
+    if (end) return `🕒 게시 종료: ${end} 까지`;
+    return "🕒 게시 기간: 관리자가 내릴 때까지";
+}
+
+/** 로컬 datetime-local 값(예: 2026-10-19T18:30) ↔ ms 변환 */
+function emergencyMsToLocalInput(ms) {
+    if (!ms) return "";
+    const d = new Date(ms);
+    const pad = n => String(n).padStart(2, "0");
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+function emergencyLocalInputToMs(value) {
+    const raw = String(value || "").trim();
+    if (!raw) return 0;
+    const t = new Date(raw).getTime();
+    return Number.isFinite(t) ? t : 0;
+}
+
+function getEmergencyDismissedRevision() {
+    try { return Number(localStorage.getItem(EMERGENCY_DISMISS_KEY) || 0); } catch (e) { return 0; }
+}
+function setEmergencyDismissedRevision(revision) {
+    try { localStorage.setItem(EMERGENCY_DISMISS_KEY, String(revision || 0)); } catch (e) { }
+}
+
+/** 접속자 화면에 긴급 공지를 그리거나 숨깁니다. */
+function renderEmergencyFloatingNotice() {
+    const box = document.getElementById("emergencyFloatingNotice");
+    const reopenBtn = document.getElementById("emergencyFloatingReopen");
+    if (!box) return;
+    const data = emergencyNoticeData;
+    const active = isEmergencyNoticeActive(data, Date.now());
+
+    if (!active) {
+        box.classList.add("is-hidden");
+        if (reopenBtn) reopenBtn.classList.add("is-hidden");
+        return;
+    }
+
+    const revision = Number(data.revision) || 0;
+    const titleEl = document.getElementById("emergencyFloatingTitle");
+    const bodyEl = document.getElementById("emergencyFloatingBody");
+    const periodEl = document.getElementById("emergencyFloatingPeriod");
+    if (titleEl) titleEl.textContent = String(data.title || "").trim() || "긴급 공지";
+    if (bodyEl) bodyEl.textContent = String(data.message || "").trim();
+    if (periodEl) periodEl.textContent = formatEmergencyPeriodLabel(data);
+    box.classList.remove("level-warn", "level-info");
+    const level = String(data.level || "danger");
+    if (level === "warn" || level === "info") box.classList.add(`level-${level}`);
+
+    // 같은 내용(revision)을 이미 접은 사용자는 작은 🚨 버튼만 보여 줍니다.
+    if (getEmergencyDismissedRevision() === revision && revision > 0) {
+        box.classList.add("is-hidden");
+        if (reopenBtn) reopenBtn.classList.remove("is-hidden");
+        return;
+    }
+    box.classList.remove("is-hidden");
+    if (reopenBtn) reopenBtn.classList.add("is-hidden");
+}
+
+function dismissEmergencyFloatingNotice() {
+    const revision = Number(emergencyNoticeData?.revision) || 0;
+    setEmergencyDismissedRevision(revision);
+    renderEmergencyFloatingNotice();
+    showToast("🚨 긴급 공지를 접었습니다. 오른쪽 아래 🚨 버튼으로 다시 볼 수 있습니다.");
+}
+
+function reopenEmergencyFloatingNotice() {
+    setEmergencyDismissedRevision(0);
+    renderEmergencyFloatingNotice();
+}
+
+/** settings/emergency_notice 실시간 구독 + 1분 주기 게시기간 재평가 */
+function subscribeEmergencyNotice() {
+    try {
+        db.collection("settings").doc(EMERGENCY_NOTICE_DOC).onSnapshot(doc => {
+            emergencyNoticeData = doc && doc.exists ? (doc.data() || null) : null;
+            renderEmergencyFloatingNotice();
+            if (document.getElementById("emergencyNoticeModal")?.style.display === "flex") {
+                fillEmergencyAdminForm(emergencyNoticeData);
+            }
+        }, err => { console.warn("긴급 공지 구독 오류:", err); });
+    } catch (e) {
+        console.warn("긴급 공지 구독 실패:", e);
+    }
+    if (emergencyNoticeTimer) clearInterval(emergencyNoticeTimer);
+    emergencyNoticeTimer = setInterval(renderEmergencyFloatingNotice, 60 * 1000);
+}
+
+/* ── 관리자 인증 (비밀번호 평문은 코드에 없음) ── */
+async function verifyEmergencyNoticePin(pin) {
+    const value = String(pin || "").trim();
+    if (!value) return { ok: false, reason: "empty" };
+
+    // 1순위 — 서버 검증 (평문은 서버 환경변수 EMERGENCY_NOTICE_PIN 에만 존재)
+    try {
+        const res = await fetch(EMERGENCY_UNLOCK_ENDPOINT, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ pin: value })
+        });
+        if (res) {
+            if (res.ok) {
+                const data = await res.json().catch(() => null);
+                if (data && data.ok === true) return { ok: true, token: String(data.token || "server") };
+            }
+            if (res.status === 401 || res.status === 400) return { ok: false, reason: "invalid_pin" };
+            if (res.status === 429) return { ok: false, reason: "rate_limited" };
+        }
+    } catch (e) {
+        // 정적 호스팅·오프라인 → 아래 해시 폴백
+    }
+
+    // 2순위 — 빌드 시 주입된 해시 (scripts/build-obfuscate.mjs)
+    const expectedHash =
+        (typeof window !== "undefined" && (window.__EMERGENCY_PIN_SHA256__ || window.__SCREEN_LOCK_SHA256__)) || "";
+    if (expectedHash) {
+        try {
+            const digest = await sha256Hex(value);
+            if (digest && digest === expectedHash) return { ok: true, token: "local" };
+        } catch (e) { }
+        return { ok: false, reason: "invalid_pin" };
+    }
+    return { ok: false, reason: "no_verifier" };
+}
+
+function openEmergencyNoticeManager() {
+    if (isEmergencyAuthorUnlocked) {
+        openEmergencyNoticeModal();
+        return;
+    }
+    const modal = document.getElementById("emergencyPinModal");
+    if (!modal) return;
+    modal.style.display = "flex";
+    const input = document.getElementById("emergencyPinInput");
+    if (input) { input.value = ""; setTimeout(() => input.focus(), 50); }
+}
+
+function closeEmergencyPinModal() {
+    const modal = document.getElementById("emergencyPinModal");
+    if (modal) modal.style.display = "none";
+}
+
+async function submitEmergencyPin() {
+    const input = document.getElementById("emergencyPinInput");
+    const value = String(input?.value || "").trim();
+    if (!value) return showToast("⚠️ 관리자 비밀번호를 입력해 주세요.");
+    const result = await verifyEmergencyNoticePin(value);
+    if (result.ok) {
+        isEmergencyAuthorUnlocked = true;
+        writeSessionValue(EMERGENCY_UNLOCK_SESSION_KEY, "1");
+        closeEmergencyPinModal();
+        openEmergencyNoticeModal();
+        return;
+    }
+    if (input) input.value = "";
+    if (result.reason === "rate_limited") return showToast("⚠️ 시도 횟수가 많습니다. 잠시 후 다시 시도해 주세요.");
+    if (result.reason === "no_verifier") {
+        console.error("[보안] 긴급 공지 인증 수단이 없습니다 — 서버(/api/emergency-unlock)와 빌드 해시가 모두 없습니다.");
+        return showToast("⚠️ 인증 서버에 연결할 수 없습니다. 관리자에게 문의해 주세요.");
+    }
+    showToast("❌ 비밀번호가 올바르지 않습니다.");
+}
+
+function openEmergencyNoticeModal() {
+    const modal = document.getElementById("emergencyNoticeModal");
+    if (!modal) return;
+    modal.style.display = "flex";
+    fillEmergencyAdminForm(emergencyNoticeData);
+    trackAppEvent("actions", "emergency_open");
+}
+
+function closeEmergencyNoticeModal() {
+    const modal = document.getElementById("emergencyNoticeModal");
+    if (modal) modal.style.display = "none";
+}
+
+function fillEmergencyAdminForm(data) {
+    const enabledEl = document.getElementById("emergencyNoticeEnabled");
+    const titleEl = document.getElementById("emergencyNoticeTitle");
+    const msgEl = document.getElementById("emergencyNoticeMessage");
+    const levelEl = document.getElementById("emergencyNoticeLevel");
+    const startEl = document.getElementById("emergencyNoticeStart");
+    const endEl = document.getElementById("emergencyNoticeEnd");
+    const stateEl = document.getElementById("emergencyNoticeState");
+    if (enabledEl) enabledEl.checked = Boolean(data?.enabled);
+    if (titleEl) titleEl.value = String(data?.title || "");
+    if (msgEl) msgEl.value = String(data?.message || "");
+    if (levelEl) levelEl.value = ["danger", "warn", "info"].includes(String(data?.level)) ? String(data.level) : "danger";
+    if (startEl) startEl.value = emergencyMsToLocalInput(emergencyTimeToMs(data?.startAt));
+    if (endEl) endEl.value = emergencyMsToLocalInput(emergencyTimeToMs(data?.endAt));
+    if (stateEl) {
+        if (!data || !String(data.message || "").trim()) {
+            stateEl.textContent = "현재 등록된 긴급 공지가 없습니다.";
+        } else if (isEmergencyNoticeActive(data, Date.now())) {
+            stateEl.textContent = `🟢 게시 중 · ${formatEmergencyPeriodLabel(data)}`;
+        } else if (data.enabled) {
+            stateEl.textContent = `🟡 게시 대기/종료 상태 · ${formatEmergencyPeriodLabel(data)}`;
+        } else {
+            stateEl.textContent = "⚪ 게시 OFF 상태로 저장되어 있습니다.";
+        }
+    }
+    updateEmergencyAdminPreview();
+}
+
+function updateEmergencyAdminPreview() {
+    const preview = document.getElementById("emergencyNoticePreview");
+    if (!preview) return;
+    const title = String(document.getElementById("emergencyNoticeTitle")?.value || "").trim();
+    const message = String(document.getElementById("emergencyNoticeMessage")?.value || "").trim();
+    const enabled = Boolean(document.getElementById("emergencyNoticeEnabled")?.checked);
+    const level = String(document.getElementById("emergencyNoticeLevel")?.value || "danger");
+    const startMs = emergencyLocalInputToMs(document.getElementById("emergencyNoticeStart")?.value);
+    const endMs = emergencyLocalInputToMs(document.getElementById("emergencyNoticeEnd")?.value);
+    if (!message) {
+        preview.textContent = "미리보기: 내용을 입력해 주세요.";
+        return;
+    }
+    const levelLabel = level === "warn" ? "🟠 주의" : (level === "info" ? "🔵 안내" : "🔴 긴급");
+    const periodLabel = formatEmergencyPeriodLabel({ startAt: startMs, endAt: endMs });
+    const willShow = isEmergencyNoticeActive({ enabled, message, startAt: startMs, endAt: endMs }, Date.now());
+    preview.textContent =
+        `${levelLabel} ${title || "긴급 공지"}\n${message}\n${periodLabel}\n` +
+        (enabled
+            ? (willShow ? "▶ 저장하면 지금 바로 모든 접속자 화면에 표시됩니다." : "▶ 저장되지만 지정한 게시 시작 시각부터 표시됩니다.")
+            : "▶ 게시 OFF 상태 — 저장만 되고 화면에는 표시되지 않습니다.");
+}
+
+/** 게시 기간 빠른 설정: 1=1시간, 3=3시간, 72=3일, 'today'=오늘 자정, 'clear'=제한 없음 */
+function applyEmergencyNoticePeriodPreset(preset) {
+    const startEl = document.getElementById("emergencyNoticeStart");
+    const endEl = document.getElementById("emergencyNoticeEnd");
+    if (!startEl || !endEl) return;
+    if (preset === "clear") {
+        startEl.value = "";
+        endEl.value = "";
+        updateEmergencyAdminPreview();
+        return;
+    }
+    const now = Date.now();
+    startEl.value = emergencyMsToLocalInput(now);
+    if (preset === "today") {
+        const end = new Date();
+        end.setHours(23, 59, 0, 0);
+        endEl.value = emergencyMsToLocalInput(end.getTime());
+    } else {
+        const hours = Number(preset) || 1;
+        endEl.value = emergencyMsToLocalInput(now + hours * 60 * 60 * 1000);
+    }
+    updateEmergencyAdminPreview();
+}
+
+async function saveEmergencyNotice() {
+    if (!isEmergencyAuthorUnlocked) return showToast("⚠️ 관리자 인증이 필요합니다.");
+    const title = String(document.getElementById("emergencyNoticeTitle")?.value || "").trim().slice(0, EMERGENCY_TITLE_MAX);
+    const message = String(document.getElementById("emergencyNoticeMessage")?.value || "").trim().slice(0, EMERGENCY_MESSAGE_MAX);
+    const enabled = Boolean(document.getElementById("emergencyNoticeEnabled")?.checked);
+    const levelRaw = String(document.getElementById("emergencyNoticeLevel")?.value || "danger");
+    const level = ["danger", "warn", "info"].includes(levelRaw) ? levelRaw : "danger";
+    const startAt = emergencyLocalInputToMs(document.getElementById("emergencyNoticeStart")?.value);
+    const endAt = emergencyLocalInputToMs(document.getElementById("emergencyNoticeEnd")?.value);
+
+    if (!message) return showToast("⚠️ 긴급 공지 내용을 입력해 주세요.");
+    if (startAt && endAt && endAt <= startAt) return showToast("⚠️ 게시 종료 시각이 시작 시각보다 빨라요.");
+
+    const payload = {
+        enabled,
+        title,
+        message,
+        level,
+        startAt,
+        endAt,
+        revision: Date.now(),
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    };
+    try {
+        await db.collection("settings").doc(EMERGENCY_NOTICE_DOC).set(payload, { merge: true });
+        setEmergencyDismissedRevision(0); // 새 내용은 모두에게 다시 펼쳐 보여 줍니다.
+        trackAppEvent("actions", "emergency_save");
+        showToast(enabled ? "🚨 긴급 공지를 게시했습니다." : "💾 긴급 공지를 저장했습니다. (게시 OFF)");
+        closeEmergencyNoticeModal();
+    } catch (err) {
+        console.error("긴급 공지 저장 실패:", err);
+        alert("긴급 공지 저장 실패: " + (err?.message || err));
+    }
+}
+
+async function stopEmergencyNotice() {
+    if (!isEmergencyAuthorUnlocked) return showToast("⚠️ 관리자 인증이 필요합니다.");
+    if (!confirm("긴급 공지를 지금 화면에서 내릴까요?\n\n※ 내용은 그대로 남고 게시만 중단됩니다.")) return;
+    try {
+        await db.collection("settings").doc(EMERGENCY_NOTICE_DOC).set({
+            enabled: false,
+            revision: Date.now(),
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        }, { merge: true });
+        const enabledEl = document.getElementById("emergencyNoticeEnabled");
+        if (enabledEl) enabledEl.checked = false;
+        updateEmergencyAdminPreview();
+        showToast("🚨 긴급 공지를 내렸습니다.");
+    } catch (err) {
+        console.error("긴급 공지 내리기 실패:", err);
+        alert("긴급 공지 내리기 실패: " + (err?.message || err));
+    }
+}
+
 window.onload = async () => { 
     applyOfficialTerminalNames();
     appendTerminalMealBlocks();
@@ -8925,6 +9455,7 @@ window.onload = async () => {
     trackVisitorSession();
     initTodayVisitorBadge();
     ensureTodayUpdateNotice();
+    subscribeEmergencyNotice();
     try { const now = new Date(); now.setMinutes(now.getMinutes() - now.getTimezoneOffset()); const todayStr = now.toISOString().split('T')[0]; const sDate = document.getElementById('wageStartDate'); const eDate = document.getElementById('wageEndDate'); if(sDate) sDate.value = todayStr; if(eDate) eDate.value = todayStr; if (typeof syncWageHourlyYearLabel === 'function') syncWageHourlyYearLabel(todayStr); const initMonth = parseInt(todayStr.split('-')[1], 10) || (now.getMonth() + 1); highlightSeasonRow(initMonth); applySeasonDefaultHours(initMonth, true); if (typeof syncWageHoursBlockSize === 'function') syncWageHoursBlockSize(); if (typeof loadWageScheduledShipsForDate === 'function') loadWageScheduledShipsForDate(todayStr, false); } catch(e) { console.error("날짜 초기화 오류", e); } 
     loadBanner(); 
     try { 

@@ -102,13 +102,16 @@ async function minifyCss(code, file) {
 }
 
 /** HTML 에 저작권 주석 + 런타임 설정 스크립트 주입 */
-function transformHtml(html, screenLockPin) {
+function transformHtml(html, screenLockPin, emergencyPin = screenLockPin) {
   const sha256 = createHash('sha256').update(String(screenLockPin), 'utf8').digest('hex');
+  const emergencySha256 = createHash('sha256').update(String(emergencyPin), 'utf8').digest('hex');
   const configScript = [
     '<script>',
     '/* 서버 검증 실패(정적 호스팅·오프라인) 시 사용하는 화면 잠금 PIN 해시.',
     '   실제 값은 서버 환경변수 SCREEN_LOCK_PIN 으로 관리하며 소스에는 평문이 없습니다. */',
     `window.__SCREEN_LOCK_SHA256__="${sha256}";`,
+    '/* 🚨 긴급 플로팅 공지 작성 잠금 해시 (서버 환경변수 EMERGENCY_NOTICE_PIN). */',
+    `window.__EMERGENCY_PIN_SHA256__="${emergencySha256}";`,
     '</script>'
   ].join('\n');
 
@@ -184,6 +187,8 @@ async function main() {
   mkdirSync(OUT_DIR, { recursive: true });
 
   const pin = process.env.SCREEN_LOCK_PIN || DEFAULT_SCREEN_LOCK_PIN;
+  // 긴급 공지 작성 비밀번호: 별도 지정이 없으면 화면 잠금 PIN 과 동일하게 동작합니다.
+  const emergencyPin = process.env.EMERGENCY_NOTICE_PIN || pin;
 
   const files = walk(SRC_DIR);
   let jsCount = 0;
@@ -223,7 +228,7 @@ async function main() {
 
     if (ext === '.html' || ext === '.htm') {
       const src = readFileSync(file, 'utf8');
-      writeFileSync(dest, transformHtml(src, pin), 'utf8');
+      writeFileSync(dest, transformHtml(src, pin, emergencyPin), 'utf8');
       htmlCount += 1;
       continue;
     }
@@ -242,6 +247,7 @@ async function main() {
   console.log(`  JS  ${jsCount}개 압축 · CSS ${cssCount}개 압축 · HTML ${htmlCount}개 처리`);
   console.log(`  텍스트 자산 ${fmt(beforeBytes)} → ${fmt(afterBytes)} (${Math.round((1 - afterBytes / Math.max(beforeBytes, 1)) * 100)}% 감소)`);
   console.log(`  화면 잠금 PIN: 서버 환경변수 SCREEN_LOCK_PIN 사용(미설정 시 기본값), 해시만 HTML 에 주입`);
+  console.log(`  긴급 공지 PIN: 서버 환경변수 EMERGENCY_NOTICE_PIN 사용(미설정 시 화면 잠금 PIN), 해시만 HTML 에 주입`);
 }
 
 main().catch((err) => {

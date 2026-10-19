@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import vm from 'node:vm';
 import { readAppJs, extractFunction as extractFunctionShared } from './app-source.mjs';
 
-// 근무일지 입·출항 선박 달력 조회 · 더블오더(2척) 선택 · 작업 내용 자동 입력 검증.
+// 근무일지 입·출항 선박 달력 조회 · 멀티오더(2~4척) 선택 · 작업 내용 자동 입력 검증.
 // 실제 앱 코드(public/js/* 전역 스크립트, A-1 분리 전에는 index.html 인라인)에서
 // 함수를 꺼내 가짜 DOM 위에서 실행한다.
 const html = readFileSync(new URL('../public/index.html', import.meta.url), 'utf8');
@@ -32,6 +32,7 @@ const FUNCTIONS = [
     'parseWorklogShipNames', 'normalizeWorklogShipKey', 'getWorklogPickedNames', 'refreshWorklogVesselList',
     'resolveWorklogVesselMeta', 'buildWorklogDoubleOrderBlock', 'syncWorklogDoubleOrderMemo',
     'updateWorklogDoubleOrderStatus', 'toggleWorklogVesselPick', 'onWorklogShipNameEdited',
+    'getMultiOrderLabel', 'syncWorklogWageSlotVisibility',
     'clickDate',
     'getSelectedVesselPeriod', 'periodHours', 'getVesselScheduleDateTime', 'formatWageScheduleEvent',
     'extractDatePrefix', 'extractShortTime', 'isVesselActiveOnDate'
@@ -41,13 +42,19 @@ const DECLARATIONS = [
     'const worklogVesselMeta = new Map();',
     'const WORKLOG_DOUBLE_BLOCK_RE',
     'const hjncScheduleMonthCache = {};',
-    'const hjncScheduleSourceInfo = {};'
+    'const hjncScheduleSourceInfo = {};',
+    // 선박 최대 4척(더블·트리플·쿼드오더) 공통 상수
+    'const MAX_WORK_VESSELS = 4;',
+    'const MULTI_ORDER_LABELS',
+    'const VESSEL_ORDER_MARKS'
 ];
 
 const SCHEDULE = [
     { VSL_NM: 'SHIP ALPHA', ATA: '2026-10-08 08:00', ATD: '2026-10-08 10:00', BERTH_NO: '1' },
     { VSL_NM: 'SHIP BETA', ATA: '2026-10-08 13:00', ATD: '2026-10-08 16:00', BERTH_NO: '2' },
-    { VSL_NM: 'SHIP GAMMA', ATA: '2026-10-08 18:00', ATD: '2026-10-08 20:00', BERTH_NO: '3' }
+    { VSL_NM: 'SHIP GAMMA', ATA: '2026-10-08 18:00', ATD: '2026-10-08 20:00', BERTH_NO: '3' },
+    { VSL_NM: 'SHIP DELTA', ATA: '2026-10-08 21:00', ATD: '2026-10-08 22:00', BERTH_NO: '4' },
+    { VSL_NM: 'SHIP EPSILON', ATA: '2026-10-08 22:30', ATD: '2026-10-08 23:30', BERTH_NO: '5' }
 ];
 
 function setup({ logDate = '2026-10-08', shipName = '', memo = '', scheduleSource = null } = {}) {
@@ -69,7 +76,10 @@ function setup({ logDate = '2026-10-08', shipName = '', memo = '', scheduleSourc
     });
     ['logShipName', 'logMemo', 'worklogScheduleDatePicker', 'hjncScheduleBoxTitle',
         'hjncScheduledShipList', 'worklogDoubleOrderStatus', 'dailyLogForm', 'selectedDateText',
-        'logWage1', 'logWage2', 'logCoworkers', 'logImagePreview', 'logImageInput'].forEach(id => make(id));
+        'logWage1', 'logWage2', 'logWage3', 'logWage4', 'worklogWageExtraRow', 'worklogWageSlotHint',
+        'logCoworkers', 'logImagePreview', 'logImageInput'].forEach(id => make(id));
+    elements.worklogWageExtraRow.classList.add('is-slot-hidden');
+    elements.worklogWageSlotHint.classList.add('is-slot-hidden');
     elements.logShipName.value = shipName;
     elements.logMemo.value = memo;
     elements.worklogScheduleDatePicker.value = logDate;
@@ -192,17 +202,67 @@ test('a vessel typed with a terminal prefix such as "[HJNC] " is still shown as 
     assert.equal(elements.logShipName.value, '');
 });
 
-test('a third vessel is refused while two are picked', () => {
+// 선박 3척(트리플오더) · 4척(쿼드오더) 선택 — 작업 내용 블록과 임금 3·4 입력칸이 함께 열린다.
+test('a third and fourth vessel make a triple and quad order and reveal the 임금3·임금4 inputs', () => {
+    const app = setup({ memo: '오늘 메모' });
+    const { context, elements, toasts } = app;
+    renderDay(app);
+
+    context.toggleWorklogVesselPick(0);
+    context.toggleWorklogVesselPick(1);
+    assert.equal(elements.worklogWageExtraRow.classList.contains('is-slot-hidden'), true,
+        '선박 2척까지는 임금 3·임금 4 입력칸이 숨겨져 있다');
+
+    context.toggleWorklogVesselPick(2);
+    assert.equal(elements.logShipName.value, 'SHIP ALPHA / SHIP BETA / SHIP GAMMA');
+    assert.match(elements.logMemo.value, /^🚢 트리플오더 작업 \(선박 3척 · 합계 7H\)\n/);
+    assert.match(elements.logMemo.value, /③ SHIP GAMMA · 입항 2026-10-08 18:00 → 출항 2026-10-08 20:00 · 2H/);
+    assert.match(elements.worklogDoubleOrderStatus.textContent, /트리플오더 선택 3\/3/);
+    assert.equal(elements.worklogWageExtraRow.classList.contains('is-slot-hidden'), false,
+        '선박 3척부터 임금 3·임금 4 입력칸이 열린다');
+    assert.equal(elements.worklogWageSlotHint.classList.contains('is-slot-hidden'), false);
+    assert.match(toasts.at(-1), /트리플오더 3척 선택 완료/);
+
+    context.toggleWorklogVesselPick(3);
+    assert.equal(elements.logShipName.value, 'SHIP ALPHA / SHIP BETA / SHIP GAMMA / SHIP DELTA');
+    assert.match(elements.logMemo.value, /^🚢 쿼드오더 작업 \(선박 4척 · 합계 8H\)\n/);
+    assert.match(elements.logMemo.value, /④ SHIP DELTA · 입항 2026-10-08 21:00 → 출항 2026-10-08 22:00 · 1H/);
+    assert.match(elements.logMemo.value, /\n\n오늘 메모$/, 'the user text is kept below the block');
+    assert.match(elements.worklogDoubleOrderStatus.textContent, /쿼드오더 선택 4\/4/);
+    assert.match(toasts.at(-1), /쿼드오더 4척 선택 완료/);
+
+    // 4척까지 내려가면 다시 임금 3·4 칸이 접힌다(값이 비어 있을 때).
+    context.toggleWorklogVesselPick(3);
+    context.toggleWorklogVesselPick(2);
+    assert.equal(elements.worklogWageExtraRow.classList.contains('is-slot-hidden'), true);
+});
+
+test('a fifth vessel is refused while four are picked', () => {
     const app = setup();
     const { context, elements, toasts } = app;
     renderDay(app);
     context.toggleWorklogVesselPick(0);
     context.toggleWorklogVesselPick(1);
-    const before = elements.logMemo.value;
     context.toggleWorklogVesselPick(2);
-    assert.equal(elements.logShipName.value, 'SHIP ALPHA / SHIP BETA');
+    context.toggleWorklogVesselPick(3);
+    const before = elements.logMemo.value;
+    context.toggleWorklogVesselPick(4);
+    assert.equal(elements.logShipName.value, 'SHIP ALPHA / SHIP BETA / SHIP GAMMA / SHIP DELTA');
     assert.equal(elements.logMemo.value, before);
-    assert.match(toasts.at(-1), /2척까지/);
+    assert.match(toasts.at(-1), /4척까지/);
+});
+
+// 임금 3·4 에 이미 값이 있으면 선박 수가 줄어도 칸을 계속 보여 준다(금액 분실 방지).
+test('임금3 값이 남아 있으면 입력칸을 계속 보여 준다', () => {
+    const app = setup();
+    const { context, elements } = app;
+    renderDay(app);
+    elements.logWage3.value = '120000';
+    context.syncWorklogWageSlotVisibility(1);
+    assert.equal(elements.worklogWageExtraRow.classList.contains('is-slot-hidden'), false);
+    elements.logWage3.value = '';
+    context.syncWorklogWageSlotVisibility(1);
+    assert.equal(elements.worklogWageExtraRow.classList.contains('is-slot-hidden'), true);
 });
 
 test('deselecting one vessel removes only the generated block and keeps the user text', () => {
@@ -260,13 +320,24 @@ test('opening a work-log day moves the calendar to that day and keeps the saved 
     assert.equal(elements.worklogScheduleDatePicker.value, '2026-10-12');
     assert.equal(elements.logShipName.value, 'SHIP ALPHA / SHIP BETA');
     assert.match(elements.worklogDoubleOrderStatus.textContent, /2\/2/);
+
+    // 선박 4척 기록을 열면 임금 3·임금 4 값과 입력칸이 함께 복원된다.
+    context.adminWorkLogs['2026-10-13'] = {
+        shipName: 'SHIP ALPHA / SHIP BETA / SHIP GAMMA / SHIP DELTA',
+        memo: '쿼드오더 기록', wage1: 100, wage2: 200, wage3: 300, wage4: 400
+    };
+    context.clickDate('2026-10-13');
+    assert.equal(elements.logWage3.value, 300);
+    assert.equal(elements.logWage4.value, 400);
+    assert.equal(elements.worklogWageExtraRow.classList.contains('is-slot-hidden'), false);
+    assert.match(elements.worklogDoubleOrderStatus.textContent, /쿼드오더 선택 4\/4/);
 });
 
 test('the work-log box renders the calendar, the double-order status and the toggle handlers', () => {
     assert.match(html, /<div id="worklogDoubleOrderStatus"/);
     // JS 템플릿에서 생성되는 마크업 문자열 — 분리 이후 app.js 에 존재
     assert.match(appJs, /onclick="toggleWorklogVesselPick\(\$\{index\}\)"/);
-    assert.match(html, /placeholder="작업 선박명 \(2척 선택 시 더블오더\)" onchange="onWorklogShipNameEdited\(\)"/);
+    assert.match(html, /placeholder="작업 선박명 \(최대 4척 · 2척 이상 멀티오더\)" onchange="onWorklogShipNameEdited\(\)"/);
 });
 
 // 사용자가 삭제를 요청한 두 블럭: "📌 근무일 날짜"(resetWorklogScheduleToLogDate) · "💰 임금계산기 선박"(importWageVesselsToWorklog)

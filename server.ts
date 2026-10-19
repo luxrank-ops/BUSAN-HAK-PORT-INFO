@@ -93,6 +93,27 @@ export function verifyScreenLockPin(pin: string): boolean {
   return crypto.timingSafeEqual(a, b);
 }
 
+// --- 🚨 긴급 플로팅 공지 작성 잠금 ---
+// 기본값은 화면 잠금 PIN 과 동일하며, 별도 운영이 필요하면 EMERGENCY_NOTICE_PIN 환경변수로 분리합니다.
+// (평문 비밀번호는 저장소 어디에도 두지 않습니다.)
+export const EMERGENCY_NOTICE_PIN = String(process.env.EMERGENCY_NOTICE_PIN || SCREEN_LOCK_PIN);
+
+/** 상수 시간 비교 — 긴급 공지 작성 권한용 PIN 검증 */
+export function verifyEmergencyNoticePin(pin: string): boolean {
+  const a = crypto.createHash('sha256').update(String(pin || ''), 'utf8').digest();
+  const b = crypto.createHash('sha256').update(EMERGENCY_NOTICE_PIN, 'utf8').digest();
+  return crypto.timingSafeEqual(a, b);
+}
+
+export function issueEmergencyUnlockToken(): { token: string; expiresAt: number } {
+  const expiresAt = Date.now() + SCREEN_UNLOCK_TOKEN_TTL_MS;
+  const token = crypto
+    .createHmac('sha256', SCREEN_UNLOCK_TOKEN_SECRET)
+    .update(`emergency-unlock:${expiresAt}`)
+    .digest('hex');
+  return { token, expiresAt };
+}
+
 export function issueScreenUnlockToken(): { token: string; expiresAt: number } {
   const expiresAt = Date.now() + SCREEN_UNLOCK_TOKEN_TTL_MS;
   const token = crypto
@@ -1241,6 +1262,26 @@ app.post('/api/screen-unlock', (req, res) => {
     return;
   }
   const { token, expiresAt } = issueScreenUnlockToken();
+  res.json({ ok: true, token, expiresAt });
+});
+
+// 🚨 긴급 플로팅 공지 작성 잠금 해제 — 비밀번호는 서버 환경변수에만 존재합니다.
+app.post('/api/emergency-unlock', (req, res) => {
+  const ip = String(req.ip || req.socket?.remoteAddress || 'unknown');
+  if (isScreenUnlockRateLimited(ip)) {
+    res.status(429).json({ ok: false, error: 'too_many_attempts' });
+    return;
+  }
+  const pin = String((req.body && (req.body as { pin?: unknown }).pin) ?? '');
+  if (!pin) {
+    res.status(400).json({ ok: false, error: 'missing_pin' });
+    return;
+  }
+  if (!verifyEmergencyNoticePin(pin)) {
+    res.status(401).json({ ok: false, error: 'invalid_pin' });
+    return;
+  }
+  const { token, expiresAt } = issueEmergencyUnlockToken();
   res.json({ ok: true, token, expiresAt });
 });
 

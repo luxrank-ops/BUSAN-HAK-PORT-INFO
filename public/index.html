@@ -34,9 +34,9 @@
     <link rel="icon" href="./favicon.ico">
     <link rel="stylesheet" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.8/dist/web/static/pretendard.css" />
     <link rel="manifest" href="./manifest.json">
-    <link rel="stylesheet" href="./css/app.css?v=2027.6">
+    <link rel="stylesheet" href="./css/app.css?v=2027.7">
     <link rel="apple-touch-icon" href="./icon-192.png">
-<script src="./js/notifications.js?v=2027.6"></script></head>
+<script src="./js/notifications.js?v=2027.7"></script></head>
 <body data-app-view="legacy">
 <header>
     <div class="today-visitor-badge-slot" aria-hidden="true"></div>
@@ -69,9 +69,23 @@
             <button class="menu-btn" onclick="writeUserTicker()">🖊️ 일반 등록</button>
             <button class="menu-btn" onclick="setAdminTicker()">📢 관리자 등록</button>
             <button class="menu-btn btn-del-menu" onclick="openTickerManager()">⚙️ 수정/삭제 관리</button>
+            <button class="menu-btn btn-emergency-menu" onclick="openEmergencyNoticeManager()">🚨 긴급 플로팅 공지</button>
         </div>
     </div>
 </div>
+
+<!-- 🚨 긴급 플로팅 공지 (티커와 별개 · 관리자 전용 작성 · on/off · 게시기간) -->
+<div id="emergencyFloatingNotice" class="emergency-float is-hidden" role="alert" aria-live="assertive">
+    <div class="emergency-float-head">
+        <span class="emergency-float-badge">🚨 긴급 공지</span>
+        <span id="emergencyFloatingTitle" class="emergency-float-title">긴급 공지</span>
+        <button type="button" class="emergency-float-close" onclick="dismissEmergencyFloatingNotice()" aria-label="긴급 공지 접기">✕</button>
+    </div>
+    <div id="emergencyFloatingBody" class="emergency-float-body"></div>
+    <div id="emergencyFloatingPeriod" class="emergency-float-period"></div>
+</div>
+<button type="button" id="emergencyFloatingReopen" class="emergency-float-reopen is-hidden"
+        onclick="reopenEmergencyFloatingNotice()" title="긴급 공지 다시 보기" aria-label="긴급 공지 다시 보기">🚨</button>
 
 <!-- [방안 A] 탭 뷰 툴바: 원본 홈 복귀 버튼 + 탭 제목 + (임금·일지) 서브탭 전환 -->
 <div id="tabViewToolbar" class="tab-view-toolbar" style="display:none;" aria-live="polite">
@@ -211,7 +225,7 @@
                             <input type="text"
                                    id="wageShipName"
                                    class="input-field"
-                                   placeholder="스케줄 선택(최대 2척) 또는 선박명 입력"
+                                   placeholder="스케줄 선택(최대 4척) 또는 선박명 입력"
                                    style="flex:1; min-width:0; margin:0; text-align:left;"
                                    oninput="onWageShipNameChange(this.value)">
                             <button type="button"
@@ -258,7 +272,7 @@
                              class="wage-terminal-scheduled-list"
                              aria-live="polite">
                             <span class="wage-terminal-schedule-message">
-                                시작 날짜의 스케줄입니다. 선박을 최대 2척까지 선택하면 입·출항 일시와 선박별 근무시간을 자동 계산합니다.
+                                시작 날짜의 스케줄입니다. 선박을 최대 4척까지 선택하면 입·출항 일시와 선박별 근무시간을 자동 계산합니다.
                             </span>
                         </div>
                     </section>
@@ -311,15 +325,25 @@
                     <div class="wage-vessel-hours" aria-label="선박별 자동계산">
                         <strong title="선박별 자동계산">⏱️ 선박별 자동계산</strong>
                         <div id="wageHoursBreakdown" class="wage-vessel-hours-pair" aria-live="polite">
-                            <div class="wage-vessel-hours-card">
+                            <div class="wage-vessel-hours-card" id="wageVessel1Card" data-vessel-slot="1">
                                 <span class="vessel-order">1번 선박</span>
                                 <span id="wageVessel1Name" class="vessel-name">미선택</span>
                                 <span id="wageVessel1Hours" class="vessel-hours">확인 필요</span>
                             </div>
-                            <div class="wage-vessel-hours-card">
+                            <div class="wage-vessel-hours-card" id="wageVessel2Card" data-vessel-slot="2">
                                 <span class="vessel-order">2번 선박</span>
                                 <span id="wageVessel2Name" class="vessel-name">미선택</span>
                                 <span id="wageVessel2Hours" class="vessel-hours">-</span>
+                            </div>
+                            <div class="wage-vessel-hours-card is-slot-hidden" id="wageVessel3Card" data-vessel-slot="3">
+                                <span class="vessel-order">3번 선박</span>
+                                <span id="wageVessel3Name" class="vessel-name">미선택</span>
+                                <span id="wageVessel3Hours" class="vessel-hours">-</span>
+                            </div>
+                            <div class="wage-vessel-hours-card is-slot-hidden" id="wageVessel4Card" data-vessel-slot="4">
+                                <span class="vessel-order">4번 선박</span>
+                                <span id="wageVessel4Name" class="vessel-name">미선택</span>
+                                <span id="wageVessel4Hours" class="vessel-hours">-</span>
                             </div>
                         </div>
                     </div>
@@ -409,7 +433,7 @@
                         <input type="text"
                                id="logShipName"
                                class="input-field"
-                               placeholder="작업 선박명 (2척 선택 시 더블오더)" onchange="onWorklogShipNameEdited()">
+                               placeholder="작업 선박명 (최대 4척 · 2척 이상 멀티오더)" onchange="onWorklogShipNameEdited()">
                     </div>
                     <div style="display:flex; gap:6px; margin:4px 0 10px;">
                         <button type="button"
@@ -453,6 +477,11 @@
                         <div class="wage-row" style="flex:1; margin-bottom:0;"><label>임금 1</label><input type="number" id="logWage1" class="input-field" placeholder="원"></div>
                         <div class="wage-row" style="flex:1; margin-bottom:0;"><label>임금 2</label><input type="number" id="logWage2" class="input-field" placeholder="원"></div>
                     </div>
+                    <div id="worklogWageExtraRow" class="worklog-wage-extra-row is-slot-hidden">
+                        <div class="wage-row" style="flex:1; margin-bottom:0;"><label>임금 3</label><input type="number" id="logWage3" class="input-field" placeholder="원"></div>
+                        <div class="wage-row" style="flex:1; margin-bottom:0;"><label>임금 4</label><input type="number" id="logWage4" class="input-field" placeholder="원"></div>
+                    </div>
+                    <div id="worklogWageSlotHint" class="worklog-wage-slot-hint is-slot-hidden">💡 선박 3~4척(멀티오더) 선택 시 임금 3 · 임금 4 입력칸이 자동으로 열립니다.</div>
                     <div class="wage-row" style="margin-bottom:4px;"><label>근무자</label><input type="text" id="logCoworkers" class="input-field" placeholder="예: 재경, 성철 (2~4명)" oninput="syncCoworkerSelectionUI()"></div>
                     <div id="coworkerLockBanner" onclick="openWorkLogPinModal(() => toggleCoworkerRosterPanel(true))" style="cursor:pointer; margin-top:4px; margin-bottom:8px; background:linear-gradient(135deg, #eff6ff, #dbeafe); border:1.5px solid #93c5fd; border-radius:8px; padding:9px 10px; display:flex; justify-content:space-between; align-items:center; gap:6px; flex-wrap:nowrap;">
                         <span style="font-size:clamp(0.74rem, 2.8vw, 0.82rem); font-weight:900; color:var(--primary); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; min-width:0; letter-spacing:-0.3px;">🔒 👥 동료 추가 · 작업자 선택 (잠김)</span>
@@ -489,7 +518,7 @@
                 <div id="monthlyStatsSummary" class="hidden" style="display:grid; grid-template-columns: repeat(3, 1fr); gap:6px; margin-top:20px; border-top:1px dashed var(--border); padding-top:15px; text-align:center;">
                     <div style="background:rgba(10,27,63,0.04); padding:8px 4px; border-radius:8px; border:1px solid var(--border);"><div style="font-size:0.72rem; color:var(--text-sub); font-weight:800;">출근 일수</div><div id="monthlyWorkDays" style="font-size:1rem; font-weight:900; color:var(--primary); margin-top:2px;">0일</div></div>
                     <div style="background:rgba(59,130,246,0.06); padding:8px 4px; border-radius:8px; border:1px solid var(--border);"><div style="font-size:0.72rem; color:var(--text-sub); font-weight:800;">일평균 수입</div><div id="monthlyAvgPay" style="font-size:1rem; font-weight:900; color:#2563eb; margin-top:2px;">0원</div></div>
-                    <div style="background:rgba(16,185,129,0.08); padding:8px 4px; border-radius:8px; border:1px solid var(--border);"><div style="font-size:0.72rem; color:var(--text-sub); font-weight:800;">임금 1 / 임금 2</div><div id="monthlySplitPay" style="font-size:0.78rem; font-weight:900; color:#047857; margin-top:4px;">0 / 0</div></div>
+                    <div style="background:rgba(16,185,129,0.08); padding:8px 4px; border-radius:8px; border:1px solid var(--border);"><div style="font-size:0.72rem; color:var(--text-sub); font-weight:800;">임금 1~4 분할</div><div id="monthlySplitPay" style="font-size:0.78rem; font-weight:900; color:#047857; margin-top:4px;">0 / 0</div></div>
                 </div>
                 <div id="monthlyTotalDisplay" style="text-align:center; margin-top:10px; font-weight:900; color:var(--primary); font-size:1.25rem; background:rgba(10,27,63,0.03); padding:12px; border-radius:10px; border:1.5px solid var(--primary);">이번 달 총액: 0원</div>
                 <div id="d3ChartLockBanner" onclick="openWorkLogPinModal()" style="cursor:pointer; margin-top:12px; background:linear-gradient(135deg, #eff6ff, #dcfce7); border:1.5px solid #60a5fa; border-radius:10px; padding:10px 10px; display:flex; justify-content:space-between; align-items:center; gap:6px; flex-wrap:nowrap;">
@@ -1458,6 +1487,56 @@
 <div id="tickerManageModal" class="modal-overlay" onclick="document.getElementById('tickerManageModal').style.display='none'"><div class="modal-content" onclick="event.stopPropagation()"><h3 style="margin-top:0; font-weight:900;">⚙️ 알림글 수정/삭제</h3><div id="tickerListContainer"></div><button class="action-btn bg-cancel" onclick="document.getElementById('tickerManageModal').style.display='none'" style="margin-top:10px;">닫기</button></div></div>
 <div id="loginModal" class="modal-overlay" style="display:none;" onclick="closeLoginModal()"><div class="modal-content" onclick="event.stopPropagation()"><h3 style="font-weight:900;">🔐 근무일지 로그인/가입</h3><p style="font-weight:600;">닉네임과 비밀번호를 입력하세요.</p><input type="text" id="loginNick" class="input-field" placeholder="닉네임 (ID)"><input type="password" id="loginPw" class="input-field" placeholder="비밀번호"><button id="confirmLoginBtn" class="action-btn" onclick="confirmLoginAndSave(event)">확인 및 저장</button><button class="action-btn bg-cancel" onclick="closeLoginModal()">취소</button></div></div>
 <div id="workLogPinModal" class="modal-overlay" style="display:none;" onclick="closeWorkLogPinModal()"><div class="modal-content" onclick="event.stopPropagation()" style="max-width:380px;"><h3 style="margin-top:0; text-align:center; color:var(--primary); font-weight:900;">🔒 근무일지 보안 잠금</h3><p style="text-align:center; font-size:0.9rem; color:var(--text-sub); font-weight:700; margin-bottom:12px;">근무일지 열람 및 기록을 위해<br>보안 비밀번호(4자리)를 입력해 주세요.</p><input type="password" id="workLogPinInput" class="input-field" placeholder="비밀번호 입력" inputmode="numeric" maxlength="8" style="text-align:center; font-size:1.3rem; letter-spacing:6px; height:48px; border:2px solid var(--primary); margin-bottom:10px;" onkeydown="if(event.key==='Enter'){event.preventDefault();submitWorkLogPin();}"><div style="display:flex; gap:8px;"><button type="button" class="action-btn bg-submit" style="flex:2; margin-top:0;" onclick="submitWorkLogPin()">잠금 해제</button><button type="button" class="action-btn bg-cancel" style="flex:1; margin-top:0;" onclick="closeWorkLogPinModal()">취소</button></div></div></div>
+<div id="emergencyPinModal" class="modal-overlay" style="display:none;" onclick="closeEmergencyPinModal()"><div class="modal-content" onclick="event.stopPropagation()" style="max-width:380px;"><h3 style="margin-top:0; text-align:center; color:var(--danger); font-weight:900;">🚨 긴급 공지 관리자 인증</h3><p style="text-align:center; font-size:0.9rem; color:var(--text-sub); font-weight:700; margin-bottom:12px;">긴급 플로팅 공지는 관리자만 작성할 수 있습니다.<br>관리자 비밀번호를 입력해 주세요.</p><input type="password" id="emergencyPinInput" class="input-field" placeholder="관리자 비밀번호" inputmode="numeric" maxlength="12" style="text-align:center; font-size:1.3rem; letter-spacing:6px; height:48px; border:2px solid var(--danger); margin-bottom:10px;" onkeydown="if(event.key==='Enter'){event.preventDefault();submitEmergencyPin();}"><div style="display:flex; gap:8px;"><button type="button" class="action-btn bg-submit" style="flex:2; margin-top:0;" onclick="submitEmergencyPin()">인증</button><button type="button" class="action-btn bg-cancel" style="flex:1; margin-top:0;" onclick="closeEmergencyPinModal()">취소</button></div></div></div>
+<div id="emergencyNoticeModal" class="modal-overlay" style="display:none;" onclick="closeEmergencyNoticeModal()">
+    <div class="modal-content" onclick="event.stopPropagation()" style="max-width:520px;">
+        <h3 style="margin:0 0 6px; color:var(--danger); font-weight:900;">🚨 긴급 플로팅 공지 (관리자 전용)</h3>
+        <div id="emergencyNoticeState" class="emergency-admin-state">현재 등록된 긴급 공지가 없습니다.</div>
+
+        <label class="emergency-admin-switch" for="emergencyNoticeEnabled">
+            <input type="checkbox" id="emergencyNoticeEnabled" onchange="updateEmergencyAdminPreview()">
+            <span><b>게시 ON / OFF</b> — 켜면 접속자 화면에 즉시 떠오릅니다.</span>
+        </label>
+
+        <input type="text" id="emergencyNoticeTitle" class="input-field" placeholder="제목 (예: 강풍 작업 중지)" maxlength="60" style="text-align:left; margin-bottom:6px;" oninput="updateEmergencyAdminPreview()">
+        <textarea id="emergencyNoticeMessage" class="input-field textarea-field" placeholder="긴급 전달 내용을 입력하세요. (최대 600자)" maxlength="600" style="margin-bottom:6px;" oninput="updateEmergencyAdminPreview()"></textarea>
+
+        <div class="emergency-admin-grid">
+            <label class="emergency-admin-field" for="emergencyNoticeLevel">
+                <span>표시 단계</span>
+                <select id="emergencyNoticeLevel" class="input-field" onchange="updateEmergencyAdminPreview()">
+                    <option value="danger">🔴 긴급 (빨강)</option>
+                    <option value="warn">🟠 주의 (주황)</option>
+                    <option value="info">🔵 안내 (파랑)</option>
+                </select>
+            </label>
+            <label class="emergency-admin-field" for="emergencyNoticeStart">
+                <span>게시 시작</span>
+                <input type="datetime-local" id="emergencyNoticeStart" class="input-field" onchange="updateEmergencyAdminPreview()">
+            </label>
+            <label class="emergency-admin-field" for="emergencyNoticeEnd">
+                <span>게시 종료</span>
+                <input type="datetime-local" id="emergencyNoticeEnd" class="input-field" onchange="updateEmergencyAdminPreview()">
+            </label>
+        </div>
+
+        <div class="emergency-admin-quick">
+            <button type="button" class="mini-btn" onclick="applyEmergencyNoticePeriodPreset(1)">지금부터 1시간</button>
+            <button type="button" class="mini-btn" onclick="applyEmergencyNoticePeriodPreset(3)">3시간</button>
+            <button type="button" class="mini-btn" onclick="applyEmergencyNoticePeriodPreset('today')">오늘 자정까지</button>
+            <button type="button" class="mini-btn" onclick="applyEmergencyNoticePeriodPreset(72)">3일</button>
+            <button type="button" class="mini-btn" onclick="applyEmergencyNoticePeriodPreset('clear')">기간 제한 없음</button>
+        </div>
+
+        <div id="emergencyNoticePreview" class="emergency-admin-preview">미리보기: 내용을 입력해 주세요.</div>
+
+        <div style="display:flex; gap:6px; margin-top:10px;">
+            <button type="button" class="action-btn bg-submit" style="flex:2; margin:0;" onclick="saveEmergencyNotice()">저장 후 게시</button>
+            <button type="button" class="action-btn" style="flex:1; margin:0; background:var(--text-sub);" onclick="stopEmergencyNotice()">내리기</button>
+            <button type="button" class="action-btn bg-cancel" style="flex:1; margin:0;" onclick="closeEmergencyNoticeModal()">닫기</button>
+        </div>
+    </div>
+</div>
 <div id="vesselInfoLinkModal" class="modal-overlay" style="display:none;" onclick="closeVesselInfoLinkModal()">
     <div class="modal-content" onclick="event.stopPropagation()" style="max-width:440px;">
         <h3 id="vesselInfoLinkTitle" style="margin:0 0 8px; color:var(--primary); font-weight:900;">🔎 선박 정보 확인</h3>
@@ -1611,7 +1690,7 @@
             <div class="awl-kpi-card" style="background:linear-gradient(135deg, #eff6ff, #dbeafe); border-color:#93c5fd;">
                 <div class="awl-kpi-label" style="color:#1e40af;">💰 조회 일지 합산 금액</div>
                 <div id="awlKpiTotalPay" class="awl-kpi-val" style="color:#1d4ed8;">0원</div>
-                <div id="awlKpiSplitSub" class="awl-kpi-sub" style="color:#1e3a8a;">임금1: 0원 · 임금2: 0원</div>
+                <div id="awlKpiSplitSub" class="awl-kpi-sub" style="color:#1e3a8a;">임금1: 0원 · 임금2: 0원 · 임금3: 0원 · 임금4: 0원</div>
             </div>
             <div class="awl-kpi-card">
                 <div class="awl-kpi-label">👥 참여 근로자 / 활동 일수</div>
@@ -1666,15 +1745,15 @@
     </div>
 </div>
 
-<script src="./js/app.js?v=2027.6"></script>
+<script src="./js/app.js?v=2027.7"></script>
   
     <!-- [여기서부터 복사] 조장 근무일 비밀번호 검증 스크립트 -->
 <!-- [추가할 보안 및 실행 스크립트] -->
-<script src="./js/leader-access.js?v=2027.6"></script>
+<script src="./js/leader-access.js?v=2027.7"></script>
   <!-- [프로덕션 수준] 파이어베이스 'ships' 컬렉션 전체 데이터 조회 및 검색 모듈 -->
-<script src="./js/ships-board.js?v=2027.6"></script>
+<script src="./js/ships-board.js?v=2027.7"></script>
 
-<script src="./js/tab-views.js?v=2027.6"></script>
+<script src="./js/tab-views.js?v=2027.7"></script>
 </body>
 </html>
 
