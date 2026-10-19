@@ -320,3 +320,49 @@ test('5. deselecting vessels hides slots 3·4 again', () => {
     assert.equal(elements.wageVessel4Card.classList.contains('is-slot-hidden'), true);
     assert.equal(elements.wageHoursBreakdown.classList.contains('is-compact'), false);
 });
+
+test('6. ensureTodayUpdateNotice includes auto-input time standard notice and overwrites r1', async () => {
+    const fnSrc = extractFunction(appJs, 'ensureTodayUpdateNotice');
+    let savedDoc = null;
+    const ctx = vm.createContext({
+        db: {
+            collection(col) {
+                assert.equal(col, 'notices');
+                return {
+                    doc(id) {
+                        assert.equal(id, 'update_2026_10_19_multi_vessel_emergency');
+                        return {
+                            async get() {
+                                return {
+                                    exists: true,
+                                    data: () => ({ version: 'multi_vessel_emergency_20261019_r1' })
+                                };
+                            },
+                            async set(payload, opts) {
+                                savedDoc = { payload, opts };
+                            }
+                        };
+                    }
+                };
+            }
+        },
+        firebase: {
+            firestore: {
+                FieldValue: {
+                    serverTimestamp: () => 'SERVER_TS'
+                }
+            }
+        },
+        console: { warn() {} }
+    });
+    vm.runInContext(fnSrc, ctx);
+    await ctx.ensureTodayUpdateNotice();
+
+    assert.ok(savedDoc, '이전 버전(r1) 공지는 새 버전으로 갱신되어야 합니다');
+    assert.equal(savedDoc.payload.version, 'multi_vessel_emergency_20261019_r2');
+    assert.equal(savedDoc.payload.isPriority, true);
+    assert.ok(savedDoc.payload.content.includes('⚠️ [꼭 확인] 임금 자동 입력 시간 기준'));
+    assert.ok(savedDoc.payload.content.includes('• 임금 자동 입력은 차트상(작업실제 시작시간)이 아닌 스케줄상(입출항시간)기준으로 시간이 자동 입력됩니다.'));
+    assert.ok(savedDoc.payload.content.includes('• 입항시간과 실제 작업시간(스타트 시간)이 차이나는 경우 시간을 수동으로 입력하시면 됩니다!'));
+});
+
