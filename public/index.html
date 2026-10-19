@@ -34,9 +34,9 @@
     <link rel="icon" href="./favicon.ico">
     <link rel="stylesheet" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.8/dist/web/static/pretendard.css" />
     <link rel="manifest" href="./manifest.json">
-    <link rel="stylesheet" href="./css/app.css?v=2027.7">
+    <link rel="stylesheet" href="./css/app.css?v=2027.8">
     <link rel="apple-touch-icon" href="./icon-192.png">
-<script src="./js/notifications.js?v=2027.7"></script></head>
+<script src="./js/notifications.js?v=2027.8"></script></head>
 <body data-app-view="legacy">
 <header>
     <div class="today-visitor-badge-slot" aria-hidden="true"></div>
@@ -1487,7 +1487,7 @@
 <div id="tickerManageModal" class="modal-overlay" onclick="document.getElementById('tickerManageModal').style.display='none'"><div class="modal-content" onclick="event.stopPropagation()"><h3 style="margin-top:0; font-weight:900;">⚙️ 알림글 수정/삭제</h3><div id="tickerListContainer"></div><button class="action-btn bg-cancel" onclick="document.getElementById('tickerManageModal').style.display='none'" style="margin-top:10px;">닫기</button></div></div>
 <div id="loginModal" class="modal-overlay" style="display:none;" onclick="closeLoginModal()"><div class="modal-content" onclick="event.stopPropagation()"><h3 style="font-weight:900;">🔐 근무일지 로그인/가입</h3><p style="font-weight:600;">닉네임과 비밀번호를 입력하세요.</p><input type="text" id="loginNick" class="input-field" placeholder="닉네임 (ID)"><input type="password" id="loginPw" class="input-field" placeholder="비밀번호"><button id="confirmLoginBtn" class="action-btn" onclick="confirmLoginAndSave(event)">확인 및 저장</button><button class="action-btn bg-cancel" onclick="closeLoginModal()">취소</button></div></div>
 <div id="workLogPinModal" class="modal-overlay" style="display:none;" onclick="closeWorkLogPinModal()"><div class="modal-content" onclick="event.stopPropagation()" style="max-width:380px;"><h3 style="margin-top:0; text-align:center; color:var(--primary); font-weight:900;">🔒 근무일지 보안 잠금</h3><p style="text-align:center; font-size:0.9rem; color:var(--text-sub); font-weight:700; margin-bottom:12px;">근무일지 열람 및 기록을 위해<br>보안 비밀번호(4자리)를 입력해 주세요.</p><input type="password" id="workLogPinInput" class="input-field" placeholder="비밀번호 입력" inputmode="numeric" maxlength="8" style="text-align:center; font-size:1.3rem; letter-spacing:6px; height:48px; border:2px solid var(--primary); margin-bottom:10px;" onkeydown="if(event.key==='Enter'){event.preventDefault();submitWorkLogPin();}"><div style="display:flex; gap:8px;"><button type="button" class="action-btn bg-submit" style="flex:2; margin-top:0;" onclick="submitWorkLogPin()">잠금 해제</button><button type="button" class="action-btn bg-cancel" style="flex:1; margin-top:0;" onclick="closeWorkLogPinModal()">취소</button></div></div></div>
-<div id="emergencyPinModal" class="modal-overlay" style="display:none;" onclick="closeEmergencyPinModal()"><div class="modal-content" onclick="event.stopPropagation()" style="max-width:380px;"><h3 style="margin-top:0; text-align:center; color:var(--danger); font-weight:900;">🚨 긴급 공지 관리자 인증</h3><p style="text-align:center; font-size:0.9rem; color:var(--text-sub); font-weight:700; margin-bottom:12px;">긴급 플로팅 공지는 관리자만 작성할 수 있습니다.<br>관리자 비밀번호를 입력해 주세요.</p><input type="password" id="emergencyPinInput" class="input-field" placeholder="관리자 비밀번호" inputmode="numeric" maxlength="12" style="text-align:center; font-size:1.3rem; letter-spacing:6px; height:48px; border:2px solid var(--danger); margin-bottom:10px;" onkeydown="if(event.key==='Enter'){event.preventDefault();submitEmergencyPin();}"><div style="display:flex; gap:8px;"><button type="button" class="action-btn bg-submit" style="flex:2; margin-top:0;" onclick="submitEmergencyPin()">인증</button><button type="button" class="action-btn bg-cancel" style="flex:1; margin-top:0;" onclick="closeEmergencyPinModal()">취소</button></div></div></div>
+<div id="emergencyPinModal" class="modal-overlay" style="display:none;" onclick="closeEmergencyPinModal()"><div class="modal-content" onclick="event.stopPropagation()" style="max-width:380px;"><h3 style="margin-top:0; text-align:center; color:var(--danger); font-weight:900;">🚨 긴급 공지 관리자 인증</h3><p style="text-align:center; font-size:0.9rem; color:var(--text-sub); font-weight:700; margin-bottom:12px;">긴급 플로팅 공지는 관리자만 작성할 수 있습니다.<br>관리자 비밀번호를 입력해 주세요.</p><input type="password" id="emergencyPinInput" class="input-field" placeholder="관리자 비밀번호" inputmode="numeric" maxlength="12" style="text-align:center; font-size:1.3rem; letter-spacing:6px; height:48px; border:2px solid var(--danger); margin-bottom:6px;" onkeydown="if(event.key==='Enter'){event.preventDefault();submitEmergencyPin();}"><p style="margin:0 0 10px; font-size:0.76rem; line-height:1.45; color:var(--text-sub); font-weight:700;">💡 근무일지 잠금 비밀번호로도 인증할 수 있습니다.</p><div style="display:flex; gap:8px;"><button type="button" class="action-btn bg-submit" style="flex:2; margin-top:0;" onclick="submitEmergencyPin()">인증</button><button type="button" class="action-btn bg-cancel" style="flex:1; margin-top:0;" onclick="closeEmergencyPinModal()">취소</button></div></div></div>
 <div id="emergencyNoticeModal" class="modal-overlay" style="display:none;" onclick="closeEmergencyNoticeModal()">
     <div class="modal-content" onclick="event.stopPropagation()" style="max-width:520px;">
         <h3 style="margin:0 0 6px; color:var(--danger); font-weight:900;">🚨 긴급 플로팅 공지 (관리자 전용)</h3>
@@ -1745,15 +1745,15 @@
     </div>
 </div>
 
-<script src="./js/app.js?v=2027.7"></script>
+<script src="./js/app.js?v=2027.8"></script>
   
     <!-- [여기서부터 복사] 조장 근무일 비밀번호 검증 스크립트 -->
 <!-- [추가할 보안 및 실행 스크립트] -->
-<script src="./js/leader-access.js?v=2027.7"></script>
+<script src="./js/leader-access.js?v=2027.8"></script>
   <!-- [프로덕션 수준] 파이어베이스 'ships' 컬렉션 전체 데이터 조회 및 검색 모듈 -->
-<script src="./js/ships-board.js?v=2027.7"></script>
+<script src="./js/ships-board.js?v=2027.8"></script>
 
-<script src="./js/tab-views.js?v=2027.7"></script>
+<script src="./js/tab-views.js?v=2027.8"></script>
 </body>
 </html>
 

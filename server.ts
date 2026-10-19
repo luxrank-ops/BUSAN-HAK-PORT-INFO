@@ -62,22 +62,28 @@ export const STATIC_ROOT = resolveStaticRoot();
 
 // --- 화면 잠금(보안 비밀번호) 설정 ---
 // PIN 은 저장소 소스가 아니라 서버 환경변수로만 관리합니다. (기본값 9445 는 하위 호환용)
-export const SCREEN_LOCK_PIN = String(process.env.SCREEN_LOCK_PIN || '9445');
+// .env / Vercel 환경변수에 붙은 공백·줄바꿈(복사-붙여넣기 실수)으로 인증이 실패하지 않게 trim() 합니다.
+export const SCREEN_LOCK_PIN = String(process.env.SCREEN_LOCK_PIN || '9445').trim() || '9445';
 export const SCREEN_UNLOCK_TOKEN_TTL_MS = 12 * 60 * 60 * 1000; // 12시간
-const SCREEN_UNLOCK_TOKEN_SECRET = process.env.UNLOCK_TOKEN_SECRET || SCREEN_LOCK_PIN;
+const SCREEN_UNLOCK_TOKEN_SECRET = String(process.env.UNLOCK_TOKEN_SECRET || SCREEN_LOCK_PIN).trim() || SCREEN_LOCK_PIN;
 // 무차별 대입 방지: IP 당 10분에 10회까지만 시도
 const SCREEN_UNLOCK_MAX_ATTEMPTS = 10;
 const SCREEN_UNLOCK_WINDOW_MS = 10 * 60 * 1000;
 const screenUnlockAttempts = new Map<string, { count: number; resetAt: number }>();
 
-function isScreenUnlockRateLimited(ip: string): boolean {
+/**
+ * 시도 횟수 제한 — 잠금 종류(scope)별로 버킷을 분리합니다.
+ * 화면 잠금에서 10회 실패해도 긴급 공지 인증이 함께 막히지 않도록 하기 위함입니다.
+ */
+function isScreenUnlockRateLimited(ip: string, scope: 'screen' | 'emergency' = 'screen'): boolean {
   const now = Date.now();
-  const entry = screenUnlockAttempts.get(ip);
+  const key = `${scope}:${ip}`;
+  const entry = screenUnlockAttempts.get(key);
   if (!entry || entry.resetAt <= now) {
-    screenUnlockAttempts.set(ip, { count: 1, resetAt: now + SCREEN_UNLOCK_WINDOW_MS });
+    screenUnlockAttempts.set(key, { count: 1, resetAt: now + SCREEN_UNLOCK_WINDOW_MS });
     if (screenUnlockAttempts.size > 5000) {
-      for (const [key, value] of screenUnlockAttempts) {
-        if (value.resetAt <= now) screenUnlockAttempts.delete(key);
+      for (const [mapKey, value] of screenUnlockAttempts) {
+        if (value.resetAt <= now) screenUnlockAttempts.delete(mapKey);
       }
     }
     return false;
@@ -88,21 +94,47 @@ function isScreenUnlockRateLimited(ip: string): boolean {
 
 /** 상수 시간 비교 — 길이가 달라도 비교 시간이 새어나가지 않도록 해시 후 비교합니다. */
 export function verifyScreenLockPin(pin: string): boolean {
-  const a = crypto.createHash('sha256').update(String(pin || ''), 'utf8').digest();
+  const a = crypto.createHash('sha256').update(String(pin || '').trim(), 'utf8').digest();
   const b = crypto.createHash('sha256').update(SCREEN_LOCK_PIN, 'utf8').digest();
   return crypto.timingSafeEqual(a, b);
 }
 
 // --- 🚨 긴급 플로팅 공지 작성 잠금 ---
-// 기본값은 화면 잠금 PIN 과 동일하며, 별도 운영이 필요하면 EMERGENCY_NOTICE_PIN 환경변수로 분리합니다.
-// (평문 비밀번호는 저장소 어디에도 두지 않습니다.)
-export const EMERGENCY_NOTICE_PIN = String(process.env.EMERGENCY_NOTICE_PIN || SCREEN_LOCK_PIN);
+// 우선순위: EMERGENCY_NOTICE_PIN 환경변수 → (미설정 시) 화면 잠금 PIN → (그마저 없으면) 기본값 9445.
+// (평문 비밀번호는 저장소 어디에도 두지 않습니다. trim() 으로 환경변수 공백·줄바꿈에도 강건합니다.)
+export const EMERGENCY_NOTICE_PIN = String(process.env.EMERGENCY_NOTICE_PIN || SCREEN_LOCK_PIN || '9445').trim() || '9445';
+/** 운영자가 EMERGENCY_NOTICE_PIN 을 따로 지정했는지 여부 */
+const HAS_EXPLICIT_EMERGENCY_PIN = Boolean(String(process.env.EMERGENCY_NOTICE_PIN || '').trim());
 
-/** 상수 시간 비교 — 긴급 공지 작성 권한용 PIN 검증 */
+/**
+ * 긴급 공지 작성에 인정되는 PIN 목록.
+ * - EMERGENCY_NOTICE_PIN 을 따로 지정한 배포: 그 값만 인정합니다(화면 잠금 PIN 과 분리 운영).
+ * - 지정하지 않은 배포: 화면 잠금 PIN 과 기본 관리자 PIN(9445) 을 함께 인정합니다.
+ *   → 운영자가 근무일지 잠금 비밀번호를 다른 값으로 바꿔 두었더라도, 안내된 기본 비밀번호로
+ *     긴급 공지를 열 수 있어 "비밀번호 인증이 안 되는" 상황을 막습니다.
+ */
+export function getAcceptedEmergencyNoticePins(): string[] {
+  const pins = new Set<string>();
+  if (EMERGENCY_NOTICE_PIN) pins.add(EMERGENCY_NOTICE_PIN);
+  if (!HAS_EXPLICIT_EMERGENCY_PIN) {
+    if (SCREEN_LOCK_PIN) pins.add(SCREEN_LOCK_PIN);
+    pins.add('9445');
+  }
+  return Array.from(pins);
+}
+
+/** 상수 시간 비교 — 긴급 공지 작성 권한용 PIN 검증 (후보 전체를 비교) */
 export function verifyEmergencyNoticePin(pin: string): boolean {
-  const a = crypto.createHash('sha256').update(String(pin || ''), 'utf8').digest();
-  const b = crypto.createHash('sha256').update(EMERGENCY_NOTICE_PIN, 'utf8').digest();
-  return crypto.timingSafeEqual(a, b);
+  const input = String(pin || '').trim();
+  if (!input) return false;
+  const a = crypto.createHash('sha256').update(input, 'utf8').digest();
+  let matched = false;
+  for (const candidate of getAcceptedEmergencyNoticePins()) {
+    const b = crypto.createHash('sha256').update(candidate, 'utf8').digest();
+    // timingSafeEqual 은 길이가 같아야 하므로 sha256(32바이트)끼리 비교합니다.
+    if (crypto.timingSafeEqual(a, b)) matched = true;
+  }
+  return matched;
 }
 
 export function issueEmergencyUnlockToken(): { token: string; expiresAt: number } {
@@ -1252,7 +1284,8 @@ app.post('/api/screen-unlock', (req, res) => {
     res.status(429).json({ ok: false, error: 'too_many_attempts' });
     return;
   }
-  const pin = String((req.body && (req.body as { pin?: unknown }).pin) ?? '');
+  const rawPin = String((req.body && (req.body as { pin?: unknown }).pin) ?? '');
+  const pin = rawPin.trim();
   if (!pin) {
     res.status(400).json({ ok: false, error: 'missing_pin' });
     return;
@@ -1266,13 +1299,16 @@ app.post('/api/screen-unlock', (req, res) => {
 });
 
 // 🚨 긴급 플로팅 공지 작성 잠금 해제 — 비밀번호는 서버 환경변수에만 존재합니다.
+// 입력 PIN 은 trim() 으로 공백을 제거해 복사-붙여넣기 실수에 강건합니다.
 app.post('/api/emergency-unlock', (req, res) => {
   const ip = String(req.ip || req.socket?.remoteAddress || 'unknown');
-  if (isScreenUnlockRateLimited(ip)) {
+  // 화면 잠금과 별도 버킷을 써서, 근무일지 잠금 실패가 긴급 공지 인증을 막지 않도록 합니다.
+  if (isScreenUnlockRateLimited(ip, 'emergency')) {
     res.status(429).json({ ok: false, error: 'too_many_attempts' });
     return;
   }
-  const pin = String((req.body && (req.body as { pin?: unknown }).pin) ?? '');
+  const rawPin = String((req.body && (req.body as { pin?: unknown }).pin) ?? '');
+  const pin = rawPin.trim();
   if (!pin) {
     res.status(400).json({ ok: false, error: 'missing_pin' });
     return;
@@ -1283,6 +1319,14 @@ app.post('/api/emergency-unlock', (req, res) => {
   }
   const { token, expiresAt } = issueEmergencyUnlockToken();
   res.json({ ok: true, token, expiresAt });
+});
+
+// 허용되지 않은 메소드 안내 — 브라우저가 GET 으로 호출하면 405 와 함께 힌트를 줍니다.
+app.get('/api/screen-unlock', (_req, res) => {
+  res.status(405).json({ ok: false, error: 'method_not_allowed', hint: 'Use POST with {pin}' });
+});
+app.get('/api/emergency-unlock', (_req, res) => {
+  res.status(405).json({ ok: false, error: 'method_not_allowed', hint: 'Use POST with {pin}' });
 });
 
 app.get('/api/health', (_req, res) => {

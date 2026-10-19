@@ -11,6 +11,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync, existsSync } from 'node:fs';
 import vm from 'node:vm';
+import nodeCrypto from 'node:crypto';
 import { readAppJs, readAppCssRaw, extractFunction as extractFunctionShared } from './app-source.mjs';
 
 const html = readFileSync(new URL('../public/index.html', import.meta.url), 'utf8');
@@ -137,4 +138,111 @@ test('빌드 산출물이 있으면 긴급 공지 해시가 주입되고 평문�
     const builtHtml = readFileSync(built, 'utf8');
     assert.match(builtHtml, /window\.__EMERGENCY_PIN_SHA256__="[a-f0-9]{64}"/);
     assert.doesNotMatch(builtHtml, new RegExp(`['"\`]${ADMIN_PIN}['"\`]`), '배포 HTML 에 비밀번호 평문이 있습니다');
+});
+
+/* ══════════════════════════════════════════════════════════════════════
+   2026-10-19 핫픽스 — "긴급 공지 비밀번호 인증이 안 된다" 회귀 방지
+   · Vercel 에서 2세그먼트 경로(/api/emergency-unlock)는 catch-all 에 닿지 못해
+     플랫폼 404 가 됩니다 → 개별 함수 파일이 반드시 있어야 합니다.
+   · EMERGENCY_NOTICE_PIN 을 따로 지정하지 않은 배포에서는 화면 잠금 PIN 과
+     기본 관리자 PIN(9445) 을 함께 인정해야 합니다(운영자 잠금 사고 방지).
+   ══════════════════════════════════════════════════════════════════════ */
+
+test('Vercel 2세그먼트 잠금 해제 경로는 개별 함수 파일로 노출된다', () => {
+    const entries = [
+        ['/api/emergency-unlock', 'api/emergency-unlock.ts'],
+        ['/api/screen-unlock', 'api/screen-unlock.ts']
+    ];
+    for (const [route, relPath] of entries) {
+        const fileUrl = new URL(`../${relPath}`, import.meta.url);
+        assert.ok(existsSync(fileUrl), `${route} 는 ${relPath} 이 없으면 Vercel 플랫폼 404 로 떨어집니다`);
+        const code = readFileSync(fileUrl, 'utf8');
+        assert.match(code, /import\s*{\s*app\s*}\s*from\s*'\.\.\/server\.js'\s*;/, `${relPath} 의 app 임포트`);
+        assert.match(code, /export\s+default\s+app\s*;/, `${relPath} 는 app 을 기본 내보내야 합니다`);
+    }
+});
+
+/** server.ts 의 긴급 공지 PIN 해석·검증 블록을 VM 에서 실행할 수 있게 꺼냅니다. */
+function loadEmergencyPinVerifier(env) {
+    const start = serverCode.indexOf('export const EMERGENCY_NOTICE_PIN');
+    assert.ok(start >= 0, 'server.ts 에 EMERGENCY_NOTICE_PIN 정의가 필요합니다');
+    const fnMarker = 'export function verifyEmergencyNoticePin';
+    const fnStart = serverCode.indexOf(fnMarker);
+    assert.ok(fnStart > start, 'server.ts 에 verifyEmergencyNoticePin 함수가 필요합니다');
+    const open = serverCode.indexOf('{', fnStart);
+    let depth = 0;
+    let fnEnd = -1;
+    for (let i = open; i < serverCode.length; i += 1) {
+        if (serverCode[i] === '{') depth += 1;
+        else if (serverCode[i] === '}') {
+            depth -= 1;
+            if (depth === 0) { fnEnd = i + 1; break; }
+        }
+    }
+    assert.ok(fnEnd > 0, 'verifyEmergencyNoticePin 함수 본문을 찾지 못했습니다');
+
+    const source = serverCode
+        .slice(start, fnEnd)
+        .replace(/^export\s+/gm, '')
+        .replace(/\(pin: string\): boolean/g, '(pin)')
+        .replace(/\(\): string\[\]/g, '()')
+        .replace(/new Set<string>\(\)/g, 'new Set()');
+    const screenPin = String(env.SCREEN_LOCK_PIN || '9445');
+    const sandbox = { crypto: nodeCrypto, SCREEN_LOCK_PIN: screenPin, process: { env } };
+    vm.createContext(sandbox);
+    vm.runInContext(source, sandbox, { filename: 'emergency-pin.js' });
+    return sandbox;
+}
+
+test('긴급 공지 PIN — EMERGENCY_NOTICE_PIN 미설정 시 화면 잠금 PIN 과 기본 PIN(9445) 모두 인정', () => {
+    const sandbox = loadEmergencyPinVerifier({ SCREEN_LOCK_PIN: '7788' });
+    const verify = sandbox.verifyEmergencyNoticePin;
+    assert.equal(verify('7788'), true, '근무일지 잠금 비밀번호로도 열려야 합니다');
+    assert.equal(verify(ADMIN_PIN), true, '기본 관리자 비밀번호(9445)로도 열려야 합니다');
+    assert.equal(verify('0000'), false);
+    assert.equal(verify(''), false);
+    assert.equal(verify('   '), false);
+    // 앞뒤 공백(모바일 자동완성·붙여넣기)이 붙어도 동작해야 합니다
+    assert.equal(verify(` ${ADMIN_PIN} `), true);
+});
+
+test('긴급 공지 PIN — EMERGENCY_NOTICE_PIN 을 지정하면 그 값만 인정(분리 운영)', () => {
+    const sandbox = loadEmergencyPinVerifier({ EMERGENCY_NOTICE_PIN: '2468', SCREEN_LOCK_PIN: '7788' });
+    const verify = sandbox.verifyEmergencyNoticePin;
+    assert.equal(verify('2468'), true);
+    assert.equal(verify(' 2468 '), true);
+    assert.equal(verify('7788'), false, '명시 지정 시 화면 잠금 PIN 은 인정하지 않습니다');
+    assert.equal(verify(ADMIN_PIN), false, '명시 지정 시 기본 PIN 도 인정하지 않습니다');
+    assert.deepEqual(Array.from(sandbox.getAcceptedEmergencyNoticePins()), ['2468']);
+});
+
+test('환경변수 공백·줄바꿈이 섞여도 PIN 이 정상 인식된다', () => {
+    const sandbox = loadEmergencyPinVerifier({ EMERGENCY_NOTICE_PIN: ' 2468\n', SCREEN_LOCK_PIN: ' 7788 ' });
+    assert.equal(vm.runInContext('EMERGENCY_NOTICE_PIN', sandbox), '2468');
+    assert.equal(sandbox.verifyEmergencyNoticePin('2468'), true);
+});
+
+test('클라이언트는 긴급/화면잠금/기본 PIN 해시를 모두 비교한다', () => {
+    assert.match(appJs, /function getEmergencyPinHashCandidates\(\)/);
+    assert.match(appJs, /window\.__EMERGENCY_PIN_SHA256__/);
+    assert.match(appJs, /window\.__SCREEN_LOCK_SHA256__/);
+    assert.match(appJs, /window\.__EMERGENCY_DEFAULT_PIN_SHA256__/);
+    assert.match(appJs, /const candidates = getEmergencyPinHashCandidates\(\);/);
+});
+
+test('빌드 스크립트가 기본 PIN 해시를 주입하되, 명시 지정 시에는 주입하지 않는다', () => {
+    assert.match(buildScript, /__EMERGENCY_DEFAULT_PIN_SHA256__/);
+    assert.match(buildScript, /const emergencyDefaultPin = explicitEmergencyPin \? '' : DEFAULT_EMERGENCY_PIN;/);
+    const built = new URL('../build/public/index.html', import.meta.url);
+    if (!existsSync(built)) return; // 빌드 전에는 건너뜀
+    const builtHtml = readFileSync(built, 'utf8');
+    assert.match(builtHtml, /window\.__EMERGENCY_DEFAULT_PIN_SHA256__="[a-f0-9]{64}"/);
+});
+
+test('시도 초과(429)에도 올바른 비밀번호면 로컬 해시로 한 번 더 확인한다', () => {
+    // 429 는 "비밀번호가 틀렸다"가 아니라 "요청이 너무 잦다"는 뜻이므로,
+    // 올바른 비밀번호까지 함께 잠기지 않도록 해시 폴백을 계속 사용합니다.
+    assert.match(appJs, /if \(res\.status === 429\) rateLimited = true;/);
+    assert.match(appJs, /reason: rateLimited \? "rate_limited" : "invalid_pin"/);
+    assert.match(appJs, /reason: rateLimited \? "rate_limited" : "no_verifier"/);
 });

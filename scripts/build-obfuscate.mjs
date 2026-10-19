@@ -35,6 +35,8 @@ const SRC_DIR = join(ROOT, 'public');
 const OUT_DIR = join(ROOT, 'build', 'public');
 
 const DEFAULT_SCREEN_LOCK_PIN = '9445';
+/** 긴급 공지 기본 관리자 PIN — EMERGENCY_NOTICE_PIN 미설정 배포에서만 인정합니다. */
+const DEFAULT_EMERGENCY_PIN = '9445';
 
 /** 저작권·무단복사 금지 배너 (압축 파일 상단에 삽입) */
 function copyrightBanner(style) {
@@ -101,10 +103,21 @@ async function minifyCss(code, file) {
   return result.code;
 }
 
-/** HTML 에 저작권 주석 + 런타임 설정 스크립트 주입 */
-function transformHtml(html, screenLockPin, emergencyPin = screenLockPin) {
+/**
+ * HTML 에 저작권 주석 + 런타임 설정 스크립트 주입
+ *
+ * 긴급 공지 해시는 서버(server.ts)와 동일한 규칙으로 계산합니다.
+ *  - EMERGENCY_NOTICE_PIN 을 지정한 배포: 그 값만 인정
+ *  - 지정하지 않은 배포: 화면 잠금 PIN + 기본 관리자 PIN(9445) 을 함께 인정
+ *    → 근무일지 잠금 비밀번호를 다른 값으로 바꾼 배포에서도 안내된 기본 비밀번호로 열립니다.
+ */
+function transformHtml(html, screenLockPin, emergencyPin = screenLockPin, emergencyDefaultPin = '') {
   const sha256 = createHash('sha256').update(String(screenLockPin), 'utf8').digest('hex');
   const emergencySha256 = createHash('sha256').update(String(emergencyPin), 'utf8').digest('hex');
+  const fallbackPin = String(emergencyDefaultPin || '').trim();
+  const fallbackSha256 = fallbackPin
+    ? createHash('sha256').update(fallbackPin, 'utf8').digest('hex')
+    : '';
   const configScript = [
     '<script>',
     '/* 서버 검증 실패(정적 호스팅·오프라인) 시 사용하는 화면 잠금 PIN 해시.',
@@ -112,6 +125,12 @@ function transformHtml(html, screenLockPin, emergencyPin = screenLockPin) {
     `window.__SCREEN_LOCK_SHA256__="${sha256}";`,
     '/* 🚨 긴급 플로팅 공지 작성 잠금 해시 (서버 환경변수 EMERGENCY_NOTICE_PIN). */',
     `window.__EMERGENCY_PIN_SHA256__="${emergencySha256}";`,
+    ...(fallbackSha256
+      ? [
+          '/* 긴급 공지 기본 관리자 PIN 해시 — EMERGENCY_NOTICE_PIN 미설정 배포에서만 주입됩니다. */',
+          `window.__EMERGENCY_DEFAULT_PIN_SHA256__="${fallbackSha256}";`
+        ]
+      : []),
     '</script>'
   ].join('\n');
 
@@ -186,9 +205,13 @@ async function main() {
   rmSync(OUT_DIR, { recursive: true, force: true });
   mkdirSync(OUT_DIR, { recursive: true });
 
-  const pin = process.env.SCREEN_LOCK_PIN || DEFAULT_SCREEN_LOCK_PIN;
-  // 긴급 공지 작성 비밀번호: 별도 지정이 없으면 화면 잠금 PIN 과 동일하게 동작합니다.
-  const emergencyPin = process.env.EMERGENCY_NOTICE_PIN || pin;
+  const pin = String(process.env.SCREEN_LOCK_PIN || DEFAULT_SCREEN_LOCK_PIN).trim() || DEFAULT_SCREEN_LOCK_PIN;
+  // 긴급 공지 작성 비밀번호: EMERGENCY_NOTICE_PIN → (미설정 시) 화면 잠금 PIN 순으로 결정합니다.
+  const explicitEmergencyPin = String(process.env.EMERGENCY_NOTICE_PIN || '').trim();
+  const emergencyPin = explicitEmergencyPin || pin;
+  // EMERGENCY_NOTICE_PIN 을 따로 지정하지 않은 배포에서만, 기본 관리자 PIN(9445)도 인정합니다.
+  // (서버 server.ts 의 getAcceptedEmergencyNoticePins() 와 동일한 규칙 — 반드시 함께 바꿔야 합니다.)
+  const emergencyDefaultPin = explicitEmergencyPin ? '' : DEFAULT_EMERGENCY_PIN;
 
   const files = walk(SRC_DIR);
   let jsCount = 0;
@@ -228,7 +251,7 @@ async function main() {
 
     if (ext === '.html' || ext === '.htm') {
       const src = readFileSync(file, 'utf8');
-      writeFileSync(dest, transformHtml(src, pin, emergencyPin), 'utf8');
+      writeFileSync(dest, transformHtml(src, pin, emergencyPin, emergencyDefaultPin), 'utf8');
       htmlCount += 1;
       continue;
     }
