@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import vm from 'node:vm';
-import { readAppJs, extractFunction as extractFunctionShared } from './app-source.mjs';
+import { readAppJs, extractFunction as extractFunctionShared, extractDeclaration as extractDeclarationShared } from './app-source.mjs';
 
 // 🚢 작업 선박 정보: 검색 → 목록의 선박 클릭 시 상세 내용이 사라지고 전체 선박 목록이 보이던 버그 회귀 테스트.
 // 원인: 선박을 펼치면 조회수(views)가 +1 저장되고, 즉시 도착하는 ships 실시간 스냅샷에서
@@ -18,6 +18,11 @@ function extractFunction(name) {
     if (body === null) throw new Error(`function not found: ${name}`);
     return body;
 }
+function extractDeclaration(name) {
+    const body = extractDeclarationShared(appJs, name);
+    if (body === null) throw new Error(`declaration not found: ${name}`);
+    return body;
+}
 
 const SHIP_FUNCTIONS = [
     'getShipDisplayName', 'getShipMemoText', 'getShipLegacyOnshoreText', 'toShipDate', 'extractShipTags',
@@ -25,8 +30,12 @@ const SHIP_FUNCTIONS = [
     'renderShipPage', 'incrementBoardItemViewCount', 'toggleBoardRow', 'loadShipComments',
     'getShipRowSignature', 'isShipViewCountOnlyChange', 'syncShipViewCountBadges', 'applyShipDirectorySnapshot',
     // D-2: 소프트 삭제 표시(deletedAt) 판별 헬퍼
-    'isDeletedRecord'
+    'isDeletedRecord',
+    // 초성·영문 이니셜 검색 (후속 제안 #1): getFilteredShipList 이 사용하는 매처
+    'getHangulChosung', 'matchesShipQuery'
 ];
+// matchesShipQuery 가 참조하는 상수 (getFilteredShipList vm 컨텍스트에 함께 적재)
+const SHIP_DECLARATIONS = ['HANGUL_CHO_LIST', 'CHO_TO_LATIN_PATTERN'];
 
 // innerHTML 로 생성된 id 요소를 추적하는 최소한의 가짜 DOM (클래스·값·텍스트만 지원)
 function createFakeDocument() {
@@ -149,6 +158,7 @@ function setup() {
         var shipCommentUnsubscribes = {}, shipCommentsById = {}, editingShipComment = null;
         var makeTimestamp = ms => ({ toDate: () => new Date(ms), toMillis: () => ms });
     `, context);
+    for (const decl of SHIP_DECLARATIONS) vm.runInContext(extractDeclaration(decl) + ';', context);
     for (const name of SHIP_FUNCTIONS) vm.runInContext(extractFunction(name), context);
 
     // Firestore 서버 상태 (timestamp 내림차순 정렬 = orderBy("timestamp","desc"))

@@ -25,7 +25,7 @@ export const APP_JS_FILES = [
 ];
 
 /** A-1 분리 버전 — index.html 의 ?v= 파라미터 · service-worker 캐시 버전을 함께 올려야 합니다. */
-export const APP_ASSET_VERSION = '2027.8';
+export const APP_ASSET_VERSION = '2027.9';
 
 export function readAppFile(relativePath) {
     return readFileSync(new URL(`./${relativePath}`, ROOT), 'utf8');

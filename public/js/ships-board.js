@@ -69,7 +69,15 @@ async function loadAndSearchAllShips(searchKeyword = "") {
                     : String(item.onboardFeat || item.memo || item.info || "")).toLowerCase();
                 const tagStr = sTags.join(" ").toLowerCase();
                 const compactTagStr = sTags.map(t => t.replace(/\s+/g, '')).join(" ").toLowerCase();
-                if (!shipName.includes(keyword) && !shipCode.includes(keyword) && !shipMemo.includes(keyword) && !tagStr.includes(keyword) && !compactTagStr.includes(keyword)) {
+                // 초성·영문 이니셜 검색(ㅎㅁ → HMM): matchesShipQuery 는 app.js 에 정의되며
+                // 스크립트 로드 순서상 이 파일보다 먼저 올라가 전역으로 사용할 수 있다
+                const matches = typeof matchesShipQuery === "function"
+                    ? (matchesShipQuery(keyword, shipName) || matchesShipQuery(keyword, shipCode) ||
+                        matchesShipQuery(keyword, shipMemo) || matchesShipQuery(keyword, tagStr) ||
+                        matchesShipQuery(keyword, compactTagStr))
+                    : (shipName.includes(keyword) || shipCode.includes(keyword) || shipMemo.includes(keyword) ||
+                        tagStr.includes(keyword) || compactTagStr.includes(keyword));
+                if (!matches) {
                     return false;
                 }
             }
