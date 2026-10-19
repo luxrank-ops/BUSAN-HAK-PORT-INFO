@@ -353,6 +353,8 @@ function selectBestCalcSegment(...args) {
             if (typeof val.totalPay === 'number') targets.push(val.totalPay);
             if (typeof val.wage1 === 'number') targets.push(val.wage1);
             if (typeof val.wage2 === 'number') targets.push(val.wage2);
+            if (typeof val.wage3 === 'number') targets.push(val.wage3);
+            if (typeof val.wage4 === 'number') targets.push(val.wage4);
             if (typeof val.pay === 'number') targets.push(val.pay);
             if (typeof val.amount === 'number') targets.push(val.amount);
             return;

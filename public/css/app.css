@@ -344,6 +344,149 @@
     .menu-btn:hover { background: var(--primary); color: white; }
     .btn-del-menu { color: var(--danger); }
     .btn-del-menu:hover { background: var(--danger); color: white; }
+    .btn-emergency-menu { color: var(--red-600); font-weight: var(--fw-black); }
+    .btn-emergency-menu:hover { background: var(--red-600); color: white; }
+
+    /* ══════════════ 🚨 긴급 플로팅 공지 (티커와 별개) ══════════════ */
+    .emergency-float {
+        position: fixed;
+        top: calc(env(safe-area-inset-top, 0px) + 58px);
+        left: 50%;
+        transform: translateX(-50%);
+        width: min(560px, calc(100vw - 20px));
+        max-height: 46vh;
+        overflow-y: auto;
+        z-index: var(--z-visitor-badge);
+        display: flex;
+        flex-direction: column;
+        gap: var(--sp-6);
+        padding: var(--sp-10) var(--sp-12);
+        border: 2.5px solid var(--red-600);
+        border-radius: var(--radius-xl);
+        background: linear-gradient(135deg, var(--red-50), var(--red-100));
+        box-shadow: 0 10px 28px rgba(220, 38, 38, 0.3);
+        animation: emergency-float-in var(--dur-300) ease-out;
+    }
+    .emergency-float.is-hidden,
+    .emergency-float-reopen.is-hidden { display: none; }
+    .emergency-float.level-warn { border-color: var(--orange-600); background: linear-gradient(135deg, var(--orange-50), var(--orange-100)); box-shadow: 0 10px 28px rgba(234, 88, 12, 0.28); }
+    .emergency-float.level-info { border-color: var(--blue-600); background: linear-gradient(135deg, var(--blue-50), var(--blue-100)); box-shadow: 0 10px 28px rgba(37, 99, 235, 0.26); }
+    @keyframes emergency-float-in { from { opacity: 0; transform: translate(-50%, -12px); } to { opacity: 1; transform: translate(-50%, 0); } }
+    .emergency-float-head { display: flex; align-items: center; gap: var(--sp-6); }
+    .emergency-float-badge {
+        flex: 0 0 auto;
+        padding: var(--sp-3) var(--sp-8);
+        border-radius: var(--radius-pill);
+        background: var(--red-600);
+        color: var(--n-000);
+        font-size: var(--fs-3);
+        font-weight: var(--fw-black);
+        white-space: nowrap;
+        animation: emergency-badge-flash 1.4s ease-in-out infinite;
+    }
+    .emergency-float.level-warn .emergency-float-badge { background: var(--orange-600); }
+    .emergency-float.level-info .emergency-float-badge { background: var(--blue-600); }
+    @keyframes emergency-badge-flash { 50% { opacity: 0.35; } }
+    .emergency-float-title {
+        flex: 1;
+        min-width: 0;
+        font-size: var(--fs-8);
+        font-weight: var(--fw-black);
+        color: var(--red-600);
+        line-height: var(--lh-5);
+        word-break: keep-all;
+    }
+    .emergency-float.level-warn .emergency-float-title { color: var(--orange-700); }
+    .emergency-float.level-info .emergency-float-title { color: var(--blue-700); }
+    .emergency-float-close {
+        flex: 0 0 auto;
+        width: 28px;
+        height: 28px;
+        border: 1px solid var(--red-300);
+        border-radius: var(--radius-circle);
+        background: var(--n-000);
+        color: var(--red-600);
+        font-size: var(--fs-6);
+        font-weight: var(--fw-black);
+        cursor: pointer;
+        touch-action: manipulation;
+    }
+    .emergency-float-body {
+        font-size: var(--fs-7);
+        font-weight: var(--fw-extrabold);
+        color: var(--n-900);
+        line-height: var(--lh-9);
+        white-space: pre-wrap;
+        word-break: break-word;
+    }
+    .emergency-float-period { font-size: var(--fs-2); font-weight: var(--fw-extrabold); color: var(--n-400); }
+    .emergency-float-reopen {
+        position: fixed;
+        right: 12px;
+        bottom: max(84px, env(safe-area-inset-bottom) + 74px);
+        width: 46px;
+        height: 46px;
+        border: 2px solid var(--n-000);
+        border-radius: var(--radius-circle);
+        background: var(--red-600);
+        color: var(--n-000);
+        font-size: var(--fs-13);
+        z-index: var(--z-visitor-badge);
+        box-shadow: 0 6px 16px rgba(220, 38, 38, 0.4);
+        cursor: pointer;
+        touch-action: manipulation;
+        animation: emergency-badge-flash 1.6s ease-in-out infinite;
+    }
+    .emergency-admin-state {
+        margin-bottom: var(--sp-8);
+        padding: var(--sp-6) var(--sp-8);
+        border-radius: var(--radius-md);
+        background: var(--surface-muted);
+        color: var(--text-sub);
+        font-size: var(--fs-4);
+        font-weight: var(--fw-extrabold);
+    }
+    .emergency-admin-switch {
+        display: flex;
+        align-items: center;
+        gap: var(--sp-8);
+        margin-bottom: var(--sp-8);
+        padding: var(--sp-8);
+        border: 2px solid var(--red-300);
+        border-radius: var(--radius-md);
+        background: var(--red-50);
+        color: var(--n-900);
+        font-size: var(--fs-5);
+        font-weight: var(--fw-bold);
+        cursor: pointer;
+    }
+    .emergency-admin-switch input[type="checkbox"] { width: 20px; height: 20px; accent-color: var(--red-600); cursor: pointer; }
+    .emergency-admin-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: var(--sp-6); }
+    .emergency-admin-field { display: flex; flex-direction: column; gap: var(--sp-3); font-size: var(--fs-3); font-weight: var(--fw-extrabold); color: var(--text-sub); }
+    .emergency-admin-field .input-field { margin: 0; text-align: left; font-size: var(--fs-6); }
+    .emergency-admin-quick { display: flex; flex-wrap: wrap; gap: var(--sp-4); margin-top: var(--sp-8); }
+    .emergency-admin-preview {
+        margin-top: var(--sp-8);
+        padding: var(--sp-8);
+        border: 1.5px dashed var(--red-300);
+        border-radius: var(--radius-md);
+        background: var(--card-bg);
+        color: var(--text-main);
+        font-size: var(--fs-4);
+        font-weight: var(--fw-bold);
+        line-height: var(--lh-8);
+        white-space: pre-wrap;
+        word-break: break-word;
+    }
+    body.dark-mode .emergency-float { background: linear-gradient(135deg, rgba(127, 29, 29, 0.96), rgba(69, 10, 10, 0.96)); }
+    body.dark-mode .emergency-float-body { color: var(--n-075); }
+    body.dark-mode .emergency-float-title { color: var(--red-300); }
+    body.dark-mode .emergency-admin-switch { background: rgba(220, 38, 38, 0.14); color: var(--n-075); }
+    @media (max-width: 480px) {
+        .emergency-float { top: calc(env(safe-area-inset-top, 0px) + 50px); max-height: 52vh; }
+        .emergency-float-title { font-size: var(--fs-6); }
+        .emergency-float-body { font-size: var(--fs-6); }
+    }
 
     .container { width: 100%; max-width: 800px; margin: 0 auto; padding: var(--sp-12); overflow-x: hidden; }
     
@@ -524,12 +667,19 @@
         overflow: hidden;
         text-overflow: ellipsis;
     }
-    /* 1번·2번 선박을 위아래로 배치 */
+    /* 1~4번 선박을 위아래로 배치.
+       노출된 블록 높이의 합 = 총 근무시간 정사각형 높이( --wage-total-side ) 이고,
+       보이는 블록끼리 균등하게 나눠 가집니다 (2개 → 1/2, 4개 → 1/4). */
     .wage-vessel-hours-pair {
         display: grid;
         grid-template-columns: minmax(0, 1fr);
+        grid-auto-rows: minmax(0, 1fr);
         gap: var(--wage-ship-gap);
+        height: var(--wage-total-side);
+        min-height: var(--wage-total-side);
     }
+    /* 선박 3·4번 블록은 3척 이상 선택 시에만 나타납니다 */
+    .wage-vessel-hours-card.is-slot-hidden { display: none; }
     .wage-vessel-hours-card {
         box-sizing: border-box;
         display: grid;
@@ -538,14 +688,25 @@
         align-items: center;
         column-gap: var(--sp-3);
         width: 100%;
-        height: var(--wage-ship-height);
+        height: 100%;
         min-width: 0;
         min-height: 0;
         padding: 1px 4px;
         border: 2px solid var(--n-250);
         border-radius: var(--radius-md);
         background: var(--card-bg);
+        overflow: hidden;
     }
+    /* 3~4척 노출 시: 블록 높이가 절반이 되므로 한 줄 컴팩트 배치로 전환 */
+    .wage-vessel-hours-pair.is-compact .wage-vessel-hours-card {
+        grid-template-columns: auto minmax(0, 1fr) auto;
+        grid-template-rows: minmax(0, 1fr);
+        column-gap: var(--sp-2);
+        padding: 0 var(--sp-3);
+    }
+    .wage-vessel-hours-pair.is-compact .vessel-order { grid-column: 1; grid-row: 1; font-size: var(--fs-2); }
+    .wage-vessel-hours-pair.is-compact .vessel-name { grid-column: 2; grid-row: 1; font-size: var(--fs-3); }
+    .wage-vessel-hours-pair.is-compact .vessel-hours { grid-column: 3; grid-row: 1; font-size: var(--fs-4); }
     .wage-vessel-hours-card .vessel-order {
         grid-column: 1;
         grid-row: 1;
@@ -605,6 +766,27 @@
         border-color: var(--blue-300);
         color: var(--blue-700);
     }
+    /* 근무일지 임금 3·4 입력칸: 평소 숨김 → 선박 3~4척 선택 시 노출 */
+    .worklog-wage-extra-row {
+        display: flex;
+        gap: var(--sp-10);
+        margin-bottom: var(--sp-8);
+        width: 100%;
+    }
+    .worklog-wage-extra-row.is-slot-hidden,
+    .worklog-wage-slot-hint.is-slot-hidden { display: none; }
+    .worklog-wage-slot-hint {
+        margin: calc(-1 * var(--sp-4)) 0 var(--sp-8);
+        padding: var(--sp-6) var(--sp-8);
+        border: 1px dashed var(--blue-300);
+        border-radius: var(--radius-md);
+        background: var(--blue-50);
+        color: var(--blue-700);
+        font-size: var(--fs-4);
+        font-weight: var(--fw-extrabold);
+        line-height: var(--lh-6);
+    }
+    body.dark-mode .worklog-wage-slot-hint { background: rgba(37, 99, 235, 0.12); }
     @media (max-width: 480px) {
         .wage-action-grid { grid-template-columns: 1fr 1fr; }
         .wage-action-grid > button:first-child { grid-column: 1 / -1; }

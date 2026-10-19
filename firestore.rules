@@ -64,7 +64,22 @@ service cloud.firestore {
 
     // 앱이 자동 등록하는 업데이트 공지 문서 ID (화면 코드와 반드시 일치해야 합니다)
     function isAutoNoticeId(id) {
-      return id == 'update_2026_10_04_v2027' || id == 'update_2026_10_10_hak_port_ver2';
+      return id == 'update_2026_10_04_v2027' || id == 'update_2026_10_10_hak_port_ver2' ||
+        id == 'update_2026_10_19_multi_vessel_emergency';
+    }
+
+    // 🚨 긴급 플로팅 공지(settings/emergency_notice) 쓰기 형식 검증.
+    //    작성 권한은 앱에서 관리자 비밀번호(서버 환경변수 PIN)로 잠그고,
+    //    규칙에서는 문서가 가질 수 있는 키·타입·길이를 제한해 오남용을 막습니다.
+    function isValidEmergencyNoticeWrite() {
+      return incoming().keys().hasOnly(['enabled', 'title', 'message', 'level', 'startAt', 'endAt', 'revision', 'updatedAt']) &&
+        (!('enabled' in incoming()) || incoming().enabled is bool) &&
+        (!('title' in incoming()) || (incoming().title is string && incoming().title.size() <= 60)) &&
+        (!('message' in incoming()) || (incoming().message is string && incoming().message.size() <= 600)) &&
+        (!('level' in incoming()) || incoming().level in ['danger', 'warn', 'info']) &&
+        (!('startAt' in incoming()) || incoming().startAt is int) &&
+        (!('endAt' in incoming()) || incoming().endAt is int) &&
+        (!('revision' in incoming()) || incoming().revision is int);
     }
 
     function isAdmin() {
@@ -89,7 +104,8 @@ service cloud.firestore {
       allow list: if false;
       allow create, update: if isSignedIn() && settingId != 'admin' && isValidId(settingId) && (
         isAdmin() ||
-        (settingId == 'banner' && incoming().diff(existing()).affectedKeys().hasOnly(['userMessages']) && incoming().userMessages is list && incoming().userMessages.size() <= 3)
+        (settingId == 'banner' && incoming().diff(existing()).affectedKeys().hasOnly(['userMessages']) && incoming().userMessages is list && incoming().userMessages.size() <= 3) ||
+        (settingId == 'emergency_notice' && isValidEmergencyNoticeWrite())
       );
       allow delete: if isAdmin() && settingId != 'admin';
     }

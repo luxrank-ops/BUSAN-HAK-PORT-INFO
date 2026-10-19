@@ -29,7 +29,9 @@ function extractDeclaration(source, name) {
 const WAGE_FUNCTIONS = [
     'getTerminalMeta', 'updateTerminalScheduleLinksUI', 'renderTerminalScheduleTabBar',
     'selectScheduleTerminal', 'invalidateCalculatedWage', 'periodHours',
-    'getSelectedVesselPeriod', 'syncWageHoursBlockSize', 'updateWageHoursBreakdown',
+    'getSelectedVesselPeriod', 'syncWageHoursBlockSize', 'syncWageVesselSlotVisibility',
+    'getWageVesselSlotRows', 'getMultiOrderLabel', 'syncWorklogWageSlotVisibility',
+    'updateWageHoursBreakdown',
     'refreshWageWorkHours', 'getWageScheduleDate', 'setWageScheduleDate',
     'openWageScheduleDatePicker', 'onWageScheduleDateChange', 'getVesselScheduleDateTime',
     'formatWageScheduleEvent', 'renderWageScheduledShipsUI', 'loadWageScheduledShipsForDate',
@@ -47,6 +49,10 @@ const WAGE_FUNCTIONS = [
 const appBundle = [
     'let lastCalculatedWageData = null;',
     'let wageToLogTransferPending = false;',
+    // 선박 최대 4척(더블·트리플·쿼드오더) 공통 상수는 라이브 소스에서 그대로 가져온다.
+    extractDeclaration(appJs, 'MAX_WORK_VESSELS'),
+    extractDeclaration(appJs, 'MULTI_ORDER_LABELS'),
+    extractDeclaration(appJs, 'VESSEL_ORDER_MARKS'),
     extractDeclaration(appJs, 'publicHolidays'),
     extractDeclaration(appJs, 'hjncScheduleMonthCache'),
     ...WAGE_FUNCTIONS.map((name) => extractFunction(appJs, name))
@@ -66,7 +72,8 @@ function setup() {
             values: new Set(id === 'dailyLogForm' ? ['hidden'] : id === 'log-card' ? ['expanded'] : []),
             add(name) { this.values.add(name); },
             remove(name) { this.values.delete(name); },
-            contains(name) { return this.values.has(name); }
+            contains(name) { return this.values.has(name); },
+            toggle(name, force) { const on = force ?? !this.values.has(name); on ? this.values.add(name) : this.values.delete(name); }
         },
         getAttribute(name) { return name === 'data-date' ? this.date : null; },
         scrollIntoView() {}
@@ -74,14 +81,24 @@ function setup() {
 
     [
         'wageTotalHours', 'wageHoursBreakdown', 'wageVessel1Name', 'wageVessel1Hours',
-        'wageVessel2Name', 'wageVessel2Hours', 'wageStartDate', 'wageStartHour',
+        'wageVessel2Name', 'wageVessel2Hours', 'wageVessel3Name', 'wageVessel3Hours',
+        'wageVessel4Name', 'wageVessel4Hours',
+        'wageVessel1Card', 'wageVessel2Card', 'wageVessel3Card', 'wageVessel4Card',
+        'wageStartDate', 'wageStartHour',
         'wageEndDate', 'wageEndHour', 'role-skilled', 'role-onshore', 'wageHoliday',
         'wageWeekend', 'wageRain', 'wageHotTime', 'wageHourly',
         'wageShipName', 'wageDoubleOrder', 'wageSpecBody', 'wageTotal',
         'wageResultTitle', 'wageResultBox', 'dailyLogForm', 'log-card', 'wage-card',
-        'logWage1', 'logWage2', 'logShipName', 'logMemo', 'wageScheduleDatePicker',
+        'logWage1', 'logWage2', 'logWage3', 'logWage4',
+        'worklogWageExtraRow', 'worklogWageSlotHint',
+        'logShipName', 'logMemo', 'wageScheduleDatePicker',
         'wageAllowanceType', 'wageAllowanceHours'
     ].forEach(id => make(id));
+    // 기본 화면: 3·4번 선박 블록과 임금 3·임금 4 입력칸은 숨김 상태로 시작한다.
+    elements.wageVessel3Card.classList.add('is-slot-hidden');
+    elements.wageVessel4Card.classList.add('is-slot-hidden');
+    elements.worklogWageExtraRow.classList.add('is-slot-hidden');
+    elements.worklogWageSlotHint.classList.add('is-slot-hidden');
 
     elements.wageHourly.value = '10320';
     elements.wageStartDate.value = '2026-10-08';
@@ -94,7 +111,9 @@ function setup() {
     const scheduleVessels = [
         { VSL_NM: 'SHIP ALPHA', ATA: '2026-10-08 08:00', ATD: '2026-10-08 10:00', BERTH_NO: '1' },
         { VSL_NM: 'SHIP BETA', ATA: '2026-10-08 13:00', ATD: '2026-10-08 16:00', BERTH_NO: '2' },
-        { VSL_NM: 'SHIP GAMMA', ATA: '2026-10-08 18:00', ATD: '2026-10-08 20:00', BERTH_NO: '3' }
+        { VSL_NM: 'SHIP GAMMA', ATA: '2026-10-08 18:00', ATD: '2026-10-08 20:00', BERTH_NO: '3' },
+        { VSL_NM: 'SHIP DELTA', ATA: '2026-10-08 21:00', ATD: '2026-10-08 22:00', BERTH_NO: '4' },
+        { VSL_NM: 'SHIP EPSILON', ATA: '2026-10-08 22:30', ATD: '2026-10-08 23:30', BERTH_NO: '5' }
     ];
 
     const context = vm.createContext({
@@ -175,6 +194,23 @@ test('2. wage hours grid includes 7:3 per-vessel breakdown cards and square tota
     assert.match(appJs, /function syncWageHoursBlockSize\(\)/);
 });
 
+// 선박별 자동계산 블록은 1~4번 4칸이며, 3·4번은 기본 숨김이고
+// 보이는 칸은 총근무시간(정사각형) 높이를 균등 분할한다.
+test('2-1. per-vessel cards are 4 equal slots that match the total-hours block height', () => {
+    for (let slot = 1; slot <= 4; slot++) {
+        assert.match(html, new RegExp(`id="wageVessel${slot}Card" data-vessel-slot="${slot}"`));
+        assert.match(html, new RegExp(`id="wageVessel${slot}Name"`));
+        assert.match(html, new RegExp(`id="wageVessel${slot}Hours"`));
+    }
+    assert.match(html, /id="wageVessel3Card"[^>]*class=|class="wage-vessel-hours-card is-slot-hidden" id="wageVessel3Card"/);
+    assert.match(html, /class="wage-vessel-hours-card is-slot-hidden" id="wageVessel4Card"/);
+    // 균등 분할 + 총근무시간 블록과 같은 높이
+    assert.match(css, /\.wage-vessel-hours-pair\s*\{[^}]*grid-auto-rows:\s*minmax\(0,\s*1fr\)/);
+    assert.match(css, /\.wage-vessel-hours-pair\s*\{[^}]*height:\s*var\(--wage-total-side\)/);
+    assert.match(css, /\.wage-vessel-hours-card\.is-slot-hidden\s*\{\s*display:\s*none/);
+    assert.match(appJs, /function syncWageVesselSlotVisibility\(selectedCount\)/);
+});
+
 test('3. selecting up to 2 vessels auto-checks double order, sums hours, and calculates segments for logWage1 & logWage2', async () => {
     const { context, elements, messages, scheduleVessels } = setup();
 
@@ -192,10 +228,9 @@ test('3. selecting up to 2 vessels auto-checks double order, sums hours, and cal
     assert.equal(String(elements.wageTotalHours.value), '5');
     assert.equal(elements.wageTotalHours.readOnly, true);
 
-    // Attempt 3rd vessel -> blocked at 2 vessels
-    context.applyWageScheduleShip(scheduleVessels[2], '2026-10-08', 'hjnc');
-    assert.match(messages.at(-1), /최대 2척/);
-    assert.equal(elements.wageShipName.value, 'SHIP ALPHA / SHIP BETA');
+    // 2척까지는 3·4번 선박 블록이 숨겨져 있다.
+    assert.equal(elements.wageVessel3Card.classList.contains('is-slot-hidden'), true);
+    assert.equal(elements.wageVessel4Card.classList.contains('is-slot-hidden'), true);
 
     // Calculate multi-vessel wage
     context.calculateWage();
@@ -216,4 +251,72 @@ test('3. selecting up to 2 vessels auto-checks double order, sums hours, and cal
     assert.equal(elements.logShipName.value, 'SHIP ALPHA / SHIP BETA');
     assert.match(elements.logMemo.value, /\[더블오더 · 임금 1 · SHIP ALPHA\]/);
     assert.match(elements.logMemo.value, /\[더블오더 · 임금 2 · SHIP BETA\]/);
+});
+
+// 선박 3~4척(트리플·쿼드오더): 시간 합산 · 블록 노출 · 임금 1~4 분리 입력
+test('4. selecting 3 or 4 vessels sums all hours, reveals slots 3·4 and fills logWage1~logWage4', async () => {
+    const { context, elements, messages, scheduleVessels } = setup();
+
+    context.applyWageScheduleShip(scheduleVessels[0], '2026-10-08', 'hjnc'); // 2H
+    context.applyWageScheduleShip(scheduleVessels[1], '2026-10-08', 'hjnc'); // 3H
+    context.applyWageScheduleShip(scheduleVessels[2], '2026-10-08', 'hjnc'); // 2H → 합계 7H
+
+    assert.equal(elements.wageShipName.value, 'SHIP ALPHA / SHIP BETA / SHIP GAMMA');
+    assert.equal(elements.wageDoubleOrder.checked, true);
+    assert.equal(String(elements.wageTotalHours.value), '7');
+    assert.match(messages.at(-1), /트리플오더 3척 선택/);
+    assert.equal(elements.wageVessel3Card.classList.contains('is-slot-hidden'), false);
+    assert.equal(elements.wageVessel4Card.classList.contains('is-slot-hidden'), true);
+    assert.equal(elements.wageVessel3Name.textContent, 'SHIP GAMMA');
+    assert.equal(elements.wageVessel3Hours.textContent, '2시간');
+    assert.equal(elements.wageHoursBreakdown.classList.contains('is-compact'), true);
+
+    context.applyWageScheduleShip(scheduleVessels[3], '2026-10-08', 'hjnc'); // 1H → 합계 8H
+    assert.equal(String(elements.wageTotalHours.value), '8');
+    assert.match(messages.at(-1), /쿼드오더 4척 선택/);
+    assert.equal(elements.wageVessel4Card.classList.contains('is-slot-hidden'), false);
+    assert.equal(elements.wageVessel4Name.textContent, 'SHIP DELTA');
+    assert.equal(elements.wageVessel4Hours.textContent, '1시간');
+
+    // 5번째 선박은 거부된다.
+    context.applyWageScheduleShip(scheduleVessels[4], '2026-10-08', 'hjnc');
+    assert.match(messages.at(-1), /최대 4척/);
+    assert.equal(elements.wageShipName.value, 'SHIP ALPHA / SHIP BETA / SHIP GAMMA / SHIP DELTA');
+
+    context.calculateWage();
+    const calc = vm.runInContext('lastCalculatedWageData', context);
+    assert.equal(calc.isMultiVessel, true);
+    assert.equal(calc.vesselCount, 4);
+    assert.equal(calc.orderLabel, '쿼드오더');
+    assert.equal(calc.segments.length, 4);
+    assert.equal(calc.segments.map(s => s.name).join(' / '), 'SHIP ALPHA / SHIP BETA / SHIP GAMMA / SHIP DELTA');
+    assert.equal(calc.segments.map(s => s.hours).join(','), '2,3,2,1');
+    assert.equal(calc.totalHours, 8);
+    assert.equal(calc.totalPay, calc.segments.reduce((sum, s) => sum + s.totalPay, 0));
+    assert.match(calc.summary, /\[쿼드오더 · 임금 4 · SHIP DELTA\]/);
+    assert.match(elements.wageResultTitle.innerText, /쿼드오더 선박별 임금 산정 내역서 \(임금 1 · 임금 2 · 임금 3 · 임금 4\)/);
+
+    await context.sendCalculatedWageToLog();
+    assert.equal(elements.logWage1.value, calc.segments[0].totalPay);
+    assert.equal(elements.logWage2.value, calc.segments[1].totalPay);
+    assert.equal(elements.logWage3.value, calc.segments[2].totalPay);
+    assert.equal(elements.logWage4.value, calc.segments[3].totalPay);
+    assert.equal(elements.worklogWageExtraRow.classList.contains('is-slot-hidden'), false);
+    assert.equal(elements.logShipName.value, 'SHIP ALPHA / SHIP BETA / SHIP GAMMA / SHIP DELTA');
+    assert.match(elements.logMemo.value, /\[쿼드오더 · 임금 3 · SHIP GAMMA\]/);
+    assert.match(elements.logMemo.value, /\[쿼드오더 · 임금 4 · SHIP DELTA\]/);
+});
+
+// 선택을 해제하면 숨김 상태와 임금칸이 원래대로 돌아간다.
+test('5. deselecting vessels hides slots 3·4 again', () => {
+    const { context, elements, scheduleVessels } = setup();
+    [0, 1, 2, 3].forEach(i => context.applyWageScheduleShip(scheduleVessels[i], '2026-10-08', 'hjnc'));
+    assert.equal(elements.wageVessel4Card.classList.contains('is-slot-hidden'), false);
+
+    context.applyWageScheduleShip(scheduleVessels[3], '2026-10-08', 'hjnc'); // 해제
+    context.applyWageScheduleShip(scheduleVessels[2], '2026-10-08', 'hjnc'); // 해제
+    assert.equal(elements.wageShipName.value, 'SHIP ALPHA / SHIP BETA');
+    assert.equal(elements.wageVessel3Card.classList.contains('is-slot-hidden'), true);
+    assert.equal(elements.wageVessel4Card.classList.contains('is-slot-hidden'), true);
+    assert.equal(elements.wageHoursBreakdown.classList.contains('is-compact'), false);
 });

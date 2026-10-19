@@ -17,7 +17,7 @@ function extractFunction(name) {
     return body;
 }
 
-const FIELD_IDS = ['logShipName', 'logWage1', 'logWage2', 'logCoworkers', 'logMemo'];
+const FIELD_IDS = ['logShipName', 'logWage1', 'logWage2', 'logWage3', 'logWage4', 'logCoworkers', 'logMemo'];
 
 function setup({ hidden = false, filled = false, confirmYes = true, withImagePreview = false } = {}) {
     const elements = {};
@@ -36,6 +36,8 @@ function setup({ hidden = false, filled = false, confirmYes = true, withImagePre
         elements.logShipName.value = 'SHIP ALPHA / SHIP BETA';
         elements.logWage1.value = '120000';
         elements.logWage2.value = '90000';
+        elements.logWage3.value = '80000';
+        elements.logWage4.value = '70000';
         elements.logCoworkers.value = '재경, 성철';
         elements.logMemo.value = '🚢 더블오더 작업 (선박 2척 · 합계 5H)\n\n오늘 메모';
         elements.logImageInput.value = 'C:\\fakepath\\site.jpg';
@@ -126,7 +128,7 @@ test('a hidden (closed) form is ignored entirely', () => {
 
 test('A-1: reset 로직은 전역 스크립트(app.js)에 단일 사본으로 유지된다', () => {
     assert.match(appJs, /function resetWorkLogForm\(\)/);
-    assert.match(appJs, /logShipName', 'logWage1', 'logWage2', 'logCoworkers', 'logMemo/);
+    assert.match(appJs, /logShipName', 'logWage1', 'logWage2', 'logWage3', 'logWage4', 'logCoworkers', 'logMemo/);
     assert.match(appJs, /근무일지 입력 내용이 초기화되었습니다/);
     // 분리 이전에는 인라인+모듈 2벌이 갈라져 있었지만, 이제 app.js 가 정본입니다.
     // 다른 전역 스크립트에 사본이 생기면 동기화 회귀가 되므로 차단합니다.
