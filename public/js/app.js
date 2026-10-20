@@ -7652,17 +7652,35 @@ function resetShipFilters() {
 }
 function extractShipTags(ship) {
     if (!ship) return [];
-    if (Array.isArray(ship.tags) && ship.tags.length > 0) return ship.tags;
+    // 📝 게시글 태그 — 하트(♡) 표기를 정본으로 사용합니다.
+    // 예전에 하트 없이 저장한 '#찬구콘' 도 '#찬구콘♡' 로 맞춰 필터가 어긋나지 않게 합니다.
+    const heartTags = ["#찬구콘♡", "#수열콘♡", "#영구콘♡", "#광명콘♡"];
+    const normalizeTag = (tag) => {
+        const raw = String(tag ?? "").trim();
+        if (!raw) return "";
+        const compact = raw.replace(/\s+/g, "");
+        const hashed = compact.startsWith("#") ? compact : `#${compact}`;
+        if (heartTags.includes(hashed)) return hashed;
+        if (heartTags.includes(`${hashed}♡`)) return `${hashed}♡`;
+        return raw;
+    };
+    if (Array.isArray(ship.tags) && ship.tags.length > 0) {
+        return [...new Set(ship.tags.map(normalizeTag).filter(Boolean))];
+    }
     const text = `${getShipDisplayName(ship)} ${getShipMemoText(ship)} ${getShipLegacyOnshoreText(ship)}`;
     const known = [
         "#오토콘", "#수동콘",
         "#외줄콘", "#더블콘", "#주먹콘", "#손가락콘", "#현대콘", "#춘학 사랑해콘", "#춘학사랑해",
-        "#브릿지주의", "#라싱바무거움", "#턴버클뻑뻑함", "#통로협소"
+        "#브릿지주의", "#라싱바무거움", "#턴버클뻑뻑함", "#통로협소",
+        "#찬구콘♡", "#수열콘♡", "#브라보콘", "#월드콘", "#닭다리콘", "#개콘", "#영구콘♡", "#광명콘♡"
     ];
     return known.filter(t => {
         // '#춘학사랑해'는 레거시 문구 '춘학사랑해콘'(기존 '#춘학 사랑해콘' 전용)과 이중 매칭되지 않게 제외
         if (t === "#춘학사랑해") return (text.includes("#춘학사랑해") || text.includes("춘학사랑해")) && !text.includes("춘학사랑해콘");
-        return text.includes(t) || text.includes(t.slice(1)) || (t === "#춘학 사랑해콘" && text.includes("춘학사랑해콘"));
+        if (text.includes(t) || text.includes(t.slice(1))) return true;
+        // 하트 태그는 '찬구콘'처럼 하트 없이 적힌 메모도 같은 태그로 인식
+        if (t.endsWith("♡") && text.includes(t.slice(1, -1))) return true;
+        return t === "#춘학 사랑해콘" && text.includes("춘학사랑해콘");
     });
 }
 /* ------------------------------------------------------------------
@@ -7872,7 +7890,8 @@ function startEditShip(id, name, feat, verifiedPw = "") {
     const pwEl = document.getElementById('shipPw');
     if (pwEl && verifiedPw) pwEl.value = verifiedPw;
     setShipDifficulty(shipObj.difficulty || 3);
-    selectedShipFormTags = Array.isArray(shipObj.tags) ? [...shipObj.tags] : extractShipTags(shipObj);
+    // extractShipTags 가 게시글 태그의 하트(♡) 표기를 정규화하므로 수정 화면에서도 같은 표기로 선택됩니다.
+    selectedShipFormTags = extractShipTags(shipObj);
     syncShipFormTagUI();
     checkShipDuplicateInline(document.getElementById('shipName').value);
     const form = document.getElementById('shipForm');

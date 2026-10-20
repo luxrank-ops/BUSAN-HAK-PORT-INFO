@@ -378,6 +378,47 @@ test('필수 장비 신규 콘 태그(외줄콘/더블콘/주먹콘/손가락콘
 });
 
 
+test('게시글 태그(찬구콘·수열콘·브라보콘·월드콘·닭다리콘·개콘·영구콘·광명콘)가 등록 폼·필터·검색에 연결된다', () => {
+    const NEW_TAGS = ['#찬구콘♡', '#수열콘♡', '#브라보콘', '#월드콘', '#닭다리콘', '#개콘', '#영구콘♡', '#광명콘♡'];
+
+    // ① 신규 등록 폼과 빠른 필터 양쪽에 태그 버튼이 있어야 한다.
+    NEW_TAGS.forEach(tag => {
+        assert.ok(html.includes(`data-form-tag="${tag}"`), `등록 폼에 ${tag} 태그 버튼이 없습니다`);
+        assert.ok(html.includes(`data-filter-tag="${tag}"`), `필터 바에 ${tag} 태그 버튼이 없습니다`);
+    });
+
+    const t = setup();
+    t.docs = [
+        ...t.docs,
+        { id: 'post1', shipName: 'CONE POST 1', onboardFeat: '찬구콘 작업', views: 0, ts: 12 },
+        { id: 'post2', shipName: 'CONE POST 2', onboardFeat: '브라보콘·닭다리콘 투입', views: 0, ts: 11 },
+        { id: 'post3', shipName: 'CONE POST 3', onboardFeat: '광명콘 작업', views: 0, tags: ['#광명콘'], ts: 10 }
+    ];
+    t.emit();
+
+    // ② 메모에 태그를 적어도 추출되고, 하트 없이 저장된 태그도 하트 표기로 맞춰진다.
+    assert.ok(t.context.extractShipTags(t.docs.find(d => d.id === 'post1')).includes('#찬구콘♡'));
+    assert.ok(t.context.extractShipTags(t.docs.find(d => d.id === 'post2')).includes('#브라보콘'));
+    assert.ok(t.context.extractShipTags(t.docs.find(d => d.id === 'post2')).includes('#닭다리콘'));
+    assert.deepEqual([...t.context.extractShipTags({ tags: ['#광명콘'] })], ['#광명콘♡']);
+    assert.deepEqual([...t.context.extractShipTags({ tags: ['#수열콘'] })], ['#수열콘♡']);
+
+    // ③ 태그 필터: 메모에서 추출한 태그·하트 없는 저장 태그 모두 같은 필터로 잡힌다.
+    vm.runInContext('activeShipFilterTags = ["#찬구콘♡"];', t.context);
+    t.context.filterShips();
+    assert.deepEqual(t.rowsShown(), ['s-post1']);
+
+    vm.runInContext('activeShipFilterTags = ["#광명콘♡"];', t.context);
+    t.context.filterShips();
+    assert.deepEqual(t.rowsShown(), ['s-post3']);
+
+    // ④ 검색어: 하트를 빼고 '찬구콘' 만 입력해도 찾을 수 있다.
+    vm.runInContext('activeShipFilterTags = [];', t.context);
+    t.search.value = '찬구콘';
+    t.context.filterShips();
+    assert.deepEqual(t.rowsShown(), ['s-post1']);
+});
+
 // D-2: 소프트 삭제(deletedAt)된 선박은 목록에서 사라지고, 남은 선박은 그대로 유지된다.
 test('소프트 삭제된 선박은 목록에서 제외된다', () => {
     const t = setup();

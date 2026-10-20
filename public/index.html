@@ -34,9 +34,9 @@
     <link rel="icon" href="./favicon.ico">
     <link rel="stylesheet" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.8/dist/web/static/pretendard.css" />
     <link rel="manifest" href="./manifest.json">
-    <link rel="stylesheet" href="./css/app.css?v=2027.9">
+    <link rel="stylesheet" href="./css/app.css?v=2027.10">
     <link rel="apple-touch-icon" href="./icon-192.png">
-<script src="./js/notifications.js?v=2027.9"></script></head>
+<script src="./js/notifications.js?v=2027.10"></script></head>
 <body data-app-view="legacy">
 <header>
     <div class="today-visitor-badge-slot" aria-hidden="true"></div>
@@ -666,7 +666,7 @@
             </div>
             <div id="shipFilterBarArea" class="ship-filter-bar hidden">
                 <div style="width:100%; display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
-                    <span style="font-size:0.76rem; font-weight:900; color:var(--primary);">🏷️ 장비·특징 태그 & 난이도 빠른 필터</span>
+                    <span style="font-size:0.76rem; font-weight:900; color:var(--primary);">🏷️ 장비·특징·게시글 태그 & 난이도 빠른 필터</span>
                     <button type="button" onclick="resetShipFilters()" style="background:transparent; border:1px solid var(--border); border-radius:6px; padding:2px 7px; font-size:0.7rem; font-weight:800; color:var(--text-sub); cursor:pointer;">필터 초기화</button>
                 </div>
                 <button type="button" class="ship-tag-chip" data-filter-tag="#오토콘" onclick="toggleShipFilterTag('#오토콘')">#오토콘</button>
@@ -682,6 +682,16 @@
                 <button type="button" class="ship-tag-chip" data-filter-tag="#라싱바무거움" onclick="toggleShipFilterTag('#라싱바무거움')">#라싱바무거움</button>
                 <button type="button" class="ship-tag-chip" data-filter-tag="#턴버클뻑뻑함" onclick="toggleShipFilterTag('#턴버클뻑뻑함')">#턴버클뻑뻑함</button>
                 <button type="button" class="ship-tag-chip" data-filter-tag="#통로협소" onclick="toggleShipFilterTag('#통로협소')">#통로협소</button>
+                <div style="flex-basis:100%; height:0; border-top:1px dashed var(--border); margin:2px 0 0;"></div>
+                <span style="flex-basis:100%; font-size:0.72rem; font-weight:900; color:var(--text-sub); letter-spacing:-0.2px;">📝 게시글 태그</span>
+                <button type="button" class="ship-tag-chip" data-filter-tag="#찬구콘♡" onclick="toggleShipFilterTag('#찬구콘♡')">#찬구콘♡</button>
+                <button type="button" class="ship-tag-chip" data-filter-tag="#수열콘♡" onclick="toggleShipFilterTag('#수열콘♡')">#수열콘♡</button>
+                <button type="button" class="ship-tag-chip" data-filter-tag="#브라보콘" onclick="toggleShipFilterTag('#브라보콘')">#브라보콘</button>
+                <button type="button" class="ship-tag-chip" data-filter-tag="#월드콘" onclick="toggleShipFilterTag('#월드콘')">#월드콘</button>
+                <button type="button" class="ship-tag-chip" data-filter-tag="#닭다리콘" onclick="toggleShipFilterTag('#닭다리콘')">#닭다리콘</button>
+                <button type="button" class="ship-tag-chip" data-filter-tag="#개콘" onclick="toggleShipFilterTag('#개콘')">#개콘</button>
+                <button type="button" class="ship-tag-chip" data-filter-tag="#영구콘♡" onclick="toggleShipFilterTag('#영구콘♡')">#영구콘♡</button>
+                <button type="button" class="ship-tag-chip" data-filter-tag="#광명콘♡" onclick="toggleShipFilterTag('#광명콘♡')">#광명콘♡</button>
                 <select id="shipDifficultyFilter" onchange="filterShips()" style="margin-left:auto; border:1.5px solid #cbd5e1; border-radius:16px; padding:3px 8px; font-size:0.75rem; font-weight:800; color:var(--primary); background:#fff; outline:none;">
                     <option value="0">★ 난이도 전체</option>
                     <option value="5">★★★★★ (5점·극상)</option>
@@ -728,7 +738,7 @@
                     </div>
                 </div>
                 <div style="margin-bottom:10px; background:#fff; padding:10px; border-radius:8px; border:1px solid var(--border);">
-                    <div style="font-size:0.84rem; font-weight:900; color:var(--primary); margin-bottom:6px;">🏷️ 필수 장비 · 선박 특징 태그 (중복 선택 가능)</div>
+                    <div style="font-size:0.84rem; font-weight:900; color:var(--primary); margin-bottom:6px;">🏷️ 필수 장비 · 선박 특징 · 게시글 태그 (중복 선택 가능)</div>
                     <div id="shipFormTagList" style="display:flex; flex-wrap:wrap; gap:6px;">
                         <button type="button" class="ship-tag-chip" data-form-tag="#오토콘" onclick="toggleShipFormTag('#오토콘')">#오토콘</button>
                         <button type="button" class="ship-tag-chip" data-form-tag="#수동콘" onclick="toggleShipFormTag('#수동콘')">#수동콘</button>
@@ -743,6 +753,16 @@
                         <button type="button" class="ship-tag-chip" data-form-tag="#라싱바무거움" onclick="toggleShipFormTag('#라싱바무거움')">#라싱바무거움</button>
                         <button type="button" class="ship-tag-chip" data-form-tag="#턴버클뻑뻑함" onclick="toggleShipFormTag('#턴버클뻑뻑함')">#턴버클뻑뻑함</button>
                         <button type="button" class="ship-tag-chip" data-form-tag="#통로협소" onclick="toggleShipFormTag('#통로협소')">#통로협소</button>
+                        <div style="flex-basis:100%; height:0; border-top:1px dashed var(--border); margin:2px 0 0;"></div>
+                        <span style="flex-basis:100%; font-size:0.76rem; font-weight:900; color:var(--text-sub);">📝 게시글 태그</span>
+                        <button type="button" class="ship-tag-chip" data-form-tag="#찬구콘♡" onclick="toggleShipFormTag('#찬구콘♡')">#찬구콘♡</button>
+                        <button type="button" class="ship-tag-chip" data-form-tag="#수열콘♡" onclick="toggleShipFormTag('#수열콘♡')">#수열콘♡</button>
+                        <button type="button" class="ship-tag-chip" data-form-tag="#브라보콘" onclick="toggleShipFormTag('#브라보콘')">#브라보콘</button>
+                        <button type="button" class="ship-tag-chip" data-form-tag="#월드콘" onclick="toggleShipFormTag('#월드콘')">#월드콘</button>
+                        <button type="button" class="ship-tag-chip" data-form-tag="#닭다리콘" onclick="toggleShipFormTag('#닭다리콘')">#닭다리콘</button>
+                        <button type="button" class="ship-tag-chip" data-form-tag="#개콘" onclick="toggleShipFormTag('#개콘')">#개콘</button>
+                        <button type="button" class="ship-tag-chip" data-form-tag="#영구콘♡" onclick="toggleShipFormTag('#영구콘♡')">#영구콘♡</button>
+                        <button type="button" class="ship-tag-chip" data-form-tag="#광명콘♡" onclick="toggleShipFormTag('#광명콘♡')">#광명콘♡</button>
                     </div>
                 </div>
                 <textarea id="shipOnboard" class="input-field textarea-field" placeholder="작업 내용 및 준비 장비 상세 메모"></textarea>
@@ -1745,15 +1765,15 @@
     </div>
 </div>
 
-<script src="./js/app.js?v=2027.9"></script>
+<script src="./js/app.js?v=2027.10"></script>
   
     <!-- [여기서부터 복사] 조장 근무일 비밀번호 검증 스크립트 -->
 <!-- [추가할 보안 및 실행 스크립트] -->
-<script src="./js/leader-access.js?v=2027.9"></script>
+<script src="./js/leader-access.js?v=2027.10"></script>
   <!-- [프로덕션 수준] 파이어베이스 'ships' 컬렉션 전체 데이터 조회 및 검색 모듈 -->
-<script src="./js/ships-board.js?v=2027.9"></script>
+<script src="./js/ships-board.js?v=2027.10"></script>
 
-<script src="./js/tab-views.js?v=2027.9"></script>
+<script src="./js/tab-views.js?v=2027.10"></script>
 </body>
 </html>
 
