@@ -15,7 +15,6 @@ import { existsSync } from 'node:fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { initializeApp, cert, getApps } from 'firebase-admin/app';
-import { getAuth } from 'firebase-admin/auth';
 import { getFirestore, FieldValue } from 'firebase-admin/firestore';
 import { getMessaging } from 'firebase-admin/messaging';
 import cron from 'node-cron';
@@ -214,7 +213,46 @@ export function verifyAdminSessionToken(rawToken: string, nowMs: number = Date.n
   return crypto.timingSafeEqual(expected, actual);
 }
 
-let firebaseBackendOverrideForTests: { db?: ReturnType<typeof getFirestore>; auth?: ReturnType<typeof getAuth> } | null = null;
+let cachedServiceAccountCreds: { clientEmail: string; privateKey: string } | null = null;
+
+function base64UrlEncode(input: Buffer | string): string {
+  const buf = typeof input === 'string' ? Buffer.from(input, 'utf8') : input;
+  return buf.toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
+}
+
+/**
+ * 외부 JWT 패키지(firebase-admin/auth -> jsonwebtoken) 의존성 없이
+ * Node 내장 crypto(RS256) 만으로 Firebase Identity Toolkit 표준 Custom Token 을 서명합니다.
+ */
+function signServiceAccountCustomToken(uid: string): string | null {
+  initFirebaseAdmin();
+  if (!cachedServiceAccountCreds?.clientEmail || !cachedServiceAccountCreds?.privateKey) {
+    return null;
+  }
+  const nowSec = Math.floor(Date.now() / 1000);
+  const headerSegment = base64UrlEncode(JSON.stringify({ alg: 'RS256', typ: 'JWT' }));
+  const payloadSegment = base64UrlEncode(
+    JSON.stringify({
+      iss: cachedServiceAccountCreds.clientEmail,
+      sub: cachedServiceAccountCreds.clientEmail,
+      aud: 'https://identitytoolkit.googleapis.com/google.identity.identitytoolkit.v1.IdentityToolkit',
+      iat: nowSec,
+      exp: nowSec + 3600,
+      uid
+    })
+  );
+  const signingInput = `${headerSegment}.${payloadSegment}`;
+  const signer = crypto.createSign('RSA-SHA256');
+  signer.update(signingInput);
+  signer.end();
+  const signature = base64UrlEncode(signer.sign(cachedServiceAccountCreds.privateKey));
+  return `${signingInput}.${signature}`;
+}
+
+let firebaseBackendOverrideForTests: {
+  db?: ReturnType<typeof getFirestore>;
+  auth?: { createCustomToken: (uid: string) => Promise<string> };
+} | null = null;
 export function setFirebaseBackendOverrideForTests(override: { db?: any; auth?: any } | null): void {
   firebaseBackendOverrideForTests = override;
 }
@@ -222,9 +260,19 @@ function resolveServerFirestore(): ReturnType<typeof getFirestore> | null {
   if (firebaseBackendOverrideForTests?.db) return firebaseBackendOverrideForTests.db;
   return initFirebaseAdmin() && getApps().length > 0 ? getFirestore() : null;
 }
-function resolveServerAuth(): ReturnType<typeof getAuth> | null {
+function resolveServerAuth(): { createCustomToken: (uid: string) => Promise<string> } | null {
   if (firebaseBackendOverrideForTests?.auth) return firebaseBackendOverrideForTests.auth;
-  return initFirebaseAdmin() && getApps().length > 0 ? getAuth() : null;
+  initFirebaseAdmin();
+  if (!cachedServiceAccountCreds?.clientEmail || !cachedServiceAccountCreds?.privateKey) {
+    return null;
+  }
+  return {
+    async createCustomToken(uid: string): Promise<string> {
+      const signed = signServiceAccountCustomToken(uid);
+      if (!signed) throw new Error('service_account_signing_unavailable');
+      return signed;
+    }
+  };
 }
 
 export async function verifyAdminPassword(rawPassword: string): Promise<boolean> {
@@ -332,6 +380,12 @@ function initFirebaseAdmin(): boolean {
         ? rawKey
         : Buffer.from(rawKey, 'base64').toString('utf-8');
       const serviceAccount = JSON.parse(decoded);
+      if (serviceAccount.client_email && serviceAccount.private_key) {
+        cachedServiceAccountCreds = {
+          clientEmail: String(serviceAccount.client_email),
+          privateKey: String(serviceAccount.private_key)
+        };
+      }
       initializeApp({
         credential: cert(serviceAccount),
         storageBucket: process.env.FIREBASE_STORAGE_BUCKET || undefined
