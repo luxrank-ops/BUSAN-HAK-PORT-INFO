@@ -114,7 +114,7 @@ jobs:
           echo '  3. 본 워크플로우를 다시 실행하고 "예"를 선택합니다.'
 
   deploy:
-    name: 승인 후 Firebase Hosting 배포
+    name: 승인 후 Firebase Hosting 및 Firestore 규칙 배포
     needs: credentials
     if: ${{ inputs.deploy_confirmation == '예' && needs.credentials.outputs.has_credentials == 'true' }}
     runs-on: ubuntu-latest
@@ -160,5 +160,7 @@ jobs:
         with:
           credentials_json: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_BUSAN_HAK_PORT }}
 
-      - name: Firebase Hosting 배포
-        run: npx --yes firebase-tools@15.3.1 deploy --only hosting --project busan-hak-port --non-interactive
+      # 호스팅 정적 파일과 함께 Firestore 보안 규칙(firestore.rules)도 함께 배포하여
+      # 신규 컬렉션·보안 정책 변경이 누락되지 않도록 합니다.
+      - name: Firebase Hosting 및 Firestore 규칙 배포
+        run: npx --yes firebase-tools@15.3.1 deploy --only hosting,firestore:rules --project busan-hak-port --non-interactive
