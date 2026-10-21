@@ -298,5 +298,80 @@ service cloud.firestore {
       allow get, list: if isSignedIn();
       allow create, update, delete: if isAdmin();
     }
+
+    // ---------------------------------------------------------
+    // 10. kkung_chain (꿍꿍따 끝말잇기 "댓글 릴레이")
+    //     - 대전(승부)이 아니라 여러 사람이 시간 날 때마다 단어 댓글을 이어 쓰는 방식입니다.
+    //     - kkung_chain/active          : 현재 릴레이 상태(라운드·마지막 단어·이어진 개수)
+    //     - kkung_chain/active/comments : 단어 댓글(= 릴레이 한 수)
+    //     - 라운드 번호·단어 개수를 조작하지 못하도록 "이어쓰기(+1)"와
+    //       "새 출발(round+1 · 0개 초기화 · 60초 간격)" 두 가지 형태만 허용합니다.
+    //     - 화면 코드(public/js/kkung-relay.js)의 운영값과 이 규칙은 함께 바꿔야 합니다.
+    // ---------------------------------------------------------
+    function isValidKkungWord(val) {
+      return val is string && val.matches('^[가-힣]{3}$');
+    }
+
+    function isValidKkungState(data) {
+      return data.round is int && data.round >= 1 && data.round <= 1000000 &&
+        isValidKkungWord(data.starterWord) &&
+        isValidKkungWord(data.lastWord) &&
+        data.wordCount is int && data.wordCount >= 0 && data.wordCount <= 500 &&
+        data.usedWords is list && data.usedWords.size() <= 500 &&
+        data.usedWords.hasAll([data.lastWord]) &&
+        data.lastNick is string && data.lastNick.size() <= 50 &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidKkungComment(data) {
+      return data.name is string && data.name.size() >= 1 && data.name.size() <= 50 &&
+        isValidKkungWord(data.word) &&
+        isValidKkungWord(data.prevWord) &&
+        data.round is int && data.round >= 1 && data.round <= 1000000 &&
+        (!('memo' in data) || data.memo == null ||
+          (data.memo is string && data.memo.size() <= 120));
+    }
+
+    // 첫 릴레이 개설: 라운드 1 · 이어진 단어 0 · 사용 목록에는 출발 단어 하나
+    function isKkungFirstRound(data) {
+      return data.round == 1 && data.wordCount == 0 &&
+        data.usedWords.size() == 1 && data.lastWord == data.starterWord;
+    }
+
+    // 단어 이어쓰기: 라운드·출발 단어는 그대로, 이어진 개수와 사용 목록은 정확히 1 증가
+    function isKkungWordAppend(data, before) {
+      return data.round == before.round &&
+        data.starterWord == before.starterWord &&
+        data.wordCount == before.wordCount + 1 &&
+        data.usedWords.size() == before.usedWords.size() + 1;
+    }
+
+    // 새 출발: 라운드 +1, 개수 0으로 초기화, 직전 활동 후 60초 안에는 연달아 갈아엎을 수 없음
+    function isKkungNewRound(data, before) {
+      return data.round == before.round + 1 &&
+        data.wordCount == 0 &&
+        data.usedWords.size() == 1 &&
+        data.lastWord == data.starterWord &&
+        (!('updatedAt' in before) || !(before.updatedAt is timestamp) ||
+          request.time.toMillis() > before.updatedAt.toMillis() + 60000);
+    }
+
+    match /kkung_chain/active {
+      allow get: if isSignedIn();
+      allow list: if false;
+      allow create: if isSignedIn() && isValidKkungState(incoming()) && isKkungFirstRound(incoming());
+      allow update: if isSignedIn() && isValidKkungState(incoming()) && (
+        isKkungWordAppend(incoming(), existing()) ||
+        isKkungNewRound(incoming(), existing())
+      );
+      allow delete: if isAdmin();
+
+      match /comments/{commentId} {
+        allow get, list: if isSignedIn();
+        allow create: if isSignedIn() && isValidId(commentId) && isValidKkungComment(incoming());
+        // 한 번 이어 쓴 단어는 릴레이 흐름 자체이므로 작성자도 고치거나 지울 수 없습니다(관리자만).
+        allow update, delete: if isAdmin();
+      }
+    }
   }
 }

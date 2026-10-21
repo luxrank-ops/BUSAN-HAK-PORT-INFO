@@ -10,7 +10,7 @@ const appJsFiles = [
   'public/js/leader-access.js',
   'public/js/ships-board.js',
   'public/js/tab-views.js',
-  'public/js/kkung-game.js'
+  'public/js/kkung-relay.js'
 ];
 
 const requiredFiles = [
