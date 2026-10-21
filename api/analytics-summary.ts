@@ -9,6 +9,27 @@
  * catch-all(api/[...path].ts)은 단일 세그먼트 경로에만 매칭되므로, 2세그먼트 경로는
  * 개별 함수 파일로 노출해야 플랫폼 404 를 피할 수 있습니다.
  */
-import { app } from '../server.js';
+import type { IncomingMessage, ServerResponse } from 'node:http';
 
-export default app;
+let cachedExpressApp: ((req: IncomingMessage, res: ServerResponse) => unknown) | null = null;
+
+export default async function handler(req: IncomingMessage, res: ServerResponse) {
+  try {
+    if (!cachedExpressApp) {
+      const mod = await import('../server.js');
+      cachedExpressApp = mod.app;
+    }
+    return cachedExpressApp(req, res);
+  } catch (err: any) {
+    res.statusCode = 500;
+    res.setHeader('Content-Type', 'application/json; charset=utf-8');
+    res.end(
+      JSON.stringify({
+        ok: false,
+        error: 'bootstrap_failed',
+        name: String(err?.name || 'Error'),
+        message: String(err?.message || err)
+      })
+    );
+  }
+}
