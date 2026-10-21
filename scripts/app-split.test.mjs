@@ -35,7 +35,8 @@ test('전역 스크립트 파일이 모두 존재하고 HTML 에 load 순서대�
         'public/js/app.js',
         'public/js/leader-access.js',
         'public/js/ships-board.js',
-        'public/js/tab-views.js'
+        'public/js/tab-views.js',
+        'public/js/kkung-game.js'
     ];
     const positions = expectedOrder.map((file) => {
         const content = readFileSync(new URL(`../${file}`, import.meta.url), 'utf8');
