@@ -1374,6 +1374,101 @@ app.get('/api/health', (_req, res) => {
   });
 });
 
+app.get('/api/analytics-summary', async (_req, res) => {
+  try {
+    if (!initFirebaseAdmin() || getApps().length === 0) {
+      res.status(503).json({ ok: false, error: 'firebase_admin_not_initialized' });
+      return;
+    }
+    const db = getFirestore();
+    const kstNow = new Date(Date.now() + 9 * 60 * 60 * 1000);
+    const dayLabels = ['일', '월', '화', '수', '목', '금', '토'];
+    const dayKeys: Array<{ key: string; shortDate: string; dayName: string; isToday: boolean }> = [];
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(Date.UTC(kstNow.getUTCFullYear(), kstNow.getUTCMonth(), kstNow.getUTCDate() - i));
+      const y = d.getUTCFullYear();
+      const m = String(d.getUTCMonth() + 1).padStart(2, '0');
+      const day = String(d.getUTCDate()).padStart(2, '0');
+      dayKeys.push({
+        key: `${y}-${m}-${day}`,
+        shortDate: `${d.getUTCMonth() + 1}/${d.getUTCDate()}`,
+        dayName: dayLabels[d.getUTCDay()],
+        isToday: i === 0
+      });
+    }
+
+    const [totalSnap, shipsSnap, postsSnap, noticesSnap, workLogsSnap, ...dailySnaps] = await Promise.all([
+      db.collection('visitor_stats').doc('total').get(),
+      db.collection('ships').limit(200).get(),
+      db.collection('posts').limit(200).get(),
+      db.collection('notices').limit(50).get(),
+      db.collection('work_logs').limit(500).get(),
+      ...dayKeys.map((dk) => db.collection('visitor_stats').doc(`daily-${dk.key}`).get())
+    ]);
+
+    const totalData = (totalSnap.exists ? totalSnap.data() : {}) || {};
+    const dailyTrend = dayKeys.map((dk, idx) => {
+      const d = (dailySnaps[idx]?.exists ? dailySnaps[idx].data() : {}) || {};
+      return {
+        date: dk.key,
+        label: `${dk.shortDate}(${dk.dayName})`,
+        isToday: dk.isToday,
+        count: Number(d.count) || 0,
+        unique: Number(d.unique) || 0,
+        hours: d.hours || { h00_06: 0, h06_12: 0, h12_18: 0, h18_24: 0 },
+        devices: d.devices || { android: 0, ios: 0, desktop: 0 },
+        blocks: d.blocks || {},
+        terminals: d.terminals || {},
+        actions: d.actions || {}
+      };
+    });
+
+    const todayEntry = dailyTrend[dailyTrend.length - 1];
+    const yesterdayEntry = dailyTrend[dailyTrend.length - 2];
+    const weekTotal = dailyTrend.reduce((acc, item) => acc + item.count, 0);
+    const weekUniqueSum = dailyTrend.reduce((acc, item) => acc + item.unique, 0);
+
+    const activeShips = shipsSnap.docs.filter((doc) => !doc.data().deletedAt);
+    const activePosts = postsSnap.docs.filter((doc) => !doc.data().deletedAt);
+    const activeWorkLogs = workLogsSnap.docs.filter((doc) => !doc.data().deletedAt);
+
+    res.json({
+      ok: true,
+      generatedAtKst: kstNow.toISOString().replace('Z', '+09:00'),
+      summary: {
+        todayVisitors: todayEntry.count,
+        todayUnique: todayEntry.unique,
+        yesterdayVisitors: yesterdayEntry.count,
+        yesterdayUnique: yesterdayEntry.unique,
+        diffFromYesterday: todayEntry.count - yesterdayEntry.count,
+        weekTotalVisitors: weekTotal,
+        weekDailyAvg: Math.round(weekTotal / 7),
+        totalVisitors: Number(totalData.count) || 0,
+        totalUnique: Math.max(Number(totalData.unique) || 0, weekUniqueSum)
+      },
+      todayHours: todayEntry.hours,
+      totalHours: totalData.hours || { h00_06: 0, h06_12: 0, h12_18: 0, h18_24: 0 },
+      todayDevices: todayEntry.devices,
+      totalDevices: totalData.devices || { android: 0, ios: 0, desktop: 0 },
+      totalBlocks: totalData.blocks || {},
+      todayBlocks: todayEntry.blocks || {},
+      totalTerminals: totalData.terminals || {},
+      todayTerminals: todayEntry.terminals || {},
+      totalActions: totalData.actions || {},
+      todayActions: todayEntry.actions || {},
+      dailyTrend,
+      collections: {
+        shipsCount: activeShips.length,
+        postsCount: activePosts.length,
+        noticesCount: noticesSnap.size,
+        workLogsCount: activeWorkLogs.length
+      }
+    });
+  } catch (error: any) {
+    res.status(500).json({ ok: false, error: error?.message || 'analytics_summary_failed' });
+  }
+});
+
 app.get('/api/hjnc-schedule', async (req, res) => {
   try {
     const targetDate = String(req.query.date || '').trim();
