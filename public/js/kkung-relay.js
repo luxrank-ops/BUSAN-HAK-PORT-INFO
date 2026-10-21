@@ -565,8 +565,17 @@
         };
     }
 
-    function startRelaySubscription() {
+    async function startRelaySubscription() {
         if (stateUnsubscribe || feedUnsubscribe) return;
+        const hasSignedUser = Boolean(
+            global.firebase &&
+            typeof global.firebase.auth === 'function' &&
+            global.firebase.auth().currentUser
+        );
+        if (!hasSignedUser && typeof global.ensureAnonymousAuth === 'function') {
+            await ensureRelayAuth();
+            if (!relayVisible || stateUnsubscribe || feedUnsubscribe) return;
+        }
         const stateRef = relayStateRef();
         const commentsRef = relayCommentsRef();
         if (!stateRef || !commentsRef) {
