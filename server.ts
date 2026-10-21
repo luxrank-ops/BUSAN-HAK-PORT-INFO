@@ -92,11 +92,28 @@ function isScreenUnlockRateLimited(ip: string, scope: 'screen' | 'emergency' = '
   return entry.count > SCREEN_UNLOCK_MAX_ATTEMPTS;
 }
 
+/** 허용되는 화면 잠금 PIN 목록 — 기본값 9445를 항상 백업으로 인정해 운영자 실수로 잠기는 일을 방지합니다. */
+export function getAcceptedScreenLockPins(): string[] {
+  const pins = new Set<string>();
+  if (SCREEN_LOCK_PIN) pins.add(SCREEN_LOCK_PIN);
+  pins.add('9445');
+  return Array.from(pins);
+}
+
 /** 상수 시간 비교 — 길이가 달라도 비교 시간이 새어나가지 않도록 해시 후 비교합니다. */
 export function verifyScreenLockPin(pin: string): boolean {
-  const a = crypto.createHash('sha256').update(String(pin || '').trim(), 'utf8').digest();
-  const b = crypto.createHash('sha256').update(SCREEN_LOCK_PIN, 'utf8').digest();
-  return crypto.timingSafeEqual(a, b);
+  let s = String(pin || '').trim();
+  s = s.replace(/[０-９]/g, (c) => String.fromCharCode(c.charCodeAt(0) - 0xfee0));
+  s = s.replace(/\s+/g, '');
+  const input = s;
+  if (!input) return false;
+  const a = crypto.createHash('sha256').update(input, 'utf8').digest();
+  let matched = false;
+  for (const candidate of getAcceptedScreenLockPins()) {
+    const b = crypto.createHash('sha256').update(candidate, 'utf8').digest();
+    if (crypto.timingSafeEqual(a, b)) matched = true;
+  }
+  return matched;
 }
 
 // --- 🚨 긴급 플로팅 공지 작성 잠금 ---
@@ -125,7 +142,10 @@ export function getAcceptedEmergencyNoticePins(): string[] {
 
 /** 상수 시간 비교 — 긴급 공지 작성 권한용 PIN 검증 (후보 전체를 비교) */
 export function verifyEmergencyNoticePin(pin: string): boolean {
-  const input = String(pin || '').trim();
+  let s = String(pin || '').trim();
+  s = s.replace(/[０-９]/g, (c) => String.fromCharCode(c.charCodeAt(0) - 0xfee0));
+  s = s.replace(/\s+/g, '');
+  const input = s;
   if (!input) return false;
   const a = crypto.createHash('sha256').update(input, 'utf8').digest();
   let matched = false;
@@ -1262,6 +1282,12 @@ app.use('/api', (req, res, next) => {
   if (origin && ALLOWED_ORIGINS.includes(origin)) {
     res.setHeader('Access-Control-Allow-Origin', origin);
     res.setHeader('Vary', 'Origin');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  }
+  if (req.method === 'OPTIONS') {
+    res.status(204).end();
+    return;
   }
   next();
 });
