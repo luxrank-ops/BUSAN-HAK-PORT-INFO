@@ -15,6 +15,7 @@ import { existsSync } from 'node:fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { initializeApp, cert, getApps } from 'firebase-admin/app';
+import { getAuth } from 'firebase-admin/auth';
 import { getFirestore, FieldValue } from 'firebase-admin/firestore';
 import { getMessaging } from 'firebase-admin/messaging';
 import cron from 'node-cron';
@@ -73,9 +74,13 @@ const screenUnlockAttempts = new Map<string, { count: number; resetAt: number }>
 
 /**
  * 시도 횟수 제한 — 잠금 종류(scope)별로 버킷을 분리합니다.
- * 화면 잠금에서 10회 실패해도 긴급 공지 인증이 함께 막히지 않도록 하기 위함입니다.
+ * 화면 잠금에서 10회 실패해도 긴급 공지·관리자·익명 세션 인증이 함께 막히지 않도록 하기 위함입니다.
  */
-function isScreenUnlockRateLimited(ip: string, scope: 'screen' | 'emergency' = 'screen'): boolean {
+function isScreenUnlockRateLimited(
+  ip: string,
+  scope: 'screen' | 'emergency' | 'admin' | 'anon' = 'screen',
+  maxAttempts: number = scope === 'anon' ? 120 : SCREEN_UNLOCK_MAX_ATTEMPTS
+): boolean {
   const now = Date.now();
   const key = `${scope}:${ip}`;
   const entry = screenUnlockAttempts.get(key);
@@ -89,7 +94,7 @@ function isScreenUnlockRateLimited(ip: string, scope: 'screen' | 'emergency' = '
     return false;
   }
   entry.count += 1;
-  return entry.count > SCREEN_UNLOCK_MAX_ATTEMPTS;
+  return entry.count > maxAttempts;
 }
 
 /** 허용되는 화면 잠금 PIN 목록 — 기본값 9445를 항상 백업으로 인정해 운영자 실수로 잠기는 일을 방지합니다. */
@@ -173,6 +178,148 @@ export function issueScreenUnlockToken(): { token: string; expiresAt: number } {
     .update(`screen-unlock:${expiresAt}`)
     .digest('hex');
   return { token, expiresAt };
+}
+
+// --- 🔐 운영 관리자 인증 및 무상태(Stateless) HMAC 관리자 토큰 ---
+// 클라이언트 verifyAdmin() 과 동일한 관리자 해시(SHA-256) 및 Firestore settings/admin 문서를 검증합니다.
+export const DEFAULT_ADMIN_PW_HASH = '6cda3286b168d396ec539b002b14f58a6aebd453b6e5bc146c2d82dfd2614bc3';
+export const ADMIN_CUSTOM_TOKEN_UID = 'admin_luxrank';
+
+export function issueAdminSessionToken(nowMs: number = Date.now()): { token: string; expiresAt: number } {
+  const expiresAt = nowMs + SCREEN_UNLOCK_TOKEN_TTL_MS;
+  const sig = crypto
+    .createHmac('sha256', SCREEN_UNLOCK_TOKEN_SECRET)
+    .update(`admin-session:${expiresAt}`)
+    .digest('hex');
+  return { token: `${expiresAt}.${sig}`, expiresAt };
+}
+
+export function verifyAdminSessionToken(rawToken: string, nowMs: number = Date.now()): boolean {
+  const cleaned = String(rawToken || '').trim().replace(/^Bearer\s+/i, '').trim();
+  const dotIdx = cleaned.indexOf('.');
+  if (dotIdx <= 0) return false;
+  const expiresStr = cleaned.slice(0, dotIdx);
+  const sigHex = cleaned.slice(dotIdx + 1);
+  if (!/^\d{10,16}$/.test(expiresStr) || !/^[a-fA-F0-9]{64}$/.test(sigHex)) return false;
+  const expiresAt = Number(expiresStr);
+  if (!Number.isFinite(expiresAt) || expiresAt <= nowMs || expiresAt > nowMs + SCREEN_UNLOCK_TOKEN_TTL_MS + 60_000) {
+    return false;
+  }
+  const expected = crypto
+    .createHmac('sha256', SCREEN_UNLOCK_TOKEN_SECRET)
+    .update(`admin-session:${expiresAt}`)
+    .digest();
+  const actual = Buffer.from(sigHex, 'hex');
+  if (expected.length !== actual.length) return false;
+  return crypto.timingSafeEqual(expected, actual);
+}
+
+let firebaseBackendOverrideForTests: { db?: ReturnType<typeof getFirestore>; auth?: ReturnType<typeof getAuth> } | null = null;
+export function setFirebaseBackendOverrideForTests(override: { db?: any; auth?: any } | null): void {
+  firebaseBackendOverrideForTests = override;
+}
+function resolveServerFirestore(): ReturnType<typeof getFirestore> | null {
+  if (firebaseBackendOverrideForTests?.db) return firebaseBackendOverrideForTests.db;
+  return initFirebaseAdmin() && getApps().length > 0 ? getFirestore() : null;
+}
+function resolveServerAuth(): ReturnType<typeof getAuth> | null {
+  if (firebaseBackendOverrideForTests?.auth) return firebaseBackendOverrideForTests.auth;
+  return initFirebaseAdmin() && getApps().length > 0 ? getAuth() : null;
+}
+
+export async function verifyAdminPassword(rawPassword: string): Promise<boolean> {
+  let normalized = String(rawPassword || '').trim();
+  normalized = normalized.replace(/[０-９]/g, (c) => String.fromCharCode(c.charCodeAt(0) - 0xfee0)).trim();
+  if (!normalized) return false;
+
+  const inputDigest = crypto.createHash('sha256').update(normalized, 'utf8').digest();
+  const candidateHexHashes = new Set<string>([DEFAULT_ADMIN_PW_HASH]);
+
+  const envAdminPw = String(process.env.ADMIN_PASSWORD || '').trim();
+  if (envAdminPw) {
+    const envHex = /^[a-fA-F0-9]{64}$/.test(envAdminPw)
+      ? envAdminPw.toLowerCase()
+      : crypto.createHash('sha256').update(envAdminPw, 'utf8').digest('hex');
+    candidateHexHashes.add(envHex);
+  }
+
+  try {
+    const adminFs = resolveServerFirestore();
+    if (adminFs) {
+      const adminDoc = await adminFs.collection('settings').doc('admin').get();
+      if (adminDoc.exists) {
+        const d = adminDoc.data() || {};
+        if (typeof d.passwordHash === 'string' && /^[a-fA-F0-9]{64}$/.test(d.passwordHash.trim())) {
+          candidateHexHashes.add(d.passwordHash.trim().toLowerCase());
+        } else if (typeof d.password === 'string' && d.password.trim()) {
+          const saved = d.password.trim();
+          const savedHex = /^[a-fA-F0-9]{64}$/.test(saved)
+            ? saved.toLowerCase()
+            : crypto.createHash('sha256').update(saved, 'utf8').digest('hex');
+          candidateHexHashes.add(savedHex);
+        }
+      }
+    }
+  } catch {
+    // settings/admin 문서 조회 실패 시 기본 해시 후보로 안전하게 폴백
+  }
+
+  let matched = false;
+  for (const hex of candidateHexHashes) {
+    const candidateBuf = Buffer.from(hex, 'hex');
+    if (candidateBuf.length === inputDigest.length && crypto.timingSafeEqual(inputDigest, candidateBuf)) {
+      matched = true;
+    }
+  }
+  return matched;
+}
+
+function formatKstDateTime(rawTs: any): { ms: number; formatted: string } {
+  if (!rawTs) return { ms: 0, formatted: '-' };
+  let ms = 0;
+  try {
+    if (typeof rawTs.toMillis === 'function') {
+      ms = Number(rawTs.toMillis()) || 0;
+    } else if (typeof rawTs.toDate === 'function') {
+      ms = rawTs.toDate().getTime();
+    } else if (typeof rawTs._seconds === 'number') {
+      ms = rawTs._seconds * 1000;
+    } else if (rawTs instanceof Date) {
+      ms = rawTs.getTime();
+    } else if (typeof rawTs === 'number') {
+      ms = rawTs;
+    } else if (typeof rawTs === 'string' && rawTs.trim()) {
+      const parsed = Date.parse(rawTs.trim());
+      if (!Number.isNaN(parsed)) ms = parsed;
+      else return { ms: 0, formatted: rawTs.trim() };
+    }
+  } catch {
+    return { ms: 0, formatted: '-' };
+  }
+  if (!ms || Number.isNaN(ms)) return { ms: 0, formatted: '-' };
+  const kst = new Date(ms + 9 * 60 * 60 * 1000);
+  const y = kst.getUTCFullYear();
+  const m = String(kst.getUTCMonth() + 1).padStart(2, '0');
+  const d = String(kst.getUTCDate()).padStart(2, '0');
+  const hh = String(kst.getUTCHours()).padStart(2, '0');
+  const mm = String(kst.getUTCMinutes()).padStart(2, '0');
+  return { ms, formatted: `${y}-${m}-${d} ${hh}:${mm}` };
+}
+
+function sanitizeVisitorDoc(docData: Record<string, any> | undefined): Record<string, any> {
+  const src = docData || {};
+  const tsInfo = formatKstDateTime(src.updatedAt);
+  return {
+    date: src.date || '',
+    count: Number(src.count) || 0,
+    unique: Number(src.unique) || 0,
+    blocks: src.blocks || {},
+    terminals: src.terminals || {},
+    actions: src.actions || {},
+    devices: src.devices || { android: 0, ios: 0, desktop: 0 },
+    hours: src.hours || { h00_06: 0, h06_12: 0, h12_18: 0, h18_24: 0 },
+    updatedAtMs: tsInfo.ms
+  };
 }
 
 // --- Firebase Admin 안전 초기화 (.env Base64 또는 JSON 원문 지원) ---
@@ -1268,7 +1415,10 @@ app.use(compression());
 const DEFAULT_ALLOWED_ORIGINS = [
   'https://busan-hak-port-info.vercel.app',
   'https://busan-hak-port.web.app',
-  'https://busan-hak-port.firebaseapp.com'
+  'https://busan-hak-port.firebaseapp.com',
+  'https://luxrank-ops.github.io',
+  'http://localhost:3000',
+  'http://127.0.0.1:3000'
 ];
 const ALLOWED_ORIGINS = [
   ...DEFAULT_ALLOWED_ORIGINS,
@@ -1277,9 +1427,15 @@ const ALLOWED_ORIGINS = [
     .map((v) => v.trim())
     .filter(Boolean)
 ];
+function isAllowedApiOrigin(origin: string | undefined): boolean {
+  if (!origin) return false;
+  if (ALLOWED_ORIGINS.includes(origin)) return true;
+  if (/^https:\/\/busan-hak-port-info-[a-z0-9-]+\.vercel\.app$/i.test(origin)) return true;
+  return false;
+}
 app.use('/api', (req, res, next) => {
   const origin = req.headers.origin;
-  if (origin && ALLOWED_ORIGINS.includes(origin)) {
+  if (origin && isAllowedApiOrigin(origin)) {
     res.setHeader('Access-Control-Allow-Origin', origin);
     res.setHeader('Vary', 'Origin');
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
@@ -1374,17 +1530,97 @@ app.get('/api/health', (_req, res) => {
   });
 });
 
-app.get('/api/analytics-summary', async (_req, res) => {
-  try {
-    if (!initFirebaseAdmin() || getApps().length === 0) {
+// 🔐 Firebase 세션·관리자 인증 엔드포인트
+// 1) mode='anonymous': Firebase 콘솔에서 익명 인증(signInAnonymously)이 비활성화된 환경에서도
+//    서버 Custom Token 으로 모든 방문자·근로자가 isSignedIn() 조건을 충족하도록 보장합니다.
+// 2) mode='admin': 운영 관리자 비밀번호를 상수 시간으로 검증한 뒤
+//    admin_luxrank Custom Token(Firestore isAdmin() 통과) + 서명된 관리자 토큰을 발급합니다.
+app.post('/api/auth-session', async (req, res) => {
+  const ip = String(req.ip || req.socket?.remoteAddress || 'unknown');
+  const body = (req.body && typeof req.body === 'object' ? req.body : {}) as {
+    mode?: unknown;
+    password?: unknown;
+    clientId?: unknown;
+  };
+  const mode = String(body.mode || 'anonymous').trim().toLowerCase();
+
+  if (mode === 'admin') {
+    if (isScreenUnlockRateLimited(ip, 'admin')) {
+      res.status(429).json({ ok: false, error: 'too_many_attempts' });
+      return;
+    }
+    const rawPw = String(body.password ?? '').trim();
+    if (!rawPw) {
+      res.status(400).json({ ok: false, error: 'missing_password' });
+      return;
+    }
+    const valid = await verifyAdminPassword(rawPw);
+    if (!valid) {
+      res.status(401).json({ ok: false, error: 'invalid_password' });
+      return;
+    }
+    const { token, expiresAt } = issueAdminSessionToken();
+    let customToken: string | null = null;
+    try {
+      const serverAuth = resolveServerAuth();
+      if (serverAuth) {
+        customToken = await serverAuth.createCustomToken(ADMIN_CUSTOM_TOKEN_UID);
+      }
+    } catch (err: any) {
+      console.warn('[auth-session] admin custom token 발급 건너뜀:', err?.message || err);
+    }
+    res.json({
+      ok: true,
+      mode: 'admin',
+      uid: ADMIN_CUSTOM_TOKEN_UID,
+      token,
+      expiresAt,
+      customToken
+    });
+    return;
+  }
+
+  if (mode === 'anonymous') {
+    if (isScreenUnlockRateLimited(ip, 'anon')) {
+      res.status(429).json({ ok: false, error: 'too_many_attempts' });
+      return;
+    }
+    const serverAuth = resolveServerAuth();
+    if (!serverAuth) {
       res.status(503).json({ ok: false, error: 'firebase_admin_not_initialized' });
       return;
     }
-    const db = getFirestore();
+    const rawClientId = String(body.clientId ?? '').trim();
+    const safeSuffix = /^[a-zA-Z0-9_-]{6,64}$/.test(rawClientId)
+      ? rawClientId
+      : crypto.randomBytes(12).toString('hex');
+    const uid = `worker_${safeSuffix}`;
+    try {
+      const customToken = await serverAuth.createCustomToken(uid);
+      res.json({ ok: true, mode: 'anonymous', uid, customToken });
+    } catch (err: any) {
+      res.status(500).json({ ok: false, error: err?.message || 'custom_token_failed' });
+    }
+    return;
+  }
+
+  res.status(400).json({ ok: false, error: 'invalid_mode' });
+});
+app.get('/api/auth-session', (_req, res) => {
+  res.status(405).json({ ok: false, error: 'method_not_allowed', hint: 'Use POST with {mode}' });
+});
+
+app.get('/api/analytics-summary', async (_req, res) => {
+  try {
+    const db = resolveServerFirestore();
+    if (!db) {
+      res.status(503).json({ ok: false, error: 'firebase_admin_not_initialized' });
+      return;
+    }
     const kstNow = new Date(Date.now() + 9 * 60 * 60 * 1000);
     const dayLabels = ['일', '월', '화', '수', '목', '금', '토'];
     const dayKeys: Array<{ key: string; shortDate: string; dayName: string; isToday: boolean }> = [];
-    for (let i = 6; i >= 0; i--) {
+    for (let i = 7; i >= 0; i--) {
       const d = new Date(Date.UTC(kstNow.getUTCFullYear(), kstNow.getUTCMonth(), kstNow.getUTCDate() - i));
       const y = d.getUTCFullYear();
       const m = String(d.getUTCMonth() + 1).padStart(2, '0');
@@ -1397,18 +1633,36 @@ app.get('/api/analytics-summary', async (_req, res) => {
       });
     }
 
-    const [totalSnap, shipsSnap, postsSnap, noticesSnap, workLogsSnap, ...dailySnaps] = await Promise.all([
+    const [
+      totalSnap,
+      usersSnap,
+      shipsSnap,
+      postsSnap,
+      noticesSnap,
+      archivesSnap,
+      workLogsSnap,
+      ...dailySnaps
+    ] = await Promise.all([
       db.collection('visitor_stats').doc('total').get(),
-      db.collection('ships').limit(200).get(),
-      db.collection('posts').limit(200).get(),
-      db.collection('notices').limit(50).get(),
-      db.collection('work_logs').limit(500).get(),
+      db.collection('user_profiles').get(),
+      db.collection('ships').get(),
+      db.collection('posts').get(),
+      db.collection('notices').get(),
+      db.collection('archives').get(),
+      db.collection('work_logs').get(),
       ...dayKeys.map((dk) => db.collection('visitor_stats').doc(`daily-${dk.key}`).get())
     ]);
 
     const totalData = (totalSnap.exists ? totalSnap.data() : {}) || {};
-    const dailyTrend = dayKeys.map((dk, idx) => {
+    const dailyDocsByDate: Record<string, any> = {};
+    dayKeys.forEach((dk, idx) => {
       const d = (dailySnaps[idx]?.exists ? dailySnaps[idx].data() : {}) || {};
+      dailyDocsByDate[dk.key] = sanitizeVisitorDoc({ date: dk.key, ...d });
+    });
+
+    const recent7Days = dayKeys.slice(1);
+    const dailyTrend = recent7Days.map((dk) => {
+      const d = dailyDocsByDate[dk.key] || {};
       return {
         date: dk.key,
         label: `${dk.shortDate}(${dk.dayName})`,
@@ -1446,6 +1700,8 @@ app.get('/api/analytics-summary', async (_req, res) => {
         totalVisitors: Number(totalData.count) || 0,
         totalUnique: Math.max(Number(totalData.unique) || 0, weekUniqueSum)
       },
+      totalDoc: sanitizeVisitorDoc(totalData),
+      dailyDocsByDate,
       todayHours: todayEntry.hours,
       totalHours: totalData.hours || { h00_06: 0, h06_12: 0, h12_18: 0, h18_24: 0 },
       todayDevices: todayEntry.devices,
@@ -1458,16 +1714,179 @@ app.get('/api/analytics-summary', async (_req, res) => {
       todayActions: todayEntry.actions || {},
       dailyTrend,
       collections: {
+        workersCount: usersSnap.size,
         shipsCount: activeShips.length,
         postsCount: activePosts.length,
         noticesCount: noticesSnap.size,
-        workLogsCount: activeWorkLogs.length
+        archivesCount: archivesSnap.size,
+        workLogsCount: activeWorkLogs.length,
+        totalWorkLogsRawCount: workLogsSnap.size
       }
     });
   } catch (error: any) {
     res.status(500).json({ ok: false, error: error?.message || 'analytics_summary_failed' });
   }
 });
+
+// 📊 관리자 전용 통합 운영 통계 · 가입 근로자 계정 · 누적 근무일지 전체 조회 API
+// 서명된 관리자 세션 토큰(verifyAdminSessionToken) 없이는 절대 응답하지 않으며,
+// 비밀번호 원문·해시는 응답 페이로드에 포함하지 않습니다(isSha256 불리언만 반환).
+const adminStatsHandler = async (req: Request, res: Response) => {
+  const authHeader = String(req.headers.authorization || '');
+  const bodyToken = req.body && typeof req.body === 'object' ? String((req.body as { token?: unknown }).token || '') : '';
+  const candidateToken = authHeader || bodyToken;
+  if (!verifyAdminSessionToken(candidateToken)) {
+    res.status(401).json({ ok: false, error: 'unauthorized' });
+    return;
+  }
+
+  try {
+    const db = resolveServerFirestore();
+    if (!db) {
+      res.status(503).json({ ok: false, error: 'firebase_admin_not_initialized' });
+      return;
+    }
+    const kstNow = new Date(Date.now() + 9 * 60 * 60 * 1000);
+    const dayKeys: string[] = [];
+    for (let i = 7; i >= 0; i--) {
+      const d = new Date(Date.UTC(kstNow.getUTCFullYear(), kstNow.getUTCMonth(), kstNow.getUTCDate() - i));
+      const y = d.getUTCFullYear();
+      const m = String(d.getUTCMonth() + 1).padStart(2, '0');
+      const day = String(d.getUTCDate()).padStart(2, '0');
+      dayKeys.push(`${y}-${m}-${day}`);
+    }
+
+    const [
+      totalSnap,
+      usersSnap,
+      workLogsSnap,
+      shipsSnap,
+      postsSnap,
+      noticesSnap,
+      archivesSnap,
+      ...dailySnaps
+    ] = await Promise.all([
+      db.collection('visitor_stats').doc('total').get(),
+      db.collection('user_profiles').get(),
+      db.collection('work_logs').get(),
+      db.collection('ships').get(),
+      db.collection('posts').get(),
+      db.collection('notices').get(),
+      db.collection('archives').get(),
+      ...dayKeys.map((key) => db.collection('visitor_stats').doc(`daily-${key}`).get())
+    ]);
+
+    const totalDoc = sanitizeVisitorDoc(totalSnap.exists ? totalSnap.data() : {});
+    const dailyDocsByDate: Record<string, any> = {};
+    dayKeys.forEach((key, idx) => {
+      const d = (dailySnaps[idx]?.exists ? dailySnaps[idx].data() : {}) || {};
+      dailyDocsByDate[key] = sanitizeVisitorDoc({ date: key, ...d });
+    });
+
+    const workerLogSummary: Record<string, { count: number; totalPay: number; lastDate: string; lastSavedMs: number }> = {};
+    const workLogs: Array<Record<string, any>> = [];
+
+    workLogsSnap.forEach((docSnap) => {
+      const d = docSnap.data() || {};
+      if (d.deletedAt) return;
+      const docId = docSnap.id || '';
+      const wid = String(d.workerId || '').trim() || (docId.includes('_') ? docId.split('_')[0] : '미지정');
+      const dateStr = String(d.date || '').trim() || (docId.includes('_') ? docId.split('_').slice(1).join('_') : '-');
+      const wage1 = Number(d.wage1) || 0;
+      const wage2 = Number(d.wage2) || 0;
+      const wage3 = Number(d.wage3) || 0;
+      const wage4 = Number(d.wage4) || 0;
+      const totalPay = Number(d.totalPay) || (wage1 + wage2 + wage3 + wage4);
+      const tsInfo = formatKstDateTime(d.timestamp);
+
+      workLogs.push({
+        id: docId,
+        workerId: wid,
+        date: dateStr,
+        shipName: String(d.shipName || '').trim(),
+        wage1,
+        wage2,
+        wage3,
+        wage4,
+        totalPay,
+        coworkers: String(d.coworkers || '').trim(),
+        memo: String(d.memo || '').trim(),
+        imageUrl: String(d.imageUrl || '').trim(),
+        savedMs: tsInfo.ms,
+        savedStr: tsInfo.formatted
+      });
+
+      if (wid) {
+        if (!workerLogSummary[wid]) {
+          workerLogSummary[wid] = { count: 0, totalPay: 0, lastDate: '', lastSavedMs: 0 };
+        }
+        workerLogSummary[wid].count += 1;
+        workerLogSummary[wid].totalPay += totalPay;
+        if (dateStr && dateStr !== '-' && (!workerLogSummary[wid].lastDate || dateStr > workerLogSummary[wid].lastDate)) {
+          workerLogSummary[wid].lastDate = dateStr;
+        }
+        if (tsInfo.ms > workerLogSummary[wid].lastSavedMs) {
+          workerLogSummary[wid].lastSavedMs = tsInfo.ms;
+        }
+      }
+    });
+
+    const workerAccounts: Array<Record<string, any>> = [];
+    usersSnap.forEach((docSnap) => {
+      const d = docSnap.data() || {};
+      const nick = docSnap.id;
+      const rawTs = d.createdAt || d.timestamp || d.updatedAt;
+      const tsInfo = formatKstDateTime(rawTs);
+      const createdStr = rawTs ? (tsInfo.formatted === '-' ? '날짜 기록 없음' : tsInfo.formatted) : '날짜 기록 없음';
+      const logStat = workerLogSummary[nick] || { count: 0, totalPay: 0, lastDate: '-', lastSavedMs: 0 };
+      const pwStr = String(d.password || '');
+      const isSha256 = /^[a-f0-9]{64}$/i.test(pwStr);
+      workerAccounts.push({
+        nick,
+        createdMs: tsInfo.ms,
+        createdStr,
+        logCount: logStat.count,
+        totalPay: logStat.totalPay,
+        lastDate: logStat.lastDate || '-',
+        lastSavedMs: logStat.lastSavedMs,
+        isSha256
+      });
+    });
+
+    workerAccounts.sort(
+      (a, b) =>
+        (b.createdMs - a.createdMs) ||
+        (b.lastSavedMs - a.lastSavedMs) ||
+        (b.logCount - a.logCount) ||
+        String(a.nick).localeCompare(String(b.nick), 'ko')
+    );
+
+    const activeShipsCount = shipsSnap.docs.filter((doc) => !doc.data().deletedAt).length;
+    const activePostsCount = postsSnap.docs.filter((doc) => !doc.data().deletedAt).length;
+
+    res.json({
+      ok: true,
+      generatedAtKst: kstNow.toISOString().replace('Z', '+09:00'),
+      totalDoc,
+      dailyDocsByDate,
+      counts: {
+        workersCount: usersSnap.size,
+        workLogsCount: workLogs.length,
+        totalWorkLogsRawCount: workLogsSnap.size,
+        shipsCount: activeShipsCount,
+        postsCount: activePostsCount,
+        noticesCount: noticesSnap.size,
+        archivesCount: archivesSnap.size
+      },
+      workerAccounts,
+      workLogs
+    });
+  } catch (error: any) {
+    res.status(500).json({ ok: false, error: error?.message || 'admin_stats_failed' });
+  }
+};
+app.get('/api/admin-stats', adminStatsHandler);
+app.post('/api/admin-stats', adminStatsHandler);
 
 app.get('/api/hjnc-schedule', async (req, res) => {
   try {

@@ -50,6 +50,7 @@ function isDeletedRecord(data) {
    복합 인덱스가 아직 배포되지 않은 환경에서는 기존 방식으로 자동 대체됩니다. */
 let workLogScopedQueryUnavailable = false;
 async function queryWorkLogsByDateRange(startDate, endDate, limitCount = 500) {
+    await ensureAnonymousAuth();
     const buildQuery = (withDateRange) => {
         // 규칙상 work_logs 목록 조회에는 workerId 조건이 반드시 있어야 합니다(없으면 권한 거부).
         let q = db.collection("work_logs").where("workerId", "==", currentWorkerId);
@@ -63,11 +64,14 @@ async function queryWorkLogsByDateRange(startDate, endDate, limitCount = 500) {
         try {
             return await buildQuery(true).get();
         } catch (e) {
-            workLogScopedQueryUnavailable = true;
-            try { console.warn("[근무일지 본인 조회] 복합 인덱스 미배포로 대체 조회로 전환:", e && e.message); } catch (_) {}
-            if (!localStorage.getItem("workLogIndexNoticeShown")) {
-                try { localStorage.setItem("workLogIndexNoticeShown", "1"); } catch (_) {}
-                if (typeof showToast === "function") showToast("ℹ️ 근무일지 조회를 대체 방식으로 전환했습니다. (관리자: 인덱스 배포 필요)");
+            const errCode = String((e && e.code) || "");
+            if (errCode !== "permission-denied") {
+                workLogScopedQueryUnavailable = true;
+                try { console.warn("[근무일지 본인 조회] 복합 인덱스 미배포로 대체 조회로 전환:", e && e.message); } catch (_) {}
+                if (!localStorage.getItem("workLogIndexNoticeShown")) {
+                    try { localStorage.setItem("workLogIndexNoticeShown", "1"); } catch (_) {}
+                    if (typeof showToast === "function") showToast("ℹ️ 근무일지 조회를 대체 방식으로 전환했습니다. (관리자: 인덱스 배포 필요)");
+                }
             }
         }
     }
@@ -135,7 +139,7 @@ document.addEventListener("click", async (ev) => {
 const auth = typeof firebase.auth === "function" ? firebase.auth() : null;
 db.enablePersistence({ synchronizeTabs: true }).catch(err => { console.warn("Persistence Error:", err.code); });
 
-// 🔐 익명 인증 자동 연결 (미인증 접근 차단 대비 및 UID 확보)
+// 🔐 익명 인증 자동 연결 + 정적 호스팅·비활성 콘솔 폴백(Custom Token) 및 관리자 토큰 관리
 let currentAuthUser = null;
 const ADMIN_UID_WHITELIST = [
     "admin_luxrank",
@@ -146,7 +150,129 @@ const ADMIN_EMAIL_WHITELIST = [
 ];
 // 노출된 구 비밀번호(0346) 차단 및 SHA-256 해시 검증 상수
 const DEFAULT_ADMIN_PW_HASH = "6cda3286b168d396ec539b002b14f58a6aebd453b6e5bc146c2d82dfd2614bc3";
+const FALLBACK_PRODUCTION_API_ORIGIN = "https://busan-hak-port-info.vercel.app";
+const ADMIN_SESSION_TOKEN_KEY = "busanPortAdminToken";
+const ADMIN_SESSION_EXPIRY_KEY = "busanPortAdminTokenExpiresAt";
+const ANON_CLIENT_ID_KEY = "busanHakPortClientId";
 let isAdminSessionVerified = sessionStorage.getItem("busanPortAdminVerified") === "1";
+
+function getOrCreateClientDeviceId() {
+    try {
+        const saved = localStorage.getItem(ANON_CLIENT_ID_KEY);
+        if (saved && /^[a-zA-Z0-9_-]{8,64}$/.test(saved)) return saved;
+        const generated = "dev_" + Math.random().toString(36).slice(2, 12) + "_" + Date.now().toString(36);
+        localStorage.setItem(ANON_CLIENT_ID_KEY, generated);
+        return generated;
+    } catch (e) {
+        return "dev_" + Math.random().toString(36).slice(2, 12);
+    }
+}
+
+function getStoredAdminSessionToken() {
+    try {
+        const token = sessionStorage.getItem(ADMIN_SESSION_TOKEN_KEY) || "";
+        const expRaw = Number(sessionStorage.getItem(ADMIN_SESSION_EXPIRY_KEY) || "0");
+        if (!token) return "";
+        if (expRaw > 0 && Date.now() >= expRaw) {
+            sessionStorage.removeItem(ADMIN_SESSION_TOKEN_KEY);
+            sessionStorage.removeItem(ADMIN_SESSION_EXPIRY_KEY);
+            return "";
+        }
+        return token;
+    } catch (e) {
+        return "";
+    }
+}
+
+function saveAdminSessionToken(token, expiresAt) {
+    try {
+        if (token) {
+            sessionStorage.setItem(ADMIN_SESSION_TOKEN_KEY, String(token));
+            if (expiresAt) sessionStorage.setItem(ADMIN_SESSION_EXPIRY_KEY, String(expiresAt));
+        }
+    } catch (e) {}
+}
+
+function hasServerBackedAdminAccess() {
+    const uid = auth && auth.currentUser ? String(auth.currentUser.uid || "") : "";
+    if (ADMIN_UID_WHITELIST.includes(uid)) return true;
+    const email = auth && auth.currentUser && auth.currentUser.email ? String(auth.currentUser.email).toLowerCase() : "";
+    if (email && auth.currentUser.emailVerified && ADMIN_EMAIL_WHITELIST.includes(email)) return true;
+    return Boolean(getStoredAdminSessionToken());
+}
+
+/**
+ * 동일 출처(/api/...)를 1순위로 호출하고, 정적 호스팅(Firebase Hosting·GitHub Pages 등 HTML 응답)
+ * 또는 프리뷰 환경의 Firebase Admin 미초기화(503) 시 운영 API 서버로 안전하게 재시도합니다.
+ */
+async function fetchPortApiJson(apiPath, initOptions = {}) {
+    const tryOnce = async (baseOrigin) => {
+        const url = baseOrigin ? `${baseOrigin}${apiPath}` : apiPath;
+        const res = await fetch(url, initOptions);
+        const ctype = String(res.headers.get("content-type") || "").toLowerCase();
+        if (!ctype.includes("application/json")) {
+            return { nonJson: true, status: res.status, data: null };
+        }
+        const data = await res.json().catch(() => null);
+        return { nonJson: false, status: res.status, data };
+    };
+
+    let primary = null;
+    try {
+        primary = await tryOnce("");
+    } catch (err) {
+        primary = { networkError: true, status: 0, data: null };
+    }
+
+    if (primary && !primary.nonJson && !primary.networkError) {
+        // 명시적 인증·입력·속도제한 응답(400/401/429)이나 정상(200)은 즉시 반환합니다.
+        if (
+            primary.status === 200 ||
+            primary.status === 400 ||
+            primary.status === 401 ||
+            primary.status === 429
+        ) {
+            return primary;
+        }
+    }
+
+    const currentOrigin = typeof window !== "undefined" && window.location ? String(window.location.origin || "") : "";
+    if (!currentOrigin || currentOrigin === FALLBACK_PRODUCTION_API_ORIGIN) {
+        return primary;
+    }
+
+    try {
+        return await tryOnce(FALLBACK_PRODUCTION_API_ORIGIN);
+    } catch (err) {
+        return primary;
+    }
+}
+
+let authInitialStateResolved = false;
+let authEnsureInFlightPromise = null;
+const authInitialStatePromise = auth
+    ? new Promise((resolve) => {
+        let settled = false;
+        const finish = (u) => {
+            if (settled) return;
+            settled = true;
+            authInitialStateResolved = true;
+            resolve(u || null);
+        };
+        try {
+            const unsub = auth.onAuthStateChanged((user) => {
+                currentAuthUser = user || null;
+                if (typeof unsub === "function") {
+                    try { unsub(); } catch (_) {}
+                }
+                finish(currentAuthUser);
+            });
+            setTimeout(() => finish(auth.currentUser || null), 800);
+        } catch (e) {
+            finish(null);
+        }
+    })
+    : Promise.resolve(null);
 
 async function ensureAnonymousAuth() {
     if (!auth) return null;
@@ -154,19 +280,58 @@ async function ensureAnonymousAuth() {
         currentAuthUser = auth.currentUser;
         return currentAuthUser;
     }
-    try {
-        const cred = await auth.signInAnonymously();
-        currentAuthUser = cred.user;
-        return currentAuthUser;
-    } catch (e) {
-        // 콘솔에서 익명 인증 비활성화 상태여도 앱 기능은 정상 동작하도록 폴백
-        return null;
+    if (authEnsureInFlightPromise) {
+        return authEnsureInFlightPromise;
     }
+    authEnsureInFlightPromise = (async () => {
+        try {
+            if (!authInitialStateResolved) {
+                const restored = await authInitialStatePromise;
+                if (restored || auth.currentUser) {
+                    currentAuthUser = auth.currentUser || restored;
+                    return currentAuthUser;
+                }
+            }
+            try {
+                const cred = await auth.signInAnonymously();
+                if (cred && cred.user) {
+                    currentAuthUser = cred.user;
+                    return currentAuthUser;
+                }
+            } catch (anonErr) {
+                // Firebase 콘솔에서 익명 인증(signInAnonymously)이 꺼져 있는 경우
+                // 서버 Custom Token(/api/auth-session)으로 즉시 서명 로그인하여 isSignedIn() 을 보장합니다.
+                if (typeof auth.signInWithCustomToken === "function") {
+                    const fallback = await fetchPortApiJson("/api/auth-session", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                            mode: "anonymous",
+                            clientId: getOrCreateClientDeviceId()
+                        })
+                    });
+                    if (fallback && fallback.status === 200 && fallback.data && fallback.data.customToken) {
+                        const customCred = await auth.signInWithCustomToken(fallback.data.customToken);
+                        if (customCred && customCred.user) {
+                            currentAuthUser = customCred.user;
+                            return currentAuthUser;
+                        }
+                    }
+                }
+            }
+            return auth.currentUser || null;
+        } catch (e) {
+            return auth.currentUser || null;
+        } finally {
+            authEnsureInFlightPromise = null;
+        }
+    })();
+    return authEnsureInFlightPromise;
 }
 if (auth) {
     auth.onAuthStateChanged(user => {
         currentAuthUser = user || null;
-        if (!user) {
+        if (!user && authInitialStateResolved) {
             ensureAnonymousAuth();
         }
     });
@@ -240,7 +405,7 @@ let currentEditPostId = null;
 async function safeGet(ref) { if (!ref) return null; try { return await ref.get(); } catch (e) { return null; } }
 async function verifyAdmin(forcePrompt = false) {
     await ensureAnonymousAuth();
-    if (!forcePrompt && isAdminSessionVerified) return true;
+    if (!forcePrompt && isAdminSessionVerified && hasServerBackedAdminAccess()) return true;
 
     const inputPw = prompt("관리자 비밀번호(또는 관리자 이메일:비밀번호)를 입력하세요:");
     if (!inputPw) return false;
@@ -264,7 +429,44 @@ async function verifyAdmin(forcePrompt = false) {
         }
     }
 
-    // 2) SHA-256 해시 검증 (settings/admin 차단 시에도 동작하며 평문 노출 원천 차단)
+    // 2) 서버 관리자 인증(1순위): 비밀번호 검증 후 admin_luxrank Custom Token + 서명 관리자 토큰 발급
+    try {
+        const serverAuth = await fetchPortApiJson("/api/auth-session", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ mode: "admin", password: raw })
+        });
+        if (serverAuth && serverAuth.status === 429) {
+            alert("⚠️ 시도 횟수가 초과되었습니다. 잠시 후 다시 시도해 주세요.");
+            return false;
+        }
+        if (serverAuth && serverAuth.status === 401) {
+            alert("⚠️ 비밀번호가 틀렸습니다.");
+            return false;
+        }
+        if (serverAuth && serverAuth.status === 200 && serverAuth.data && serverAuth.data.ok) {
+            if (serverAuth.data.token) {
+                saveAdminSessionToken(serverAuth.data.token, serverAuth.data.expiresAt);
+            }
+            if (serverAuth.data.customToken && auth && typeof auth.signInWithCustomToken === "function") {
+                try {
+                    const adminCred = await auth.signInWithCustomToken(serverAuth.data.customToken);
+                    if (adminCred && adminCred.user) {
+                        currentAuthUser = adminCred.user;
+                    }
+                } catch (customErr) {
+                    console.warn("관리자 Custom Token 로그인 폴백:", customErr && customErr.message);
+                }
+            }
+            isAdminSessionVerified = true;
+            try { sessionStorage.setItem("busanPortAdminVerified", "1"); } catch (e) {}
+            return true;
+        }
+    } catch (e) {
+        // 오프라인·로컬 개발 환경에서는 아래 로컬 SHA-256 검증으로 안전하게 폴백
+    }
+
+    // 3) 로컬 SHA-256 해시 폴백 검증 (서버 연결 불가 환경 대비)
     const inputHash = await sha256Hex(raw);
     let targetHash = DEFAULT_ADMIN_PW_HASH;
     try {
@@ -285,12 +487,6 @@ async function verifyAdmin(forcePrompt = false) {
     if (inputHash === targetHash || inputHash === DEFAULT_ADMIN_PW_HASH) {
         isAdminSessionVerified = true;
         try { sessionStorage.setItem("busanPortAdminVerified", "1"); } catch (e) {}
-        if (auth && auth.currentUser) {
-            db.collection("admins").doc(auth.currentUser.uid).set({
-                uid: auth.currentUser.uid,
-                verifiedAt: firebase.firestore.FieldValue.serverTimestamp()
-            }, { merge: true }).catch(() => {});
-        }
         return true;
     }
     alert("⚠️ 비밀번호가 틀렸습니다.");
@@ -402,40 +598,43 @@ function trackVisitorSession() {
     const inc = firebase.firestore.FieldValue.increment(1);
     const ts = firebase.firestore.FieldValue.serverTimestamp();
 
-    visitorCountPromise = db.runTransaction(async transaction => {
-        const totalSnapshot = await transaction.get(totalRef);
-        const dailySnapshot = await transaction.get(dailyRef);
-        const totalData = totalSnapshot.exists ? (totalSnapshot.data() || {}) : {};
-        const dailyData = dailySnapshot.exists ? (dailySnapshot.data() || {}) : {};
-        const totalCount = Number(totalData.count) || 0;
-        const dailyCount = Number(dailyData.count) || 0;
-        const totalUnique = Number(totalData.unique) || 0;
-        const dailyUnique = Number(dailyData.unique) || 0;
+    visitorCountPromise = (async () => {
+        await ensureAnonymousAuth();
+        return db.runTransaction(async transaction => {
+            const totalSnapshot = await transaction.get(totalRef);
+            const dailySnapshot = await transaction.get(dailyRef);
+            const totalData = totalSnapshot.exists ? (totalSnapshot.data() || {}) : {};
+            const dailyData = dailySnapshot.exists ? (dailySnapshot.data() || {}) : {};
+            const totalCount = Number(totalData.count) || 0;
+            const dailyCount = Number(dailyData.count) || 0;
+            const totalUnique = Number(totalData.unique) || 0;
+            const dailyUnique = Number(dailyData.unique) || 0;
 
-        const totalPayload = {
-            count: totalCount + 1,
-            devices: { [devKey]: inc },
-            hours: { [hourKey]: inc },
-            updatedAt: ts
-        };
-        if (isNewEverUnique) {
-            totalPayload.unique = totalUnique + 1;
-        } else if (typeof totalData.unique === "undefined" && isNewDailyUnique) {
-            totalPayload.unique = totalUnique + 1;
-        }
+            const totalPayload = {
+                count: totalCount + 1,
+                devices: { [devKey]: inc },
+                hours: { [hourKey]: inc },
+                updatedAt: ts
+            };
+            if (isNewEverUnique) {
+                totalPayload.unique = totalUnique + 1;
+            } else if (typeof totalData.unique === "undefined" && isNewDailyUnique) {
+                totalPayload.unique = totalUnique + 1;
+            }
 
-        const dailyPayload = {
-            date: dateKey,
-            count: dailyCount + 1,
-            unique: isNewDailyUnique ? (dailyUnique + 1) : Math.max(dailyUnique, 1),
-            devices: { [devKey]: inc },
-            hours: { [hourKey]: inc },
-            updatedAt: ts
-        };
+            const dailyPayload = {
+                date: dateKey,
+                count: dailyCount + 1,
+                unique: isNewDailyUnique ? (dailyUnique + 1) : Math.max(dailyUnique, 1),
+                devices: { [devKey]: inc },
+                hours: { [hourKey]: inc },
+                updatedAt: ts
+            };
 
-        transaction.set(totalRef, totalPayload, { merge: true });
-        transaction.set(dailyRef, dailyPayload, { merge: true });
-    }).then(() => {
+            transaction.set(totalRef, totalPayload, { merge: true });
+            transaction.set(dailyRef, dailyPayload, { merge: true });
+        });
+    })().then(() => {
         if (canStoreSession) sessionStorage.setItem(sessionKey, dateKey);
         try {
             if (isNewDailyUnique) localStorage.setItem(uniqueDailyKey, dateKey);
@@ -535,6 +734,16 @@ function renderTotalVisitorBadgeValue(totalCount, updatedAt) {
     updateVisitorBadgeTooltipAndAria();
 }
 
+async function fallbackLoadVisitorBadgeFromServer() {
+    try {
+        const resp = await fetchPortApiJson("/api/analytics-summary");
+        if (resp && resp.status === 200 && resp.data && resp.data.ok && resp.data.summary) {
+            renderTotalVisitorBadgeValue(resp.data.summary.totalVisitors, null);
+            renderTodayVisitorBadgeValue(resp.data.summary.todayVisitors, null);
+        }
+    } catch (e) {}
+}
+
 function startTotalVisitorBadgeListener() {
     const els = getTodayVisitorBadgeEls();
     if (!els || totalVisitorBadgeUnsub) return;
@@ -544,9 +753,11 @@ function startTotalVisitorBadgeListener() {
             totalVisitorBadgeRetry = 0;
             const data = snapshot.exists ? (snapshot.data() || {}) : {};
             renderTotalVisitorBadgeValue(data.count, data.updatedAt);
-        }, error => {
+        }, async error => {
             console.warn("누적 방문자 배지 갱신 실패:", error && error.message);
             totalVisitorBadgeUnsub = null;
+            await ensureAnonymousAuth();
+            await fallbackLoadVisitorBadgeFromServer();
             if (totalVisitorBadgeRetry < 3) {
                 totalVisitorBadgeRetry += 1;
                 setTimeout(() => {
@@ -556,6 +767,7 @@ function startTotalVisitorBadgeListener() {
         });
     } catch (error) {
         console.warn("누적 방문자 배지 연결 오류:", error && error.message);
+        void fallbackLoadVisitorBadgeFromServer();
     }
 }
 
@@ -579,10 +791,12 @@ function startTodayVisitorBadgeListener() {
             todayVisitorBadgeRetry = 0;
             const data = snapshot.exists ? (snapshot.data() || {}) : {};
             renderTodayVisitorBadgeValue(data.count, data.updatedAt);
-        }, error => {
+        }, async error => {
             console.warn("오늘 방문자 배지 갱신 실패:", error && error.message);
             todayVisitorBadgeUnsub = null;
             setTodayVisitorBadgeState("error");
+            await ensureAnonymousAuth();
+            await fallbackLoadVisitorBadgeFromServer();
             // 익명 인증 지연·일시적 네트워크 오류 대비 자동 재시도 (최대 3회)
             if (todayVisitorBadgeRetry < 3) {
                 todayVisitorBadgeRetry += 1;
@@ -594,6 +808,7 @@ function startTodayVisitorBadgeListener() {
     } catch (error) {
         console.warn("오늘 방문자 배지 연결 오류:", error && error.message);
         setTodayVisitorBadgeState("error");
+        void fallbackLoadVisitorBadgeFromServer();
     }
 }
 
@@ -731,6 +946,25 @@ async function refreshVisitorStatsModal() {
     await loadAndRenderVisitorStats();
     showToast("✅ 실시간 통계가 갱신되었습니다.");
 }
+async function fetchServerAdminStatsPayload() {
+    const adminToken = getStoredAdminSessionToken();
+    if (!adminToken) return null;
+    try {
+        const resp = await fetchPortApiJson("/api/admin-stats", {
+            method: "GET",
+            headers: {
+                "Authorization": `Bearer ${adminToken}`
+            }
+        });
+        if (resp && resp.status === 200 && resp.data && resp.data.ok) {
+            return resp.data;
+        }
+    } catch (e) {
+        console.warn("서버 관리자 통계 API 폴백 전환:", e && e.message);
+    }
+    return null;
+}
+
 async function loadAndRenderVisitorStats() {
     const todayCountEl = document.getElementById("todayVisitorCount");
     const yesterdayCountEl = document.getElementById("yesterdayVisitorCount");
@@ -738,6 +972,8 @@ async function loadAndRenderVisitorStats() {
     const totalCountEl = document.getElementById("totalVisitorCount");
     if (todayCountEl) todayCountEl.innerText = "...";
     if (totalCountEl) totalCountEl.innerText = "...";
+
+    await ensureAnonymousAuth();
 
     const now = new Date();
     const dayKeys = [];
@@ -752,13 +988,37 @@ async function loadAndRenderVisitorStats() {
         });
     }
 
-    const [totalSnap, ...dailySnaps] = await Promise.all([
-        db.collection("visitor_stats").doc("total").get(),
-        ...dayKeys.map(dk => db.collection("visitor_stats").doc(`daily-${dk.key}`).get())
-    ]);
+    // 1순위: 서버 Admin SDK(/api/admin-stats)로 보안 규칙을 우회해 전체 통계를 일괄 조회
+    const serverAdminPayload = await fetchServerAdminStatsPayload();
+    let serverSummaryPayload = null;
 
-    const totalDoc = totalSnap.exists ? totalSnap.data() : {};
-    const dailyDocs = dailySnaps.map(s => (s.exists ? s.data() : {}));
+    let totalDoc = null;
+    let dailyDocs = null;
+
+    if (serverAdminPayload && serverAdminPayload.totalDoc && serverAdminPayload.dailyDocsByDate) {
+        totalDoc = serverAdminPayload.totalDoc;
+        dailyDocs = dayKeys.map(dk => serverAdminPayload.dailyDocsByDate[dk.key] || {});
+    } else {
+        try {
+            const [totalSnap, ...dailySnaps] = await Promise.all([
+                db.collection("visitor_stats").doc("total").get(),
+                ...dayKeys.map(dk => db.collection("visitor_stats").doc(`daily-${dk.key}`).get())
+            ]);
+            totalDoc = totalSnap.exists ? totalSnap.data() : {};
+            dailyDocs = dailySnaps.map(s => (s.exists ? s.data() : {}));
+        } catch (visitorErr) {
+            const summaryResp = await fetchPortApiJson("/api/analytics-summary");
+            if (summaryResp && summaryResp.status === 200 && summaryResp.data && summaryResp.data.ok) {
+                serverSummaryPayload = summaryResp.data;
+                totalDoc = summaryResp.data.totalDoc || {};
+                const byDate = summaryResp.data.dailyDocsByDate || {};
+                dailyDocs = dayKeys.map(dk => byDate[dk.key] || {});
+            } else {
+                throw visitorErr;
+            }
+        }
+    }
+
     const todayDoc = dailyDocs[6] || {};
     const yesterdayDoc = dailyDocs[5] || {};
 
@@ -931,75 +1191,115 @@ async function loadAndRenderVisitorStats() {
     const dbGridEl = document.getElementById("statsDbContentGrid");
     if (dbGridEl) {
         let workersCnt = 0, logsCnt = 0, noticesCnt = 0, archivesCnt = 0;
-        const workerAccounts = [];
+        let serverShipsCnt = null, serverPostsCnt = null;
+        let workerAccounts = [];
         const workerLogSummary = {};
-        try {
-            const hasNoticesCache = Array.isArray(window.allNoticesCache);
-            const hasArchivesCache = typeof window.allArchivesCount === "number";
-            const [uSnap, lSnap, nSnap, aSnap] = await Promise.all([
-                db.collection("user_profiles").get(),
-                db.collection("work_logs").get(),
-                hasNoticesCache ? Promise.resolve(null) : db.collection("notices").get(),
-                hasArchivesCache ? Promise.resolve(null) : db.collection("archives").get()
-            ]);
-            workersCnt = uSnap.size;
-            logsCnt = lSnap.size;
-            noticesCnt = hasNoticesCache ? window.allNoticesCache.length : (nSnap ? nSnap.size : 0);
-            archivesCnt = hasArchivesCache ? window.allArchivesCount : (aSnap ? aSnap.size : 0);
 
-            lSnap.forEach(doc => {
-                const d = doc.data() || {};
-                const wid = String(d.workerId || "").trim() || (doc.id.includes("_") ? doc.id.split("_")[0] : "");
-                if (!wid) return;
-                if (!workerLogSummary[wid]) {
-                    workerLogSummary[wid] = { count: 0, totalPay: 0, lastDate: "", lastSavedMs: 0 };
-                }
-                workerLogSummary[wid].count += 1;
-                const pay = Number(d.totalPay) || ((Number(d.wage1) || 0) + (Number(d.wage2) || 0) + (Number(d.wage3) || 0) + (Number(d.wage4) || 0));
-                workerLogSummary[wid].totalPay += pay;
-                const dateStr = String(d.date || "");
-                if (dateStr && (!workerLogSummary[wid].lastDate || dateStr > workerLogSummary[wid].lastDate)) {
-                    workerLogSummary[wid].lastDate = dateStr;
-                }
-                const tsMs = d.timestamp && typeof d.timestamp.toMillis === "function" ? d.timestamp.toMillis() : 0;
-                if (tsMs > workerLogSummary[wid].lastSavedMs) {
-                    workerLogSummary[wid].lastSavedMs = tsMs;
-                }
-            });
-
-            uSnap.forEach(doc => {
-                const d = doc.data() || {};
-                const nick = doc.id;
-                let createdMs = 0;
-                let createdStr = "날짜 기록 없음";
-                const rawTs = d.createdAt || d.timestamp || d.updatedAt;
-                if (rawTs && typeof rawTs.toDate === "function") {
-                    const dt = rawTs.toDate();
-                    createdMs = dt.getTime();
-                    createdStr = `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, "0")}-${String(dt.getDate()).padStart(2, "0")} ${String(dt.getHours()).padStart(2, "0")}:${String(dt.getMinutes()).padStart(2, "0")}`;
-                } else if (typeof rawTs === "string" && rawTs.trim()) {
-                    createdStr = rawTs.trim();
-                }
-                const logStat = workerLogSummary[nick] || { count: 0, totalPay: 0, lastDate: "-", lastSavedMs: 0 };
-                const pwStr = String(d.password || "");
-                const isSha256 = /^[a-f0-9]{64}$/i.test(pwStr);
-                workerAccounts.push({
-                    nick,
-                    createdMs,
-                    createdStr,
-                    logCount: logStat.count,
-                    totalPay: logStat.totalPay,
-                    lastDate: logStat.lastDate || "-",
-                    lastSavedMs: logStat.lastSavedMs,
-                    isSha256
-                });
-            });
-
-            workerAccounts.sort((a, b) => (b.createdMs - a.createdMs) || (b.lastSavedMs - a.lastSavedMs) || (b.logCount - a.logCount) || a.nick.localeCompare(b.nick, "ko"));
+        if (serverAdminPayload && serverAdminPayload.counts) {
+            workersCnt = Number(serverAdminPayload.counts.workersCount) || 0;
+            logsCnt = Number(serverAdminPayload.counts.workLogsCount) || 0;
+            noticesCnt = Number(serverAdminPayload.counts.noticesCount) || 0;
+            archivesCnt = Number(serverAdminPayload.counts.archivesCount) || 0;
+            serverShipsCnt = Number(serverAdminPayload.counts.shipsCount) || 0;
+            serverPostsCnt = Number(serverAdminPayload.counts.postsCount) || 0;
+            workerAccounts = Array.isArray(serverAdminPayload.workerAccounts) ? serverAdminPayload.workerAccounts : [];
             cachedStatsModalData.workerAccounts = workerAccounts;
-        } catch (e) {}
-        const shipsCnt = Array.isArray(allShipsData) ? allShipsData.length : 0;
-        const postsCnt = Array.isArray(allPostsData) ? allPostsData.length : 0;
+
+            if (Array.isArray(serverAdminPayload.workLogs)) {
+                adminWorkLogDetailCache.logs = serverAdminPayload.workLogs;
+                adminWorkLogDetailCache.loadedAt = Date.now();
+            }
+        } else {
+            try {
+                const hasNoticesCache = Array.isArray(window.allNoticesCache);
+                const hasArchivesCache = typeof window.allArchivesCount === "number";
+                const [uSnap, lSnap, nSnap, aSnap] = await Promise.all([
+                    db.collection("user_profiles").get(),
+                    db.collection("work_logs").get(),
+                    hasNoticesCache ? Promise.resolve(null) : db.collection("notices").get(),
+                    hasArchivesCache ? Promise.resolve(null) : db.collection("archives").get()
+                ]);
+                workersCnt = uSnap.size;
+                noticesCnt = hasNoticesCache ? window.allNoticesCache.length : (nSnap ? nSnap.size : 0);
+                archivesCnt = hasArchivesCache ? window.allArchivesCount : (aSnap ? aSnap.size : 0);
+
+                let activeLogsCnt = 0;
+                lSnap.forEach(doc => {
+                    const d = doc.data() || {};
+                    if (isDeletedRecord(d)) return;
+                    activeLogsCnt += 1;
+                    const wid = String(d.workerId || "").trim() || (doc.id.includes("_") ? doc.id.split("_")[0] : "");
+                    if (!wid) return;
+                    if (!workerLogSummary[wid]) {
+                        workerLogSummary[wid] = { count: 0, totalPay: 0, lastDate: "", lastSavedMs: 0 };
+                    }
+                    workerLogSummary[wid].count += 1;
+                    const pay = Number(d.totalPay) || ((Number(d.wage1) || 0) + (Number(d.wage2) || 0) + (Number(d.wage3) || 0) + (Number(d.wage4) || 0));
+                    workerLogSummary[wid].totalPay += pay;
+                    const dateStr = String(d.date || "");
+                    if (dateStr && (!workerLogSummary[wid].lastDate || dateStr > workerLogSummary[wid].lastDate)) {
+                        workerLogSummary[wid].lastDate = dateStr;
+                    }
+                    const tsMs = d.timestamp && typeof d.timestamp.toMillis === "function" ? d.timestamp.toMillis() : 0;
+                    if (tsMs > workerLogSummary[wid].lastSavedMs) {
+                        workerLogSummary[wid].lastSavedMs = tsMs;
+                    }
+                });
+                logsCnt = activeLogsCnt;
+
+                uSnap.forEach(doc => {
+                    const d = doc.data() || {};
+                    const nick = doc.id;
+                    let createdMs = 0;
+                    let createdStr = "날짜 기록 없음";
+                    const rawTs = d.createdAt || d.timestamp || d.updatedAt;
+                    if (rawTs && typeof rawTs.toDate === "function") {
+                        const dt = rawTs.toDate();
+                        createdMs = dt.getTime();
+                        createdStr = `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, "0")}-${String(dt.getDate()).padStart(2, "0")} ${String(dt.getHours()).padStart(2, "0")}:${String(dt.getMinutes()).padStart(2, "0")}`;
+                    } else if (typeof rawTs === "string" && rawTs.trim()) {
+                        createdStr = rawTs.trim();
+                    }
+                    const logStat = workerLogSummary[nick] || { count: 0, totalPay: 0, lastDate: "-", lastSavedMs: 0 };
+                    const pwStr = String(d.password || "");
+                    const isSha256 = /^[a-f0-9]{64}$/i.test(pwStr);
+                    workerAccounts.push({
+                        nick,
+                        createdMs,
+                        createdStr,
+                        logCount: logStat.count,
+                        totalPay: logStat.totalPay,
+                        lastDate: logStat.lastDate || "-",
+                        lastSavedMs: logStat.lastSavedMs,
+                        isSha256
+                    });
+                });
+
+                workerAccounts.sort((a, b) => (b.createdMs - a.createdMs) || (b.lastSavedMs - a.lastSavedMs) || (b.logCount - a.logCount) || a.nick.localeCompare(b.nick, "ko"));
+                cachedStatsModalData.workerAccounts = workerAccounts;
+            } catch (clientDbErr) {
+                console.warn("클라이언트 DB 현황 조회 폴백(/api/analytics-summary):", clientDbErr && clientDbErr.message);
+                try {
+                    if (!serverSummaryPayload) {
+                        const summaryResp = await fetchPortApiJson("/api/analytics-summary");
+                        if (summaryResp && summaryResp.status === 200 && summaryResp.data && summaryResp.data.ok) {
+                            serverSummaryPayload = summaryResp.data;
+                        }
+                    }
+                    if (serverSummaryPayload && serverSummaryPayload.collections) {
+                        const cols = serverSummaryPayload.collections;
+                        workersCnt = Number(cols.workersCount) || 0;
+                        logsCnt = Number(cols.workLogsCount) || 0;
+                        noticesCnt = Number(cols.noticesCount) || (Array.isArray(window.allNoticesCache) ? window.allNoticesCache.length : 0);
+                        archivesCnt = Number(cols.archivesCount) || (typeof window.allArchivesCount === "number" ? window.allArchivesCount : 0);
+                        serverShipsCnt = Number(cols.shipsCount) || 0;
+                        serverPostsCnt = Number(cols.postsCount) || 0;
+                    }
+                } catch (e2) {}
+            }
+        }
+        const shipsCnt = Array.isArray(allShipsData) && allShipsData.length > 0 ? allShipsData.length : (serverShipsCnt ?? 0);
+        const postsCnt = Array.isArray(allPostsData) && allPostsData.length > 0 ? allPostsData.length : (serverPostsCnt ?? 0);
         dbGridEl.innerHTML = `
             <div class="stats-mini-item"><span>🚢 등록 선박 도감</span><b style="color:#0284c7;">${shipsCnt.toLocaleString()}척</b></div>
             <div class="stats-mini-item"><span>💬 자유게시판 게시글</span><b style="color:#4f46e5;">${postsCnt.toLocaleString()}건</b></div>
@@ -1154,7 +1454,7 @@ async function openAdminWorkLogDetail(initialWorker = "") {
 }
 
 async function openAdminWorkLogDetailFromStats(initialWorker = "") {
-    if (!isAdminSessionVerified && !(await verifyAdmin())) return;
+    if ((!isAdminSessionVerified || !hasServerBackedAdminAccess()) && !(await verifyAdmin())) return;
     showAdminWorkLogModal(initialWorker);
 }
 
@@ -1178,38 +1478,48 @@ async function loadAdminWorkLogDetail(forceRefresh = false, initialWorker = "") 
 
     if (forceRefresh || adminWorkLogDetailCache.logs.length === 0 || (Date.now() - adminWorkLogDetailCache.loadedAt > 60000)) {
         try {
-            const snap = await db.collection("work_logs").get();
-            const items = [];
-            snap.forEach(doc => {
-                const d = doc.data() || {};
-                if (isDeletedRecord(d)) return;
-                const docId = doc.id || "";
-                const wid = String(d.workerId || "").trim() || (docId.includes("_") ? docId.split("_")[0] : "미지정");
-                const dateStr = String(d.date || "").trim() || (docId.includes("_") ? docId.split("_").slice(1).join("_") : "-");
-                const wage1 = Number(d.wage1) || 0;
-                const wage2 = Number(d.wage2) || 0;
-                const wage3 = Number(d.wage3) || 0;
-                const wage4 = Number(d.wage4) || 0;
-                const totalPay = Number(d.totalPay) || (wage1 + wage2 + wage3 + wage4);
-                const savedMs = d.timestamp && typeof d.timestamp.toMillis === "function" ? d.timestamp.toMillis() : 0;
-                const savedStr = formatAdminWorkLogDateTime(d.timestamp);
-                items.push({
-                    id: docId,
-                    workerId: wid,
-                    date: dateStr,
-                    shipName: String(d.shipName || "").trim(),
-                    wage1,
-                    wage2,
-                    wage3,
-                    wage4,
-                    totalPay,
-                    coworkers: String(d.coworkers || "").trim(),
-                    memo: String(d.memo || "").trim(),
-                    imageUrl: String(d.imageUrl || "").trim(),
-                    savedMs,
-                    savedStr
+            await ensureAnonymousAuth();
+            let items = null;
+            const serverAdminPayload = await fetchServerAdminStatsPayload();
+            if (serverAdminPayload && Array.isArray(serverAdminPayload.workLogs)) {
+                items = serverAdminPayload.workLogs;
+                if (Array.isArray(serverAdminPayload.workerAccounts)) {
+                    cachedStatsModalData.workerAccounts = serverAdminPayload.workerAccounts;
+                }
+            } else {
+                const snap = await db.collection("work_logs").get();
+                items = [];
+                snap.forEach(doc => {
+                    const d = doc.data() || {};
+                    if (isDeletedRecord(d)) return;
+                    const docId = doc.id || "";
+                    const wid = String(d.workerId || "").trim() || (docId.includes("_") ? docId.split("_")[0] : "미지정");
+                    const dateStr = String(d.date || "").trim() || (docId.includes("_") ? docId.split("_").slice(1).join("_") : "-");
+                    const wage1 = Number(d.wage1) || 0;
+                    const wage2 = Number(d.wage2) || 0;
+                    const wage3 = Number(d.wage3) || 0;
+                    const wage4 = Number(d.wage4) || 0;
+                    const totalPay = Number(d.totalPay) || (wage1 + wage2 + wage3 + wage4);
+                    const savedMs = d.timestamp && typeof d.timestamp.toMillis === "function" ? d.timestamp.toMillis() : 0;
+                    const savedStr = formatAdminWorkLogDateTime(d.timestamp);
+                    items.push({
+                        id: docId,
+                        workerId: wid,
+                        date: dateStr,
+                        shipName: String(d.shipName || "").trim(),
+                        wage1,
+                        wage2,
+                        wage3,
+                        wage4,
+                        totalPay,
+                        coworkers: String(d.coworkers || "").trim(),
+                        memo: String(d.memo || "").trim(),
+                        imageUrl: String(d.imageUrl || "").trim(),
+                        savedMs,
+                        savedStr
+                    });
                 });
-            });
+            }
             adminWorkLogDetailCache.logs = items;
             adminWorkLogDetailCache.loadedAt = Date.now();
             const now = new Date();
@@ -1225,6 +1535,12 @@ async function loadAdminWorkLogDetail(forceRefresh = false, initialWorker = "") 
             return;
         }
     }
+
+    const nowTime = new Date(adminWorkLogDetailCache.loadedAt || Date.now());
+    setAdminWorkLogText(
+        "awlUpdatedTime",
+        `기준 시각: ${nowTime.getFullYear()}-${String(nowTime.getMonth() + 1).padStart(2, "0")}-${String(nowTime.getDate()).padStart(2, "0")} ${String(nowTime.getHours()).padStart(2, "0")}:${String(nowTime.getMinutes()).padStart(2, "0")}:${String(nowTime.getSeconds()).padStart(2, "0")} · 총 ${adminWorkLogDetailCache.logs.length.toLocaleString()}건`
+    );
 
     populateAdminWorkLogWorkerSelect(initialWorker);
     renderAdminWorkLogDetail();
@@ -9558,8 +9874,8 @@ window.onload = async () => {
     applyOfficialTerminalNames();
     appendTerminalMealBlocks();
     renderTerminalScheduleTabBar();
-    initAppHistoryNavigation();
     await ensureAnonymousAuth();
+    initAppHistoryNavigation();
     ["t1", "t2", "t3"].forEach(loadSectionTicker);
     trackVisitorSession();
     initTodayVisitorBadge();
