@@ -1525,6 +1525,28 @@ const SCREEN_UNLOCK_TOKEN_KEY = "workLogUnlockToken";
 const SCREEN_UNLOCK_EXPIRY_KEY = "workLogUnlockExpiry";
 const SCREEN_UNLOCK_TTL_MS = 12 * 60 * 60 * 1000; // 12시간
 
+/** PIN 정규화 — 전각 숫자·공백을 반각·무공백으로 통일해 모바일 오타를 방지합니다. */
+function normalizePinInput(raw) {
+    let s = String(raw || "").trim();
+    s = s.replace(/[０-９]/g, (c) => String.fromCharCode(c.charCodeAt(0) - 0xfee0));
+    s = s.replace(/\s+/g, "");
+    return s;
+}
+/** 빌드가 주입한 화면 잠금 PIN 해시 후보 (현재 PIN + 기본 9445 백업) */
+function getScreenLockHashCandidates() {
+    if (typeof window === "undefined") return [];
+    const raw = [
+        window.__SCREEN_LOCK_SHA256__,
+        window.__SCREEN_LOCK_DEFAULT_SHA256__
+    ];
+    const unique = [];
+    raw.forEach(v => {
+        const h = String(v || "").trim().toLowerCase();
+        if (/^[a-f0-9]{64}$/.test(h) && !unique.includes(h)) unique.push(h);
+    });
+    return unique;
+}
+
 function readSessionValue(key) {
     try { return sessionStorage.getItem(key); } catch (e) { return null; }
 }
@@ -1547,10 +1569,11 @@ let pendingWorkLogAction = null;
  * @returns {Promise<{ok: boolean, token?: string, expiresAt?: number}>}
  */
 async function verifyScreenLockPin(pin) {
-    const value = String(pin || "").trim();
+    const value = normalizePinInput(pin);
     if (!value) return { ok: false, reason: "empty" };
 
     // 1순위 — 서버 검증 (PIN 평문은 서버 환경변수에만 존재)
+    let rateLimited = false;
     try {
         const res = await fetch(SCREEN_UNLOCK_ENDPOINT, {
             method: "POST",
@@ -1567,27 +1590,27 @@ async function verifyScreenLockPin(pin) {
             }
             // 서버가 명확히 거부했다면 폴백하지 않고 그대로 실패 (서버가 정답을 아는 쪽)
             if (res.status === 401 || res.status === 400) return { ok: false, reason: "invalid_pin" };
-            if (res.status === 429) return { ok: false, reason: "rate_limited" };
+            if (res.status === 429) rateLimited = true;
         }
     } catch (e) {
         // 네트워크 오류·정적 호스팅 환경 → 아래 폴백으로 진행
     }
 
     // 2순위 — 빌드 시 주입된 해시와 비교 (scripts/build-obfuscate.mjs 가 주입)
-    const expectedHash = (typeof window !== "undefined" && window.__SCREEN_LOCK_SHA256__) || "";
-    if (expectedHash) {
+    const candidates = getScreenLockHashCandidates();
+    if (candidates.length > 0) {
         try {
-            const digest = await sha256Hex(value);
-            if (digest && digest === expectedHash) {
+            const digest = String(await sha256Hex(value) || "").toLowerCase();
+            if (digest && candidates.includes(digest)) {
                 return { ok: true, token: "local", expiresAt: Date.now() + SCREEN_UNLOCK_TTL_MS };
             }
         } catch (e) { }
-        return { ok: false, reason: "invalid_pin" };
+        return { ok: false, reason: rateLimited ? "rate_limited" : "invalid_pin" };
     }
 
     // 서버도 없고 주입된 해시도 없는 배포(예: 원본 public/ 을 그대로 정적 배포)는
     // 잠금을 풀 방법이 없습니다. 조용히 실패하지 않고 원인을 알립니다.
-    return { ok: false, reason: "no_verifier" };
+    return { ok: false, reason: rateLimited ? "rate_limited" : "no_verifier" };
 }
 function syncWorkLogExtraUnlockUI() {
     const lockBanner = document.getElementById("logExtraLockBanner");
@@ -9292,7 +9315,7 @@ function subscribeEmergencyNotice() {
 
 /* ── 관리자 인증 (비밀번호 평문은 코드에 없음) ── */
 async function verifyEmergencyNoticePin(pin) {
-    const value = String(pin || "").trim();
+    const value = (typeof normalizePinInput === "function" ? normalizePinInput(pin) : String(pin || "").trim());
     if (!value) return { ok: false, reason: "empty" };
 
     // 1순위 — 서버 검증 (평문은 서버 환경변수 EMERGENCY_NOTICE_PIN 에만 존재)

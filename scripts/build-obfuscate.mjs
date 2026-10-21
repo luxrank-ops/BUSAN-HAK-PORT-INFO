@@ -111,18 +111,29 @@ async function minifyCss(code, file) {
  *  - 지정하지 않은 배포: 화면 잠금 PIN + 기본 관리자 PIN(9445) 을 함께 인정
  *    → 근무일지 잠금 비밀번호를 다른 값으로 바꾼 배포에서도 안내된 기본 비밀번호로 열립니다.
  */
+function normalizePinForHash(pin) {
+  let s = String(pin || '').trim();
+  s = s.replace(/[０-９]/g, (c) => String.fromCharCode(c.charCodeAt(0) - 0xfee0));
+  s = s.replace(/\s+/g, '');
+  return s;
+}
 function transformHtml(html, screenLockPin, emergencyPin = screenLockPin, emergencyDefaultPin = '') {
-  const sha256 = createHash('sha256').update(String(screenLockPin), 'utf8').digest('hex');
-  const emergencySha256 = createHash('sha256').update(String(emergencyPin), 'utf8').digest('hex');
-  const fallbackPin = String(emergencyDefaultPin || '').trim();
+  const normScreenPin = normalizePinForHash(screenLockPin);
+  const normEmergencyPin = normalizePinForHash(emergencyPin);
+  const sha256 = createHash('sha256').update(normScreenPin, 'utf8').digest('hex');
+  const emergencySha256 = createHash('sha256').update(normEmergencyPin, 'utf8').digest('hex');
+  const fallbackPin = normalizePinForHash(emergencyDefaultPin);
   const fallbackSha256 = fallbackPin
     ? createHash('sha256').update(fallbackPin, 'utf8').digest('hex')
     : '';
+  // 화면 잠금 기본 백업 PIN(9445) — 운영자가 PIN을 바꿔도 기존 안내 번호로 열리도록
+  const screenDefaultSha256 = createHash('sha256').update('9445', 'utf8').digest('hex');
   const configScript = [
     '<script>',
     '/* 서버 검증 실패(정적 호스팅·오프라인) 시 사용하는 화면 잠금 PIN 해시.',
     '   실제 값은 서버 환경변수 SCREEN_LOCK_PIN 으로 관리하며 소스에는 평문이 없습니다. */',
     `window.__SCREEN_LOCK_SHA256__="${sha256}";`,
+    `window.__SCREEN_LOCK_DEFAULT_SHA256__="${screenDefaultSha256}";`,
     '/* 🚨 긴급 플로팅 공지 작성 잠금 해시 (서버 환경변수 EMERGENCY_NOTICE_PIN). */',
     `window.__EMERGENCY_PIN_SHA256__="${emergencySha256}";`,
     ...(fallbackSha256
