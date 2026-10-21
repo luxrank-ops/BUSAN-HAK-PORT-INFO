@@ -32,7 +32,7 @@ const PLAN_A_TAB_META = {
     },
     'guide': {
         title: '현장가이드',
-        hint: '실전안전지침 · 현장 실무 용어 가이드 · 생활영어 한문장',
+        hint: '꿍꿍따 끝말잇기 · 현장 실무 용어 가이드 · 생활영어 한문장',
         nav: 'nav-guide'
     }
 };

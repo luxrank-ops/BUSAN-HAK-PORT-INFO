@@ -333,7 +333,7 @@ const STATS_BLOCK_META = [
     { id: "board-card", label: "💬 스트레스 해소(톡톡)", color: "#6366f1" },
     { id: "archive-card", label: "📂 자료실 (셔틀버스 시간표 등)", color: "#eab308" },
     { id: "weather-card", label: "📡 날씨 및 도선 상황", color: "#06b6d4" },
-    { id: "safety-card", label: "⛑️ 실전 통합 안전 지침", color: "#10b981" },
+    { id: "safety-card", label: "🎮 꿍꿍따 미니게임", color: "#10b981" },
     { id: "guide-card", label: "📖 현장 실무 용어 가이드", color: "#8b5cf6" },
     { id: "privacy-center-card", label: "🛡️ 실전 보안 가이드", color: "#64748b" },
     { id: "main-manual-card", label: "🔅 앱 공유 · 사용 설명서", color: "#f59e0b" }

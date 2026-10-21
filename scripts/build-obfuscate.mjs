@@ -163,7 +163,8 @@ const JS_LOAD_ORDER = [
   'js/app.js',
   'js/leader-access.js',
   'js/ships-board.js',
-  'js/tab-views.js'
+  'js/tab-views.js',
+  'js/kkung-game.js'
 ];
 
 /**
