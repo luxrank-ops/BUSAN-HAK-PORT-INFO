@@ -6040,8 +6040,12 @@ function saveWorkLog(){
             btn.style.background = "var(--success)"; 
             showToast("근무일지가 안전하게 저장되었습니다."); 
             
-            // 데이터 즉시 갱신
-            adminWorkLogs[dStr] = logData; 
+            // 데이터 즉시 갱신. 기간 조회 결과를 따로 캐시하고 있으므로 그 캐시도 함께 갱신해야
+            // 저장 후 검색 결과/임금 내역서로 돌아갈 때 수정 전 기록이 다시 나타나지 않습니다.
+            adminWorkLogs[dStr] = logData;
+            if (rangeFetchedLogs && Object.prototype.hasOwnProperty.call(rangeFetchedLogs, dStr)) {
+                rangeFetchedLogs[dStr] = logData;
+            }
             renderCalendar(currentDate.getFullYear(), currentDate.getMonth()); 
 
             if (shouldOfferVesselInfoFollowUp) {
