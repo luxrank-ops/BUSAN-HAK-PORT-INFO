@@ -2455,6 +2455,166 @@ app.get('/api/analytics-summary', async (_req, res) => {
   }
 });
 
+// ─── 🖥️ 방문자 IP·위치 추적 (PC 접속 위치 정보) ──────────────────────────
+// 앱 접속 시 프런트 비콘(/api/visitor-beacon)이 서버의 요청 소스 IP(req.ip)를 기준으로
+// IP 조회 서비스에서 국가/도시를 조회해 Firestore visitor_ip_logs 에 기록합니다.
+// 운영자는 /api/visitor-logs 로 '앱 통합 운영 > 방문자 상세 통계'에서
+// PC(데스크톱) 방문자의 IP·위치 내역을 조회할 수 있습니다.
+
+const VISITOR_BEACON_DEDUP_WINDOW_MS = 30 * 60 * 1000; // 동일 IP 중복 기록 방지 간격
+const visitorBeaconLastWrite = new Map<string, number>();
+
+function beaconDateKeyKst(now: Date = new Date()): string {
+  const kst = new Date(now.getTime() + 9 * 60 * 60 * 1000);
+  return `${kst.getUTCFullYear()}-${String(kst.getUTCMonth() + 1).padStart(2, '0')}-${String(kst.getUTCDate()).padStart(2, '0')}`;
+}
+
+function deviceKeyFromUserAgent(ua: string): string {
+  if (/android/i.test(ua)) return 'android';
+  if (/iPad|iPhone|iPod/i.test(ua)) return 'ios';
+  return 'desktop';
+}
+
+function isPrivateOrLocalIp(ip: string): boolean {
+  if (!ip || ip === 'unknown') return true;
+  const normalized = ip.replace(/^::ffff:/, ''); // IPv4-mapped IPv6
+  if (normalized === '127.0.0.1' || normalized === '::1' || normalized === 'localhost') return true;
+  if (normalized.startsWith('10.') || normalized.startsWith('192.168.')) return true;
+  const m = normalized.match(/^172\.([0-9]+)\./);
+  if (m) {
+    const b = Number(m[1]);
+    if (b >= 16 && b <= 31) return true;
+  }
+  return false;
+}
+
+const IP_COUNTRY_KR_MAP: Record<string, string> = {
+  'South Korea': '대한민국',
+  'Korea, Republic of': '대한민국',
+  'Republic of Korea': '대한민국'
+};
+function localizeCountry(name: string): string {
+  if (!name) return '미확인';
+  return IP_COUNTRY_KR_MAP[name] || name;
+}
+
+/** ip-api.com (무료, 키 불필요) 에서 IP 기반 위치 정보를 조회합니다. 실패하면 null. */
+async function fetchIpLocation(ip: string): Promise<{ country: string; region: string; city: string } | null> {
+  if (isPrivateOrLocalIp(ip)) return null;
+  try {
+    const res = await httpRequestText(
+      `http://ip-api.com/json/${encodeURIComponent(ip)}?fields=status,country,regionName,city,query`
+    );
+    const parsed = JSON.parse(res.body || '{}');
+    if (parsed && parsed.status === 'success') {
+      return {
+        country: localizeCountry(String(parsed.country || '')),
+        region: String(parsed.regionName || ''),
+        city: String(parsed.city || '')
+      };
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+/** 앱 접속 비콘 수신 — 클라이언트 IP·기기 정보 + IP 지리 위치を記録합니다. (절대 실패 응답 안 함) */
+const visitorBeaconHandler = async (req: Request, res: Response) => {
+  let shouldWrite = false;
+  try {
+    const ip = String(req.ip || req.socket?.remoteAddress || 'unknown');
+    const ua = String(req.headers['user-agent'] || '').slice(0, 300);
+    const body = (req.body && typeof req.body === 'object' ? req.body : {}) as { device?: unknown };
+    const device = /^(android|ios|desktop)$/.test(String(body.device || ''))
+      ? String(body.device)
+      : deviceKeyFromUserAgent(ua);
+    const dateKey = beaconDateKeyKst();
+
+    const now = Date.now();
+    const last = visitorBeaconLastWrite.get(ip);
+    if (last === undefined || now - last >= VISITOR_BEACON_DEDUP_WINDOW_MS) {
+      shouldWrite = true;
+      visitorBeaconLastWrite.set(ip, now);
+      if (visitorBeaconLastWrite.size > 2000) {
+        for (const [k, v] of visitorBeaconLastWrite.entries()) {
+          if (now - v >= VISITOR_BEACON_DEDUP_WINDOW_MS) visitorBeaconLastWrite.delete(k);
+        }
+      }
+    }
+
+    const db = resolveServerFirestore();
+    if (db && shouldWrite) {
+      const location = await fetchIpLocation(ip);
+      await db.collection('visitor_ip_logs').add({
+        ip,
+        device,
+        userAgent: ua,
+        country: location?.country ?? '',
+        region: location?.region ?? '',
+        city: location?.city ?? '',
+        dateKey,
+        accessedAt: FieldValue.serverTimestamp(),
+        accessedAtMs: now
+      });
+    }
+  } catch {
+    // 비콘 기록 실패는 페이지 동작에 영향 주지 않습니다.
+  }
+  res.json({ ok: true });
+};
+
+/** 방문자 IP·위치 로그 조회 — 관리자 세션 토큰 필요 */
+const visitorLogsHandler = async (req: Request, res: Response) => {
+  const authHeader = String(req.headers.authorization || '');
+  const bodyToken = req.body && typeof req.body === 'object' ? String((req.body as { token?: unknown }).token || '') : '';
+  if (!verifyAdminSessionToken(authHeader || bodyToken)) {
+    res.status(401).json({ ok: false, error: 'unauthorized' });
+    return;
+  }
+  try {
+    const db = resolveServerFirestore();
+    if (!db) {
+      res.status(503).json({ ok: false, error: 'firebase_admin_not_initialized' });
+      return;
+    }
+    const deviceFilter = String(req.query.device || '').trim();
+    let snap: FirebaseFirestore.QuerySnapshot<FirebaseFirestore.DocumentData>;
+    try {
+      snap = await db.collection('visitor_ip_logs').orderBy('accessedAtMs', 'desc').limit(300).get();
+    } catch (orderErr: any) {
+      const msg = String(orderErr?.message || orderErr);
+      if (/index/i.test(msg) || String(orderErr?.code) === 'failed-precondition') {
+        snap = await db.collection('visitor_ip_logs').get();
+      } else {
+        throw orderErr;
+      }
+    }
+    let logs: any[] = snap.docs.map((doc) => ({ id: doc.id, ...(doc.data() || {}) }));
+    logs.sort((a, b) => Number(b.accessedAtMs || 0) - Number(a.accessedAtMs || 0));
+    if (deviceFilter) logs = logs.filter((l) => l.device === deviceFilter);
+    logs = logs.slice(0, 100);
+    const resultLogs = logs.map((l) => ({
+      id: l.id,
+      ip: String(l.ip || ''),
+      device: String(l.device || ''),
+      userAgent: String(l.userAgent || ''),
+      country: String(l.country || ''),
+      region: String(l.region || ''),
+      city: String(l.city || ''),
+      dateKey: String(l.dateKey || ''),
+      accessedAtMs: Number(l.accessedAtMs) || 0,
+      accessedAt: formatKstDateTime(l.accessedAt).formatted
+    }));
+    res.json({ ok: true, logs: resultLogs, count: resultLogs.length, deviceFilter });
+  } catch (error: any) {
+    res.status(500).json({ ok: false, error: error?.message || 'visitor_logs_failed' });
+  }
+};
+
+app.post('/api/visitor-beacon', visitorBeaconHandler);
+app.get('/api/visitor-logs', visitorLogsHandler);
+
 // 📊 관리자 전용 통합 운영 통계 · 가입 근로자 계정 · 누적 근무일지 전체 조회 API
 // 서명된 관리자 세션 토큰(verifyAdminSessionToken) 없이는 절대 응답하지 않으며,
 // 비밀번호 원문·해시는 응답 페이로드에 포함하지 않습니다(isSha256 불리언만 반환).
