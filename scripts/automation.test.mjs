@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
+import * as esbuild from 'esbuild';
 import { readAppJs, extractFunction, extractDeclaration } from './app-source.mjs';
 
 // A-1 (2026-10-17): 커뮤니티 검증 로직은 인라인 스크립트 → public/js/app.js 로 이동.
@@ -232,3 +233,178 @@ test('4순위: 서버 헬스체크(/api/health) 및 터미널 장애 시 Stale-W
   assert.match(serverCode, /cacheSource:\s*'firestore-cache'/);
   assert.match(serverCode, /failures\s*>=\s*2\s*\?\s*'isolated'\s*:\s*'degraded'/);
 });
+
+test('PNC 점검 1: SUPPORTED_TERMINALS에 pnc가 포함되고 Info.pnc·ShipVslStatus.pnc HTML 파서 및 검색 폼 추출기가 정확히 동작한다', () => {
+  assert.match(serverCode, /SUPPORTED_TERMINALS\s*=\s*\[[^\]]*'pnc'[^\]]*\]/);
+
+  const stripTagsMatch = serverCode.match(/function stripTags[\s\S]*?^}/m);
+  const normalizeMatch = serverCode.match(/export function normalizeDateTimeStr[\s\S]*?^}/m);
+  const pncBlockMatch = serverCode.match(
+    /function decodeBasicEntities[\s\S]*?export function mergePncScheduleAndWorkStatus[\s\S]*?^}/m
+  );
+  assert.ok(stripTagsMatch && normalizeMatch && pncBlockMatch, 'PNC 파서 함수 블록이 존재해야 합니다');
+
+  const tsSnippet = [stripTagsMatch[0], normalizeMatch[0], pncBlockMatch[0]].join('\n');
+  const compiled = esbuild.transformSync(tsSnippet, { loader: 'ts', format: 'cjs' }).code;
+  const mod = { exports: {} };
+  const ctx = vm.createContext({ module: mod, exports: mod.exports, URL, URLSearchParams, String, Number, Array, Map, RegExp });
+  vm.runInContext(compiled, ctx, { filename: 'pnc-parser.cjs' });
+
+  const {
+    parsePncScheduleHtml,
+    parsePncWorkStatusHtml,
+    extractPncSearchFormRequest,
+    mergePncScheduleAndWorkStatus
+  } = mod.exports;
+
+  const sampleInfoHtml = `
+    <form method="post" action="/info/CMS/Ship/Info.pnc?mCode=MN014">
+      <input type="hidden" name="mCode" value="MN014">
+      <input type="text" name="sDate" value="2026-10-21"> ~
+      <input type="text" name="eDate" value="2026-10-30">
+      <select name="route"><option value="" selected>ROUTE</option></select>
+      <select name="oper"><option value="">OPER</option></select>
+      <input type="radio" name="gubun" value="ETB" checked>
+      <input type="radio" name="pageUnit" value="100" checked>
+      <input type="radio" name="pageUnit" value="500">
+      <input type="radio" name="pageUnit" value="1000">
+    </form>
+    <table>
+      <thead>
+        <tr>
+          <th>No.</th><th>모선명</th><th>모선코드</th><th>선사항차</th><th>운항선사</th>
+          <th>항로</th><th>접안방향</th><th>접안(예정)일시</th><th>출항(예정)일시</th><th>선석</th>
+          <th>반입마감일시</th><th>양하수량</th><th>선적수량</th><th>Shift</th><th>줄잡이업체</th><th>작업서류</th><th>업데이트일시</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>1</td><td>MISSOURI EXPRESS</td><td>MISX-007/2026</td><td>640W/642E</td><td>HLC</td>
+          <td>GUSWC5E</td><td>Port</td><td>2026-10-21 20:45</td><td>2026-10-23 14:00</td><td>B6</td>
+          <td>2026-10-21 03:00</td><td>1413</td><td>1628</td><td>124</td><td>New Port Marine</td><td></td><td>2026-10-21 22:35</td>
+        </tr>
+        <tr>
+          <td>2</td><td>CELSIUS EMMEN</td><td>MCSE-003/2026</td><td>642W</td><td>ONE</td>
+          <td>JPH</td><td>Star</td><td>2026-10-22 18:10</td><td>2026-10-23 20:00</td><td>B4</td>
+          <td>2026-10-22 10:00</td><td>800</td><td>920</td><td>40</td><td>ENS MARINE</td><td></td><td></td>
+        </tr>
+      </tbody>
+    </table>
+  `;
+
+  const formReq = extractPncSearchFormRequest(sampleInfoHtml, '2026-10-01', '2026-10-31');
+  assert.ok(formReq, '검색 폼 요청이 추출되어야 합니다');
+  assert.equal(formReq.method, 'POST');
+  assert.equal(formReq.url, 'https://svc.pncport.com/info/CMS/Ship/Info.pnc?mCode=MN014');
+  const parsedBody = new URLSearchParams(formReq.body);
+  assert.equal(parsedBody.get('sDate'), '2026-10-01');
+  assert.equal(parsedBody.get('eDate'), '2026-10-31');
+  assert.equal(parsedBody.get('pageUnit'), '1000');
+  assert.equal(parsedBody.get('mCode'), 'MN014');
+
+  const scheduleItems = parsePncScheduleHtml(sampleInfoHtml);
+  assert.equal(scheduleItems.length, 2);
+  assert.equal(scheduleItems[0].TERMINAL, 'PNC');
+  assert.equal(scheduleItems[0].VSL_NM, 'MISSOURI EXPRESS');
+  assert.equal(scheduleItems[0].BERTH_NO, 'B6');
+  assert.equal(scheduleItems[0].PTNR_CODE, 'HLC');
+  assert.equal(scheduleItems[0].VOY_NO, '640W/642E');
+  assert.equal(scheduleItems[0].ETB, '2026-10-21 20:45');
+  assert.equal(scheduleItems[0].ATD, '2026-10-23 14:00');
+
+  const sampleStatusHtml = `
+    <table>
+      <tr><th>구분</th><th>#4</th><th>#5</th><th>#6</th><th>#9</th></tr>
+      <tr><th>선박코드</th><td>MCSE-003/2026</td><td>MXPS-005/2026</td><td>MISX-007/2026</td><td></td></tr>
+      <tr><th>선박명</th><td>CELSIUS EMMEN</td><td>X-PRESS SHANNON</td><td>MISSOURI EXPRESS</td><td></td></tr>
+      <tr><th>운항선사</th><td>ONE</td><td>HLC</td><td>HLC</td><td></td></tr>
+      <tr><th>접안일시</th><td>2026-10-22 18:10</td><td>2026-10-23 02:30</td><td>2026-10-21 20:45</td><td></td></tr>
+      <tr><th>작업시작일시</th><td>2026-10-22 20:12</td><td>2026-10-23 03:30</td><td>2026-10-21 21:30</td><td></td></tr>
+      <tr><th>출항(예정)일시</th><td>2026-10-23 20:00</td><td>2026-10-23 19:00</td><td>2026-10-23 14:00</td><td></td></tr>
+    </table>
+  `;
+
+  const statusItems = parsePncWorkStatusHtml(sampleStatusHtml);
+  assert.equal(statusItems.length, 3);
+  assert.equal(statusItems[0].BERTH_NO, 'B4');
+  assert.equal(statusItems[0].ATW, '2026-10-22 20:12');
+
+  const merged = mergePncScheduleAndWorkStatus(scheduleItems, statusItems);
+  assert.equal(merged.length, 3);
+  const missouri = merged.find((v) => v.VSL_NM === 'MISSOURI EXPRESS');
+  assert.equal(missouri.ATW, '2026-10-21 21:30', '본선작업현황의 실제 작업시작일시(ATW)가 보강되어야 합니다');
+});
+
+test('PNC 점검 2: 프론트엔드 PNC 실시간 활성화(live: true), 셔틀버스 모달 폴백·초기화, 손상 아이콘 정리가 완료되어 있다', async () => {
+  const termListCode = extractDeclaration(appJs, 'TERMINAL_SCHEDULE_LIST');
+  const termCtx = vm.createContext({});
+  vm.runInContext(`${termListCode}\nglobalThis.list = TERMINAL_SCHEDULE_LIST;`, termCtx);
+  const pncEntry = termCtx.list.find((t) => t.id === 'pnc');
+  assert.ok(pncEntry, 'TERMINAL_SCHEDULE_LIST에 pnc 항목이 존재해야 합니다');
+  assert.equal(pncEntry.live, true, 'PNC 스케줄이 live: true 상태여야 합니다');
+
+  // 백그라운드 SWR 갱신이 getWageScheduleDate()를 참조하는지 검증
+  const fetchMonthFn = extractFunction(appJs, 'fetchHjncScheduleForMonth');
+  assert.match(fetchMonthFn, /const\s+wageDate\s*=\s*getWageScheduleDate\(\)/);
+
+  // PNC 셔틀버스 모달 동작 검증 (커스텀 이미지 깨짐 시 기본 이미지 자동 폴백 + 닫기 시 초기화)
+  const elements = {
+    imageModal: { style: { display: 'none' }, classList: { add() {}, remove() {} } },
+    modalImage: { src: '', style: { display: 'block' }, onload: null, onerror: null },
+    modalImageTitle: { textContent: '', classList: { hidden: true, add() { this.hidden = true; }, remove() { this.hidden = false; } } },
+    modalImageStatus: { textContent: '', classList: { hidden: true, add() { this.hidden = true; }, remove() { this.hidden = false; } } },
+    pncBusAdminBtn: { classList: { hidden: true, add() { this.hidden = true; }, remove() { this.hidden = false; } } }
+  };
+
+  const busCode = [
+    extractDeclaration(appJs, 'DEFAULT_PNC_BUS_IMAGE_URL'),
+    extractDeclaration(appJs, 'isPncBusModalActive'),
+    extractFunction(appJs, 'resetPncBusModalState'),
+    extractFunction(appJs, 'openBusSchedule'),
+    extractFunction(appJs, 'closeImageModal')
+  ].join('\n');
+
+  const events = [];
+  const busSandbox = vm.createContext({
+    document: { getElementById: (id) => elements[id] || null },
+    trackAppEvent: (cat, act) => events.push(`${cat}:${act}`),
+    scheduleAppHistoryRecord: () => {},
+    console,
+    String,
+    db: {
+      collection: () => ({
+        doc: () => ({
+          get: async () => ({
+            exists: true,
+            data: () => ({ imageUrl: 'https://example.com/broken-bus.jpg' })
+          })
+        })
+      })
+    }
+  });
+  vm.runInContext(busCode, busSandbox);
+
+  await busSandbox.openBusSchedule();
+  assert.equal(elements.imageModal.style.display, 'flex');
+  assert.equal(elements.modalImageTitle.classList.hidden, false);
+  assert.equal(elements.pncBusAdminBtn.classList.hidden, false);
+  assert.equal(elements.modalImage.src, 'https://example.com/broken-bus.jpg');
+
+  // 커스텀 URL 로드 오류 발생 시 기본 PNC 셔틀 이미지로 자동 폴백
+  elements.modalImage.onerror();
+  assert.match(elements.modalImage.src, /KakaoTalk_20260129_001114789\.jpg/);
+
+  // 닫기 호출 시 일반 사진 뷰어 오염 방지를 위해 모든 상태 초기화
+  busSandbox.closeImageModal();
+  assert.equal(elements.imageModal.style.display, 'none');
+  assert.equal(elements.modalImageTitle.classList.hidden, true);
+  assert.equal(elements.pncBusAdminBtn.classList.hidden, true);
+
+  // icons/ 내 1바이트 깨진 파일이 없어야 함
+  const iconsDir = new URL('../icons/', import.meta.url);
+  for (const name of fs.readdirSync(iconsDir)) {
+    const stat = fs.statSync(new URL(name, iconsDir));
+    assert.ok(stat.size > 100, `icons/${name} 파일이 손상되었습니다 (${stat.size} bytes)`);
+  }
+});
+

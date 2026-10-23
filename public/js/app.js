@@ -2434,6 +2434,9 @@ function applyAppUIState(targetState) {
             const el = document.getElementById(id);
             if (!el) return;
             const shouldOpen = Array.isArray(targetState.openModals) && targetState.openModals.includes(id);
+            if (id === "imageModal" && !shouldOpen) {
+                resetPncBusModalState();
+            }
             el.style.display = shouldOpen ? "flex" : "none";
         });
 
@@ -2922,7 +2925,7 @@ function renderFavoriteQuickBar() {
         if (!cfg) return "";
         const extraBtns = [];
         if (cfg.bayplan) {
-            extraBtns.push(`<a href="${cfg.bayplan}" target="_blank" class="fav-quick-btn extra">🧩 베이</a>`);
+            extraBtns.push(`<a href="${cfg.bayplan}" target="_blank" rel="noopener noreferrer" class="fav-quick-btn extra">🧩 베이</a>`);
         }
         if (cfg.bus) {
             extraBtns.push(`<button type="button" class="fav-quick-btn extra" onclick="openBusSchedule()">🚌 셔틀</button>`);
@@ -2937,9 +2940,9 @@ function renderFavoriteQuickBar() {
                 ${nameHtml}
             </div>
             <div class="fav-quick-actions">
-                <a href="${cfg.schedule}" target="_blank" class="fav-quick-btn" onclick="trackAppEvent('terminals','${id}')">스케줄</a>
-                <a href="${cfg.chart}" target="_blank" class="fav-quick-btn" onclick="trackAppEvent('terminals','${id}')">차트</a>
-                <a href="${cfg.status}" target="_blank" class="fav-quick-btn" onclick="trackAppEvent('terminals','${id}')">현황</a>
+                <a href="${cfg.schedule}" target="_blank" rel="noopener noreferrer" class="fav-quick-btn" onclick="trackAppEvent('terminals','${id}')">스케줄</a>
+                <a href="${cfg.chart}" target="_blank" rel="noopener noreferrer" class="fav-quick-btn" onclick="trackAppEvent('terminals','${id}')">차트</a>
+                <a href="${cfg.status}" target="_blank" rel="noopener noreferrer" class="fav-quick-btn" onclick="trackAppEvent('terminals','${id}')">현황</a>
                 ${extraBtns.join("")}
                 <button type="button" class="fav-quick-btn meal" onclick="openHjncMealModal('${id}', '${cfg.mealLabel}')">🍱 식단</button>
             </div>
@@ -3102,7 +3105,7 @@ const TERMINAL_SCHEDULE_LIST = [
     { id: "bnct", group: "3항업", label: "고려(BNCT)", badge: "BNCT", color: "#2563eb", live: true },
     { id: "dgt",  group: "3항업", label: "동원(DGT)",  badge: "DGT",  color: "#059669", live: true },
     { id: "bct",  group: "3항업", label: "BCT",        badge: "BCT",  color: "#7c3aed", live: false },
-    { id: "pnc",  group: "2항업", label: "PNC",        badge: "PNC",  color: "#0284c7", live: false },
+    { id: "pnc",  group: "2항업", label: "PNC",        badge: "PNC",  color: "#0284c7", live: true },
     { id: "hpnt", group: "2항업", label: "HMM(HPNT)",  badge: "HPNT", color: "#dc2626", live: true },
     { id: "pnit", group: "2항업", label: "국제(PNIT)", badge: "PNIT", color: "#0d9488", live: true },
     { id: "bptc", group: "1항업", label: "북항(BPTC)", badge: "BPTC", color: "#4f46e5", live: true },
@@ -4011,7 +4014,7 @@ async function fetchHjncScheduleForMonth(yearMonth, forceRefresh = false, termin
                 if (shipFormEl && !shipFormEl.classList.contains("hidden") && shipDate && shipDate.startsWith(yearMonth)) {
                     renderShipFormScheduledShipsUI(shipDate, updated, tid);
                 }
-                const wageDate = document.getElementById("wageStartDate")?.value;
+                const wageDate = getWageScheduleDate();
                 if (wageDate && wageDate.startsWith(yearMonth)) {
                     renderWageScheduledShipsUI(wageDate, updated, tid);
                 }
@@ -8927,7 +8930,145 @@ async function submitShipComment(shipId) {
 function renderPagination(curr) { const total = Math.ceil(allPostsData.length / postsPerPage); const el = document.getElementById('pagination'); if(!el) return; const html = []; for(let i=1; i<=total; i++){ html.push(`<span class="page-num ${i===curr?'active':''}" onclick="renderBoardPage(${i})" style="cursor:pointer; padding:5px 12px; margin:2px; background:#e5e7eb; border-radius:8px; font-weight:800; font-size:0.9rem;">${i}</span>`); } el.innerHTML = html.join(""); } 
 function loadComments(pid){if(commentUnsubscribes[pid]) commentUnsubscribes[pid](); commentUnsubscribes[pid]=db.collection('posts').doc(pid).collection('comments').orderBy('timestamp','asc').onSnapshot(s=>{const el=document.getElementById(`cmt-list-${pid}`); const badgeEl=document.getElementById(`cmt-badge-${pid}`); const visibleComments=[]; s.forEach(d=>{const c=d.data()||{}; if(isDeletedRecord(c)) return; visibleComments.push(d);}); if(badgeEl){ if(visibleComments.length>0){ badgeEl.innerText=`💬 ${visibleComments.length}`; badgeEl.classList.remove('hidden'); } else { badgeEl.classList.add('hidden'); } } if(!el) return; boardCommentsById[pid]=[]; const items=[]; s.forEach(d=>{const c=d.data()||{}; if(isDeletedRecord(c)) return; boardCommentsById[pid].push({...c, id:d.id}); const isHidden=Boolean(c.hidden); const safeName=escapeShipCommentHtml(c.name||"익명"); const safeText=isHidden ? `🔒 자동 블라인드 처리된 댓글입니다. (${escapeShipCommentHtml(c.blindReason||'금칙어/도배 감지')})` : escapeShipCommentHtml(c.text||""); const safePw=String(c.password||"").replace(/\\/g,"\\\\").replace(/'/g,"\\'").replace(/"/g,"&quot;"); const imgHtml=(!isHidden && c.imageUrl) ? `<div style="margin-top:4px;"><img src="${escapeShipCommentHtml(c.imageUrl)}" loading="lazy" alt="댓글 첨부 이미지" class="comment-img-thumb" onclick="document.getElementById('imageModal').style.display='flex'; document.getElementById('modalImage').src=this.src;" title="클릭하여 원본 확대 보기"></div>` : ""; items.push(`<div class="comment-item"><div style="flex:1; min-width:0; padding-right:6px;"><div><span class="comment-meta">${safeName}:</span> <span class="comment-text" style="white-space:pre-wrap; ${isHidden ? 'color:var(--text-sub); font-style:italic;' : ''}">${safeText}</span></div>${imgHtml}</div><div style="display:flex; gap:3px; flex-shrink:0;"><button class="mini-btn" style="padding:2px 8px; font-size:0.75rem; border-radius:4px;" onclick="editComment('${pid}','${d.id}')">수정</button><button class="mini-btn btn-del" style="padding:2px 8px; font-size:0.75rem; border-radius:4px;" onclick="deleteComment('${pid}','${d.id}','${safePw}')">삭제</button></div></div>`);}); el.innerHTML=items.join("");}, err=>{console.warn("댓글 로드 오류:",err);});} 
 
-function openBusSchedule(){ trackAppEvent('actions', 'bus_view'); const m=document.getElementById('imageModal'); document.getElementById('modalImage').src='https://firebasestorage.googleapis.com/v0/b/busan-hak-port.firebasestorage.app/o/KakaoTalk_20260129_001114789.jpg?alt=media'; m.style.display='flex'; } function closeImageModal(){ document.getElementById('imageModal').style.display='none'; } function openPrivacy() { toggleDashItem('privacy-center-card'); document.getElementById('privacy-center-card').scrollIntoView({behavior: 'smooth', block: 'center'}); }
+const DEFAULT_PNC_BUS_IMAGE_URL = "https://firebasestorage.googleapis.com/v0/b/busan-hak-port.firebasestorage.app/o/KakaoTalk_20260129_001114789.jpg?alt=media";
+let isPncBusModalActive = false;
+
+function resetPncBusModalState() {
+    isPncBusModalActive = false;
+    const titleEl = document.getElementById("modalImageTitle");
+    const statusEl = document.getElementById("modalImageStatus");
+    const adminBtn = document.getElementById("pncBusAdminBtn");
+    const imgEl = document.getElementById("modalImage");
+    if (titleEl) titleEl.classList.add("hidden");
+    if (statusEl) {
+        statusEl.textContent = "";
+        statusEl.classList.add("hidden");
+    }
+    if (adminBtn) adminBtn.classList.add("hidden");
+    if (imgEl) {
+        imgEl.style.display = "block";
+        imgEl.onload = null;
+        imgEl.onerror = null;
+    }
+}
+
+async function openBusSchedule() {
+    trackAppEvent("actions", "bus_view");
+    trackAppEvent("terminals", "pnc");
+    isPncBusModalActive = true;
+
+    const modal = document.getElementById("imageModal");
+    const imgEl = document.getElementById("modalImage");
+    const titleEl = document.getElementById("modalImageTitle");
+    const statusEl = document.getElementById("modalImageStatus");
+    const adminBtn = document.getElementById("pncBusAdminBtn");
+    if (!modal || !imgEl) return;
+
+    if (titleEl) {
+        titleEl.textContent = "🚌 부산신항만(PNC) 셔틀버스 시간표";
+        titleEl.classList.remove("hidden");
+    }
+    if (statusEl) {
+        statusEl.textContent = "셔틀버스 시간표를 불러오는 중...";
+        statusEl.classList.remove("hidden");
+    }
+    if (adminBtn) adminBtn.classList.remove("hidden");
+
+    const applyBusImageUrl = (targetUrl, allowDefaultFallback) => {
+        imgEl.onload = () => {
+            if (!isPncBusModalActive) return;
+            imgEl.style.display = "block";
+            if (statusEl) {
+                statusEl.textContent = "";
+                statusEl.classList.add("hidden");
+            }
+        };
+        imgEl.onerror = () => {
+            if (!isPncBusModalActive) return;
+            if (allowDefaultFallback && targetUrl !== DEFAULT_PNC_BUS_IMAGE_URL) {
+                applyBusImageUrl(DEFAULT_PNC_BUS_IMAGE_URL, false);
+                return;
+            }
+            imgEl.style.display = "none";
+            if (statusEl) {
+                statusEl.textContent = "⚠️ 셔틀버스 시간표 이미지를 불러오지 못했습니다. 네트워크 연결을 확인해 주세요.";
+                statusEl.classList.remove("hidden");
+            }
+        };
+        imgEl.style.display = "block";
+        imgEl.src = targetUrl;
+    };
+
+    applyBusImageUrl(DEFAULT_PNC_BUS_IMAGE_URL, false);
+    modal.style.display = "flex";
+    scheduleAppHistoryRecord();
+
+    try {
+        if (typeof db !== "undefined" && db) {
+            const snap = await db.collection("settings").doc("pnc_bus").get();
+            const customUrl = snap && snap.exists ? String((snap.data() || {}).imageUrl || "").trim() : "";
+            if (isPncBusModalActive && customUrl && customUrl !== DEFAULT_PNC_BUS_IMAGE_URL) {
+                applyBusImageUrl(customUrl, true);
+            }
+        }
+    } catch (err) {
+        console.warn("PNC 셔틀 시간표 설정 조회 확인:", err);
+    }
+}
+
+async function requestPncBusUpload() {
+    if (!(await verifyAdmin())) return;
+    const input = document.getElementById("pncBusFileInput");
+    if (!input) return;
+    input.value = "";
+    input.click();
+}
+
+async function uploadPncBusImage(input) {
+    const file = input && input.files && input.files[0];
+    if (!file) return;
+    const statusEl = document.getElementById("modalImageStatus");
+    const imgEl = document.getElementById("modalImage");
+    if (statusEl) {
+        statusEl.textContent = "셔틀 시간표 이미지 업로드 중...";
+        statusEl.classList.remove("hidden");
+    }
+    try {
+        const compressed = typeof compressImageForUpload === "function" ? await compressImageForUpload(file) : file;
+        const safeFileName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+        const upload = await storage.ref(`terminal-bus/pnc_${Date.now()}_${safeFileName}`).put(compressed);
+        const imageUrl = await upload.ref.getDownloadURL();
+        await db.collection("settings").doc("pnc_bus").set({
+            imageUrl,
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        if (imgEl) {
+            imgEl.style.display = "block";
+            imgEl.src = imageUrl;
+        }
+        if (statusEl) {
+            statusEl.textContent = "✅ 셔틀버스 시간표 이미지가 업데이트되었습니다.";
+            statusEl.classList.remove("hidden");
+        }
+        showToast("🚌 PNC 셔틀버스 시간표 이미지가 변경되었습니다.");
+    } catch (error) {
+        if (statusEl) {
+            statusEl.textContent = "이미지 업로드에 실패했습니다.";
+            statusEl.classList.remove("hidden");
+        }
+        alert("셔틀버스 시간표 업로드 실패: " + (error?.message || error));
+    } finally {
+        input.value = "";
+    }
+}
+
+function closeImageModal() {
+    resetPncBusModalState();
+    const m = document.getElementById("imageModal");
+    if (m) m.style.display = "none";
+}
+
+function openPrivacy() { toggleDashItem('privacy-center-card'); document.getElementById('privacy-center-card').scrollIntoView({behavior: 'smooth', block: 'center'}); }
 
 if ("serviceWorker" in navigator) {
     window.addEventListener("load", () => {

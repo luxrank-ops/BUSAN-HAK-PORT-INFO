@@ -40,7 +40,7 @@ if (IS_VERCEL) {
   app.set('trust proxy', 1);
 }
 
-export const SUPPORTED_TERMINALS = ['hjnc', 'bnct', 'dgt', 'hpnt', 'pnit', 'bptc', 'hbct'] as const;
+export const SUPPORTED_TERMINALS = ['hjnc', 'bnct', 'dgt', 'pnc', 'hpnt', 'pnit', 'bptc', 'hbct'] as const;
 export const SCHEDULE_DIFF_THRESHOLD_MINUTES = Number(process.env.SCHEDULE_DIFF_THRESHOLD_MINUTES) || 60;
 export const SCHEDULE_CACHE_TTL_DAYS = 30;
 export const READ_NOTIFICATION_TTL_DAYS = 14;
@@ -788,6 +788,284 @@ export async function fetchTerminalScheduleVesselsWithMeta(
   }
 }
 
+function decodeBasicEntities(str: string): string {
+  return String(str || '')
+    .replace(/&amp;/gi, '&')
+    .replace(/&lt;/gi, '<')
+    .replace(/&gt;/gi, '>')
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;|&apos;/gi, "'")
+    .replace(/&#(\d+);/g, (_m, code) => String.fromCharCode(Number(code)));
+}
+
+export function parsePncScheduleHtml(html: string): VesselScheduleItem[] {
+  const results: VesselScheduleItem[] = [];
+  if (!html) return results;
+
+  const tableRegex = /<table[^>]*>([\s\S]*?)<\/table>/gi;
+  let tableMatch;
+  while ((tableMatch = tableRegex.exec(html)) !== null) {
+    const tableBody = tableMatch[1];
+    const headerCells = Array.from(tableBody.matchAll(/<th[^>]*>([\s\S]*?)<\/th>/gi)).map((m) =>
+      decodeBasicEntities(stripTags(m[1]))
+    );
+
+    let idxName = 1;
+    let idxCode = 2;
+    let idxVoy = 3;
+    let idxOper = 4;
+    let idxEtb = 7;
+    let idxAtd = 8;
+    let idxBerth = 9;
+
+    if (headerCells.length >= 10) {
+      headerCells.forEach((h, idx) => {
+        const lower = h.toLowerCase();
+        if (/모선명|선박명|^name$/i.test(lower)) idxName = idx;
+        else if (/모선코드|선박코드|^code$/i.test(lower)) idxCode = idx;
+        else if (/선사항차|항차|voyage/i.test(lower)) idxVoy = idx;
+        else if (/운항선사|선사|operator/i.test(lower)) idxOper = idx;
+        else if (/접안.*일시|^etb$/i.test(lower)) idxEtb = idx;
+        else if (/출항.*일시|^etd$/i.test(lower)) idxAtd = idx;
+        else if (/^선석$|berth/i.test(lower)) idxBerth = idx;
+      });
+    }
+
+    const rowRegex = /<tr[^>]*>([\s\S]*?)<\/tr>/gi;
+    let rowMatch;
+    while ((rowMatch = rowRegex.exec(tableBody)) !== null) {
+      const cells = Array.from(rowMatch[1].matchAll(/<td[^>]*>([\s\S]*?)<\/td>/gi)).map((m) =>
+        decodeBasicEntities(stripTags(m[1]))
+      );
+      if (cells.length >= 10 && /^\d+$/.test(cells[0] || '')) {
+        const vslName = (cells[idxName] || '').trim();
+        const codeStr = (cells[idxCode] || '').trim();
+        const voyStr = (cells[idxVoy] || codeStr).trim();
+        const operStr = (cells[idxOper] || '').trim();
+        const etbNorm = normalizeDateTimeStr(cells[idxEtb] || '');
+        const atdNorm = normalizeDateTimeStr(cells[idxAtd] || '');
+        const berthStr = (cells[idxBerth] || '').trim();
+        if (vslName && (etbNorm || atdNorm)) {
+          results.push({
+            TERMINAL: 'PNC',
+            VSL_NM: vslName,
+            BERTH_NO: berthStr,
+            PTNR_CODE: operStr,
+            VOY_NO: voyStr,
+            ETB: etbNorm,
+            ATA: etbNorm,
+            ATW: etbNorm,
+            ATC: atdNorm,
+            ATD: atdNorm
+          });
+        }
+      }
+    }
+  }
+  return results;
+}
+
+export function parsePncWorkStatusHtml(html: string): VesselScheduleItem[] {
+  const results: VesselScheduleItem[] = [];
+  if (!html) return results;
+
+  const tableRegex = /<table[^>]*>([\s\S]*?)<\/table>/gi;
+  let tableMatch;
+  while ((tableMatch = tableRegex.exec(html)) !== null) {
+    const rows: string[][] = [];
+    const rowRegex = /<tr[^>]*>([\s\S]*?)<\/tr>/gi;
+    let rowMatch;
+    while ((rowMatch = rowRegex.exec(tableMatch[1])) !== null) {
+      const cells = Array.from(rowMatch[1].matchAll(/<(?:th|td)[^>]*>([\s\S]*?)<\/(?:th|td)>/gi)).map((m) =>
+        decodeBasicEntities(stripTags(m[1]))
+      );
+      if (cells.length >= 2) rows.push(cells);
+    }
+
+    const rowMap = new Map<string, string[]>();
+    for (const r of rows) {
+      const label = (r[0] || '').replace(/\s+/g, '');
+      if (label) rowMap.set(label, r.slice(1));
+    }
+
+    const names = rowMap.get('선박명') || rowMap.get('모선명');
+    if (!names || names.length === 0) continue;
+
+    const headers = rowMap.get('구분') || [];
+    const codes = rowMap.get('선박코드') || rowMap.get('모선코드') || [];
+    const opers = rowMap.get('운항선사') || rowMap.get('선사') || [];
+    const atas = rowMap.get('접안일시') || rowMap.get('접안(예정)일시') || [];
+    const atws = rowMap.get('작업시작일시') || [];
+    const atds = rowMap.get('출항(예정)일시') || rowMap.get('출항일시') || [];
+
+    for (let i = 0; i < names.length; i++) {
+      const vslName = (names[i] || '').trim();
+      if (!vslName || vslName === '-') continue;
+      const rawBerth = (headers[i] || '').trim();
+      const berthNo = /^#\d+$/.test(rawBerth) ? `B${rawBerth.slice(1)}` : rawBerth;
+      const ataNorm = normalizeDateTimeStr(atas[i] || '');
+      const atwNorm = normalizeDateTimeStr(atws[i] || '') || ataNorm;
+      const atdNorm = normalizeDateTimeStr(atds[i] || '');
+
+      results.push({
+        TERMINAL: 'PNC',
+        VSL_NM: vslName,
+        BERTH_NO: berthNo,
+        PTNR_CODE: (opers[i] || '').trim(),
+        VOY_NO: (codes[i] || '').trim(),
+        ETB: ataNorm,
+        ATA: ataNorm,
+        ATW: atwNorm,
+        ATC: atdNorm,
+        ATD: atdNorm
+      });
+    }
+  }
+  return results;
+}
+
+export function extractPncSearchFormRequest(
+  html: string,
+  startDate: string,
+  endDate: string,
+  baseUrl: string = 'https://svc.pncport.com/info/CMS/Ship/Info.pnc?mCode=MN014'
+): { method: 'GET' | 'POST'; url: string; body: string } | null {
+  if (!html) return null;
+  const formRegex = /<form([^>]*)>([\s\S]*?)<\/form>/gi;
+  let formMatch;
+  while ((formMatch = formRegex.exec(html)) !== null) {
+    const formAttrs = formMatch[1] || '';
+    const formInner = formMatch[2] || '';
+
+    const params = new URLSearchParams();
+    const dateInputs: Array<{ name: string; sep: string }> = [];
+    let pageSizeFieldName = '';
+
+    const inputRegex = /<input\b([^>]*)>/gi;
+    let inputMatch;
+    while ((inputMatch = inputRegex.exec(formInner)) !== null) {
+      const attrs = inputMatch[1] || '';
+      const nameMatch = attrs.match(/\bname\s*=\s*["']([^"']+)["']/i);
+      if (!nameMatch) continue;
+      const name = nameMatch[1];
+      const typeMatch = attrs.match(/\btype\s*=\s*["']([^"']+)["']/i);
+      const inputType = (typeMatch ? typeMatch[1] : 'text').toLowerCase();
+      const valMatch = attrs.match(/\bvalue\s*=\s*["']([^"']*)["']/i);
+      const val = valMatch ? decodeBasicEntities(valMatch[1]) : '';
+      const isChecked = /\bchecked\b/i.test(attrs);
+
+      if (val === '1000' && (inputType === 'radio' || inputType === 'hidden')) {
+        pageSizeFieldName = name;
+      }
+
+      const dateValMatch = val.match(/^\d{4}([-./])\d{2}\1\d{2}$/);
+      if (inputType !== 'hidden' && inputType !== 'radio' && inputType !== 'checkbox' && dateValMatch) {
+        dateInputs.push({ name, sep: dateValMatch[1] });
+        continue;
+      }
+
+      if (inputType === 'radio' || inputType === 'checkbox') {
+        if (isChecked) params.append(name, val || 'on');
+      } else if (inputType !== 'button' && inputType !== 'submit' && inputType !== 'reset' && inputType !== 'image') {
+        params.set(name, val);
+      }
+    }
+
+    if (dateInputs.length < 2) continue;
+
+    const selectRegex = /<select\b([^>]*)>([\s\S]*?)<\/select>/gi;
+    let selectMatch;
+    while ((selectMatch = selectRegex.exec(formInner)) !== null) {
+      const sAttrs = selectMatch[1] || '';
+      const sInner = selectMatch[2] || '';
+      const nameMatch = sAttrs.match(/\bname\s*=\s*["']([^"']+)["']/i);
+      if (!nameMatch) continue;
+      const sName = nameMatch[1];
+      const options = Array.from(sInner.matchAll(/<option\b([^>]*)>([\s\S]*?)<\/option>/gi));
+      let chosenVal = '';
+      let has1000Option = false;
+      for (const opt of options) {
+        const oAttrs = opt[1] || '';
+        const oValMatch = oAttrs.match(/\bvalue\s*=\s*["']([^"']*)["']/i);
+        const oVal = oValMatch ? decodeBasicEntities(oValMatch[1]) : stripTags(opt[2]);
+        if (oVal === '1000') has1000Option = true;
+        if (/\bselected\b/i.test(oAttrs)) chosenVal = oVal;
+      }
+      if (has1000Option) {
+        params.set(sName, '1000');
+      } else if (!params.has(sName) && options.length > 0) {
+        if (!chosenVal) {
+          const firstValMatch = (options[0][1] || '').match(/\bvalue\s*=\s*["']([^"']*)["']/i);
+          chosenVal = firstValMatch ? decodeBasicEntities(firstValMatch[1]) : '';
+        }
+        params.set(sName, chosenVal);
+      }
+    }
+
+    const fmtDate = (iso: string, sep: string) => (sep === '-' ? iso : iso.replace(/-/g, sep));
+    params.set(dateInputs[0].name, fmtDate(startDate, dateInputs[0].sep));
+    params.set(dateInputs[1].name, fmtDate(endDate, dateInputs[1].sep));
+    if (pageSizeFieldName) {
+      params.set(pageSizeFieldName, '1000');
+    }
+
+    const methodMatch = formAttrs.match(/\bmethod\s*=\s*["']([^"']+)["']/i);
+    const method: 'GET' | 'POST' =
+      methodMatch && methodMatch[1].toUpperCase() === 'GET' ? 'GET' : 'POST';
+    const actionMatch = formAttrs.match(/\baction\s*=\s*["']([^"']*)["']/i);
+    const rawAction = actionMatch && actionMatch[1].trim() ? decodeBasicEntities(actionMatch[1].trim()) : baseUrl;
+    const resolvedUrl = new URL(rawAction, baseUrl);
+    if (!params.has('mCode') && resolvedUrl.searchParams.get('mCode')) {
+      params.set('mCode', resolvedUrl.searchParams.get('mCode') || 'MN014');
+    }
+
+    if (method === 'GET') {
+      params.forEach((v, k) => resolvedUrl.searchParams.set(k, v));
+      return { method: 'GET', url: resolvedUrl.toString(), body: '' };
+    }
+    return { method: 'POST', url: resolvedUrl.toString(), body: params.toString() };
+  }
+  return null;
+}
+
+export function mergePncScheduleAndWorkStatus(
+  scheduleList: VesselScheduleItem[],
+  statusList: VesselScheduleItem[] = []
+): VesselScheduleItem[] {
+  const merged = new Map<string, VesselScheduleItem>();
+  for (const item of scheduleList) {
+    if (!item.VSL_NM) continue;
+    const key = `${item.VSL_NM.toUpperCase()}|${item.ETB || item.ATA || ''}`;
+    if (!merged.has(key)) {
+      merged.set(key, { ...item });
+    }
+  }
+
+  for (const st of statusList) {
+    if (!st.VSL_NM) continue;
+    const targetName = st.VSL_NM.toUpperCase();
+    let matched = false;
+    for (const existing of merged.values()) {
+      if (existing.VSL_NM.toUpperCase() === targetName) {
+        if (st.ATW) existing.ATW = st.ATW;
+        if (st.ATA) existing.ATA = st.ATA;
+        if (st.ATD) {
+          existing.ATD = st.ATD;
+          existing.ATC = st.ATD;
+        }
+        if (st.BERTH_NO && !existing.BERTH_NO) existing.BERTH_NO = st.BERTH_NO;
+        if (st.PTNR_CODE && !existing.PTNR_CODE) existing.PTNR_CODE = st.PTNR_CODE;
+        matched = true;
+      }
+    }
+    if (!matched && (st.ETB || st.ATA || st.ATD)) {
+      merged.set(`${targetName}|${st.ETB || st.ATA || ''}`, { ...st });
+    }
+  }
+
+  return Array.from(merged.values());
+}
+
 export async function fetchTerminalScheduleVessels(terminalId: string, startDate: string, endDate: string): Promise<VesselScheduleItem[]> {
   const result = await fetchTerminalScheduleVesselsWithMeta(terminalId, startDate, endDate);
   return result.vessels;
@@ -918,6 +1196,62 @@ async function fetchTerminalScheduleVesselsUncached(tid: string, startDate: stri
       ATC: normalizeDateTimeStr(v.workEndDate),
       ATD: normalizeDateTimeStr(v.atd || v.etd)
     })).filter((v: VesselScheduleItem) => Boolean(v.VSL_NM));
+  }
+
+  if (tid === 'pnc') {
+    const scheduleUrl = 'https://svc.pncport.com/info/CMS/Ship/Info.pnc?mCode=MN014';
+    const statusUrl = 'https://svc.pncport.com/info/CMS/Ship/ShipVslStatus.pnc?mCode=MN020';
+
+    const [pageSettled, statusSettled] = await Promise.allSettled([
+      httpRequestText(scheduleUrl),
+      httpRequestText(statusUrl)
+    ]);
+
+    if (pageSettled.status !== 'fulfilled') {
+      throw pageSettled.reason || new Error('PNC schedule fetch failed');
+    }
+
+    const pageRes = pageSettled.value;
+    const rawCookies = pageRes.headers['set-cookie'] || [];
+    const cookieHeader = Array.isArray(rawCookies)
+      ? rawCookies.map((c: string) => c.split(';')[0]).join('; ')
+      : String(rawCookies).split(';')[0];
+
+    const collectedSchedules: VesselScheduleItem[] = [...parsePncScheduleHtml(pageRes.body)];
+
+    const searchReq = extractPncSearchFormRequest(pageRes.body, startDate, endDate, scheduleUrl);
+    if (searchReq) {
+      try {
+        const searchRes =
+          searchReq.method === 'GET'
+            ? await httpRequestText(searchReq.url, {
+                headers: {
+                  Cookie: cookieHeader,
+                  Referer: scheduleUrl
+                }
+              })
+            : await httpRequestText(searchReq.url, {
+                method: 'POST',
+                headers: {
+                  Cookie: cookieHeader,
+                  Origin: 'https://svc.pncport.com',
+                  'Content-Type': 'application/x-www-form-urlencoded',
+                  Referer: scheduleUrl,
+                  'Content-Length': String(Buffer.byteLength(searchReq.body))
+                },
+                body: searchReq.body
+              });
+        const rangedList = parsePncScheduleHtml(searchRes.body);
+        if (rangedList.length > 0) {
+          collectedSchedules.unshift(...rangedList);
+        }
+      } catch {}
+    }
+
+    const statusList =
+      statusSettled.status === 'fulfilled' ? parsePncWorkStatusHtml(statusSettled.value.body) : [];
+
+    return mergePncScheduleAndWorkStatus(collectedSchedules, statusList);
   }
 
   if (tid === 'hpnt' || tid === 'pnit') {
