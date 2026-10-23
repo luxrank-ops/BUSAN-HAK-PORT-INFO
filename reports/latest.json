@@ -1,7 +1,7 @@
 {
-  "kstDate": "2026-10-23",
-  "generatedAt": "2026-10-23T06:46:48.918Z",
-  "kstDateTime": "2026-10-23 (금) 15:46:48 KST",
+  "kstDate": "2026-10-24",
+  "generatedAt": "2026-10-23T21:57:31.238Z",
+  "kstDateTime": "2026-10-24 (토) 06:57:31 KST",
   "summary": {
     "total": 100,
     "pass": 100,
@@ -616,7 +616,7 @@
       "category": "보안·인증",
       "name": "firestore.rules 크기",
       "status": "PASS",
-      "detail": "16KB",
+      "detail": "17KB",
       "severity": "info"
     },
     {
