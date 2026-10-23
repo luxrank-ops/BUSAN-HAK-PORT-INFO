@@ -952,67 +952,313 @@ function renderStatsTerminalRanking(totalDoc, todayDoc) {
     }).join("");
 }
 
-/** 서버(/api/visitor-logs)로 조회한 PC(데스크톱) 방문자 IP·위치 로그를 통계 모달에 렌더링합니다. */
+/* ==================================================================
+   🖥️ 최근 N일 PC 접속자 위치 리스트 (방문자 상세 통계 · 관리자 전용)
+   서버 /api/visitor-logs?device=desktop&days=3 로 조회한 방문 로그를
+   날짜별로 묶어 IP·위치와 함께 보여주고, CSV·리포트 복사를 지원합니다.
+   ================================================================== */
+const pcVisitorLocationState = {
+    logs: [],
+    summary: null,
+    days: 3,
+    dateKeys: [],
+    rangeLabel: "",
+    maskIp: true,
+    loadedAt: 0,
+    error: ""
+};
+
+/** IP 마스킹 — 마지막 옥텟(IPv6 는 뒷부분)을 가려 화면 공유·캡처 시 노출을 줄입니다. */
+function maskVisitorIp(ip) {
+    const raw = String(ip || "").trim();
+    if (!raw) return "-";
+    if (raw.includes(".")) {
+        const parts = raw.split(".");
+        if (parts.length === 4) return `${parts[0]}.${parts[1]}.${parts[2]}.***`;
+        return raw;
+    }
+    const groups = raw.split(":");
+    if (groups.length >= 3) return `${groups.slice(0, 3).join(":")}:****`;
+    return raw;
+}
+
+/** dateKey(YYYY-MM-DD) → '10-23 (금)' 형태의 짧은 라벨 */
+function formatPcVisitorDayLabel(dateKey) {
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(dateKey || ""));
+    if (!m) return String(dateKey || "-");
+    const names = ["일", "월", "화", "수", "목", "금", "토"];
+    const day = new Date(Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3]))).getUTCDay();
+    const todayKey = typeof getVisitorDateKey === "function" ? getVisitorDateKey() : "";
+    const suffix = dateKey === todayKey ? " · 오늘" : "";
+    return `${m[2]}-${m[3]} (${names[day]})${suffix}`;
+}
+
+function getPcVisitorDays() {
+    const el = document.getElementById("statsVisitorIpRange");
+    const val = Number(el && el.value);
+    return [1, 3, 7].includes(val) ? val : 3;
+}
+
+function renderPcVisitorSummaryCards() {
+    const box = document.getElementById("statsVisitorIpSummaryCards");
+    if (!box) return;
+    const summary = pcVisitorLocationState.summary;
+    const logs = pcVisitorLocationState.logs;
+    if (!summary) {
+        box.innerHTML = "";
+        return;
+    }
+    const top = (summary.byLocation || [])[0];
+    const card = (icon, title, value, sub, color) => `
+        <div style="background:${color}11; border:1px solid ${color}44; border-radius:8px; padding:7px 5px; text-align:center;">
+            <div style="font-size:0.68rem; font-weight:800; color:var(--text-sub);">${icon} ${title}</div>
+            <div style="font-size:0.92rem; font-weight:900; color:${color}; margin-top:2px;">${value}</div>
+            <div style="font-size:0.64rem; font-weight:800; color:var(--text-sub); margin-top:1px;">${sub}</div>
+        </div>`;
+    box.innerHTML = `
+        <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:6px; margin-bottom:8px;">
+            ${card("🖥️", `최근 ${pcVisitorLocationState.days}일 PC 접속`, `${Number(summary.totalCount || 0).toLocaleString()}건`, `조회 ${logs.length.toLocaleString()}건 표시`, "#2563eb")}
+            ${card("🌐", "고유 IP", `${Number(summary.uniqueIp || 0).toLocaleString()}개`, "중복 접속 합산", "#047857")}
+            ${card("📍", "1위 지역", top ? escapePcVisitorText(top.label) : "-", top ? `${Number(top.count || 0).toLocaleString()}건` : "기록 없음", "#d97706")}
+        </div>
+        ${renderPcVisitorLocationRank(summary.byLocation || [])}
+    `;
+}
+
+/** 지역별 접속 순위 상위 5개 막대 */
+function renderPcVisitorLocationRank(byLocation) {
+    const rows = (byLocation || []).slice(0, 5);
+    if (rows.length === 0) return "";
+    const max = Math.max(...rows.map(r => Number(r.count) || 0), 1);
+    const total = rows.reduce((acc, r) => acc + (Number(r.count) || 0), 0) || 1;
+    return `
+        <div style="border:1px solid var(--border); border-radius:8px; padding:7px 8px; background:var(--bg-color);">
+            ${rows.map((r, idx) => {
+                const count = Number(r.count) || 0;
+                const pct = Math.round((count / total) * 100);
+                const width = Math.max(5, Math.round((count / max) * 100));
+                const rank = idx === 0 ? "🥇" : idx === 1 ? "🥈" : idx === 2 ? "🥉" : `${idx + 1}.`;
+                return `<div style="margin-bottom:${idx === rows.length - 1 ? 0 : 6}px;">
+                    <div style="display:flex; justify-content:space-between; gap:6px; font-size:0.7rem; font-weight:900; color:var(--text-main);">
+                        <span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${rank} ${escapePcVisitorText(r.label)}</span>
+                        <span style="color:var(--primary); font-variant-numeric:tabular-nums; white-space:nowrap;">${count.toLocaleString()}건 (${pct}%) · IP ${Number(r.uniqueIp || 0)}</span>
+                    </div>
+                    <div style="height:5px; background:var(--border); border-radius:3px; overflow:hidden; margin-top:2px;">
+                        <div style="height:100%; width:${width}%; background:var(--primary); border-radius:3px;"></div>
+                    </div>
+                </div>`;
+            }).join("")}
+        </div>`;
+}
+
+function escapePcVisitorText(s) {
+    return String(s == null ? "" : s)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;");
+}
+
+/** 서버에서 조회한 PC 접속 로그를 상태에 저장하고 화면을 다시 그립니다. */
+async function loadPcVisitorLocationList(force) {
+    pcVisitorLocationState.days = getPcVisitorDays();
+    const box = document.getElementById("statsVisitorIpLogs");
+    const adminToken = typeof getStoredAdminSessionToken === "function" ? getStoredAdminSessionToken() : "";
+    if (!adminToken) {
+        pcVisitorLocationState.error = "관리자 인증 후 확인할 수 있습니다.";
+        pcVisitorLocationState.logs = [];
+        pcVisitorLocationState.summary = null;
+        renderStatsVisitorIpLogs([]);
+        return;
+    }
+    if (box && (!pcVisitorLocationState.loadedAt || force)) {
+        box.innerHTML = `<div style="padding:12px 8px; text-align:center; font-size:0.76rem; color:var(--text-sub); font-weight:800;">🔄 최근 ${pcVisitorLocationState.days}일 PC 접속 기록을 불러오는 중...</div>`;
+    }
+    try {
+        const resp = await fetchPortApiJson(`/api/visitor-logs?device=desktop&days=${pcVisitorLocationState.days}`, {
+            method: "GET",
+            headers: { Authorization: `Bearer ${adminToken}` }
+        });
+        if (resp && resp.status === 200 && resp.data && resp.data.ok) {
+            pcVisitorLocationState.logs = Array.isArray(resp.data.logs) ? resp.data.logs : [];
+            pcVisitorLocationState.summary = resp.data.summary || null;
+            pcVisitorLocationState.dateKeys = Array.isArray(resp.data.dateKeys) ? resp.data.dateKeys : [];
+            pcVisitorLocationState.rangeLabel = String(resp.data.rangeLabel || "");
+            pcVisitorLocationState.error = "";
+            pcVisitorLocationState.loadedAt = Date.now();
+            cachedStatsModalData.visitorIpLogs = pcVisitorLocationState.logs;
+        } else {
+            pcVisitorLocationState.error = "PC 접속 기록을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.";
+        }
+    } catch (e) {
+        console.warn("PC 접속 위치 리스트 조회 실패:", e && e.message);
+        pcVisitorLocationState.error = "PC 접속 기록 조회 실패: " + (e && e.message ? e.message : "네트워크 오류");
+    }
+    renderStatsVisitorIpLogs(pcVisitorLocationState.logs);
+}
+
+/** PC 접속자 위치 리스트를 날짜별 그룹 + IP·위치 표로 렌더링합니다. */
 function renderStatsVisitorIpLogs(logs) {
     const box = document.getElementById("statsVisitorIpLogs");
     const summaryEl = document.getElementById("statsVisitorIpSummary");
     if (!box) return;
 
-    const escapeHtml = (s) => String(s || "")
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;");
+    renderPcVisitorSummaryCards();
 
-    const rows = Array.isArray(logs) ? logs.filter((l) => l && l.device === "desktop") : [];
-    const todayKey = getVisitorDateKey();
-    const todayCnt = rows.filter((l) => l.dateKey === todayKey).length;
+    const rows = Array.isArray(logs) ? logs : [];
+    const summary = pcVisitorLocationState.summary;
+    const todayKey = typeof getVisitorDateKey === "function" ? getVisitorDateKey() : "";
+    const todayCnt = rows.filter(l => l && l.dateKey === todayKey).length;
 
     if (summaryEl) {
-        summaryEl.innerText = `오늘 PC 접속 ${todayCnt.toLocaleString()}건 · 누적 PC 접속 기록 ${rows.length.toLocaleString()}건 (관리자 전용)`;
+        const rangeText = pcVisitorLocationState.rangeLabel || `최근 ${pcVisitorLocationState.days}일`;
+        summaryEl.innerText = summary
+            ? `${rangeText} · 오늘 ${todayCnt.toLocaleString()}건 · 총 ${Number(summary.totalCount || 0).toLocaleString()}건 (관리자 전용)`
+            : `${rangeText} (관리자 전용)`;
     }
 
-    if (rows.length === 0) {
-        box.innerHTML = `<div style="padding:12px 8px; text-align:center; font-size:0.78rem; color:var(--text-sub); font-weight:800;">조회된 PC 접속 기록이 없습니다.</div>`;
+    if (pcVisitorLocationState.error) {
+        box.innerHTML = `<div style="padding:12px 8px; text-align:center; font-size:0.78rem; color:#b45309; font-weight:800;">⚠️ ${escapePcVisitorText(pcVisitorLocationState.error)}</div>`;
         return;
     }
 
+    if (rows.length === 0) {
+        box.innerHTML = `<div style="padding:14px 8px; text-align:center; font-size:0.78rem; color:var(--text-sub); font-weight:800;">
+            최근 ${pcVisitorLocationState.days}일 동안 기록된 PC 접속 위치가 없습니다.<br>
+            <span style="font-size:0.7rem; font-weight:700;">※ PC(데스크톱) 접속 시에만 기록되며, 기록은 접속 후 최대 30분 간격으로 남습니다.</span>
+        </div>`;
+        return;
+    }
+
+    let lastDateKey = "";
     const trs = rows.map((l, idx) => {
-        const location = [l.country, l.region, l.city]
-            .filter((v) => v && v !== l.country)
-            .map(escapeHtml)
-            .join(" > ");
-        const locText = location || escapeHtml(l.country || "-");
-        const accessedAt = l.accessedAt || "-";
-        return `<tr style="border-bottom:1px solid var(--border); background:${idx % 2 === 1 ? 'rgba(10,27,63,0.03)' : 'transparent'};">
+        const dateKey = String(l.dateKey || "");
+        const groupHeader = dateKey !== lastDateKey
+            ? `<tr><td colspan="5" style="padding:7px 4px 4px; font-size:0.72rem; font-weight:900; color:var(--primary); background:rgba(10,27,63,0.05); border-bottom:1px solid var(--border);">
+                    📅 ${formatPcVisitorDayLabel(dateKey)} <span style="color:var(--text-sub); font-weight:800;">· ${rows.filter(r => String(r.dateKey || "") === dateKey).length}건</span>
+               </td></tr>`
+            : "";
+        lastDateKey = dateKey;
+        const timeText = String(l.accessedAt || "-").replace(/^\d{4}-\d{2}-\d{2}\s*/, "") || "-";
+        const ipText = pcVisitorLocationState.maskIp ? maskVisitorIp(l.ip) : String(l.ip || "-");
+        const location = l.locationLabel || [l.country, l.region, l.city].filter(Boolean).join(" › ") || "위치 미확인";
+        return groupHeader + `<tr style="border-bottom:1px solid var(--border); background:${idx % 2 === 1 ? "rgba(10,27,63,0.03)" : "transparent"};">
             <td style="padding:6px 4px; text-align:center; font-weight:800; color:var(--text-sub); font-size:0.7rem;">${idx + 1}</td>
-            <td style="padding:6px 4px; font-size:0.72rem; font-weight:800; color:var(--text-main);">${escapeHtml(accessedAt)}</td>
-            <td style="padding:6px 4px; font-size:0.72rem; font-weight:800; font-variant-numeric:tabular-nums; color:#334155; word-break:break-all;">${escapeHtml(l.ip)}</td>
-            <td style="padding:6px 4px; font-size:0.72rem; color:var(--primary); font-weight:800;">${locText}</td>
+            <td style="padding:6px 4px; font-size:0.72rem; font-weight:800; color:var(--text-main); font-variant-numeric:tabular-nums; white-space:nowrap;">${escapePcVisitorText(timeText)}</td>
+            <td style="padding:6px 4px; font-size:0.72rem; font-weight:800; font-variant-numeric:tabular-nums; color:#334155; word-break:break-all;">${escapePcVisitorText(ipText)}</td>
+            <td style="padding:6px 4px; font-size:0.72rem; color:var(--primary); font-weight:800;">${escapePcVisitorText(location)}</td>
             <td style="padding:6px 4px; text-align:center; font-size:0.7rem; font-weight:800; color:var(--text-sub);">💻 PC</td>
         </tr>`;
     }).join("");
 
     box.innerHTML = `
-        <div style="overflow-x:auto;">
+        <div style="overflow-x:auto; border:1px solid var(--border); border-radius:8px;">
             <table style="width:100%; border-collapse:collapse; font-size:0.72rem;">
                 <thead>
                     <tr>
                         <th style="padding:5px 4px; text-align:center; font-size:0.68rem; font-weight:900; color:var(--text-sub); border-bottom:1.5px solid var(--border); width:34px;">No.</th>
-                        <th style="padding:5px 4px; text-align:left; font-size:0.68rem; font-weight:900; color:var(--text-sub); border-bottom:1.5px solid var(--border);">접속 시각 (KST)</th>
+                        <th style="padding:5px 4px; text-align:left; font-size:0.68rem; font-weight:900; color:var(--text-sub); border-bottom:1.5px solid var(--border); width:56px;">시각</th>
                         <th style="padding:5px 4px; text-align:left; font-size:0.68rem; font-weight:900; color:var(--text-sub); border-bottom:1.5px solid var(--border);">IP 주소</th>
-                        <th style="padding:5px 4px; text-align:left; font-size:0.68rem; font-weight:900; color:var(--text-sub); border-bottom:1.5px solid var(--border);">위치 (국가 › 도시)</th>
-                        <th style="padding:5px 4px; text-align:center; font-size:0.68rem; font-weight:900; color:var(--text-sub); border-bottom:1.5px solid var(--border); width:56px;">디바이스</th>
+                        <th style="padding:5px 4px; text-align:left; font-size:0.68rem; font-weight:900; color:var(--text-sub); border-bottom:1.5px solid var(--border);">위치 (국가 › 지역 › 도시)</th>
+                        <th style="padding:5px 4px; text-align:center; font-size:0.68rem; font-weight:900; color:var(--text-sub); border-bottom:1.5px solid var(--border); width:52px;">기기</th>
                     </tr>
                 </thead>
                 <tbody>${trs}</tbody>
             </table>
         </div>
-        <div style="margin-top:6px; font-size:0.68rem; color:var(--text-sub); font-weight:800;">
-            💡 IP 기반 추정 위치이므로 실제 PC 위치와 다를 수 있으며, VPN/공유망 이용 시 접속망 지역의 정보가 표시됩니다.
-        </div>
-    `;
+        <div style="margin-top:6px; font-size:0.68rem; color:var(--text-sub); font-weight:800; line-height:1.5;">
+            💡 IP 기반 추정 위치라 실제 PC 위치와 다를 수 있고, VPN·공유망 이용 시 접속망 지역으로 표시됩니다.<br>
+            🔒 개인정보 보호를 위해 IP 마지막 자리를 가렸습니다 — <b>🔓 IP 전체 보기</b> 버튼으로 원문을 확인할 수 있습니다.
+        </div>`;
 }
+
+/** 화면·CSV·리포트에 쓸 PC 접속 목록 라벨 (마스킹 정책 반영) */
+function getPcVisitorIpText(ip, forceFull) {
+    if (forceFull || !pcVisitorLocationState.maskIp) return String(ip || "-");
+    return maskVisitorIp(ip);
+}
+
+function togglePcVisitorIpMask() {
+    pcVisitorLocationState.maskIp = !pcVisitorLocationState.maskIp;
+    renderStatsVisitorIpLogs(pcVisitorLocationState.logs);
+    showToast(pcVisitorLocationState.maskIp ? "🔒 IP 주소를 가렸습니다." : "🔓 IP 주소 전체를 표시합니다.");
+}
+
+function downloadPcVisitorLocationCsv() {
+    const rows = pcVisitorLocationState.logs;
+    if (!rows || rows.length === 0) {
+        showToast("⚠️ 저장할 PC 접속 기록이 없습니다.");
+        return;
+    }
+    const esc = val => `"${String(val == null ? "" : val).replace(/"/g, '""')}"`;
+    const headers = ["No", "접속일시(KST)", "IP", "국가", "지역(시·도)", "도시", "위치 라벨", "기기", "접속일(dateKey)"];
+    const lines = [headers.map(esc).join(",")];
+    rows.forEach((l, idx) => {
+        lines.push([
+            idx + 1,
+            l.accessedAt || "",
+            getPcVisitorIpText(l.ip),
+            l.country || "",
+            l.region || "",
+            l.city || "",
+            l.locationLabel || "",
+            l.device === "desktop" ? "PC" : (l.device || ""),
+            l.dateKey || ""
+        ].map(esc).join(","));
+    });
+    const blob = new Blob(["\uFEFF" + lines.join("\r\n")], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    const todayStr = typeof getVisitorDateKey === "function" ? getVisitorDateKey() : new Date().toISOString().slice(0, 10);
+    a.href = url;
+    a.download = `부산항_PC접속자_위치_최근${pcVisitorLocationState.days}일_${todayStr}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    showToast(`📊 PC 접속 ${rows.length.toLocaleString()}건이 CSV(엑셀)로 저장되었습니다.`);
+}
+
+function buildPcVisitorLocationReportText() {
+    const rows = pcVisitorLocationState.logs || [];
+    const summary = pcVisitorLocationState.summary || {};
+    const days = pcVisitorLocationState.days;
+    const lines = [
+        `🖥️ 최근 ${days}일 PC 접속자 위치 리스트`,
+        `• 조회 기간: ${pcVisitorLocationState.rangeLabel || `최근 ${days}일 (KST)`}`,
+        `• 총 PC 접속: ${Number(summary.totalCount || rows.length).toLocaleString()}건 · 고유 IP ${Number(summary.uniqueIp || 0).toLocaleString()}개`,
+        `• 날짜별: ` + ((summary.byDay || []).filter(d => d.count > 0).map(d => `${formatPcVisitorDayLabel(d.dateKey)} ${d.count}건`).join(" / ") || "없음"),
+        `• 지역 TOP 5: ` + ((summary.byLocation || []).slice(0, 5).map((l, i) => `${i + 1}위 ${l.label}(${l.count}건)`).join(", ") || "없음"),
+        "",
+        "No | 접속일시 | IP | 위치 | 기기"
+    ];
+    rows.forEach((l, idx) => {
+        const location = l.locationLabel || [l.country, l.region, l.city].filter(Boolean).join(" › ") || "위치 미확인";
+        lines.push(`${idx + 1} | ${l.accessedAt || "-"} | ${getPcVisitorIpText(l.ip)} | ${location} | PC`);
+    });
+    lines.push("", `※ IP 기반 추정 위치이며 화면 정책(${pcVisitorLocationState.maskIp ? "IP 마스킹" : "IP 전체 표시"})이 적용된 값입니다.`);
+    return lines.join("\n");
+}
+
+function copyPcVisitorLocationReport() {
+    if (!pcVisitorLocationState.logs || pcVisitorLocationState.logs.length === 0) {
+        showToast("⚠️ 복사할 PC 접속 기록이 없습니다.");
+        return;
+    }
+    const txt = buildPcVisitorLocationReportText();
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(txt).then(() => showToast("📋 PC 접속자 위치 리포트가 복사되었습니다!"));
+    } else {
+        const ta = document.createElement("textarea");
+        ta.value = txt;
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand("copy");
+        document.body.removeChild(ta);
+        showToast("📋 PC 접속자 위치 리포트가 복사되었습니다!");
+    }
+}
+
 async function openVisitorStats() {
     try {
         if (!(await verifyAdmin(true))) return;
@@ -1270,21 +1516,10 @@ async function loadAndRenderVisitorStats() {
         `;
     }
 
-    // PC 방문자 IP·위치 로그 (앱 통합 운영 > 방문자 상세 통계)
-    try {
-        const adminToken = getStoredAdminSessionToken();
-        if (adminToken) {
-            const resp = await fetchPortApiJson("/api/visitor-logs?device=desktop", {
-                method: "GET",
-                headers: { "Authorization": `Bearer ${adminToken}` }
-            });
-            if (resp && resp.status === 200 && resp.data && resp.data.ok) {
-                cachedStatsModalData.visitorIpLogs = Array.isArray(resp.data.logs) ? resp.data.logs : [];
-                renderStatsVisitorIpLogs(cachedStatsModalData.visitorIpLogs);
-            }
-        }
-    } catch (e) {
-        console.warn("방문자 IP·위치 로그 조회 실패(무시):", e && e.message);
+    // 🖥️ 최근 N일 PC 접속자 위치 리스트 (앱 통합 운영 > 방문자 상세 통계)
+    //    (부분 번들·구버전 캐시에서는 함수가 없을 수 있으므로 존재할 때만 호출)
+    if (typeof loadPcVisitorLocationList === "function") {
+        await loadPcVisitorLocationList(false);
     }
 
     // 앱 DB 누적 콘텐츠 현황 조회
