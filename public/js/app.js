@@ -557,7 +557,28 @@ const STATS_ACTION_META = [
     { id: "leader_cal", label: "📅 조장 근무표 조회" },
     { id: "promo_share", label: "📤 홍보글 복사·공유" }
 ];
-let cachedStatsModalData = { totalDoc: {}, todayDoc: {}, currentBlockMode: "total", reportText: "" };
+let cachedStatsModalData = { totalDoc: {}, todayDoc: {}, currentBlockMode: "total", reportText: "", visitorIpLogs: [] };
+
+/** 앱 접속 시 서버 비콘(/api/visitor-beacon)로 IP·위치 기록을 남깁니다.
+   서버가 요청 소스 IP(req.ip) 기반으로 IP 조회 서비에서 국가/도시를 조회해
+   Firestore visitor_ip_logs 에 저장하며, 운영 통계(PC 접속 위치)에 사용됩니다. */
+let visitorBeaconSentKey = "";
+async function sendVisitorBeacon() {
+    try {
+        const now = new Date();
+        const dateKey = getVisitorDateKey(now);
+        visitorBeaconSentKey = `busanHakPortBeaconSent:${dateKey}`;
+        if (sessionStorage.getItem(visitorBeaconSentKey)) return;
+        sessionStorage.setItem(visitorBeaconSentKey, "1");
+        await fetchPortApiJson("/api/visitor-beacon", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ device: detectVisitorDeviceKey() })
+        });
+    } catch (e) {
+        console.warn("방문자 비콘 전송 실패(무시):", e && e.message);
+    }
+}
 
 function trackVisitorSession() {
     if (visitorCountPromise) return visitorCountPromise;
@@ -930,6 +951,68 @@ function renderStatsTerminalRanking(totalDoc, todayDoc) {
         </div>`;
     }).join("");
 }
+
+/** 서버(/api/visitor-logs)로 조회한 PC(데스크톱) 방문자 IP·위치 로그를 통계 모달에 렌더링합니다. */
+function renderStatsVisitorIpLogs(logs) {
+    const box = document.getElementById("statsVisitorIpLogs");
+    const summaryEl = document.getElementById("statsVisitorIpSummary");
+    if (!box) return;
+
+    const escapeHtml = (s) => String(s || "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;");
+
+    const rows = Array.isArray(logs) ? logs.filter((l) => l && l.device === "desktop") : [];
+    const todayKey = getVisitorDateKey();
+    const todayCnt = rows.filter((l) => l.dateKey === todayKey).length;
+
+    if (summaryEl) {
+        summaryEl.innerText = `오늘 PC 접속 ${todayCnt.toLocaleString()}건 · 누적 PC 접속 기록 ${rows.length.toLocaleString()}건 (관리자 전용)`;
+    }
+
+    if (rows.length === 0) {
+        box.innerHTML = `<div style="padding:12px 8px; text-align:center; font-size:0.78rem; color:var(--text-sub); font-weight:800;">조회된 PC 접속 기록이 없습니다.</div>`;
+        return;
+    }
+
+    const trs = rows.map((l, idx) => {
+        const location = [l.country, l.region, l.city]
+            .filter((v) => v && v !== l.country)
+            .map(escapeHtml)
+            .join(" > ");
+        const locText = location || escapeHtml(l.country || "-");
+        const accessedAt = l.accessedAt || "-";
+        return `<tr style="border-bottom:1px solid var(--border); background:${idx % 2 === 1 ? 'rgba(10,27,63,0.03)' : 'transparent'};">
+            <td style="padding:6px 4px; text-align:center; font-weight:800; color:var(--text-sub); font-size:0.7rem;">${idx + 1}</td>
+            <td style="padding:6px 4px; font-size:0.72rem; font-weight:800; color:var(--text-main);">${escapeHtml(accessedAt)}</td>
+            <td style="padding:6px 4px; font-size:0.72rem; font-weight:800; font-variant-numeric:tabular-nums; color:#334155; word-break:break-all;">${escapeHtml(l.ip)}</td>
+            <td style="padding:6px 4px; font-size:0.72rem; color:var(--primary); font-weight:800;">${locText}</td>
+            <td style="padding:6px 4px; text-align:center; font-size:0.7rem; font-weight:800; color:var(--text-sub);">💻 PC</td>
+        </tr>`;
+    }).join("");
+
+    box.innerHTML = `
+        <div style="overflow-x:auto;">
+            <table style="width:100%; border-collapse:collapse; font-size:0.72rem;">
+                <thead>
+                    <tr>
+                        <th style="padding:5px 4px; text-align:center; font-size:0.68rem; font-weight:900; color:var(--text-sub); border-bottom:1.5px solid var(--border); width:34px;">No.</th>
+                        <th style="padding:5px 4px; text-align:left; font-size:0.68rem; font-weight:900; color:var(--text-sub); border-bottom:1.5px solid var(--border);">접속 시각 (KST)</th>
+                        <th style="padding:5px 4px; text-align:left; font-size:0.68rem; font-weight:900; color:var(--text-sub); border-bottom:1.5px solid var(--border);">IP 주소</th>
+                        <th style="padding:5px 4px; text-align:left; font-size:0.68rem; font-weight:900; color:var(--text-sub); border-bottom:1.5px solid var(--border);">위치 (국가 › 도시)</th>
+                        <th style="padding:5px 4px; text-align:center; font-size:0.68rem; font-weight:900; color:var(--text-sub); border-bottom:1.5px solid var(--border); width:56px;">디바이스</th>
+                    </tr>
+                </thead>
+                <tbody>${trs}</tbody>
+            </table>
+        </div>
+        <div style="margin-top:6px; font-size:0.68rem; color:var(--text-sub); font-weight:800;">
+            💡 IP 기반 추정 위치이므로 실제 PC 위치와 다를 수 있으며, VPN/공유망 이용 시 접속망 지역의 정보가 표시됩니다.
+        </div>
+    `;
+}
 async function openVisitorStats() {
     try {
         if (!(await verifyAdmin(true))) return;
@@ -1187,6 +1270,23 @@ async function loadAndRenderVisitorStats() {
         `;
     }
 
+    // PC 방문자 IP·위치 로그 (앱 통합 운영 > 방문자 상세 통계)
+    try {
+        const adminToken = getStoredAdminSessionToken();
+        if (adminToken) {
+            const resp = await fetchPortApiJson("/api/visitor-logs?device=desktop", {
+                method: "GET",
+                headers: { "Authorization": `Bearer ${adminToken}` }
+            });
+            if (resp && resp.status === 200 && resp.data && resp.data.ok) {
+                cachedStatsModalData.visitorIpLogs = Array.isArray(resp.data.logs) ? resp.data.logs : [];
+                renderStatsVisitorIpLogs(cachedStatsModalData.visitorIpLogs);
+            }
+        }
+    } catch (e) {
+        console.warn("방문자 IP·위치 로그 조회 실패(무시):", e && e.message);
+    }
+
     // 앱 DB 누적 콘텐츠 현황 조회
     const dbGridEl = document.getElementById("statsDbContentGrid");
     if (dbGridEl) {
@@ -1342,6 +1442,7 @@ async function loadAndRenderVisitorStats() {
         `• 어제 방문자: ${yesterdayVisitors.toLocaleString()}명`,
         `• 최근 7일 방문자: ${weekVisitors.toLocaleString()}명 (일평균 ${weekAvg.toLocaleString()}명)`,
         `• 총 누적 방문자: ${totalVisitors.toLocaleString()}명 (누적 순 방문자: ${totalUniqueVisitors.toLocaleString()}명)`,
+        `• PC 접속 기록(최근): ${(cachedStatsModalData.visitorIpLogs?.length || 0).toLocaleString()}건 (IP·위치 기준, 관리자 전용)`,
         `• 기기·시간대 표본 안내: 10/06(v2027) 이후 정상 집계 적용`,
         `• 인기 클릭 블록 TOP 5: ` + topBlocks.map((b, i) => `${i+1}위 ${b.label}(${b.cnt}회)`).join(", "),
         `• 인기 터미널 TOP 3: ` + topTerms.map((t, i) => `${i+1}위 ${t.label}(${t.cnt}회)`).join(", ")
@@ -10023,6 +10124,7 @@ window.onload = async () => {
     initAppHistoryNavigation();
     ["t1", "t2", "t3"].forEach(loadSectionTicker);
     trackVisitorSession();
+    await sendVisitorBeacon();
     initTodayVisitorBadge();
     ensureTodayUpdateNotice();
     subscribeEmergencyNotice();

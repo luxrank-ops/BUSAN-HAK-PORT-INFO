@@ -7,6 +7,14 @@
         { "fieldPath": "workerId", "order": "ASCENDING" },
         { "fieldPath": "date", "order": "ASCENDING" }
       ]
+    },
+    {
+      "collectionGroup": "visitor_ip_logs",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "device", "order": "ASCENDING" },
+        { "fieldPath": "accessedAtMs", "order": "DESCENDING" }
+      ]
     }
   ],
   "fieldOverrides": []
