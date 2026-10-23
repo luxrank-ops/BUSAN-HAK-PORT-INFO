@@ -88,3 +88,12 @@ export declare function sendInspectionReportEmail(options: {
   nodemailer?: unknown;
   logger?: { log?: (...args: unknown[]) => void; warn?: (...args: unknown[]) => void; error?: (...args: unknown[]) => void };
 }): Promise<SendReportEmailResult>;
+
+/** 임의의 보고서 메시지를 설정된 전송 방식으로 발송합니다(일일·주간 보고서 공용). */
+export declare function sendReportEmailMessage(options: {
+  message: InspectionEmailMessage;
+  env?: NodeJS.ProcessEnv;
+  fetchImpl?: typeof fetch;
+  nodemailer?: unknown;
+  logger?: { log?: (...args: unknown[]) => void; warn?: (...args: unknown[]) => void; error?: (...args: unknown[]) => void };
+}): Promise<SendReportEmailResult>;

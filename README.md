@@ -97,7 +97,7 @@
 | 경로 | 처리 주체 |
 | --- | --- |
 | `/api/*` (단일 세그먼트) | `api/[...path].ts` (Vercel Function · Node 런타임) → `server.ts` 의 Express 앱에 위임. 인천 리전(`icn1`)에서 실행되어 국내 터미널 사이트 수집 지연이 짧습니다 |
-| `/api/cron/*` (2세그먼트) | `api/cron/{schedule-watch,daily-cleanup,weekly-backup}.ts` **개별 함수 파일** (아래 "Vercel 라우팅 제약" 참고) |
+| `/api/cron/*` (2세그먼트) | `api/cron/{schedule-watch,daily-cleanup,weekly-backup,weekly-self-check}.ts` **개별 함수 파일** (아래 "Vercel 라우팅 제약" 참고) |
 | 그 외 모든 경로 | Vercel CDN 이 `build/public`(압축·난독화 산출물)을 정적 서빙. 파일이 없는 경로는 `index.html` 로 폴백(SPA rewrite). 캐시·보안 헤더는 `vercel.json` `headers` 가 `firebase.json` 과 동일 정책으로 적용 |
 
 Vercel 에서 동작하는 서버 API(로컬 `npm run dev` 와 동일한 코드입니다):
@@ -143,6 +143,7 @@ Vercel 에서 동작하는 서버 API(로컬 `npm run dev` 와 동일한 코드�
 | 선박 스케줄 변경 감지 + FCM 푸시 | `/api/cron/schedule-watch` | GitHub Actions `cron-schedule-watch.yml` | 매시간 5분 (UTC) |
 | DB 자가 정리(30일 캐시·14일 읽은 알림 TTL) | `/api/cron/daily-cleanup` | Vercel Cron (`vercel.json` crons) | 매일 03:00 (UTC) |
 | 주간 Firestore 백업 | `/api/cron/weekly-backup` | Vercel Cron (`vercel.json` crons) | 매주 일요일 00:00 (UTC) |
+| **주간 자가 점검 · 자가 복구** | **`/api/cron/weekly-self-check`** | **Vercel Cron + GitHub Actions `weekly-self-check.yml` + node-cron** | **매주 월요일 05:00 (KST)** |
 
 > **왜 스케줄 감시만 GitHub Actions 인가** — 운영 Vercel 프로젝트는 **Hobby(무료) 플랜**이라
 > `vercel.json` crons 에 1일 1회 초과 빈도(`0 * * * *` 등)를 등록하면 **배포가 실패**합니다
@@ -177,6 +178,60 @@ Vercel 에서 동작하는 서버 API(로컬 `npm run dev` 와 동일한 코드�
 - 발송이 실패해도 점검 결과·HTTP 응답은 정상이며, `email.error` 와 `/api/inspection-report` 의 `email` 필드로 확인할 수 있습니다.
 - GitHub Actions(`scripts/daily-inspection.mjs`)는 Vercel Cron 과 같은 시각에 실행되므로 **기본적으로 발송하지 않습니다.** Vercel Cron 을 못 쓰면 저장소 variables 에 `REPORT_EMAIL_ON_CLI=1` 을 두세요(중복 수신 주의).
 - 환경변수별 상세 설정 방법은 [`.env.example`](.env.example) 의 **"9. 일일 점검 보고서 메일"** 절을 참고하세요.
+
+### 🛠️ 주간 자가 점검 · 자가 복구 (매주 월요일 05:00 KST)
+
+앱이 **일주일에 한 번 스스로를 점검하고, 받아오는 데이터의 변화를 감지해 능동적으로 대응하며,
+발견한 오류를 자동으로 복구한 뒤 결과를 메일로 보고**하는 자동화입니다.
+
+```
+probe(수집) → drift(기준선 대비 변화 판정) → repair(자동 복구) → recheck(재검증) → report(메일·Git 커밋)
+```
+
+| 단계 | 내용 |
+| --- | --- |
+| **1. 기능 점검** | 필수 파일·JSON 문법·크론/워크플로 등록·배포 사이트 헬스(`/`, `/api/health`, `/api/inspection-report`)·Firestore 표본 정합성·런타임 설정(Admin, `CRON_SECRET`, PIN, 메일 자격증명) |
+| **2. 데이터 변화 감지** | 8개 터미널(HJNC·BNCT·DGT·PNC·HPNT·PNIT·BPTC·HBCT) 스케줄을 **실제로 수집**해 이번 주 수집량·핵심 필드(`VSL_NM`·`ETB`·`ATD`) 채움률을 지난 주 기준선과 비교. 수집량이 기준선의 50% 미만이면 WARN, 15% 미만·0척이면 FAIL, 필드 채움률이 절반 이하로 떨어지면(파서 셀렉터 변경 의심) FAIL. 새 필드 등장은 INFO 로 기록해 스키마 확장을 추적합니다 |
+| **3. 자동 복구** | ① 격리 상태 초기화 → ② 백오프 재수집(기본 2회) → ③ 스케줄 캐시 재구축 / 지연된 TTL 정리 즉시 실행 / 유실된 보고서 복원 / 기준선 재생성. **복구 후 반드시 재수집으로 개선 여부를 검증**하고, 검증되지 않은 "복구 성공"은 인정하지 않습니다 |
+| **4. 에스컬레이션** | 자동 복구로 해결되지 않은 FAIL 은 GitHub 이슈로 생성해 사람에게 인계합니다(`GITHUB_TOKEN`+`GITHUB_REPOSITORY` 설정 시) |
+| **5. 보고서** | 마크다운 상세 + JSON 요약을 생성해 **메일 발송**(수신 `SELF_CHECK_EMAIL_TO` → `REPORT_EMAIL_TO` → 기본 `luxrank@gmail.com`)하고, GitHub Actions 실행 시 `reports/self-check/`·`docs/inspections/` 에 **커밋해 영구 보존**합니다 |
+
+**안전 원칙** — 자동 복구는 **캐시·상태·파생 보고서로 한정**됩니다. 근무일지·게시글·선박정보 같은
+사용자 원본 데이터는 **읽기만** 하며 절대 수정·삭제하지 않습니다. 모든 복구 동작은 보고서에
+실행 내역·소요 시간·재검증 결과로 남아 감사 가능합니다.
+
+| 실행 주체 | 트리거 | 역할 |
+| --- | --- | --- |
+| Vercel Cron | `vercel.json` → 일요일 20:00 UTC (= 월요일 05:00 KST) | 서버 런타임 점검 + **서버 측 복구**(캐시·상태·정리) + 메일 발송 |
+| GitHub Actions | `.github/workflows/weekly-self-check.yml` | 저장소·배포 사이트·실데이터 점검 + **보고서·기준선 Git 커밋**(영구 보존) + 아티팩트 |
+| node-cron | 상시 서버 `0 5 * * 1` (Asia/Seoul) | 셀프호스팅 환경에서 위와 동일한 파이프라인 실행 |
+
+| 엔드포인트 | 설명 |
+| --- | --- |
+| `GET /api/cron/weekly-self-check` | 주간 점검 실행 (`CRON_SECRET` 인증). `?email=0` 메일 생략, `?forceEmail=1` 주간 중복방지 무시 |
+| `GET /api/self-check-report` | 최신 점검 요약(공개, 민감 정보 제외) · 복구 내역 · 데이터 변화 · 메일 상태 |
+
+```bash
+# 수동 실행 (로컬/서버)
+npm run selfcheck                       # 실데이터 점검 + 보고서 저장
+npm run selfcheck -- --offline           # 네트워크 점검 생략(저장소·자동화 등록만 확인)
+npm run selfcheck -- --no-email          # 메일 생략
+```
+
+- 보고서 위치: `reports/self-check/weekly-self-check-YYYY-MM-DD.md|json`, `reports/self-check/latest.md`, `docs/inspections/weekly-YYYY-MM-DD.md`
+- 메일은 **같은 ISO 주차에 1통만** 발송됩니다(`system_self_check/state` 마커). GitHub Actions 에서도 보내려면 저장소 variables 에 `SELF_CHECK_EMAIL_ON_CLI=1` 을 등록하세요(중복 수신 주의).
+- 데이터 변화 임계값은 `SELF_CHECK_DRIFT_WARN_RATIO`(기본 0.5) · `SELF_CHECK_DRIFT_FAIL_RATIO`(기본 0.15) 로 조정합니다.
+> ⚠️ **메일을 실제로 받으려면 전송 자격증명이 필요합니다.** 일일 점검과 **같은 설정**을 그대로 쓰므로,
+> Vercel 프로젝트 환경변수에 `RESEND_API_KEY`(+`REPORT_EMAIL_FROM`) · `GOOGLE_CLIENT_ID/SECRET/REFRESH_TOKEN` ·
+> `SMTP_HOST`(+`SMTP_USER`/`SMTP_PASS`) 중 **하나**만 등록하면 됩니다. 미등록이면 점검은 정상 수행되지만
+> 메일은 `skipped` 로 기록됩니다(보고서는 Git 커밋·`/api/self-check-report` 에서 확인 가능).
+> 등록 후 **Redeploy** 한 번 필요합니다.
+>
+> ⏱️ Vercel Hobby 플랜은 크론 실행 시각이 **±1시간 오차**로 트리거됩니다(05:00~05:59 KST 사이).
+> 정확한 시각이 필요하면 GitHub Actions 워크플로(정시 실행)나 상시 서버(node-cron)를 사용하세요.
+
+- 전체 환경변수 설명은 [`.env.example`](.env.example) 의 **"10. 주간 자가 점검 · 자가 복구"** 절을 참고하세요.
+- 판정 엔진은 `scripts/weekly-self-check.mjs` 하나이며, 서버·CLI 가 같은 기준을 씁니다(테스트: `scripts/weekly-self-check.test.mjs`).
 
 ### 서버리스 특성·한계
 

@@ -496,6 +496,50 @@ async function sendViaSmtp({ message, env, nodemailer }) {
 }
 
 /**
+ * 임의의 보고서 메시지를 설정된 전송 방식(Resend → Gmail API → SMTP)으로 발송합니다.
+ * 일일 점검·주간 자가 점검 등 모든 보고서가 이 단일 경로를 사용합니다.
+ *
+ * @param {object} options
+ * @param {{subject: string, text: string, html: string, attachments?: Array, to: string[], from?: string}} options.message
+ * @param {NodeJS.ProcessEnv} [options.env]
+ * @param {typeof fetch} [options.fetchImpl] 테스트용 주입
+ * @param {object|null} [options.nodemailer]  테스트용 주입(SMTP)
+ * @param {{log?: Function, warn?: Function, error?: Function}} [options.logger]
+ * @returns {Promise<{ok: boolean, skipped: boolean, reason: string|null, transport: string|null, messageId: string|null, error: string|null}>}
+ */
+export async function sendReportEmailMessage(options = {}) {
+  const { message, env = process.env, fetchImpl = globalThis.fetch, nodemailer = null, logger = console } = options;
+  if (!message || !message.subject) {
+    return { ok: false, skipped: true, reason: 'no_message', transport: null, messageId: null, error: null };
+  }
+  const resolved = resolveMailTransport(env);
+  if (!resolved.transport) {
+    return { ok: false, skipped: true, reason: resolved.reason || 'not_configured', transport: null, messageId: null, error: null };
+  }
+  const to = Array.isArray(message.to) ? message.to.filter(Boolean) : [];
+  if (!to.length) {
+    return { ok: false, skipped: true, reason: 'no_recipient', transport: resolved.transport, messageId: null, error: null };
+  }
+  const payload = { ...message, to, attachments: Array.isArray(message.attachments) ? message.attachments : [] };
+  try {
+    let sent;
+    if (resolved.transport === 'resend') {
+      sent = await sendViaResend({ message: payload, env, fetchImpl });
+    } else if (resolved.transport === 'gmail-api') {
+      sent = await sendViaGmailApi({ message: payload, env, fetchImpl });
+    } else {
+      sent = await sendViaSmtp({ message: payload, env, nodemailer });
+    }
+    logger?.log?.(`[REPORT] 메일 발송 완료 (${resolved.transport}) → ${to.join(', ')} — ${payload.subject}`);
+    return { ok: true, skipped: false, reason: null, transport: resolved.transport, messageId: sent?.messageId || null, error: null };
+  } catch (error) {
+    const detail = error?.message || String(error);
+    logger?.error?.(`[REPORT] 메일 발송 실패 (${resolved.transport}): ${detail}`);
+    return { ok: false, skipped: false, reason: null, transport: resolved.transport, messageId: null, error: detail };
+  }
+}
+
+/**
  * 일일 점검 보고서 메일을 발송합니다. 설정이 없으면 조용히 건너뜁니다(skipped).
  *
  * @param {object} options
@@ -533,30 +577,5 @@ export async function sendInspectionReportEmail(options = {}) {
   if (!config.to.length) return skip('no_recipient', resolved.transport);
 
   const message = buildInspectionEmail({ result, markdown, json, config, env });
-
-  try {
-    let sent;
-    if (resolved.transport === 'resend') {
-      sent = await sendViaResend({ message, env, fetchImpl });
-    } else if (resolved.transport === 'gmail-api') {
-      sent = await sendViaGmailApi({ message, env, fetchImpl });
-    } else {
-      sent = await sendViaSmtp({ message, env, nodemailer });
-    }
-    logger?.log?.(
-      `[INSPECTION] 보고서 메일 발송 완료 (${resolved.transport}) → ${config.to.join(', ')} — ${message.subject}`
-    );
-    return {
-      ok: true,
-      skipped: false,
-      reason: null,
-      transport: resolved.transport,
-      messageId: sent?.messageId || null,
-      error: null,
-    };
-  } catch (error) {
-    const message_ = error?.message || String(error);
-    logger?.error?.(`[INSPECTION] 보고서 메일 발송 실패 (${resolved.transport}): ${message_}`);
-    return { ok: false, skipped: false, reason: null, transport: resolved.transport, messageId: null, error: message_ };
-  }
+  return sendReportEmailMessage({ message, env, fetchImpl, nodemailer, logger });
 }

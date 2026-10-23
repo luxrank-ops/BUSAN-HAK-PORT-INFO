@@ -19,8 +19,23 @@ import { getFirestore, FieldValue } from 'firebase-admin/firestore';
 import { getMessaging } from 'firebase-admin/messaging';
 import cron from 'node-cron';
 // 일일 점검 보고서 메일 발송기 (scripts/daily-report-mailer.mjs — 타입은 .d.mts 에 선언)
-import { sendInspectionReportEmail, DEFAULT_REPORT_EMAIL_TO } from './scripts/daily-report-mailer.mjs';
+import { sendInspectionReportEmail, resolveMailTransport, DEFAULT_REPORT_EMAIL_TO } from './scripts/daily-report-mailer.mjs';
 import type { SendReportEmailResult } from './scripts/daily-report-mailer.mjs';
+// 주간 자가 점검 · 자가 복구 엔진 (CLI 와 공용 — scripts/weekly-self-check.mjs, 타입은 .d.mts)
+import {
+  runWeeklySelfCheck,
+  generateWeeklySelfCheckMarkdown,
+  buildSelfCheckJson,
+  sendWeeklySelfCheckEmail,
+  resolveSelfCheckConfig,
+  DEFAULT_SELF_CHECK_RECIPIENT
+} from './scripts/weekly-self-check.mjs';
+import type {
+  SelfCheckResult,
+  SelfCheckProbe,
+  SelfCheckAction,
+  SelfCheckBaseline
+} from './scripts/weekly-self-check.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -491,6 +506,32 @@ export const automationRuntimeStatus = {
     lastResult: null as null | { kstDate: string; overall: string; pass: number; warn: number; fail: number; total: number },
     // 보고서 메일 발송 상태 (미설정 환경에서는 skipped 로 기록되고 점검 자체는 성공)
     lastEmailAt: null as string | null,
+    lastEmailStatus: null as 'sent' | 'skipped' | 'failed' | null,
+    lastEmailTransport: null as string | null,
+    lastEmailReason: null as string | null,
+    lastEmailError: null as string | null
+  },
+  // 주간 자가 점검 · 자가 복구 (매주 월요일 05:00 KST)
+  weeklySelfCheck: {
+    lastRunAt: null as string | null,
+    lastSuccessAt: null as string | null,
+    lastError: null as string | null,
+    lastReportPath: null as string | null,
+    lastResult: null as null | {
+      kstDate: string;
+      isoWeek: string;
+      overall: string;
+      pass: number;
+      warn: number;
+      fail: number;
+      total: number;
+      repaired: number;
+    },
+    lastChecks: [] as Array<{ id: string; category: string; name: string; status: string; detail: string }>,
+    lastDrift: [] as Array<{ terminal: string; status: string; count: number; baselineCount: number | null; changeRatio: number | null }>,
+    lastRepairs: [] as Array<{ target: string; action: string; status: string; detail: string; verified?: boolean | null }>,
+    lastEmailAt: null as string | null,
+    lastEmailWeek: null as string | null,
     lastEmailStatus: null as 'sent' | 'skipped' | 'failed' | null,
     lastEmailTransport: null as string | null,
     lastEmailReason: null as string | null,
@@ -2101,6 +2142,639 @@ export function generateInspectionMarkdown(result: InspectionResult): string {
   return md;
 }
 
+// ═══════════════════════════════════════════════════════════════════════════
+// 주간 자가 점검 · 자가 복구 — 매주 월요일 05:00 KST
+// ───────────────────────────────────────────────────────────────────────────
+// 판정·드리프트 분석·복구 계획·보고서 생성은 scripts/weekly-self-check.mjs 의 공용 엔진이
+// 담당하고, 이 파일은 **서버 런타임에만 가능한 것**(실시간 수집·캐시/상태 복구·Firestore)을
+// probe 와 repair action 으로 주입합니다. CLI(GitHub Actions)와 판정 기준이 동일합니다.
+//
+//   1) probe    : 런타임 설정 · 자동화 실행 기록 · 보고서 산출물 · DB 표본 · 터미널 8곳 실수집
+//   2) drift    : 지난 주 기준선(수집량·필드 채움률) 대비 급감/스키마 변화 감지
+//   3) repair   : 격리 상태 초기화 → 재수집(백오프) → 스케줄 캐시 재구축 / 지연 정리 실행 / 보고서 재생성
+//   4) verify   : 복구 후 재수집 결과로 실제 개선 여부 확인 (자기 신고만으로 성공 처리하지 않음)
+//   5) escalate : 미해결 FAIL 은 GitHub 이슈로 남겨 사람이 판단하도록 인계
+//
+// ⚠️ 원본 사용자 데이터(근무일지·게시글·선박정보)는 읽기만 하며 절대 수정·삭제하지 않습니다.
+//    자동 복구 대상은 캐시·상태·파생 보고서로 한정됩니다.
+// ═══════════════════════════════════════════════════════════════════════════
+export const SELF_CHECK_COLLECTION = 'system_self_check';
+const SELF_CHECK_BASELINE_DOC = 'baseline';
+const SELF_CHECK_STATE_DOC = 'state';
+const WEEKLY_SELF_CHECK_CRON = '0 5 * * 1'; // 매주 월요일 05:00 (Asia/Seoul)
+
+/** 기준선 파일 경로 — 서버리스는 /tmp(휘발), 상시 서버는 저장소 reports/self-check */
+function resolveSelfCheckDir(): string {
+  return IS_VERCEL ? path.join('/tmp', 'self-check') : path.join(__dirname, 'reports', 'self-check');
+}
+
+function weeklyInspectionRange(now: Date): { startDate: string; endDate: string } {
+  const fmt = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  const start = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1);
+  const end = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 3);
+  return { startDate: fmt(start), endDate: fmt(end) };
+}
+
+/** 해당 터미널의 메모리 캐시를 비워 강제 재수집을 유도합니다(TTL 3분 우회). */
+function clearScheduleMemoryCache(terminalId: string): number {
+  const tid = String(terminalId).toLowerCase();
+  let removed = 0;
+  for (const key of [...scheduleMemoryCache.keys()]) {
+    if (key.startsWith(`${tid}:`)) {
+      scheduleMemoryCache.delete(key);
+      removed += 1;
+    }
+  }
+  return removed;
+}
+
+function vesselFieldCoverage(rows: any[]): Record<string, number> {
+  const sample = rows.slice(0, 200);
+  const coverage: Record<string, number> = {};
+  if (!sample.length) return { VSL_NM: 0, ETB: 0, ATD: 0 };
+  for (const field of ['VSL_NM', 'ETB', 'ATD', 'VOY_NO', 'BERTH_NO']) {
+    const filled = sample.filter((row) => row?.[field] !== undefined && row?.[field] !== null && String(row[field]).trim() !== '').length;
+    coverage[field] = Number((filled / sample.length).toFixed(4));
+  }
+  return coverage;
+}
+
+/** 지난 주 기준선 복원 — Firestore 우선(서버리스 인스턴스 교체에도 유지), 파일 폴백 */
+export async function loadSelfCheckBaseline(): Promise<any> {
+  try {
+    if (getApps().length > 0) {
+      const snap = await getFirestore().collection(SELF_CHECK_COLLECTION).doc(SELF_CHECK_BASELINE_DOC).get();
+      if (snap.exists) {
+        const payload = (snap.data() || {}).payload;
+        if (payload) return typeof payload === 'string' ? JSON.parse(payload) : payload;
+      }
+    }
+  } catch (err: any) {
+    console.warn('[SELF-CHECK] Firestore 기준선 조회 실패:', err?.message || err);
+  }
+  try {
+    const raw = await fs.readFile(path.join(resolveSelfCheckDir(), 'baseline.json'), 'utf8');
+    return JSON.parse(raw);
+  } catch {
+    return null;
+  }
+}
+
+/** 기준선 영속화 — 다음 주 비교의 기준이 되므로 Firestore + 파일 이중 기록 */
+export async function saveSelfCheckBaseline(baseline: SelfCheckBaseline): Promise<void> {
+  const payload = JSON.stringify(baseline);
+  let saved = false;
+  const errors: string[] = [];
+  try {
+    if (getApps().length > 0) {
+      await getFirestore().collection(SELF_CHECK_COLLECTION).doc(SELF_CHECK_BASELINE_DOC).set({
+        payload,
+        version: baseline.version ?? 1,
+        terminalCount: Object.keys(baseline.terminals || {}).length,
+        updatedAt: FieldValue.serverTimestamp()
+      }, { merge: true });
+      saved = true;
+    }
+  } catch (err: any) {
+    errors.push(`Firestore: ${err?.message || err}`);
+  }
+  try {
+    const dir = resolveSelfCheckDir();
+    await fs.mkdir(dir, { recursive: true });
+    await fs.writeFile(path.join(dir, 'baseline.json'), payload, 'utf8');
+    saved = true;
+  } catch (err: any) {
+    errors.push(`파일: ${err?.message || err}`);
+  }
+  if (!saved) throw new Error(`기준선 저장 실패 — ${errors.join(' / ')}`);
+}
+
+/** 이번 주 보고서를 이미 보냈는지 (중복 발송 방지 — Firestore 마커 + 인스턴스 메모리) */
+async function readWeeklyEmailMarker(): Promise<string | null> {
+  const memoryWeek = automationRuntimeStatus.weeklySelfCheck.lastEmailWeek;
+  if (memoryWeek) return memoryWeek;
+  try {
+    if (getApps().length > 0) {
+      const snap = await getFirestore().collection(SELF_CHECK_COLLECTION).doc(SELF_CHECK_STATE_DOC).get();
+      const week = snap.exists ? (snap.data() || {}).lastEmailWeek : null;
+      return week ? String(week) : null;
+    }
+  } catch {
+    /* 마커 조회 실패는 발송을 막지 않습니다 */
+  }
+  return null;
+}
+
+async function writeWeeklyEmailMarker(isoWeek: string): Promise<void> {
+  automationRuntimeStatus.weeklySelfCheck.lastEmailWeek = isoWeek;
+  try {
+    if (getApps().length > 0) {
+      await getFirestore().collection(SELF_CHECK_COLLECTION).doc(SELF_CHECK_STATE_DOC).set(
+        { lastEmailWeek: isoWeek, lastEmailAt: new Date().toISOString() },
+        { merge: true }
+      );
+    }
+  } catch (err: any) {
+    console.warn('[SELF-CHECK] 메일 마커 저장 실패:', err?.message || err);
+  }
+}
+
+/**
+ * 서버 런타임 점검 항목(probe).
+ * 터미널 8곳은 이번 주 범위(어제~3일 뒤)를 **실제로 수집**해 수집량·필드 채움률을 측정합니다.
+ */
+export function buildServerSelfCheckProbes(now: Date = new Date()): SelfCheckProbe[] {
+  const { startDate, endDate } = weeklyInspectionRange(now);
+  const probes: SelfCheckProbe[] = [];
+
+  probes.push({
+    id: 'runtime.firebase',
+    category: '런타임',
+    name: 'Firebase Admin',
+    run: async () =>
+      getApps().length > 0
+        ? { status: 'PASS', detail: 'Admin SDK 초기화됨 (Firestore·FCM 사용 가능)' }
+        : { status: 'WARN', code: 'firestore.unavailable', detail: 'Admin 미초기화 — DB 표본 점검·캐시 복구를 건너뜁니다' }
+  });
+
+  probes.push({
+    id: 'runtime.cron_secret',
+    category: '런타임',
+    name: 'CRON_SECRET',
+    run: async () =>
+      CRON_SECRET
+        ? { status: 'PASS', detail: '설정됨 — 외부 트리거 차단 정상' }
+        : { status: 'WARN', code: 'config.cron_secret_missing', detail: '미설정 — 주기 작업 엔드포인트가 503 으로 거부됩니다' }
+  });
+
+  probes.push({
+    id: 'runtime.screen_lock',
+    category: '런타임',
+    name: '화면 잠금 PIN',
+    run: async () =>
+      SCREEN_LOCK_PIN && SCREEN_LOCK_PIN !== '9445'
+        ? { status: 'PASS', detail: '기본값이 아닌 PIN 설정됨' }
+        : { status: 'WARN', code: 'config.default_pin', detail: '기본 PIN(9445) 사용 중 — 운영 배포에서는 변경 권장' }
+  });
+
+  probes.push({
+    id: 'runtime.static',
+    category: '런타임',
+    name: '정적 산출물',
+    run: async () => {
+      if (IS_VERCEL) return { status: 'PASS', detail: 'CDN 이 build/public 을 서빙 (함수 번들 외부)' };
+      const built = existsSync(path.join(__dirname, 'build', 'public', 'index.html'));
+      const source = existsSync(path.join(__dirname, 'public', 'index.html'));
+      if (built) return { status: 'PASS', detail: 'build/public 산출물 존재 (난독화 배포본)' };
+      if (source) return { status: 'WARN', code: 'build.missing', detail: 'build/public 없음 — 원본 public/ 으로 서빙 중' };
+      return { status: 'FAIL', code: 'build.missing', detail: 'public/index.html 조차 없음' };
+    }
+  });
+
+  probes.push({
+    id: 'runtime.email',
+    category: '보고서 메일',
+    name: '메일 전송 설정',
+    run: async () => {
+      const cfg = resolveSelfCheckConfig(process.env);
+      const resolved = resolveMailTransport(process.env);
+      if (!cfg.email.enabled) return { status: 'WARN', code: 'email.disabled', detail: 'SELF_CHECK_EMAIL_ENABLED=0 — 보고서가 메일로 오지 않습니다' };
+      if (!resolved.transport) {
+        return {
+          status: 'WARN',
+          code: 'email.not_configured',
+          detail: `전송 자격증명 없음 (${resolved.reason || 'not_configured'}) — RESEND_API_KEY / GOOGLE_* / SMTP_* 중 하나를 등록하세요 (수신: ${cfg.email.to.join(', ')})`
+        };
+      }
+      return { status: 'PASS', detail: `${resolved.transport} 방식 · 수신 ${cfg.email.to.join(', ')}` };
+    }
+  });
+
+  probes.push({
+    id: 'automation.runtime',
+    category: '자동화',
+    name: '주기 작업 실행 기록',
+    run: async () => {
+      if (IS_VERCEL) {
+        return { status: 'PASS', detail: '서버리스 — vercel.json crons 가 실행(인스턴스 메모리 기록은 남지 않음)' };
+      }
+      const entries: Array<{ name: string; at: string | null; maxHours: number; cleanup?: boolean }> = [
+        { name: '스케줄 감시', at: automationRuntimeStatus.scheduleWatcher.lastSuccessAt, maxHours: 3 },
+        { name: 'DB 정리', at: automationRuntimeStatus.autoCleanup.lastSuccessAt, maxHours: 48, cleanup: true },
+        { name: '주간 백업', at: automationRuntimeStatus.weeklyBackup.lastSuccessAt, maxHours: 24 * 9 },
+        { name: '일일 점검', at: automationRuntimeStatus.dailyInspection.lastSuccessAt, maxHours: 48 }
+      ];
+      const stale = entries.filter((e) => !e.at || Date.now() - Date.parse(e.at) > e.maxHours * 3600_000);
+      if (!stale.length) return { status: 'PASS', detail: '4개 주기 작업 모두 최근 실행 확인' };
+      const cleanupOverdue = stale.some((e) => e.cleanup);
+      return {
+        status: 'WARN',
+        code: cleanupOverdue ? 'automation.cleanup_overdue' : 'automation.stale',
+        detail: stale.map((e) => `${e.name} ${e.at ?? '기록 없음'}`).join(' / ')
+      };
+    }
+  });
+
+  probes.push({
+    id: 'report.artifacts',
+    category: '보고서',
+    name: '보고서 산출물',
+    run: async () => {
+      if (IS_VERCEL) return { status: 'PASS', detail: '서버리스 — 보고서는 응답 본문·메일 첨부로 전달' };
+      const target = path.join(__dirname, 'reports', 'latest.md');
+      try {
+        const stat = await fs.stat(target);
+        const ageHours = (Date.now() - stat.mtimeMs) / 3600_000;
+        if (ageHours <= 36) return { status: 'PASS', detail: `reports/latest.md ${Math.round(ageHours)}시간 전 갱신` };
+        return { status: 'WARN', code: 'report.missing', detail: `reports/latest.md ${Math.round(ageHours)}시간 경과 — 일일 점검 확인 필요` };
+      } catch {
+        return { status: 'WARN', code: 'report.missing', detail: 'reports/latest.md 없음' };
+      }
+    }
+  });
+
+  probes.push({
+    id: 'db.integrity',
+    category: '데이터 정합성',
+    name: 'Firestore 표본 점검',
+    run: async () => {
+      if (getApps().length === 0) {
+        return { status: 'WARN', code: 'firestore.unavailable', detail: 'Admin 미초기화 — 표본 점검 생략' };
+      }
+      const db = getFirestore();
+      const logsSnap = await db.collection('work_logs').limit(20).get();
+      let cacheCount: number | null = null;
+      try {
+        const counted = await db.collection('vessel_schedules_cache').count().get();
+        cacheCount = counted.data().count;
+      } catch {
+        cacheCount = null;
+      }
+      const docs = logsSnap.docs.map((d) => d.data() || {});
+      if (!docs.length) {
+        return { status: 'PASS', detail: `work_logs 표본 없음(신규 배포) · 스케줄 캐시 ${cacheCount ?? '—'}건` };
+      }
+      let missing = 0;
+      for (const doc of docs) {
+        const hasDate = Boolean(doc.date || doc.dateKey || doc.workDate || doc.createdAt);
+        const hasTerminal = Boolean(doc.terminal || doc.TERMINAL);
+        if (!hasDate || !hasTerminal) missing += 1;
+      }
+      const ratio = missing / docs.length;
+      if (ratio > 0.5) {
+        return { status: 'FAIL', code: 'db.schema_drift', detail: `work_logs 표본 ${docs.length}건 중 ${missing}건 필수 필드 누락(읽기 전용 점검 — 원본은 수정하지 않음)` };
+      }
+      if (ratio > 0) {
+        return { status: 'WARN', code: 'db.partial_fields', detail: `work_logs ${docs.length}건 중 ${missing}건 필드 누락 · 캐시 ${cacheCount ?? '—'}건` };
+      }
+      return { status: 'PASS', detail: `work_logs ${docs.length}건 정상 · 스케줄 캐시 ${cacheCount ?? '—'}건` };
+    }
+  });
+
+  for (const tid of SUPPORTED_TERMINALS) {
+    probes.push({
+      id: `terminal.${tid}`,
+      category: '터미널 데이터',
+      name: `${tid.toUpperCase()} 실시간 수집`,
+      kind: 'terminal',
+      target: tid,
+      run: async () => {
+        clearScheduleMemoryCache(tid); // 매주 점검은 항상 신선한 수집 결과로 판정합니다
+        try {
+          const meta = await fetchTerminalScheduleVesselsWithMeta(tid, startDate, endDate);
+          const rows = Array.isArray(meta.vessels) ? meta.vessels : [];
+          const coverage = vesselFieldCoverage(rows);
+          return {
+            status: meta.stale ? 'WARN' : 'PASS',
+            code: meta.stale ? 'terminal.stale_cache' : undefined,
+            detail: `${rows.length}척 수집${meta.stale ? ` (stale · ${meta.cacheSource})` : ` · ${meta.cacheSource}`}`,
+            data: { count: rows.length, fieldCoverage: coverage, label: tid.toUpperCase() }
+          };
+        } catch (err: any) {
+          return {
+            status: 'FAIL',
+            detail: err?.message || '수집 실패',
+            data: { count: 0, fieldCoverage: {}, error: err?.message || '수집 실패', label: tid.toUpperCase() }
+          };
+        }
+      }
+    });
+  }
+
+  return probes;
+}
+
+/**
+ * 서버 런타임 자동 복구 동작.
+ * 모두 **멱등(idempotent)** 이며 캐시·상태·파생 보고서만 다룹니다.
+ */
+export function buildServerSelfCheckRepairActions(now: Date = new Date()): Record<string, SelfCheckAction> {
+  return {
+    // 1) 잘못 격리된 터미널 상태 초기화 (연속 실패 카운터·메모리 캐시 제거)
+    'reset-terminal-health': async ({ target }: any) => {
+      const tid = String(target).toLowerCase();
+      if (!(SUPPORTED_TERMINALS as readonly string[]).includes(tid)) {
+        return { ok: false, detail: `지원하지 않는 터미널: ${tid}` };
+      }
+      const removed = clearScheduleMemoryCache(tid);
+      recordTerminalSuccess(tid);
+      return { ok: true, detail: `격리 상태 해제 · 메모리 캐시 ${removed}건 비움` };
+    },
+
+    // 2) 백오프 재수집 — 이번 주 복구의 핵심 동작
+    'retry-terminal': async ({ target }: any) => {
+      const tid = String(target).toLowerCase();
+      const cfg = resolveSelfCheckConfig(process.env);
+      const { startDate, endDate } = weeklyInspectionRange(now);
+      let lastError: string | null = null;
+      for (let attempt = 1; attempt <= cfg.retryAttempts; attempt += 1) {
+        clearScheduleMemoryCache(tid);
+        try {
+          const meta = await fetchTerminalScheduleVesselsWithMeta(tid, startDate, endDate);
+          const rows = Array.isArray(meta.vessels) ? meta.vessels : [];
+          if (rows.length > 0) {
+            return {
+              ok: true,
+              detail: `재시도 ${attempt}회차에서 ${rows.length}척 수집 성공${meta.stale ? ' (캐시 폴백)' : ''}`,
+              recovered: { count: rows.length, fieldCoverage: vesselFieldCoverage(rows) }
+            };
+          }
+          lastError = '수집 결과 0척 (소스 구조 변경 또는 일정 공백)';
+        } catch (err: any) {
+          lastError = err?.message || String(err);
+        }
+        if (attempt < cfg.retryAttempts) {
+          await new Promise((resolve) => setTimeout(resolve, cfg.retryBackoffMs * attempt));
+        }
+      }
+      return { ok: false, detail: `재시도 ${cfg.retryAttempts}회 실패 — ${lastError || '원인 미상'}` };
+    },
+
+    // 3) 스케줄 캐시 재구축 — 재수집 성공 데이터를 Firestore 캐시에 반영(폴백 경로 복원)
+    'rebuild-schedule-cache': async ({ target }: any) => {
+      if (getApps().length === 0) return { ok: false, detail: 'Firebase Admin 미초기화 — 캐시 재구축 불가' };
+      const tid = String(target).toLowerCase();
+      const { startDate, endDate } = weeklyInspectionRange(now);
+      let rows: VesselScheduleItem[] = [];
+      const cached = [...scheduleMemoryCache.entries()].find(([key, entry]) => key.startsWith(`${tid}:`) && entry.vessels.length > 0);
+      if (cached) rows = cached[1].vessels;
+      else {
+        try {
+          const meta = await fetchTerminalScheduleVesselsWithMeta(tid, startDate, endDate);
+          rows = Array.isArray(meta.vessels) ? meta.vessels : [];
+        } catch {
+          rows = [];
+        }
+      }
+      if (!rows.length) return { ok: false, detail: '캐시에 반영할 수집 데이터 없음' };
+      const cacheRef = getFirestore().collection('vessel_schedules_cache');
+      const limited = rows.slice(0, 300);
+      let written = 0;
+      for (const v of limited) {
+        if (!v.VSL_NM) continue;
+        const safeName = String(v.VSL_NM).replace(/[\s/]+/g, '_');
+        const docId = `${v.TERMINAL}_${v.VOY_NO || 'NOVOY'}_${safeName}`;
+        try {
+          await cacheRef.doc(docId).set({
+            TERMINAL: v.TERMINAL,
+            VSL_NM: v.VSL_NM,
+            BERTH_NO: v.BERTH_NO || '',
+            PTNR_CODE: v.PTNR_CODE || '',
+            VOY_NO: v.VOY_NO || '',
+            ETB: v.ETB || null,
+            ATA: v.ATA || null,
+            ATD: v.ATD || null,
+            selfCheckRepairedAt: FieldValue.serverTimestamp(),
+            updatedAt: FieldValue.serverTimestamp(),
+            updatedAtMs: Date.now()
+          }, { merge: true });
+          written += 1;
+        } catch {
+          /* 개별 문서 실패는 계속 진행 */
+        }
+      }
+      return written > 0
+        ? { ok: true, detail: `스케줄 캐시 ${written}건 재구축` }
+        : { ok: false, detail: '캐시 쓰기 0건 (권한 또는 네트워크 오류)' };
+    },
+
+    // 4) 지연된 TTL 정리 즉시 실행
+    'run-overdue-cleanup': async () => {
+      const result = await runDatabaseAutoCleanup();
+      return {
+        ok: true,
+        detail: `스케줄 캐시 ${result.deletedCacheDocs}건 · 읽은 알림 ${result.deletedNotiDocs}건 정리`
+      };
+    },
+
+    // 5) 보고서 산출물 재생성 (상시 서버 전용 — 서버리스는 /tmp 라 무의미)
+    'regenerate-report': async () => {
+      if (IS_VERCEL) return { ok: false, detail: '서버리스에서는 보고서 파일을 유지하지 않습니다' };
+      const result = await runDailyInspection(new Date(), { sendEmail: false });
+      return { ok: true, detail: `일일 점검 보고서 재생성 (${result.summary.overall} ${result.summary.pass}/${result.summary.total})` };
+    },
+
+    // 6) 기준선 신규 생성 — 최초 실행 시 되돌릴 대상이 없으므로 즉시 완료
+    'bootstrap-baseline': async () => ({ ok: true, detail: '이번 주 관측값으로 기준선 생성' }),
+
+    // 7) 사람에게 인계 — 미해결 FAIL 을 GitHub 이슈로 남깁니다
+    'escalate-github-issue': async ({ checks, kst, platform, repo, token }: any) => {
+      if (!repo || !token) return { ok: false, detail: 'GITHUB_REPOSITORY/GITHUB_TOKEN 미설정' };
+      const response = await fetch(`https://api.github.com/repos/${repo}/issues`, {
+        method: 'POST',
+        headers: {
+          authorization: `Bearer ${token}`,
+          accept: 'application/vnd.github+json',
+          'content-type': 'application/json',
+          'user-agent': 'busan-hak-port-weekly-self-check/1.0'
+        },
+        body: JSON.stringify({
+          title: `[주간자가점검] ${kst?.kstDate || new Date().toISOString().slice(0, 10)} 미해결 이상 ${checks.length}건`,
+          body: [
+            `플랫폼: ${platform}`,
+            `점검 일시: ${kst?.kstDateTime || ''}`,
+            '',
+            '### 미해결 항목 (자동 복구 후에도 남은 항목)',
+            ...checks.slice(0, 30).map((c: any) => `- [${c.status}] ${c.category} · ${c.name}: ${c.detail}`),
+            '',
+            '_자동 생성: server.ts `runServerWeeklySelfCheck()`_'
+          ].join('\n'),
+          labels: ['self-check', 'automated']
+        })
+      });
+      if (!response.ok) {
+        const text = await response.text().catch(() => '');
+        return { ok: false, detail: `이슈 생성 실패 HTTP ${response.status}: ${text.slice(0, 200)}` };
+      }
+      const created: any = await response.json().catch(() => ({}));
+      return { ok: true, detail: 'GitHub 이슈 생성', url: created?.html_url || null };
+    }
+  };
+}
+
+/**
+ * 최신 주간 점검 결과를 Firestore 에 보관합니다.
+ * 서버리스는 인스턴스 메모리가 사라지므로, 공개 API(/api/self-check-report)가
+ * 저장된 요약을 읽어 "언제든 최근 점검 결과를 확인"할 수 있게 합니다.
+ */
+async function saveSelfCheckSummary(result: SelfCheckResult, email: SendReportEmailResult): Promise<void> {
+  if (getApps().length === 0) return;
+  try {
+    const payload = {
+      json: buildSelfCheckJson(result),
+      email: {
+        status: email.ok ? 'sent' : email.skipped ? 'skipped' : 'failed',
+        transport: email.transport,
+        reason: email.reason,
+        error: email.error,
+        to: resolveSelfCheckConfig(process.env).email.to,
+        at: new Date().toISOString()
+      },
+      capturedAt: new Date().toISOString()
+    };
+    await getFirestore().collection(SELF_CHECK_COLLECTION).doc('latest').set(
+      { payload: JSON.stringify(payload), kstDate: result.kstDate, overall: result.summary.overall, updatedAt: FieldValue.serverTimestamp() },
+      { merge: true }
+    );
+  } catch (err: any) {
+    console.warn('[SELF-CHECK] 최신 결과 저장 실패:', err?.message || err);
+  }
+}
+
+/** Firestore 에 보관된 최신 주간 점검 결과(없으면 null) */
+async function loadSelfCheckSummary(): Promise<any | null> {
+  try {
+    if (getApps().length === 0) return null;
+    const snap = await getFirestore().collection(SELF_CHECK_COLLECTION).doc('latest').get();
+    if (!snap.exists) return null;
+    const payload = (snap.data() || {}).payload;
+    if (!payload) return null;
+    return typeof payload === 'string' ? JSON.parse(payload) : payload;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * 주간 자가 점검 보고서 파일 저장.
+ *  · 정본(reports/self-check) — 날짜별 파일 + latest 별칭
+ *  · 보관본(docs/inspections) — 날짜별 weekly-YYYY-MM-DD.md 만 (일일 점검 파일과 충돌 방지)
+ *  · 서버리스는 /tmp 만 쓰기 가능하며 인스턴스 종료 시 사라집니다(응답·메일 첨부로 전달).
+ */
+async function saveWeeklySelfCheckArtifacts(result: SelfCheckResult, markdown: string, json: any): Promise<string | null> {
+  const targets = IS_VERCEL
+    ? [{ dir: path.join('/tmp', 'self-check'), canonical: true }]
+    : [
+        { dir: path.join(__dirname, 'reports', 'self-check'), canonical: true },
+        { dir: path.join(__dirname, 'docs', 'inspections'), canonical: false }
+      ];
+  let primary: string | null = null;
+  for (const target of targets) {
+    try {
+      await fs.mkdir(target.dir, { recursive: true });
+      if (!target.canonical) {
+        // 보관본은 날짜별 파일만 — latest.* / weekly-self-check-*.json 을 덮어쓰지 않습니다.
+        await fs.writeFile(path.join(target.dir, `weekly-${result.kstDate}.md`), markdown, 'utf8');
+        continue;
+      }
+      const file = path.join(target.dir, `weekly-self-check-${result.kstDate}.md`);
+      await fs.writeFile(file, markdown, 'utf8');
+      await fs.writeFile(path.join(target.dir, 'latest.md'), markdown, 'utf8');
+      await fs.writeFile(path.join(target.dir, `weekly-self-check-${result.kstDate}.json`), JSON.stringify(json, null, 2), 'utf8');
+      await fs.writeFile(path.join(target.dir, 'latest.json'), JSON.stringify(json, null, 2), 'utf8');
+      if (!primary) primary = file;
+    } catch (err: any) {
+      console.warn(`[SELF-CHECK] 보고서 저장 건너뜀 (${target.dir}): ${err?.message || err}`);
+    }
+  }
+  return primary;
+}
+
+/**
+ * 주간 자가 점검 실행 + 보고서 저장 + (선택)메일 발송.
+ * 실패해도 예외를 던지지 않고 결과 객체로 돌려줍니다(크론 응답 안정성).
+ */
+export async function runServerWeeklySelfCheck(
+  options: { now?: Date; sendEmail?: boolean; forceEmail?: boolean } = {}
+): Promise<{ result: SelfCheckResult; markdown: string; json: any; email: SendReportEmailResult; reportPath: string | null }> {
+  const now = options.now instanceof Date ? options.now : new Date();
+  const status = automationRuntimeStatus.weeklySelfCheck;
+  const config = resolveSelfCheckConfig(process.env);
+  status.lastRunAt = now.toISOString();
+
+  let result: SelfCheckResult;
+  try {
+    const baseline = await loadSelfCheckBaseline();
+    result = await runWeeklySelfCheck({
+      now,
+      config,
+      probes: buildServerSelfCheckProbes(now),
+      baseline,
+      actions: buildServerSelfCheckRepairActions(now),
+      saveBaseline: saveSelfCheckBaseline,
+      platform: IS_VERCEL ? 'vercel-serverless' : 'node-server',
+      logger: console
+    });
+  } catch (err: any) {
+    status.lastError = err?.message || String(err);
+    console.error('[SELF-CHECK] 주간 점검 실패:', err);
+    throw err;
+  }
+
+  const markdown = generateWeeklySelfCheckMarkdown(result);
+  const json = buildSelfCheckJson(result);
+  const reportPath = await saveWeeklySelfCheckArtifacts(result, markdown, json);
+
+  status.lastSuccessAt = new Date().toISOString();
+  status.lastError = null;
+  status.lastReportPath = reportPath;
+  status.lastResult = {
+    kstDate: result.kstDate,
+    isoWeek: result.isoWeek,
+    overall: result.summary.overall,
+    pass: result.summary.pass,
+    warn: result.summary.warn,
+    fail: result.summary.fail,
+    total: result.summary.total,
+    repaired: result.summary.repaired
+  };
+  status.lastChecks = result.checks.map((c) => ({ id: c.id, category: c.category, name: c.name, status: c.status, detail: c.detail }));
+  status.lastDrift = result.drift.map((d) => ({
+    terminal: d.terminal,
+    status: d.status,
+    count: d.current.count,
+    baselineCount: d.baseline ? d.baseline.count : null,
+    changeRatio: d.changeRatio
+  }));
+  status.lastRepairs = result.repairs.map((r) => ({ target: r.target, action: r.action, status: r.status, detail: r.detail, verified: r.verified ?? null }));
+
+  let email: SendReportEmailResult = { ok: false, skipped: true, reason: result.skipped ? 'disabled' : 'skipped', transport: null, messageId: null, error: null };
+  if (options.sendEmail !== false && !result.skipped) {
+    const alreadySentWeek = await readWeeklyEmailMarker();
+    if (!options.forceEmail && alreadySentWeek === result.isoWeek) {
+      email = { ok: false, skipped: true, reason: 'already_sent_this_week', transport: null, messageId: null, error: null };
+    } else {
+      email = await sendWeeklySelfCheckEmail({ result, markdown, json, env: process.env });
+      if (email.ok) await writeWeeklyEmailMarker(result.isoWeek);
+    }
+    status.lastEmailAt = new Date().toISOString();
+    status.lastEmailStatus = email.ok ? 'sent' : email.skipped ? 'skipped' : 'failed';
+    status.lastEmailTransport = email.transport;
+    status.lastEmailReason = email.reason;
+    status.lastEmailError = email.error;
+  }
+
+  await saveSelfCheckSummary(result, email);
+
+  console.log(
+    `[SELF-CHECK] 주간 점검 ${result.summary.overall} — PASS ${result.summary.pass}/${result.summary.total}, 자동복구 ${result.summary.repaired}건, 메일 ${
+      email.ok ? `발송(${email.transport})` : email.skipped ? `건너뜀(${email.reason})` : `실패(${email.error})`
+    }`
+  );
+
+  return { result, markdown, json, email, reportPath };
+}
+
 // --- 크론 스케줄러 등록 (상시 프로세스 서버에서만 백그라운드 실행) ---
 // 테스트 환경과 Vercel 서버리스에서는 등록하지 않습니다 — 서버리스는 응답 후 프로세스가
 // 동결되어 node-cron 타이머가 발화하지 않기 때문입니다. Vercel 배포에서는 대신
@@ -2130,6 +2804,15 @@ if (process.env.NODE_ENV !== 'test' && !IS_VERCEL) {
   cron.schedule('0 4 * * *', () => {
     console.log('[CRON] 일일 기능 점검 시작...', new Date().toISOString());
     void runDailyInspection();
+  }, { timezone: 'Asia/Seoul' } as any);
+
+  // 5) 매주 월요일 05:00 (0 5 * * 1, Asia/Seoul) — 주간 자가 점검 · 자가 복구 + 보고서 메일
+  //    Vercel(서버리스)에서는 node-cron 이 동작하지 않으므로 vercel.json crons 와
+  //    GitHub Actions 예약 워크플로가 /api/cron/weekly-self-check 를 호출합니다.
+  //    메일 중복 발송은 결과의 ISO 주차 마커(system_self_check/state)로 1주 1통을 보장합니다.
+  cron.schedule(WEEKLY_SELF_CHECK_CRON, () => {
+    console.log('[CRON] 주간 자가 점검 시작...', new Date().toISOString());
+    void runServerWeeklySelfCheck();
   }, { timezone: 'Asia/Seoul' } as any);
 }
 
@@ -2816,6 +3499,46 @@ const cronDailyInspectionHandler = async (req: Request, res: Response) => {
 app.get('/api/cron/daily-inspection', cronDailyInspectionHandler);
 app.get('/api/cron-daily-inspection', cronDailyInspectionHandler);
 
+// 5) 주간 자가 점검 · 자가 복구 — Vercel Cron 매주 월요일 05:00 KST (일요일 20:00 UTC)
+//    · 기능 점검 → 데이터 변화 감지 → 자동 복구 → 재검증 → 보고서 메일(luxrank@gmail.com 등)
+//    · ?email=0 으로 메일 생략 / ?forceEmail=1 로 주간 중복 방지 무시
+const cronWeeklySelfCheckHandler = async (req: Request, res: Response) => {
+  if (!authorizeCronRequest(req, res)) return;
+  try {
+    const sendEmail = String(req.query.email ?? '1') !== '0';
+    const forceEmail = String(req.query.forceEmail ?? '0') === '1';
+    const { result, markdown, json, email, reportPath } = await runServerWeeklySelfCheck({ sendEmail, forceEmail });
+    res.json({
+      ok: true,
+      task: 'weekly-self-check',
+      kstDate: result.kstDate,
+      isoWeek: result.isoWeek,
+      summary: result.summary,
+      baseline: result.baseline,
+      repairs: json.repairs,
+      drift: json.drift,
+      escalation: result.escalation,
+      email: {
+        to: resolveSelfCheckConfig(process.env).email.to,
+        status: automationRuntimeStatus.weeklySelfCheck.lastEmailStatus,
+        transport: automationRuntimeStatus.weeklySelfCheck.lastEmailTransport,
+        reason: automationRuntimeStatus.weeklySelfCheck.lastEmailReason,
+        sentAt: automationRuntimeStatus.weeklySelfCheck.lastEmailAt,
+        error: automationRuntimeStatus.weeklySelfCheck.lastEmailError
+      },
+      missing: email.ok ? undefined : email.reason || email.error,
+      reportPath,
+      // 서버리스 /tmp 는 함수 종료 시 사라지므로 보고서 전문을 응답에 포함합니다.
+      report: markdown,
+      ...(IS_VERCEL ? { note: 'ephemeral_filesystem: /tmp 보고서는 함수 종료 후 유지되지 않으므로 응답 본문을 저장하세요' } : {})
+    });
+  } catch (error: any) {
+    res.status(500).json({ ok: false, task: 'weekly-self-check', error: error?.message || String(error) });
+  }
+};
+app.get('/api/cron/weekly-self-check', cronWeeklySelfCheckHandler);
+app.get('/api/cron-weekly-self-check', cronWeeklySelfCheckHandler);
+
 // 공개 요약 조회 — 인증 없이 최신 점검 상태 확인 (민감 정보 제외)
 app.get('/api/inspection-report', (_req, res) => {
   const d = automationRuntimeStatus.dailyInspection;
@@ -2839,6 +3562,60 @@ app.get('/api/inspection-report', (_req, res) => {
       sentAt: d.lastEmailAt,
       error: d.lastEmailError,
     },
+  });
+});
+
+// 공개 요약 조회 — 주간 자가 점검의 최신 결과(민감 정보 제외, 인증 불필요)
+app.get('/api/self-check-report', async (_req, res) => {
+  const d = automationRuntimeStatus.weeklySelfCheck;
+  if (!d.lastRunAt) {
+    // 서버리스는 메모리가 휘발되므로 Firestore 에 보관된 최신 결과를 우선 사용합니다.
+    const stored = await loadSelfCheckSummary();
+    if (stored?.json) {
+      res.json({
+        ok: true,
+        hasReport: true,
+        persisted: true,
+        lastRunAt: stored.json.generatedAt || stored.capturedAt,
+        kstDate: stored.json.kstDate,
+        isoWeek: stored.json.isoWeek,
+        summary: stored.json.summary,
+        repairs: stored.json.repairs,
+        drift: stored.json.drift,
+        checks: stored.json.checks,
+        email: stored.email || null,
+        schedule: { cron: WEEKLY_SELF_CHECK_CRON, timezone: 'Asia/Seoul', label: '매주 월요일 05:00 KST' }
+      });
+      return;
+    }
+    res.json({
+      ok: true,
+      hasReport: false,
+      message: '아직 주간 자가 점검 기록이 없습니다. 매주 월요일 05:00 KST 에 자동 실행됩니다.'
+    });
+    return;
+  }
+  res.json({
+    ok: true,
+    hasReport: true,
+    lastRunAt: d.lastRunAt,
+    lastSuccessAt: d.lastSuccessAt,
+    lastError: d.lastError,
+    summary: d.lastResult,
+    repairs: d.lastRepairs,
+    drift: d.lastDrift,
+    checks: d.lastChecks,
+    reportPath: d.lastReportPath,
+    email: {
+      to: resolveSelfCheckConfig(process.env).email.to,
+      status: d.lastEmailStatus,
+      transport: d.lastEmailTransport,
+      reason: d.lastEmailReason,
+      sentAt: d.lastEmailAt,
+      week: d.lastEmailWeek,
+      error: d.lastEmailError
+    },
+    schedule: { cron: WEEKLY_SELF_CHECK_CRON, timezone: 'Asia/Seoul', label: '매주 월요일 05:00 KST' }
   });
 });
 
