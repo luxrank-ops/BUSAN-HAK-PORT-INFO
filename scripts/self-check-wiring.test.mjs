@@ -104,6 +104,13 @@ test('GitHub Actions 주간 워크플로: 스케줄·실행·권한·보고서 �
   assert.equal(parsed.permissions?.issues, 'write', '미해결 항목 이슈 생성 권한');
   assert.match(text, /scripts\/weekly-self-check-run\.mjs/, '점검 스크립트 실행');
   assert.match(text, /SELF_CHECK_EMAIL_ON_CLI/, 'CLI 메일 발송 스위치');
+  // 메일은 "작업 종료 후" 마지막 단계에서 발송되어야 한다
+  assert.match(text, /weekly-self-check-run\.mjs --no-email/, '점검 단계에서는 메일을 보내지 않는다');
+  assert.match(text, /--email-only/, '보고서 커밋 후 마지막 단계에서 메일 발송');
+  const commitIdx = text.indexOf('보고서 커밋');
+  const mailIdx = text.indexOf('보고서 메일 발송');
+  assert.ok(commitIdx > 0 && mailIdx > commitIdx, '메일 단계는 보고서 커밋 뒤에 있어야 합니다');
+  assert.equal(parsed.on.workflow_dispatch.inputs.force_email.type, 'boolean', '수동 재발송 옵션');
   assert.match(text, /git add -A reports\//, '보고서·기준선 커밋');
 });
 

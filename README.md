@@ -194,7 +194,8 @@ probe(수집) → drift(기준선 대비 변화 판정) → repair(자동 복구
 | **2. 데이터 변화 감지** | 8개 터미널(HJNC·BNCT·DGT·PNC·HPNT·PNIT·BPTC·HBCT) 스케줄을 **실제로 수집**해 이번 주 수집량·핵심 필드(`VSL_NM`·`ETB`·`ATD`) 채움률을 지난 주 기준선과 비교. 수집량이 기준선의 50% 미만이면 WARN, 15% 미만·0척이면 FAIL, 필드 채움률이 절반 이하로 떨어지면(파서 셀렉터 변경 의심) FAIL. 새 필드 등장은 INFO 로 기록해 스키마 확장을 추적합니다 |
 | **3. 자동 복구** | ① 격리 상태 초기화 → ② 백오프 재수집(기본 2회) → ③ 스케줄 캐시 재구축 / 지연된 TTL 정리 즉시 실행 / 유실된 보고서 복원 / 기준선 재생성. **복구 후 반드시 재수집으로 개선 여부를 검증**하고, 검증되지 않은 "복구 성공"은 인정하지 않습니다 |
 | **4. 에스컬레이션** | 자동 복구로 해결되지 않은 FAIL 은 GitHub 이슈로 생성해 사람에게 인계합니다(`GITHUB_TOKEN`+`GITHUB_REPOSITORY` 설정 시) |
-| **5. 보고서** | 마크다운 상세 + JSON 요약을 생성해 **메일 발송**(수신 `SELF_CHECK_EMAIL_TO` → `REPORT_EMAIL_TO` → 기본 `luxrank@gmail.com`)하고, GitHub Actions 실행 시 `reports/self-check/`·`docs/inspections/` 에 **커밋해 영구 보존**합니다 |
+| **5. 보고서** | 마크다운 상세 + JSON 요약을 생성해 `reports/self-check/`·`docs/inspections/` 에 저장/커밋합니다 |
+| **6. 메일 (마지막)** | **모든 작업이 끝난 뒤** 마지막 단계에서 보고서를 메일 발송합니다 — 수신 `SELF_CHECK_EMAIL_TO` → `REPORT_EMAIL_TO` → 기본 `luxrank@gmail.com`. 메일 본문·첨부에는 1~6단계 진행 타임라인과 총 소요 시간이 함께 기록됩니다 |
 
 **안전 원칙** — 자동 복구는 **캐시·상태·파생 보고서로 한정**됩니다. 근무일지·게시글·선박정보 같은
 사용자 원본 데이터는 **읽기만** 하며 절대 수정·삭제하지 않습니다. 모든 복구 동작은 보고서에
@@ -206,20 +207,27 @@ probe(수집) → drift(기준선 대비 변화 판정) → repair(자동 복구
 | GitHub Actions | `.github/workflows/weekly-self-check.yml` | 저장소·배포 사이트·실데이터 점검 + **보고서·기준선 Git 커밋**(영구 보존) + 아티팩트 |
 | node-cron | 상시 서버 `0 5 * * 1` (Asia/Seoul) | 셀프호스팅 환경에서 위와 동일한 파이프라인 실행 |
 
+> 📬 **메일 발송 시점** — 점검·자동 복구·재검증·기준선 저장·보고서 생성(**그리고 GitHub Actions 의 보고서 커밋**)이
+> **모두 끝난 뒤** 마지막 단계에서 발송합니다. 그래서 첨부된 보고서의 타임라인은 실제 작업 종료 상태를 그대로 보여주고,
+> 같은 ISO 주차에는 **1통만** 도착합니다(이미 보낸 주에는 자동 건너뜀, `--force-email` 로 재발송).
+
 | 엔드포인트 | 설명 |
 | --- | --- |
 | `GET /api/cron/weekly-self-check` | 주간 점검 실행 (`CRON_SECRET` 인증). `?email=0` 메일 생략, `?forceEmail=1` 주간 중복방지 무시 |
 | `GET /api/self-check-report` | 최신 점검 요약(공개, 민감 정보 제외) · 복구 내역 · 데이터 변화 · 메일 상태 |
 
 ```bash
-# 수동 실행 (로컬/서버)
-npm run selfcheck                       # 실데이터 점검 + 보고서 저장
-npm run selfcheck -- --offline           # 네트워크 점검 생략(저장소·자동화 등록만 확인)
-npm run selfcheck -- --no-email          # 메일 생략
+# 수동 실행 (로컬/서버) — 점검 → 복구 → 보고서 → "작업 종료 후" 메일
+npm run selfcheck                        # 점검 + 보고서 저장 + 메일 발송(기본 ON)
+npm run selfcheck -- --offline            # 네트워크 점검 생략(저장소·자동화 등록만 확인)
+npm run selfcheck -- --no-email           # 메일만 생략
+npm run selfcheck -- --force-email        # 이번 주에 이미 보냈어도 재발송
+npm run selfcheck -- --email-only         # 직전 보고서(latest)만 메일 발송 (Actions 마지막 단계용)
 ```
 
 - 보고서 위치: `reports/self-check/weekly-self-check-YYYY-MM-DD.md|json`, `reports/self-check/latest.md`, `docs/inspections/weekly-YYYY-MM-DD.md`
-- 메일은 **같은 ISO 주차에 1통만** 발송됩니다(`system_self_check/state` 마커). GitHub Actions 에서도 보내려면 저장소 variables 에 `SELF_CHECK_EMAIL_ON_CLI=1` 을 등록하세요(중복 수신 주의).
+- 메일은 **같은 ISO 주차에 1통만** 발송됩니다. 서버는 `system_self_check/state`(Firestore) 마커를, CLI/Actions 는 저장소 기준선 파일과 공개 API(`/api/self-check-report` 의 `email.week`)를 확인해 중복을 막습니다.
+- GitHub Actions 순서: `점검(--no-email)` → `보고서 Git 커밋` → **`메일 발송(--email-only)`** → 아티팩트 업로드. 즉 저장소 기록까지 끝난 뒤에 메일이 나갑니다. `SELF_CHECK_EMAIL_ON_CLI=0` 으로 Actions 발송만 끌 수 있습니다.
 - 데이터 변화 임계값은 `SELF_CHECK_DRIFT_WARN_RATIO`(기본 0.5) · `SELF_CHECK_DRIFT_FAIL_RATIO`(기본 0.15) 로 조정합니다.
 > ⚠️ **메일을 실제로 받으려면 전송 자격증명이 필요합니다.** 일일 점검과 **같은 설정**을 그대로 쓰므로,
 > Vercel 프로젝트 환경변수에 `RESEND_API_KEY`(+`REPORT_EMAIL_FROM`) · `GOOGLE_CLIENT_ID/SECRET/REFRESH_TOKEN` ·

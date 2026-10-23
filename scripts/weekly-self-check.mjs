@@ -577,6 +577,20 @@ export async function runWeeklySelfCheck(options = {}) {
   const startedAt = Date.now();
   const kst = getKstParts(now);
   const platform = options.platform || 'node-server';
+  const steps = [];
+  const markStep = (name, label, startedAtMs, status = 'ok', detail = null) => {
+    const record = {
+      name,
+      label,
+      startedAt: new Date(startedAtMs).toISOString(),
+      finishedAt: new Date().toISOString(),
+      durationMs: Math.max(0, Date.now() - startedAtMs),
+      status,
+      detail,
+    };
+    steps.push(record);
+    return record;
+  };
 
   if (!config.enabled) {
     return {
@@ -592,6 +606,7 @@ export async function runWeeklySelfCheck(options = {}) {
       escalation: { attempted: false, status: 'skipped', detail: 'SELF_CHECK_ENABLED=0' },
       baseline: { updated: false, terminals: 0 },
       config: publicConfig(config),
+      steps: [],
       durationMs: 0,
     };
   }
@@ -599,6 +614,7 @@ export async function runWeeklySelfCheck(options = {}) {
   const baseline = normalizeBaseline(options.baseline, now);
   const checks = [];
   const drift = [];
+  const tProbes = Date.now();
 
   for (const probe of Array.isArray(options.probes) ? options.probes : []) {
     const result = await runSingleProbe(probe, config.probeTimeoutMs);
@@ -629,6 +645,17 @@ export async function runWeeklySelfCheck(options = {}) {
       checks.push(result);
     }
   }
+  markStep('probes', '기능 점검', tProbes, 'ok', `점검 항목 ${checks.length}건`);
+
+  // 데이터 변화 판정은 위 루프에서 함께 계산되지만, 보고서 타임라인에는 별도 단계로 남깁니다.
+  const tDrift = Date.now();
+  markStep(
+    'drift',
+    '데이터 변화 판정',
+    tDrift,
+    'ok',
+    `터미널 ${drift.length}곳 · WARN ${drift.filter((d) => d.status === 'WARN').length} · FAIL ${drift.filter((d) => d.status === 'FAIL').length}`
+  );
 
   // 기준선 갱신(수집 성공 관측만 반영)
   const observations = drift.map((d) => ({
@@ -641,6 +668,7 @@ export async function runWeeklySelfCheck(options = {}) {
     limit: config.historyLimit,
   });
 
+  const tRepairs = Date.now();
   const plan = planRepairs({ checks, drift, baseline, config });
   const repairs = plan.length
     ? await executeRepairs({
@@ -652,7 +680,21 @@ export async function runWeeklySelfCheck(options = {}) {
       })
     : [];
 
+  markStep(
+    'repairs',
+    '자동 복구',
+    tRepairs,
+    repairs.every((r) => r.status !== 'failed') ? 'ok' : 'warn',
+    `복구 계획 ${plan.length}건 · 실행 ${repairs.length}건 · 실패 ${repairs.filter((r) => r.status === 'failed').length}건`
+  );
+
+  const tRecheck = Date.now();
   const recovered = applyRecoveries({ drift, checks, repairs, baseline, thresholds: config.thresholds });
+  markStep('recheck', '복구 후 재검증', tRecheck, 'ok', `검증된 복구 ${recovered.fixed}건`);
+
+  const tBaseline = Date.now();
+  let baselineSaved = false;
+  let baselineSaveError = null;
 
   // 미해결 FAIL → GitHub 이슈로 에스컬레이션 (사람이 판단해야 하는 영역)
   const unresolvedChecks = recovered.checks.filter((c) => c.status === 'FAIL');
@@ -689,10 +731,32 @@ export async function runWeeklySelfCheck(options = {}) {
   }
 
   const summary = summarizeChecks(recovered.checks, repairs);
+
+  // 다음 점검을 위한 기준선 영속화 (실패해도 이번 보고서는 유효)
+  if (typeof options.saveBaseline === 'function') {
+    try {
+      await options.saveBaseline({ ...nextBaseline, lastRun: { at: now.toISOString(), overall: summary.overall, pass: summary.pass, warn: summary.warn, fail: summary.fail } });
+      baselineSaved = true;
+    } catch (error) {
+      baselineSaved = false;
+      baselineSaveError = error?.message || String(error);
+      logger?.warn?.(`[SELF-CHECK] 기준선 저장 실패: ${baselineSaveError}`);
+    }
+  }
+  markStep(
+    'baseline',
+    '기준선 저장',
+    tBaseline,
+    baselineSaveError ? 'failed' : baselineSaved ? 'ok' : 'skipped',
+    baselineSaveError || (baselineSaved ? `터미널 ${Object.keys(nextBaseline.terminals || {}).length}곳` : '기준선 저장소 미지정')
+  );
+
   const result = {
     version: SELF_CHECK_VERSION,
     skipped: false,
     generatedAt: now.toISOString(),
+    startedAt: new Date(startedAt).toISOString(),
+    completedAt: new Date().toISOString(),
     ...kst,
     platform,
     summary,
@@ -700,26 +764,18 @@ export async function runWeeklySelfCheck(options = {}) {
     drift: recovered.drift,
     repairs,
     escalation,
+    // 보고서 생성·메일 발송은 호출자(서버/CLI)가 이어서 기록합니다(appendStep).
+    steps,
     baseline: {
       updated: baselineUpdated > 0,
       terminals: Object.keys(nextBaseline.terminals || {}).length,
       runs: nextBaseline.runs?.length || 0,
+      saved: baselineSaved,
+      ...(baselineSaveError ? { saveError: baselineSaveError } : {}),
     },
     config: publicConfig(config),
     durationMs: Date.now() - startedAt,
   };
-
-  // 다음 점검을 위한 기준선 영속화 (실패해도 이번 보고서는 유효)
-  if (typeof options.saveBaseline === 'function') {
-    try {
-      await options.saveBaseline({ ...nextBaseline, lastRun: { at: now.toISOString(), overall: summary.overall, pass: summary.pass, warn: summary.warn, fail: summary.fail } });
-      result.baseline.saved = true;
-    } catch (error) {
-      result.baseline.saved = false;
-      result.baseline.saveError = error?.message || String(error);
-      logger?.warn?.(`[SELF-CHECK] 기준선 저장 실패: ${result.baseline.saveError}`);
-    }
-  }
 
   return result;
 }
@@ -735,6 +791,28 @@ function publicConfig(config) {
     emailTo: config.email.to,
     escalationReady: Boolean(config.escalate.token && config.escalate.repo),
   };
+}
+
+/**
+ * 파이프라인 단계 기록 — "무엇을 어떤 순서로 끝냈는지"를 보고서·메일·API 에 남깁니다.
+ * (메일은 **모든 작업이 끝난 뒤** 발송되며, 이 타임라인이 그 근거가 됩니다)
+ */
+export function appendStep(result, step = {}) {
+  if (!result || typeof result !== 'object') return null;
+  if (!Array.isArray(result.steps)) result.steps = [];
+  const at = step.at ? new Date(step.at) : new Date();
+  const record = {
+    name: step.name || 'step',
+    label: step.label || step.name || '단계',
+    startedAt: step.startedAt || at.toISOString(),
+    finishedAt: at.toISOString(),
+    durationMs: Number.isFinite(Number(step.durationMs)) ? Number(step.durationMs) : 0,
+    status: step.status || 'ok',
+    detail: step.detail ?? null,
+  };
+  result.steps.push(record);
+  result.completedAt = record.finishedAt;
+  return record;
 }
 
 export function summarizeChecks(checks = [], repairs = []) {
@@ -759,6 +837,21 @@ export function summarizeChecks(checks = [], repairs = []) {
 }
 
 // ── 보고서(마크다운·메일) ───────────────────────────────────────────────────
+function formatDuration(ms) {
+  const total = Math.max(0, Math.round(Number(ms) || 0));
+  if (total < 1000) return `${total}ms`;
+  const seconds = total / 1000;
+  if (seconds < 60) return `${seconds.toFixed(1)}초`;
+  const minutes = Math.floor(seconds / 60);
+  return `${minutes}분 ${Math.round(seconds % 60)}초`;
+}
+
+function formatKstDateTimeFromIso(iso) {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return String(iso || '');
+  return getKstParts(date).kstDateTime;
+}
+
 function statusLabel(status) {
   return `${STATUS_EMOJI[status] || '❓'} ${status}`;
 }
@@ -781,6 +874,9 @@ export function generateWeeklySelfCheckMarkdown(result) {
   const checks = result.checks || [];
   const drift = result.drift || [];
   const repairs = result.repairs || [];
+  const steps = Array.isArray(result.steps) ? result.steps : [];
+  const completedAtLabel = result.completedAt ? formatKstDateTimeFromIso(result.completedAt) : kstDateTime;
+  const durationLabel = formatDuration(result.durationMs || 0);
   const verdict = VERDICT[summary.overall] || VERDICT.PASS;
   const byCategory = groupByCategory(checks);
   const actionNeeded = checks.filter((c) => c.status !== 'PASS');
@@ -801,7 +897,20 @@ export function generateWeeklySelfCheckMarkdown(result) {
   md += `| 🛠️ 자동 복구 완료 | ${summary.repaired}건 |\n`;
   md += `| 🔁 복구 실패 | ${summary.repairFailed}건 |\n`;
   md += `| 통과율 | ${summary.passRate}% |\n`;
-  md += `| 기준선 상태 | ${baseline?.updated ? `갱신됨 (터미널 ${baseline.terminals}곳)` : '갱신 없음'} |\n\n`;
+  md += `| 기준선 상태 | ${baseline?.updated ? `갱신됨 (터미널 ${baseline.terminals}곳)` : '갱신 없음'} |\n`;
+  md += `| 작업 종료 시각 | ${completedAtLabel} (총 ${durationLabel}) |\n`;
+  md += `| 보고서 메일 | **작업 종료 후 발송** (같은 주 1통 · 수신 ${(config?.emailTo || []).join(', ')}) |\n\n`;
+
+  // 작업 타임라인 — "모든 작업이 끝난 뒤 메일을 보냈다"는 근거를 보고서에 남깁니다.
+  if (steps.length) {
+    md += `---\n\n## 0-1. 작업 타임라인 (작업 종료 후 발송)\n\n`;
+    md += `| # | 단계 | 상태 | 소요 | 상세 |\n| --- | --- | --- | --- | --- |\n`;
+    steps.forEach((st, i) => {
+      const mark = st.status === 'ok' ? '✅' : st.status === 'failed' ? '❌' : st.status === 'warn' ? '⚠️' : '⏭️';
+      md += `| ${i + 1} | ${st.label} | ${mark} ${st.status} | ${formatDuration(st.durationMs)} | ${String(st.detail || '').replace(/\|/g, '/')} |\n`;
+    });
+    md += `\n> ✅ **모든 단계가 끝난 뒤** 이 보고서를 메일로 발송합니다. 같은 ISO 주차(${result.isoWeek})에는 1통만 도착합니다.\n\n`;
+  }
 
   if (summary.overall === 'PASS') {
     md += `> 🟢 **이상 없음.** 자동 점검·복구가 정상 작동했고 조치할 항목이 없습니다.\n\n`;
@@ -915,8 +1024,18 @@ export function buildWeeklySelfCheckText(result) {
   lines.push('');
   lines.push(`■ 종합 판정: ${verdict.label} (${summary.overall}) — 통과율 ${summary.passRate}%`);
   lines.push(`점검 일시: ${result.kstDateTime} (${result.isoWeek})`);
+  lines.push(`작업 종료: ${result.completedAt ? formatKstDateTimeFromIso(result.completedAt) : result.kstDateTime} (총 ${formatDuration(result.durationMs || 0)})`);
   lines.push(`실행 환경: ${result.platform}`);
+  lines.push('발송 시점: **작업 종료 후** — 아래 단계를 모두 마친 뒤 이 메일을 보냅니다.');
   lines.push('');
+  if (Array.isArray(result.steps) && result.steps.length) {
+    lines.push('■ 진행 단계');
+    result.steps.forEach((st, i) => {
+      const mark = st.status === 'ok' ? '✔' : st.status === 'failed' ? '✘' : st.status === 'warn' ? '!' : '·';
+      lines.push(`- ${mark} ${i + 1}. ${st.label}: ${st.status} (${formatDuration(st.durationMs)}) ${st.detail || ''}`.trimEnd());
+    });
+    lines.push('');
+  }
   lines.push('■ 요약');
   lines.push(`- 전체 ${summary.total}건 / PASS ${summary.pass} / WARN ${summary.warn} / FAIL ${summary.fail}`);
   lines.push(`- 자동 복구 완료 ${summary.repaired}건, 복구 실패 ${summary.repairFailed}건`);
@@ -1031,6 +1150,7 @@ export function buildWeeklySelfCheckHtml(result) {
       <div style="color:#9fc0ff;font-size:12px;letter-spacing:2px;font-weight:700;">WEEKLY SELF-CHECK · AUTO-REPAIR</div>
       <div style="color:#ffffff;font-size:21px;font-weight:800;margin-top:6px;">주간 자가 점검 · 자가 복구 보고서</div>
       <div style="color:#c9d8f2;font-size:12px;margin-top:8px;">${escapeHtml(result.kstDateTime)} · ${escapeHtml(result.isoWeek)} · ${escapeHtml(result.platform)}</div>
+      <div style="color:#9fc0ff;font-size:11px;margin-top:6px;">작업 종료 ${escapeHtml(result.completedAt ? formatKstDateTimeFromIso(result.completedAt) : result.kstDateTime)} · 총 ${escapeHtml(formatDuration(result.durationMs || 0))} — <b style="color:#ffffff;">모든 단계 완료 후 발송</b></div>
     </td></tr>
     <tr><td style="padding:22px 28px 4px 28px;">
       <div style="display:inline-block;background:${verdict.color === '#0b8043' ? '#e8f7ee' : verdict.color === '#a46a21' ? '#fff7e8' : '#fdeeee'};color:${verdict.color};font-weight:800;font-size:14px;padding:7px 14px;border-radius:999px;">${verdict.emoji} ${verdict.label} (${summary.overall})</div>
@@ -1038,6 +1158,23 @@ export function buildWeeklySelfCheckHtml(result) {
         전체 ${summary.total}건 · ✅ PASS ${summary.pass} · ⚠️ WARN ${summary.warn} · ❌ FAIL ${summary.fail} · 🛠️ 자동 복구 ${summary.repaired}건 · 통과율 ${summary.passRate}%
       </div>
     </td></tr>
+    ${
+      Array.isArray(result.steps) && result.steps.length
+        ? `<tr><td style="padding:18px 28px 0 28px;">
+      <div style="font-size:15px;font-weight:800;color:#0a1b3f;border-left:4px solid #1a4fba;padding-left:10px;">0. 작업 타임라인 (종료 후 발송)</div>
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top:10px;border-collapse:collapse;font-size:12px;">
+        <tr style="background:#0a1b3f;color:#ffffff;"><th align="left" style="padding:7px 9px;">단계</th><th align="center" style="padding:7px 9px;">상태</th><th align="right" style="padding:7px 9px;">소요</th><th align="left" style="padding:7px 9px;">상세</th></tr>
+        ${result.steps
+          .map((st, i) => {
+            const mark = st.status === 'ok' ? '✅' : st.status === 'failed' ? '❌' : st.status === 'warn' ? '⚠️' : '⏭️';
+            return `<tr><td style="padding:6px 9px;border-bottom:1px solid #eceff5;">${i + 1}. ${escapeHtml(st.label)}</td><td align="center" style="border-bottom:1px solid #eceff5;">${mark} ${escapeHtml(st.status)}</td><td align="right" style="border-bottom:1px solid #eceff5;color:#5a6b86;">${escapeHtml(formatDuration(st.durationMs))}</td><td style="border-bottom:1px solid #eceff5;color:#5a6b86;font-size:11px;">${escapeHtml(String(st.detail || '').slice(0, 100))}</td></tr>`;
+          })
+          .join('')}
+      </table>
+      <div style="color:#8b9bb4;font-size:11px;margin-top:8px;">모든 단계가 끝난 뒤 이 보고서를 발송합니다 — 같은 ISO 주차에는 1통만 도착합니다.</div>
+    </td></tr>`
+        : ''
+    }
     <tr><td style="padding:18px 28px 0 28px;">
       <div style="font-size:15px;font-weight:800;color:#0a1b3f;border-left:4px solid #1a4fba;padding-left:10px;">1. 자동 복구 내역</div>
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top:10px;border-collapse:collapse;font-size:12px;">
@@ -1118,6 +1255,17 @@ export function buildSelfCheckJson(result) {
   return {
     version: result.version,
     generatedAt: result.generatedAt,
+    startedAt: result.startedAt || null,
+    completedAt: result.completedAt || null,
+    durationMs: result.durationMs || 0,
+    steps: (result.steps || []).map((st) => ({
+      name: st.name,
+      label: st.label,
+      status: st.status,
+      durationMs: st.durationMs,
+      detail: st.detail,
+      finishedAt: st.finishedAt,
+    })),
     kstDate: result.kstDate,
     kstDateTime: result.kstDateTime,
     isoWeek: result.isoWeek,
@@ -1149,6 +1297,48 @@ export function buildSelfCheckJson(result) {
       durationMs: c.durationMs || 0,
     })),
     baseline: result.baseline,
+  };
+}
+
+/**
+ * 저장된 JSON(buildSelfCheckJson 결과)에서 메일·보고서 생성용 결과 객체를 복원합니다.
+ * GitHub Actions 처럼 "점검 → 보고서 커밋 → 메일 발송" 을 단계로 나눠 실행할 때
+ * 마지막 메일 단계가 앞 단계의 결과를 그대로 재사용하기 위한 함수입니다.
+ *
+ * @param {object} json buildSelfCheckJson 결과
+ * @param {object} [config] resolveSelfCheckConfig(env) — 수신자·임계값 등 표시용
+ */
+export function rehydrateSelfCheckResult(json = {}, config = null) {
+  const cfg = config || resolveSelfCheckConfig({});
+  const drift = (json.drift || []).map((d) => ({
+    terminal: d.terminal,
+    status: d.status,
+    findings: Array.isArray(d.findings) ? d.findings : [],
+    current: { count: Number(d.current) || 0, fieldCoverage: {} },
+    baseline: d.baseline === null || d.baseline === undefined ? null : { count: Number(d.baseline) || 0, fieldCoverage: {}, samples: 0 },
+    changeRatio: d.changeRatio ?? null,
+    error: null,
+    after: d.after || null,
+  }));
+  return {
+    version: json.version ?? SELF_CHECK_VERSION,
+    skipped: Boolean(json.skipped),
+    generatedAt: json.generatedAt || new Date().toISOString(),
+    startedAt: json.startedAt || undefined,
+    completedAt: json.completedAt || undefined,
+    durationMs: Number(json.durationMs) || 0,
+    kstDate: json.kstDate,
+    kstDateTime: json.kstDateTime,
+    isoWeek: json.isoWeek,
+    platform: json.platform || 'cli',
+    summary: json.summary,
+    checks: json.checks || [],
+    drift,
+    repairs: json.repairs || [],
+    escalation: json.escalation || { attempted: false, status: 'skipped', detail: null, url: null, error: null },
+    steps: Array.isArray(json.steps) ? json.steps : [],
+    baseline: json.baseline || { updated: false, terminals: 0 },
+    config: publicConfig(cfg),
   };
 }
 
