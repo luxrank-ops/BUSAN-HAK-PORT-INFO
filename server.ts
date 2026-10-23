@@ -28,6 +28,7 @@ import {
   buildSelfCheckJson,
   sendWeeklySelfCheckEmail,
   resolveSelfCheckConfig,
+  appendStep,
   DEFAULT_SELF_CHECK_RECIPIENT
 } from './scripts/weekly-self-check.mjs';
 import type {
@@ -2628,7 +2629,8 @@ async function saveSelfCheckSummary(result: SelfCheckResult, email: SendReportEm
         reason: email.reason,
         error: email.error,
         to: resolveSelfCheckConfig(process.env).email.to,
-        at: new Date().toISOString()
+        week: email.ok ? result.isoWeek : automationRuntimeStatus.weeklySelfCheck.lastEmailWeek,
+        sentAt: new Date().toISOString()
       },
       capturedAt: new Date().toISOString()
     };
@@ -2721,13 +2723,20 @@ export async function runServerWeeklySelfCheck(
     throw err;
   }
 
-  const markdown = generateWeeklySelfCheckMarkdown(result);
-  const json = buildSelfCheckJson(result);
-  const reportPath = await saveWeeklySelfCheckArtifacts(result, markdown, json);
+  // ── 6) 보고서 생성 (아직 발송하지 않습니다 — 남은 단계가 모두 끝난 뒤 발송) ──
+  const tReport = Date.now();
+  let markdown = generateWeeklySelfCheckMarkdown(result);
+  let json = buildSelfCheckJson(result);
+  appendStep(result, {
+    name: 'report',
+    label: '보고서 생성',
+    status: 'ok',
+    durationMs: Date.now() - tReport,
+    detail: `마크다운 ${markdown.length.toLocaleString()}자 · JSON 요약 포함`
+  });
 
   status.lastSuccessAt = new Date().toISOString();
   status.lastError = null;
-  status.lastReportPath = reportPath;
   status.lastResult = {
     kstDate: result.kstDate,
     isoWeek: result.isoWeek,
@@ -2748,6 +2757,9 @@ export async function runServerWeeklySelfCheck(
   }));
   status.lastRepairs = result.repairs.map((r) => ({ target: r.target, action: r.action, status: r.status, detail: r.detail, verified: r.verified ?? null }));
 
+  // ── 7) 보고서 메일 — **모든 작업이 끝난 뒤** 마지막 단계로 발송 ──
+  //    같은 ISO 주차에는 1통만(서버 Firestore 마커 + CLI 는 같은 마커를 공개 API 로 확인).
+  const tEmail = Date.now();
   let email: SendReportEmailResult = { ok: false, skipped: true, reason: result.skipped ? 'disabled' : 'skipped', transport: null, messageId: null, error: null };
   if (options.sendEmail !== false && !result.skipped) {
     const alreadySentWeek = await readWeeklyEmailMarker();
@@ -2762,7 +2774,34 @@ export async function runServerWeeklySelfCheck(
     status.lastEmailTransport = email.transport;
     status.lastEmailReason = email.reason;
     status.lastEmailError = email.error;
+  } else {
+    // 요청(?email=0)으로 생략한 경우에도 이번 실행의 상태를 정확히 남깁니다.
+    email = { ok: false, skipped: true, reason: result.skipped ? 'disabled' : 'requested_skip', transport: null, messageId: null, error: null };
+    status.lastEmailAt = new Date().toISOString();
+    status.lastEmailStatus = 'skipped';
+    status.lastEmailTransport = null;
+    status.lastEmailReason = email.reason;
+    status.lastEmailError = null;
   }
+  appendStep(result, {
+    name: 'email',
+    label: '보고서 메일 발송 (작업 종료 후)',
+    status: email.ok ? 'ok' : email.skipped ? 'skipped' : 'failed',
+    durationMs: Date.now() - tEmail,
+    detail: email.ok
+      ? `${config.email.to.join(', ')} (${email.transport})`
+      : email.skipped
+        ? `건너뜀 — ${email.reason || '사유 없음'}`
+        : `실패 — ${email.error || ''}`
+  });
+  result.completedAt = new Date().toISOString();
+  result.durationMs = Date.now() - Date.parse(result.startedAt || new Date().toISOString());
+
+  // 메일 단계까지 포함한 최종 보고서로 저장 (첨부본과 저장본의 타임라인이 일치)
+  markdown = generateWeeklySelfCheckMarkdown(result);
+  json = buildSelfCheckJson(result);
+  const reportPath = await saveWeeklySelfCheckArtifacts(result, markdown, json);
+  status.lastReportPath = reportPath;
 
   await saveSelfCheckSummary(result, email);
 

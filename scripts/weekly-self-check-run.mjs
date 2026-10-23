@@ -11,14 +11,15 @@
  *   4) 기준선 영속화       : reports/self-check/baseline.json (워크플로가 Git 에 커밋 → 주간 이력 보존)
  *
  *   사용법:
- *     node scripts/weekly-self-check-run.mjs                # 실제 점검 + 보고서 저장
+ *     node scripts/weekly-self-check-run.mjs                # 점검 + 보고서 저장 + 메일(작업 종료 후)
  *     node scripts/weekly-self-check-run.mjs --offline      # 네트워크 점검 생략(로컬/CI 검증용)
  *     node scripts/weekly-self-check-run.mjs --no-email     # 메일 발송 생략
- *     node scripts/weekly-self-check-run.mjs --force-email  # 중복 방지 무시하고 발송
+ *     node scripts/weekly-self-check-run.mjs --force-email  # 주간 중복 확인을 무시하고 발송
  *     node scripts/weekly-self-check-run.mjs --base-url=https://...   # 대상 사이트 변경
  *
- *   메일: 기본적으로 CLI 에서는 보내지 않습니다(Vercel Cron 이 같은 주에 발송).
- *         CLI 발송을 켜려면 SELF_CHECK_EMAIL_ON_CLI=1 (또는 --email).
+ *   메일: **모든 작업이 끝난 뒤** 발송합니다(CLI 기본 ON). 같은 ISO 주차에 1통만 발송되며,
+ *         서버(Vercel Cron)가 이미 보낸 주에는 자동으로 건너뜁니다(공개 API 마커 확인).
+ *         끄려면 --no-email, 중복 확인을 무시하고 보내려면 --force-email.
  *   종료코드: FAIL 1건 이상이면 1 (CI 실패 표시용, 보고서·메일은 그대로 남습니다).
  */
 import { readFile, writeFile, mkdir, access, readdir } from 'node:fs/promises';
@@ -32,6 +33,8 @@ import {
   sendWeeklySelfCheckEmail,
   resolveSelfCheckConfig,
   getKstParts,
+  appendStep,
+  rehydrateSelfCheckResult,
   DEFAULT_SELF_CHECK_RECIPIENT,
 } from './weekly-self-check.mjs';
 
@@ -45,12 +48,13 @@ const TERMINALS = ['hjnc', 'bnct', 'dgt', 'pnc', 'hpnt', 'pnit', 'bptc', 'hbct']
 const CORE_FIELDS = ['VSL_NM', 'ETB', 'ATD'];
 
 function parseArgs(argv = process.argv.slice(2)) {
-  const args = { offline: false, email: false, noEmail: false, forceEmail: false, baseUrl: DEFAULT_BASE_URL, json: false };
+  const args = { offline: false, email: false, noEmail: false, forceEmail: false, emailOnly: false, baseUrl: DEFAULT_BASE_URL, json: false };
   for (const raw of argv) {
     if (raw === '--offline') args.offline = true;
     else if (raw === '--email') args.email = true;
     else if (raw === '--no-email') args.noEmail = true;
     else if (raw === '--force-email') args.forceEmail = true;
+    else if (raw === '--email-only') args.emailOnly = true;
     else if (raw === '--json') args.json = true;
     else if (raw.startsWith('--base-url=')) args.baseUrl = raw.slice('--base-url='.length).replace(/\/+$/, '');
   }
@@ -416,6 +420,49 @@ async function writeReports(result) {
   return { markdown, json };
 }
 
+
+/** 직전 실행이 남긴 보고서(latest.json/md)를 메일 발송용 결과 객체로 복원합니다. */
+async function loadLatestReport(config) {
+  const jsonPath = path.join(ROOT, 'reports', 'self-check', 'latest.json');
+  const mdPath = path.join(ROOT, 'reports', 'self-check', 'latest.md');
+  if (!existsSync(jsonPath)) return { result: null, markdown: '', json: null };
+  try {
+    const json = JSON.parse(await readFile(jsonPath, 'utf8'));
+    const markdown = existsSync(mdPath) ? await readFile(mdPath, 'utf8') : '';
+    return { result: rehydrateSelfCheckResult(json, config), markdown, json };
+  } catch (error) {
+    console.warn(`[주간자가점검] 보고서 복원 실패: ${error.message}`);
+    return { result: null, markdown: '', json: null };
+  }
+}
+
+/**
+ * 이번 주 보고서가 이미 발송되었는지 확인합니다.
+ *  1) 로컬 기준선 파일의 lastEmailWeek (같은 저장소에서 실행한 경우)
+ *  2) 공개 API(/api/self-check-report)의 email.week — 서버(Vercel Cron)가 보낸 경우
+ */
+async function findAlreadySentWeek(baseUrl, baseline) {
+  if (baseline?.lastEmailWeek) return String(baseline.lastEmailWeek);
+  try {
+    const res = await fetchJson(`${baseUrl}/api/self-check-report`, 8000);
+    const week = res.body?.email?.week;
+    if (week) return String(week);
+  } catch {
+    /* 마커 조회 실패는 발송을 막지 않습니다 */
+  }
+  return null;
+}
+
+/** CLI 발송 성공 표시 — 기준선 파일에 기록해 같은 주 중복 발송을 막습니다. */
+async function writeLocalEmailMarker(isoWeek) {
+  try {
+    const baseline = (await readBaseline()) || {};
+    await saveJsonFile(BASELINE_PATH, { ...baseline, lastEmailWeek: isoWeek, lastEmailAt: new Date().toISOString() });
+  } catch {
+    /* 마커 저장 실패는 무시 */
+  }
+}
+
 // ── CLI 진입점 ─────────────────────────────────────────────────────────────
 const isMain = process.argv[1] && path.resolve(process.argv[1]) === __filename;
 if (isMain) {
@@ -423,6 +470,54 @@ if (isMain) {
   const now = new Date();
   const kst = getKstParts(now);
   const config = resolveSelfCheckConfig(process.env);
+
+  // ── 메일 전용 모드 ────────────────────────────────────────────────────────
+  //   GitHub Actions 처럼 "점검 → 보고서 Git 커밋 → 메일" 순서로 나눠 실행할 때,
+  //   마지막 단계가 이미 만들어진 보고서를 그대로 발송합니다(작업 종료 후 발송 보장).
+  if (args.emailOnly) {
+    if (!truthy(process.env.SELF_CHECK_EMAIL_ON_CLI ?? '1')) {
+      console.log('[주간자가점검] 메일 전용 모드: SELF_CHECK_EMAIL_ON_CLI=0 — 발송하지 않습니다');
+      process.exit(0);
+    }
+    const { result, markdown, json } = await loadLatestReport(config);
+    if (!result) {
+      console.warn('[주간자가점검] 메일 전용 모드: reports/self-check/latest.json 이 없습니다 — 발송 생략');
+      process.exit(0);
+    }
+    const alreadySent = args.forceEmail ? null : await findAlreadySentWeek(args.baseUrl, await readBaseline());
+    if (alreadySent === result.isoWeek) {
+      console.log(`[주간자가점검] 메일: 건너뜀 — ${result.isoWeek} 보고서는 이미 발송되었습니다(--force-email 로 강제 발송 가능)`);
+      process.exit(0);
+    }
+    const tEmail = Date.now();
+    const outcome = await sendWeeklySelfCheckEmail({ result, markdown, json, env: process.env });
+    // 이전 실행이 남긴 메일 단계 기록은 지우고 이번 결과로 대체합니다(타임라인 중복 방지).
+    result.steps = (result.steps || []).filter((st) => st.name !== 'email');
+    appendStep(result, {
+      name: 'email',
+      label: '보고서 메일 발송 (작업 종료 후)',
+      status: outcome.ok ? 'ok' : outcome.skipped ? 'skipped' : 'failed',
+      startedAt: new Date(tEmail).toISOString(),
+      durationMs: Date.now() - tEmail,
+      detail: outcome.ok
+        ? `${config.email.to.join(', ')} (${outcome.transport})`
+        : outcome.skipped
+          ? `건너뜀 — ${outcome.reason || '사유 없음'}`
+          : `실패 — ${outcome.error || ''}`
+    });
+    result.completedAt = new Date().toISOString();
+    result.durationMs = Date.now() - Date.parse(result.startedAt || result.generatedAt);
+    await writeReports(result);
+    if (outcome.ok) {
+      await writeLocalEmailMarker(result.isoWeek);
+      console.log(`[주간자가점검] 메일: 발송 완료 → ${config.email.to.join(', ')} (${outcome.transport}) · ${result.isoWeek}`);
+    } else if (outcome.skipped) {
+      console.log(`[주간자가점검] 메일: 건너뜀 (${outcome.reason || '사유 없음'})`);
+    } else {
+      console.warn(`[주간자가점검] 메일: 발송 실패 — ${outcome.error || ''}`);
+    }
+    process.exit(0);
+  }
 
   console.log(`[주간자가점검] 시작: ${kst.kstDateTime} (${kst.isoWeek}) · 대상 ${args.baseUrl}${args.offline ? ' (offline)' : ''}`);
 
@@ -442,24 +537,60 @@ if (isMain) {
     saveBaseline: async (next) => saveJsonFile(BASELINE_PATH, next),
   });
 
-  const { markdown, json } = await writeReports(result);
+  // ── 보고서 생성 ──
+  const tReport = Date.now();
+  let { markdown, json } = await writeReports(result);
+  appendStep(result, {
+    name: 'report',
+    label: '보고서 생성',
+    status: 'ok',
+    durationMs: Date.now() - tReport,
+    detail: `reports/self-check/weekly-self-check-${result.kstDate}.md`
+  });
+
   console.log(
     `[주간자가점검] 판정 ${result.summary.overall} — PASS ${result.summary.pass}/${result.summary.total}, WARN ${result.summary.warn}, FAIL ${result.summary.fail}, 자동복구 ${result.summary.repaired}건`
   );
   console.log(`[주간자가점검] 보고서: reports/self-check/weekly-self-check-${result.kstDate}.md`);
 
-  // 메일 발송 (기본 OFF — Vercel Cron 과 중복 방지. --email 또는 SELF_CHECK_EMAIL_ON_CLI=1 로 켭니다)
-  const shouldEmail =
-    !args.noEmail &&
-    (args.email || args.forceEmail || truthy(process.env.SELF_CHECK_EMAIL_ON_CLI) || truthy(process.env.REPORT_EMAIL_ON_CLI));
+  // ── 메일 발송 (모든 작업 종료 후 마지막 단계) ──
+  //   · 기본 ON — 요청대로 "매주 작업 종료 후" 보고서를 받습니다.
+  //   · 같은 ISO 주차에는 1통만: 서버(Vercel)가 이미 보냈으면 공개 API 마커로 확인해 건너뜁니다.
+  const shouldEmail = !args.noEmail && truthy(process.env.SELF_CHECK_EMAIL_ON_CLI ?? '1');
+  const tEmail = Date.now();
+  let email = { ok: false, skipped: true, reason: 'no_email_flag', transport: null, messageId: null, error: null };
   if (shouldEmail) {
-    const email = await sendWeeklySelfCheckEmail({ result, markdown, json, env: process.env });
-    if (email.skipped) console.log(`[주간자가점검] 메일: 건너뜀 (${email.reason || '사유 없음'})`);
-    else if (email.ok) console.log(`[주간자가점검] 메일: 발송 완료 → ${config.email.to.join(', ')} (${email.transport})`);
-    else console.warn(`[주간자가점검] 메일: 발송 실패 — ${email.error || ''}`);
+    const alreadySent = args.forceEmail ? null : await findAlreadySentWeek(args.baseUrl, baseline);
+    if (alreadySent === result.isoWeek) {
+      email = { ok: false, skipped: true, reason: 'already_sent_this_week', transport: null, messageId: null, error: null };
+      console.log(`[주간자가점검] 메일: 건너뜀 — ${result.isoWeek} 보고서는 이미 발송되었습니다(existing marker). --force-email 로 강제 발송할 수 있습니다.`);
+    } else {
+      email = await sendWeeklySelfCheckEmail({ result, markdown, json, env: process.env });
+      if (email.ok) await writeLocalEmailMarker(result.isoWeek);
+      if (email.skipped) console.log(`[주간자가점검] 메일: 건너뜀 (${email.reason || '사유 없음'})`);
+      else if (email.ok) console.log(`[주간자가점검] 메일: 발송 완료 → ${config.email.to.join(', ')} (${email.transport})`);
+      else console.warn(`[주간자가점검] 메일: 발송 실패 — ${email.error || ''}`);
+    }
   } else {
-    console.log(`[주간자가점검] 메일: 생략 (CLI 기본값) — 수신 ${config.email.to.join(', ') || DEFAULT_SELF_CHECK_RECIPIENT}`);
+    console.log(`[주간자가점검] 메일: 생략(--no-email) — 수신 ${config.email.to.join(', ') || DEFAULT_SELF_CHECK_RECIPIENT}`);
   }
+
+  appendStep(result, {
+    name: 'email',
+    label: '보고서 메일 발송 (작업 종료 후)',
+    status: email.ok ? 'ok' : email.skipped ? 'skipped' : 'failed',
+    durationMs: Date.now() - tEmail,
+    detail: email.ok
+      ? `${config.email.to.join(', ')} (${email.transport})`
+      : email.skipped
+        ? `건너뜀 — ${email.reason || '사유 없음'}`
+        : `실패 — ${email.error || ''}`
+  });
+  result.completedAt = new Date().toISOString();
+  result.durationMs = Date.now() - Date.parse(result.startedAt || result.generatedAt);
+
+  // 메일 단계까지 포함한 최종본으로 보고서·JSON 재작성 (첨부본 = 저장본)
+  ({ markdown, json } = await writeReports(result));
 
   if (args.json) console.log(JSON.stringify(json, null, 2));
 

@@ -16,6 +16,10 @@ import {
   buildWeeklySelfCheckSubject,
   buildWeeklySelfCheckEmail,
   buildSelfCheckJson,
+  rehydrateSelfCheckResult,
+  appendStep,
+  buildWeeklySelfCheckText,
+  buildWeeklySelfCheckHtml,
   sendWeeklySelfCheckEmail,
   DEFAULT_SELF_CHECK_RECIPIENT,
   REPAIR_RULES,
@@ -517,4 +521,92 @@ test('runWeeklySelfCheck: 수집은 성공했지만 품질 경고(stale 캐시)�
   assert.ok(result.drift[0].findings.some((f) => f.code === 'terminal.stale_cache'));
   assert.ok(result.repairs.length >= 1, 'stale 이면 캐시 갱신 복구를 시도한다');
   assert.equal(result.repairs[0].status, 'skipped', '복구 동작이 없으면 건너뜀으로 감사 기록');
+});
+
+// ── 9. 작업 종료 후 발송 · 타임라인 ──────────────────────────────────────────
+test('appendStep: 단계 기록이 누적되고 완료 시각이 갱신된다', () => {
+  const result = { generatedAt: '2026-10-27T00:00:00.000Z' };
+  appendStep(result, { name: 'probes', label: '기능 점검', status: 'ok', durationMs: 1200, detail: '16건' });
+  appendStep(result, { name: 'email', label: '보고서 메일 발송 (작업 종료 후)', status: 'ok', detail: 'luxrank@gmail.com' });
+  assert.equal(result.steps.length, 2);
+  assert.equal(result.steps[0].durationMs, 1200);
+  assert.equal(result.steps[1].name, 'email');
+  assert.ok(result.completedAt);
+});
+
+test('runWeeklySelfCheck: 단계 타임라인을 결과에 남긴다(기능→변화→복구→재검증→기준선)', async () => {
+  const result = await runWeeklySelfCheck({
+    now: WEEK_START,
+    config: resolveSelfCheckConfig({}),
+    probes: [{ id: 'x', category: '기능', name: 'x', run: async () => ({ status: 'PASS' }) }],
+    saveBaseline: async () => {},
+  });
+  const names = result.steps.map((s) => s.name);
+  assert.deepEqual(names, ['probes', 'drift', 'repairs', 'recheck', 'baseline']);
+  assert.ok(result.startedAt && result.completedAt);
+  assert.ok(result.durationMs >= 0);
+  const md = generateWeeklySelfCheckMarkdown(result);
+  assert.match(md, /## 0-1\. 작업 타임라인 \(작업 종료 후 발송\)/);
+  assert.match(md, /모든 단계가 끝난 뒤/);
+  assert.ok(buildSelfCheckJson(result).steps.length === 5);
+});
+
+test('rehydrateSelfCheckResult: 저장된 JSON 을 메일 발송용 결과로 복원한다', () => {
+  const original = {
+    version: 1,
+    generatedAt: '2026-10-27T00:00:00.000Z',
+    startedAt: '2026-10-27T00:00:00.000Z',
+    completedAt: '2026-10-27T00:01:00.000Z',
+    durationMs: 60000,
+    kstDate: '2026-10-27',
+    kstDateTime: '2026-10-27 (화) 05:00:00 KST',
+    isoWeek: '2026-W44',
+    platform: 'github-actions',
+    summary: { total: 2, pass: 2, warn: 0, fail: 0, overall: 'PASS', repaired: 1, repairFailed: 0, unresolved: 0, passRate: 100 },
+    checks: [{ id: 'a', category: '기능', name: 'a', status: 'PASS', detail: 'ok' }],
+    drift: [{ terminal: 'hjnc', status: 'WARN', current: 8, baseline: 10, changeRatio: 0.8, findings: [{ code: 'count_drop_warn', severity: 'WARN', detail: '감소' }] }],
+    repairs: [{ target: 'hjnc', action: 'retry-terminal', status: 'applied', detail: 'ok', verified: true }],
+    escalation: { attempted: false, status: 'skipped', detail: null, url: null, error: null },
+    baseline: { updated: true, terminals: 8 },
+    steps: [{ name: 'probes', label: '기능 점검', status: 'ok', durationMs: 10, detail: '2건' }],
+  };
+  const restored = rehydrateSelfCheckResult(original);
+  assert.equal(restored.isoWeek, '2026-W44');
+  assert.equal(restored.drift[0].current.count, 8);
+  assert.equal(restored.drift[0].baseline.count, 10);
+  assert.equal(restored.steps.length, 1);
+  assert.equal(restored.completedAt, original.completedAt);
+  // 복원된 결과로 메일·보고서를 그대로 만들 수 있어야 합니다.
+  const message = buildWeeklySelfCheckEmail({ result: restored, markdown: '# r', json: original });
+  assert.match(message.subject, /2026-10-27/);
+  assert.match(message.text, /작업 종료/);
+  assert.match(generateWeeklySelfCheckMarkdown(restored), /주간 자가 점검/);
+});
+
+test('메일 본문/HTML 에 발송 시점·타임라인이 표시된다', () => {
+  const result = {
+    kstDate: '2026-10-27',
+    kstDateTime: '2026-10-27 (화) 05:00:00 KST',
+    isoWeek: '2026-W44',
+    platform: 'vercel-serverless',
+    completedAt: '2026-10-27T00:02:00.000Z',
+    durationMs: 120000,
+    summary: { total: 2, pass: 2, warn: 0, fail: 0, overall: 'PASS', repaired: 0, repairFailed: 0, unresolved: 0, passRate: 100 },
+    checks: [],
+    drift: [],
+    repairs: [],
+    escalation: { attempted: false, status: 'skipped', detail: null, url: null, error: null },
+    baseline: { updated: true, terminals: 8 },
+    steps: [
+      { name: 'probes', label: '기능 점검', status: 'ok', durationMs: 1000, detail: '16건' },
+      { name: 'email', label: '보고서 메일 발송 (작업 종료 후)', status: 'ok', durationMs: 200, detail: 'luxrank@gmail.com (smtp)' },
+    ],
+    config: { emailTo: ['luxrank@gmail.com'], emailMode: 'always', enabled: true, autoFix: true, retryAttempts: 2, thresholds: { warnRatio: 0.5, failRatio: 0.15 } },
+  };
+  const text = buildWeeklySelfCheckText(result);
+  assert.match(text, /발송 시점: \*\*작업 종료 후\*\*/);
+  assert.match(text, /1\. 기능 점검: ok/);
+  const html = buildWeeklySelfCheckHtml(result);
+  assert.match(html, /작업 타임라인/);
+  assert.match(html, /모든 단계 완료 후 발송/);
 });

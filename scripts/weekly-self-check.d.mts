@@ -129,17 +129,30 @@ export interface SelfCheckBaseline {
   lastRun?: any;
 }
 
+export interface SelfCheckStep {
+  name: string;
+  label: string;
+  startedAt: string;
+  finishedAt: string;
+  durationMs: number;
+  status: 'ok' | 'warn' | 'failed' | 'skipped' | string;
+  detail?: string | null;
+}
+
 export interface SelfCheckResult {
   version: number;
   skipped?: boolean;
   reason?: string;
   generatedAt: string;
+  startedAt?: string;
+  completedAt?: string;
   kstDate: string;
   kstDateTime: string;
   dayName: string;
   isoWeek: string;
   platform: string;
   summary: SelfCheckSummary;
+  steps?: SelfCheckStep[];
   checks: SelfCheckCheck[];
   drift: SelfCheckDrift[];
   repairs: SelfCheckRepair[];
@@ -221,6 +234,10 @@ export declare function applyRecoveries(input: {
   thresholds?: Partial<SelfCheckThresholds>;
 }): { drift: SelfCheckDrift[]; checks: SelfCheckCheck[]; fixed: number };
 export declare function runWeeklySelfCheck(options?: RunWeeklySelfCheckOptions): Promise<SelfCheckResult>;
+export declare function appendStep(
+  result: SelfCheckResult | Record<string, any>,
+  step?: Partial<SelfCheckStep> & { at?: string | Date }
+): SelfCheckStep | null;
 export declare function summarizeChecks(checks?: SelfCheckCheck[], repairs?: SelfCheckRepair[]): SelfCheckSummary;
 export declare function generateWeeklySelfCheckMarkdown(result: SelfCheckResult): string;
 export declare function buildWeeklySelfCheckSubject(result: SelfCheckResult): string;
@@ -233,6 +250,7 @@ export declare function buildWeeklySelfCheckEmail(options: {
   config?: SelfCheckConfig;
 }): { subject: string; text: string; html: string; attachments: Array<{ filename: string; content: string; contentType: string }>; to: string[]; from: string };
 export declare function buildSelfCheckJson(result: SelfCheckResult): object;
+export declare function rehydrateSelfCheckResult(json: any, config?: SelfCheckConfig): SelfCheckResult;
 export declare function weeklyReportPaths(kstDate: string): { markdown: string; json: string; docsMarkdown: string };
 export declare function fingerprintReport(markdown: string): string;
 export declare function sendWeeklySelfCheckEmail(options: {
