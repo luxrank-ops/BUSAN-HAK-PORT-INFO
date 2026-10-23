@@ -24,7 +24,8 @@
     "dotenv": "^18.0.7",
     "express": "^4.21.2",
     "firebase-admin": "^14.5.0",
-    "node-cron": "^4.6.0"
+    "node-cron": "^4.6.0",
+    "nodemailer": "^10.2.1"
   },
   "devDependencies": {
     "@firebase/rules-unit-testing": "^5.0.2",

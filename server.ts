@@ -18,6 +18,9 @@ import { initializeApp, cert, getApps } from 'firebase-admin/app';
 import { getFirestore, FieldValue } from 'firebase-admin/firestore';
 import { getMessaging } from 'firebase-admin/messaging';
 import cron from 'node-cron';
+// 일일 점검 보고서 메일 발송기 (scripts/daily-report-mailer.mjs — 타입은 .d.mts 에 선언)
+import { sendInspectionReportEmail, DEFAULT_REPORT_EMAIL_TO } from './scripts/daily-report-mailer.mjs';
+import type { SendReportEmailResult } from './scripts/daily-report-mailer.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -485,7 +488,13 @@ export const automationRuntimeStatus = {
     lastSuccessAt: null as string | null,
     lastReportPath: null as string | null,
     lastError: null as string | null,
-    lastResult: null as null | { kstDate: string; overall: string; pass: number; warn: number; fail: number; total: number }
+    lastResult: null as null | { kstDate: string; overall: string; pass: number; warn: number; fail: number; total: number },
+    // 보고서 메일 발송 상태 (미설정 환경에서는 skipped 로 기록되고 점검 자체는 성공)
+    lastEmailAt: null as string | null,
+    lastEmailStatus: null as 'sent' | 'skipped' | 'failed' | null,
+    lastEmailTransport: null as string | null,
+    lastEmailReason: null as string | null,
+    lastEmailError: null as string | null
   }
 };
 
@@ -1775,6 +1784,41 @@ export async function runWeeklyFirestoreBackup(targetDir: string = path.join(__d
   }
 }
 
+// ── 일일 점검 보고서 메일 발송 ─────────────────────────────────────────────
+// 매일 04:00 KST 에 실행되는 runDailyInspection() 이 보고서 생성 직후 호출합니다.
+//   · 전송 방식은 환경변수로 자동 감지 — Resend → Gmail API → SMTP 순
+//   · 아무 자격증명도 없으면 조용히 건너뜁니다(skipped). 점검 성공·실패 판정에는 영향 없음
+//   · 설정 방법은 .env.example 의 "9. 일일 점검 보고서 메일" 절 참고
+export const REPORT_EMAIL_TO = String(process.env.REPORT_EMAIL_TO || DEFAULT_REPORT_EMAIL_TO).trim() || DEFAULT_REPORT_EMAIL_TO;
+
+/** 보고서 메일 발송 + 상태 기록. 실패해도 예외를 던지지 않습니다(점검 결과 보존). */
+export async function deliverDailyInspectionEmail(
+  result: InspectionResult,
+  markdown: string
+): Promise<SendReportEmailResult> {
+  const status = automationRuntimeStatus.dailyInspection;
+  try {
+    const sent = await sendInspectionReportEmail({
+      result,
+      markdown,
+      json: { kstDate: result.kstDate, kstDateTime: result.kstDateTime, generatedAt: result.generatedAt, summary: result.summary, checks: result.checks },
+      env: process.env,
+    });
+    status.lastEmailAt = new Date().toISOString();
+    status.lastEmailTransport = sent.transport;
+    status.lastEmailReason = sent.reason;
+    status.lastEmailError = sent.error;
+    status.lastEmailStatus = sent.ok ? 'sent' : sent.skipped ? 'skipped' : 'failed';
+    return sent;
+  } catch (err: any) {
+    status.lastEmailAt = new Date().toISOString();
+    status.lastEmailStatus = 'failed';
+    status.lastEmailError = err?.message || String(err);
+    console.error('[INSPECTION] 보고서 메일 처리 중 오류:', status.lastEmailError);
+    return { ok: false, skipped: false, reason: null, transport: null, messageId: null, error: status.lastEmailError };
+  }
+}
+
 // ── 매일 04시(KST) 기능 점검 — 보고서 자동 생성 ────────────────────────────
 export interface InspectionCheck {
   category: string;
@@ -1801,7 +1845,10 @@ function formatKstDateTimeForInspection(now: Date): string {
   return `${kst.getUTCFullYear()}-${String(kst.getUTCMonth() + 1).padStart(2, '0')}-${String(kst.getUTCDate()).padStart(2, '0')} (${days[kst.getUTCDay()]}) ${String(kst.getUTCHours()).padStart(2, '0')}:${String(kst.getUTCMinutes()).padStart(2, '0')}:${String(kst.getUTCSeconds()).padStart(2, '0')} KST`;
 }
 
-export async function runDailyInspection(now: Date = new Date()): Promise<InspectionResult> {
+export async function runDailyInspection(
+  now: Date = new Date(),
+  options: { sendEmail?: boolean } = {}
+): Promise<InspectionResult> {
   automationRuntimeStatus.dailyInspection.lastRunAt = now.toISOString();
   const kstDate = formatKstDateForInspection(now);
   const kstDateTime = formatKstDateTimeForInspection(now);
@@ -1898,8 +1945,10 @@ export async function runDailyInspection(now: Date = new Date()): Promise<Inspec
   };
 
   // 보고서 생성 및 저장 시도 (Vercel /tmp, 로컬은 reports/)
+  let reportMarkdown: string | null = null;
   try {
     const markdown = generateInspectionMarkdown(result);
+    reportMarkdown = markdown;
     const dirs = IS_VERCEL
       ? [path.join('/tmp', 'reports'), path.join('/tmp', 'inspections')]
       : [path.join(__dirname, 'reports'), path.join(__dirname, '..', 'reports'), path.join(__dirname, 'docs', 'inspections')];
@@ -1969,6 +2018,12 @@ export async function runDailyInspection(now: Date = new Date()): Promise<Inspec
   if (fail > 0) {
     // FAIL 이 있어도 lastSuccessAt은 갱신하되, 로그로 경고
     console.warn(`[INSPECTION] FAIL ${fail}건 감지 — 보고서 확인 필요`);
+  }
+
+  // 보고서 메일 발송 — 매일 04:00 KST 크론(Vercel Cron · node-cron) 경유로 1회 실행됩니다.
+  // 자격증명 미설정이면 skipped, 발송 오류여도 점검 결과와 응답은 그대로 반환합니다.
+  if (options.sendEmail !== false) {
+    await deliverDailyInspectionEmail(result, reportMarkdown ?? generateInspectionMarkdown(result));
   }
 
   return result;
@@ -2742,6 +2797,15 @@ const cronDailyInspectionHandler = async (req: Request, res: Response) => {
       kstDate: result.kstDate,
       summary: result.summary,
       report: markdown,
+      // 보고서 메일 발송 결과 (자격증명 미설정이면 skipped — 점검 자체는 성공)
+      email: {
+        to: REPORT_EMAIL_TO,
+        status: automationRuntimeStatus.dailyInspection.lastEmailStatus,
+        transport: automationRuntimeStatus.dailyInspection.lastEmailTransport,
+        reason: automationRuntimeStatus.dailyInspection.lastEmailReason,
+        sentAt: automationRuntimeStatus.dailyInspection.lastEmailAt,
+        error: automationRuntimeStatus.dailyInspection.lastEmailError,
+      },
       // Vercel /tmp 보고서는 함수 종료 후 사라지므로 응답 바디에 포함해 전달
       ...(IS_VERCEL ? { note: 'ephemeral_filesystem: /tmp 보고서는 함수 종료 후 유지되지 않으므로 응답 바디를 저장하세요' } : {}),
     });
@@ -2767,6 +2831,14 @@ app.get('/api/inspection-report', (_req, res) => {
     lastError: d.lastError,
     summary: d.lastResult,
     reportPath: d.lastReportPath,
+    email: {
+      to: REPORT_EMAIL_TO,
+      status: d.lastEmailStatus,
+      transport: d.lastEmailTransport,
+      reason: d.lastEmailReason,
+      sentAt: d.lastEmailAt,
+      error: d.lastEmailError,
+    },
   });
 });
 

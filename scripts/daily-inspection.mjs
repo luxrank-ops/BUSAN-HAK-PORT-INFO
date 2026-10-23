@@ -616,10 +616,31 @@ if (isMain) {
   const now = new Date();
   console.log(`[일일점검] 점검 시작: ${formatKstDateTime(now)}`);
   const result = await runInspection(now);
-  const { markdown } = await saveReports(result, now);
+  const { markdown, jsonSummary } = await saveReports(result, now);
 
   console.log(`\n[일일점검] 결과: ${result.summary.overall} (PASS ${result.summary.pass}/${result.summary.total}, WARN ${result.summary.warn}, FAIL ${result.summary.fail})`);
   console.log(`[일일점검] 보고서 저장 완료: reports/daily-inspection-${result.kstDate}.md`);
+
+  // 보고서 메일 발송 (기본 OFF)
+  //   · Vercel Cron(/api/cron/daily-inspection)이 같은 시각(19:00 UTC)에 이미 발송하므로
+  //     중복 수신을 막기 위해 CLI 에서는 기본적으로 보내지 않습니다.
+  //   · Vercel Cron 을 못 쓰는 플랜이면 REPORT_EMAIL_ON_CLI=1 로 이쪽에서 발송하세요.
+  //   · 발송 실패는 CI 판정(FAIL 항목 기준)에 영향을 주지 않습니다.
+  if (String(process.env.REPORT_EMAIL_ON_CLI || '0').trim() === '1') {
+    try {
+      const { sendInspectionReportEmail } = await import('./daily-report-mailer.mjs');
+      const email = await sendInspectionReportEmail({ result, markdown, json: jsonSummary, env: process.env });
+      if (email.skipped) {
+        console.log(`[일일점검] 보고서 메일: 건너뜀 (${email.reason || '사유 없음'})`);
+      } else if (email.ok) {
+        console.log(`[일일점검] 보고서 메일: 발송 완료 (${email.transport}${email.messageId ? ` · id=${email.messageId}` : ''})`);
+      } else {
+        console.warn(`[일일점검] 보고서 메일: 발송 실패 (${email.transport}) ${email.error || ''}`);
+      }
+    } catch (e) {
+      console.warn(`[일일점검] 보고서 메일 오류: ${e?.message || e}`);
+    }
+  }
 
   if (result.summary.fail > 0) {
     console.log(`\n[일일점검] FAIL 항목:`);
