@@ -106,7 +106,7 @@ Vercel 에서 동작하는 서버 API(로컬 `npm run dev` 와 동일한 코드�
 - `GET /api/config` — Web Push VAPID 키 등 공개 설정
 - `POST /api/screen-unlock` — 화면 잠금 PIN 서버 검증(1순위). `trust proxy` 설정으로 **실제 클라이언트 IP 기준** 속도 제한(IP당 10분 10회)이 동작합니다
 - `POST /api/emergency-unlock` — 🚨 긴급 플로팅 공지 작성 PIN 서버 검증(1순위). 화면 잠금과 **별도 시도 횟수 버킷**을 사용해, 근무일지 잠금 실패가 긴급 공지 인증을 막지 않습니다
-- `GET /api/hjnc-schedule` · `GET /api/terminal-schedule` — 7개 터미널 실시간 선석 스케줄(메모리 캐시 → Firestore 캐시 stale-while-revalidate 폴백)
+- `GET /api/hjnc-schedule` · `GET /api/terminal-schedule` — 8개 터미널(`HJNC`·`BNCT`·`DGT`·`PNC`·`HPNT`·`PNIT`·`BPTC`·`HBCT`) 실시간 선석 스케줄(메모리 캐시 → Firestore 캐시 stale-while-revalidate 폴백)
 - `GET /api/cron/*` — 주기 작업 트리거(아래 참고, `CRON_SECRET` 인증 필수)
 
 ### ⚠️ Vercel 라우팅 제약 — 2세그먼트 경로는 개별 함수 파일이 필요합니다
