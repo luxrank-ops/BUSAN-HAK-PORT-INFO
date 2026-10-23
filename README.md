@@ -335,6 +335,47 @@ npm run dev
 http://localhost:3000
 ```
 
+## 🖥️ 최근 3일 PC 접속자 위치 리스트
+
+앱에 접속하면 프런트 비콘(`POST /api/visitor-beacon`)이 서버에서 확인한 **접속 IP·기기**를 IP 위치 조회(ip-api.com) 결과와 함께 Firestore `visitor_ip_logs` 에 남깁니다. 이 기록을 **최근 3일 · PC(데스크톱) 접속자 위치 리스트**로 보는 방법은 두 가지입니다.
+
+### 1) 앱 안에서 보기 (관리자 전용)
+
+`앱 통합 운영` → `방문자 상세 통계` → **🖥️ 최근 3일 PC 접속자 위치 리스트** 섹션
+
+| 요소 | 설명 |
+| --- | --- |
+| 기간 선택 | 오늘(1일) · **최근 3일(기본)** · 최근 7일 |
+| 요약 카드 | 기간 내 PC 접속 건수 · 고유 IP 수 · 1위 지역 |
+| 지역 순위 | 국가 › 시·도 › 도시별 접속 건수·비중 상위 5곳 |
+| 상세 목록 | 날짜별로 묶은 접속 시각(KST) · IP · 위치 (최신순) |
+| 📊 CSV 저장 | 엑셀에서 바로 열리는 CSV(`부산항_PC접속자_위치_최근3일_YYYY-MM-DD.csv`) |
+| 📋 리포트 복사 | 요약 + 상세 목록을 카톡·메모에 붙여넣을 수 있는 텍스트 |
+| 🔓 IP 전체 보기 | 개인정보 보호를 위해 기본은 IP 마지막 자리를 가림 (`121.130.45.***`) |
+
+- 조회 API: `GET /api/visitor-logs?device=desktop&days=3` (관리자 세션 토큰 `Authorization: Bearer …` 필요, `days` 1~7)
+- IP 마스킹은 화면·CSV·리포트에 동일하게 적용되며, 토글은 표시 정책만 바꿉니다.
+- 기록은 접속 시 남고 같은 IP 는 30분 간격으로만 새로 쌓이므로, "방문 세션 수"가 아니라 **접속 지점(IP) 기준 위치 분포**로 해석하세요.
+
+### 2) 명령 한 줄로 파일 만들기 (CLI)
+
+```bash
+# 필요한 환경변수 (둘 중 하나)
+#   FIREBASE_SERVICE_ACCOUNT_KEY=<서비스 계정 키 JSON 또는 Base64>
+#   GOOGLE_APPLICATION_CREDENTIALS=<서비스 계정 키 파일 경로>
+
+npm run visitor:report -- --days 3               # reports/pc-visitors-YYYY-MM-DD.md + .csv
+npm run visitor:report -- --days 1 --device all  # 오늘 · 모바일 포함
+npm run visitor:report -- --demo                 # 예시 데이터로 출력 형식만 확인 (DB 접속 불필요)
+npm run visitor:report -- --full-ip              # IP 마스킹 해제
+```
+
+- 결과물: `reports/pc-visitors-YYYY-MM-DD.md`(요약·날짜별·지역 순위·상세 표) + `.csv`(엑셀용, BOM 포함)
+- 콘솔에도 상위 100건 표를 바로 출력합니다.
+- `--demo` 는 **실제 방문 기록이 아닌 예시 데이터**로 형식을 보여 줍니다. 저장 파일 이름이 `pc-visitors-demo.*` 로 구분됩니다.
+
+> ⚠️ `visitor_ip_logs` 는 관리자 전용 컬렉션이며 Firestore 보안 규칙상 클라이언트에서 직접 읽을 수 없습니다. 조회는 위 두 경로(관리자 세션 API · 서비스 계정 CLI)만 사용하세요.
+
 ## 검사 및 빌드
 
 ```bash

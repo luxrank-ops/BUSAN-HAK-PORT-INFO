@@ -1657,9 +1657,21 @@
 
         <div class="stats-section-box" style="margin-bottom:8px;">
             <div class="stats-section-title">
-                <span>🖥️ PC 방문자 IP · 위치 정보 (최근 접속)</span>
+                <span>🖥️ 최근 3일 PC 접속자 위치 리스트</span>
                 <span id="statsVisitorIpSummary" style="font-size:0.7rem; color:var(--text-sub); font-weight:700;"></span>
             </div>
+            <div style="display:flex; gap:5px; flex-wrap:wrap; align-items:center; margin-bottom:7px;">
+                <select id="statsVisitorIpRange" onchange="loadPcVisitorLocationList(true)" style="height:28px; font-size:0.74rem; font-weight:800; padding:0 6px; border:1px solid var(--border); border-radius:6px; background:var(--bg-color); color:var(--text-main);">
+                    <option value="1">오늘(1일)</option>
+                    <option value="3" selected>최근 3일</option>
+                    <option value="7">최근 7일</option>
+                </select>
+                <button type="button" onclick="loadPcVisitorLocationList(true)" style="background:#eff6ff; color:#1d4ed8; border:1px solid #93c5fd; border-radius:6px; padding:4px 8px; font-size:0.72rem; font-weight:900; cursor:pointer;">🔄 새로고침</button>
+                <button type="button" onclick="downloadPcVisitorLocationCsv()" style="background:#10b981; color:#fff; border:none; border-radius:6px; padding:4px 8px; font-size:0.72rem; font-weight:900; cursor:pointer;">📊 CSV 저장</button>
+                <button type="button" onclick="copyPcVisitorLocationReport()" style="background:var(--primary); color:#fff; border:none; border-radius:6px; padding:4px 8px; font-size:0.72rem; font-weight:900; cursor:pointer;">📋 리포트 복사</button>
+                <button type="button" onclick="togglePcVisitorIpMask()" style="background:var(--bg-color); color:var(--text-sub); border:1px solid var(--border); border-radius:6px; padding:4px 8px; font-size:0.72rem; font-weight:900; cursor:pointer;">🔓 IP 전체 보기</button>
+            </div>
+            <div id="statsVisitorIpSummaryCards"></div>
             <div id="statsVisitorIpLogs" style="font-size:0.75rem;"></div>
         </div>
 

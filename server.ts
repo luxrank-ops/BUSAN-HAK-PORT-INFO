@@ -37,6 +37,13 @@ import type {
   SelfCheckAction,
   SelfCheckBaseline
 } from './scripts/weekly-self-check.mjs';
+// 방문자 위치 집계 — CLI(scripts/pc-visitor-report.mjs)와 같은 함수를 씁니다(단일 사본).
+import {
+  buildDayWindow as buildVisitorDayWindow,
+  buildLocationLabel as buildVisitorLocationLabel,
+  summarizeVisitorLogs,
+  kstDateKey
+} from './scripts/pc-visitor-report.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -3286,7 +3293,12 @@ const visitorBeaconHandler = async (req: Request, res: Response) => {
   res.json({ ok: true });
 };
 
-/** 방문자 IP·위치 로그 조회 — 관리자 세션 토큰 필요 */
+// ─── 🖥️ 최근 N일 PC 접속자 위치 리스트 조회 ────────────────────────────────
+// 방문자 상세 통계(관리자 전용) 안의 '최근 3일 PC 접속자 위치 리스트' 섹션이
+// 이 엔드포인트를 호출합니다. device=desktop 으로 PC 접속만 추리고,
+// days(1~7) 창 안의 기록을 최신순으로 돌려주면서 날짜별·지역별 요약을 함께 계산합니다.
+
+/** 방문자 IP·위치 로그 조회 — 관리자 세션 토큰 필요 / 최근 N일(기본 3일) 지원 */
 const visitorLogsHandler = async (req: Request, res: Response) => {
   const authHeader = String(req.headers.authorization || '');
   const bodyToken = req.body && typeof req.body === 'object' ? String((req.body as { token?: unknown }).token || '') : '';
@@ -3301,34 +3313,83 @@ const visitorLogsHandler = async (req: Request, res: Response) => {
       return;
     }
     const deviceFilter = String(req.query.device || '').trim();
-    let snap: FirebaseFirestore.QuerySnapshot<FirebaseFirestore.DocumentData>;
-    try {
-      snap = await db.collection('visitor_ip_logs').orderBy('accessedAtMs', 'desc').limit(300).get();
-    } catch (orderErr: any) {
-      const msg = String(orderErr?.message || orderErr);
-      if (/index/i.test(msg) || String(orderErr?.code) === 'failed-precondition') {
-        snap = await db.collection('visitor_ip_logs').get();
-      } else {
-        throw orderErr;
+    const requestedDays = Number(req.query.days);
+    const days = Math.min(7, Math.max(1, Number.isFinite(requestedDays) && requestedDays > 0 ? Math.floor(requestedDays) : 3));
+    const requestedLimit = Number(req.query.limit);
+    const limit = Math.min(3000, Math.max(50, Number.isFinite(requestedLimit) && requestedLimit > 0 ? Math.floor(requestedLimit) : 1000));
+    const { dateKeys, sinceMs } = buildVisitorDayWindow(days);
+
+    // 복합 인덱스(device ASC · accessedAtMs DESC)가 있으면 기기 필터를 서버에서 처리하고,
+    // 인덱스가 없거나 구버전 문서(accessedAtMs 누락)가 섞여 있으면 단계적으로 완화합니다.
+    const collection = db.collection('visitor_ip_logs');
+    const queryBuilders: Array<() => Promise<FirebaseFirestore.QuerySnapshot<FirebaseFirestore.DocumentData>>> = [];
+    if (deviceFilter) {
+      queryBuilders.push(() => collection
+        .where('device', '==', deviceFilter)
+        .where('accessedAtMs', '>=', sinceMs)
+        .orderBy('accessedAtMs', 'desc')
+        .limit(limit)
+        .get());
+      queryBuilders.push(() => collection
+        .where('device', '==', deviceFilter)
+        .orderBy('accessedAtMs', 'desc')
+        .limit(limit * 2)
+        .get());
+    }
+    queryBuilders.push(() => collection
+      .where('accessedAtMs', '>=', sinceMs)
+      .orderBy('accessedAtMs', 'desc')
+      .limit(limit * 2)
+      .get());
+    queryBuilders.push(() => collection.orderBy('accessedAtMs', 'desc').limit(limit * 3).get());
+
+    let snap: FirebaseFirestore.QuerySnapshot<FirebaseFirestore.DocumentData> | null = null;
+    let lastErr: any = null;
+    for (const build of queryBuilders) {
+      try {
+        snap = await build();
+        break;
+      } catch (err: any) {
+        lastErr = err;
+        const msg = String(err?.message || err);
+        const recoverable = /index/i.test(msg) || String(err?.code) === 'failed-precondition' || String(err?.code) === 'invalid-argument';
+        if (!recoverable) throw err;
       }
     }
+    if (!snap) throw lastErr || new Error('visitor_logs_query_failed');
+
     let logs: any[] = snap.docs.map((doc) => ({ id: doc.id, ...(doc.data() || {}) }));
-    logs.sort((a, b) => Number(b.accessedAtMs || 0) - Number(a.accessedAtMs || 0));
+    logs = logs.filter((l) => Number(l.accessedAtMs) >= sinceMs);
     if (deviceFilter) logs = logs.filter((l) => l.device === deviceFilter);
-    logs = logs.slice(0, 100);
+    logs.sort((a, b) => Number(b.accessedAtMs || 0) - Number(a.accessedAtMs || 0));
+    logs = logs.slice(0, limit);
+
+    const summary = summarizeVisitorLogs(logs, dateKeys);
     const resultLogs = logs.map((l) => ({
       id: l.id,
       ip: String(l.ip || ''),
       device: String(l.device || ''),
-      userAgent: String(l.userAgent || ''),
+      userAgent: String(l.userAgent || '').slice(0, 160),
       country: String(l.country || ''),
       region: String(l.region || ''),
       city: String(l.city || ''),
-      dateKey: String(l.dateKey || ''),
+      locationLabel: buildVisitorLocationLabel(l),
+      dateKey: String(l.dateKey || '') || kstDateKey(Number(l.accessedAtMs) || 0),
       accessedAtMs: Number(l.accessedAtMs) || 0,
       accessedAt: formatKstDateTime(l.accessedAt).formatted
     }));
-    res.json({ ok: true, logs: resultLogs, count: resultLogs.length, deviceFilter });
+
+    res.json({
+      ok: true,
+      logs: resultLogs,
+      count: resultLogs.length,
+      deviceFilter,
+      days,
+      dateKeys,
+      sinceMs,
+      rangeLabel: `${dateKeys[0]} ~ ${dateKeys[dateKeys.length - 1]} (KST, 최근 ${days}일)`,
+      summary
+    });
   } catch (error: any) {
     res.status(500).json({ ok: false, error: error?.message || 'visitor_logs_failed' });
   }
