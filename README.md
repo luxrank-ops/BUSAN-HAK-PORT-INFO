@@ -157,6 +157,27 @@ Vercel 에서 동작하는 서버 API(로컬 `npm run dev` 와 동일한 코드�
 
 `CRON_SECRET`·`FIREBASE_SERVICE_ACCOUNT_KEY` 가 없어도 사이트와 화면 잠금(빌드 해시 폴백)은 동작하지만, 스케줄 API 의 Firestore 폴백·FCM 알림·주기 작업은 동작하지 않습니다.
 
+### 일일 점검 보고서 메일 (매일 04:00 KST)
+
+기능 점검(`/api/cron/daily-inspection`)이 끝나면 생성된 보고서를 **메일로 자동 발송**합니다.
+
+1. `authorizeCronRequest()` — `CRON_SECRET` 인증
+2. `runDailyInspection()` — 점검 + 마크다운/JSON 보고서 생성
+3. `deliverDailyInspectionEmail()` — 보고서 발송 (`scripts/daily-report-mailer.mjs`)
+4. 응답의 `email` 필드로 결과 기록 (`sent` / `skipped` / `failed`)
+
+| 항목 | 내용 |
+| --- | --- |
+| 수신 | `REPORT_EMAIL_TO` (기본 `luxrank@gmail.com`, 쉼표로 복수 지정) |
+| 첨부 | `daily-inspection-YYYY-MM-DD.md`(전체 상세) · `.json`(기계 판독용) |
+| 발송 조건 | `REPORT_EMAIL_MODE=always`(매일, 기본) / `alert`(WARN·FAIL 있을 때만) |
+| 전송 방식 | 환경변수 **자동 감지** — ① `RESEND_API_KEY` → ② `GOOGLE_CLIENT_ID`+`SECRET`+`REFRESH_TOKEN`(Gmail API) → ③ `SMTP_HOST`(+`SMTP_USER`/`SMTP_PASS`, nodemailer) |
+
+- **자격증명이 없으면 조용히 건너뜁니다**(`email.status: "skipped"`) — 점검 자체와 크론 응답(`ok: true`)은 그대로 유지됩니다.
+- 발송이 실패해도 점검 결과·HTTP 응답은 정상이며, `email.error` 와 `/api/inspection-report` 의 `email` 필드로 확인할 수 있습니다.
+- GitHub Actions(`scripts/daily-inspection.mjs`)는 Vercel Cron 과 같은 시각에 실행되므로 **기본적으로 발송하지 않습니다.** Vercel Cron 을 못 쓰면 저장소 variables 에 `REPORT_EMAIL_ON_CLI=1` 을 두세요(중복 수신 주의).
+- 환경변수별 상세 설정 방법은 [`.env.example`](.env.example) 의 **"9. 일일 점검 보고서 메일"** 절을 참고하세요.
+
 ### 서버리스 특성·한계
 
 - 메모리 캐시(스케줄 stale 캐시)와 PIN 속도 제한 상태는 **함수 인스턴스 단위 best-effort** 입니다(인스턴스가 여러 개이거나 재활용되면 초기화됨). Firestore `vessel_schedules_cache` 폴백 체인은 기존과 동일하게 동작합니다.
