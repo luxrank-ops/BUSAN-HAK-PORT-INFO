@@ -373,5 +373,15 @@ service cloud.firestore {
         allow update, delete: if isAdmin();
       }
     }
+
+    // ---------------------------------------------------------
+    // 11. visitor_ip_logs (관리자 전용 방문자 IP·위치 로그)
+    //     - 쓰기: 서버 Admin SDK(/api/visitor-beacon) 전용 (클라이언트 직접 쓰기 차단)
+    //     - 읽기: 관리자(isAdmin) 세션에서만 조회 허용
+    // ---------------------------------------------------------
+    match /visitor_ip_logs/{logId} {
+      allow get, list: if isAdmin();
+      allow write: if false;
+    }
   }
 }

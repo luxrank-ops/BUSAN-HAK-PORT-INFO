@@ -41,6 +41,11 @@ export function formatDayLabel(dateKey: string): string;
 export function formatKstDateTime(ms?: number): string;
 export function maskIp(ip?: string): string;
 export function buildLocationLabel(log: { country?: unknown; region?: unknown; city?: unknown }): string;
+export function localizeVisitorLocation(log: { country?: unknown; region?: unknown; city?: unknown }): {
+  country: string;
+  region: string;
+  city: string;
+};
 export function summarizeVisitorLogs(logs: VisitorLogLike[], dateKeys: string[]): VisitorLogSummary;
 export function buildCsv(logs: VisitorLogLike[], options?: { maskIps?: boolean }): string;
 export function buildMarkdown(options: {
@@ -52,5 +57,6 @@ export function buildMarkdown(options: {
   device?: string;
   maskIps?: boolean;
   source?: string;
+  dailyPcDeviceCounts?: Record<string, number> | null;
 }): string;
 export function buildDemoLogs(nowMs?: number): VisitorLogLike[];

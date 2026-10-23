@@ -360,9 +360,8 @@ http://localhost:3000
 ### 2) 명령 한 줄로 파일 만들기 (CLI)
 
 ```bash
-# 필요한 환경변수 (둘 중 하나)
-#   FIREBASE_SERVICE_ACCOUNT_KEY=<서비스 계정 키 JSON 또는 Base64>
-#   GOOGLE_APPLICATION_CREDENTIALS=<서비스 계정 키 파일 경로>
+# 인증: 로컬 `firebase login` 세션이 있으면 별도 환경변수 없이 바로 실행됩니다.
+# (CI·외부 서버에서는 FIREBASE_SERVICE_ACCOUNT_KEY 또는 GOOGLE_APPLICATION_CREDENTIALS 지정)
 
 npm run visitor:report -- --days 3               # reports/pc-visitors-YYYY-MM-DD.md + .csv
 npm run visitor:report -- --days 1 --device all  # 오늘 · 모바일 포함

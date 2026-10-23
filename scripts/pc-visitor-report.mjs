@@ -26,6 +26,7 @@
  * 함께 내보내므로 scripts/pc-visitor-report.test.mjs 에서 의존성 없이 검증합니다.
  */
 import fs from 'node:fs/promises';
+import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -96,6 +97,112 @@ export function buildLocationLabel(log) {
         parts.push(value);
     }
     return parts.length ? parts.join(' › ') : '위치 미확인';
+}
+
+const COUNTRY_KR_MAP = {
+    'south korea': '대한민국',
+    'korea, republic of': '대한민국',
+    'republic of korea': '대한민국',
+    'korea': '대한민국',
+    kr: '대한민국',
+    'united states': '미국',
+    'united states of america': '미국',
+    usa: '미국',
+    us: '미국',
+    japan: '일본',
+    jp: '일본',
+    china: '중국',
+    cn: '중국',
+    singapore: '싱가포르',
+    sg: '싱가포르',
+    taiwan: '대만',
+    tw: '대만',
+    'hong kong': '홍콩',
+    hk: '홍콩',
+    vietnam: '베트남',
+    vn: '베트남'
+};
+
+const REGION_KR_MAP = {
+    busan: '부산광역시',
+    pusan: '부산광역시',
+    'busan-gwangyeoksi': '부산광역시',
+    seoul: '서울특별시',
+    'seoul-teukbyeolsi': '서울특별시',
+    incheon: '인천광역시',
+    daegu: '대구광역시',
+    daejeon: '대전광역시',
+    gwangju: '광주광역시',
+    ulsan: '울산광역시',
+    sejong: '세종특별자치시',
+    'sejong-si': '세종특별자치시',
+    'gyeonggi-do': '경기도',
+    gyeonggi: '경기도',
+    'gangwon-do': '강원특별자치도',
+    gangwon: '강원특별자치도',
+    'chungcheongbuk-do': '충청북도',
+    'north chungcheong': '충청북도',
+    'chungcheongnam-do': '충청남도',
+    'south chungcheong': '충청남도',
+    'jeollabuk-do': '전북특별자치도',
+    'jeonbuk-do': '전북특별자치도',
+    'north jeolla': '전북특별자치도',
+    'jeollanam-do': '전라남도',
+    'south jeolla': '전라남도',
+    'gyeongsangbuk-do': '경상북도',
+    'north gyeongsang': '경상북도',
+    'gyeongsangnam-do': '경상남도',
+    'south gyeongsang': '경상남도',
+    'jeju-do': '제주특별자치도',
+    jeju: '제주특별자치도'
+};
+
+const CITY_KR_MAP = {
+    ...REGION_KR_MAP,
+    'haeundae-gu': '해운대구',
+    haeundae: '해운대구',
+    'gangseo-gu': '강서구',
+    'nam-gu': '남구',
+    'saha-gu': '사하구',
+    'dong-gu': '동구',
+    'jung-gu': '중구',
+    'seo-gu': '서구',
+    'yeongdo-gu': '영도구',
+    'busanjin-gu': '부산진구',
+    'dongnae-gu': '동래구',
+    'buk-gu': '북구',
+    'geumjeong-gu': '금정구',
+    'yeonje-gu': '연제구',
+    'suyeong-gu': '수영구',
+    'sasang-gu': '사상구',
+    'gijang-gun': '기장군',
+    gijang: '기장군',
+    changwon: '창원시',
+    'changwon-si': '창원시',
+    gimhae: '김해시',
+    'gimhae-si': '김해시',
+    yangsan: '양산시',
+    'yangsan-si': '양산시',
+    geoje: '거제시',
+    'geoje-si': '거제시',
+    jinhae: '진해구',
+    'jinhae-gu': '진해구',
+    'songpa-gu': '송파구',
+    'gangnam-gu': '강남구',
+    'seocho-gu': '서초구',
+    'mapo-gu': '마포구',
+    'yeongdeungpo-gu': '영등포구'
+};
+
+/** 영문 국가·시/도·도시명을 한국어 표준 명칭으로 정규화합니다. */
+export function localizeVisitorLocation(log) {
+    const rawCountry = String(log?.country ?? '').trim();
+    const rawRegion = String(log?.region ?? '').trim();
+    const rawCity = String(log?.city ?? '').trim();
+    const country = COUNTRY_KR_MAP[rawCountry.toLowerCase()] || rawCountry;
+    const region = REGION_KR_MAP[rawRegion.toLowerCase()] || rawRegion;
+    const city = CITY_KR_MAP[rawCity.toLowerCase()] || rawCity;
+    return { country, region, city };
 }
 
 /**
@@ -169,13 +276,20 @@ export function buildCsv(logs, options = {}) {
 }
 
 /** Markdown 리포트 문자열 */
-export function buildMarkdown({ logs, summary, days, dateKeys, generatedAt = Date.now(), device = 'desktop', maskIps = true, source = 'Firestore visitor_ip_logs' }) {
+export function buildMarkdown({ logs, summary, days, dateKeys, generatedAt = Date.now(), device = 'desktop', maskIps = true, source = 'Firestore visitor_ip_logs', dailyPcDeviceCounts = null }) {
     const safeSummary = summary || summarizeVisitorLogs(logs, dateKeys);
     const rangeLabel = `${dateKeys[0]} ~ ${dateKeys[dateKeys.length - 1]} (KST, 최근 ${days}일)`;
     const deviceLabel = device === 'desktop' ? 'PC(데스크톱)' : device === 'all' ? '전체 기기' : device;
     const total = safeSummary.totalCount;
     const top = safeSummary.topLocation;
     const pct = (n) => (total > 0 ? `${Math.round((n / total) * 100)}%` : '0%');
+    const hasDailyPcStats = dailyPcDeviceCounts && typeof dailyPcDeviceCounts === 'object' && Object.keys(dailyPcDeviceCounts).length > 0;
+    const totalPcSessions = hasDailyPcStats
+        ? dateKeys.reduce((acc, dk) => acc + (Number(dailyPcDeviceCounts[dk]) || 0), 0)
+        : 0;
+    const dailyPcStatsLine = hasDailyPcStats
+        ? `| 일별 PC 방문 세션(visitor_stats) | **${totalPcSessions.toLocaleString('ko-KR')}세션** (${[...dateKeys].reverse().map((dk) => `${formatDayLabel(dk)} ${Number(dailyPcDeviceCounts[dk] || 0).toLocaleString('ko-KR')}건`).join(' · ')}) |`
+        : null;
 
     const rows = (logs || []).map((log, idx) => {
         const location = buildLocationLabel(log).replace(/\|/g, '\\|');
@@ -200,6 +314,7 @@ export function buildMarkdown({ logs, summary, days, dateKeys, generatedAt = Dat
         `| 고유 IP | ${safeSummary.uniqueIp.toLocaleString('ko-KR')}개 |`,
         `| 1위 지역 | ${top ? `${top.label} (${top.count}건)` : '-'} |`,
         `| 기록 있는 날짜 | ${safeSummary.byDay.filter((d) => d.count > 0).map((d) => `${formatDayLabel(d.dateKey)} ${d.count}건`).join(' · ') || '없음'} |`,
+        ...(dailyPcStatsLine ? [dailyPcStatsLine] : []),
         '',
         '## 2. 날짜별 접속',
         '',
@@ -260,9 +375,117 @@ export function buildDemoLogs(nowMs = Date.now()) {
     }).filter((l) => l.accessedAtMs >= sinceMs);
 }
 
-/** Firestore 에서 최근 N일 방문 로그를 읽어옵니다. (firebase-admin 동적 임포트) */
+function parseFirestoreRestValue(v) {
+    if (!v || typeof v !== 'object') return undefined;
+    if ('stringValue' in v) return String(v.stringValue);
+    if ('integerValue' in v) return Number(v.integerValue);
+    if ('doubleValue' in v) return Number(v.doubleValue);
+    if ('booleanValue' in v) return Boolean(v.booleanValue);
+    if ('timestampValue' in v) return String(v.timestampValue);
+    if ('nullValue' in v) return null;
+    if ('mapValue' in v) {
+        const out = {};
+        const fields = (v.mapValue && v.mapValue.fields) || {};
+        for (const [k, fv] of Object.entries(fields)) out[k] = parseFirestoreRestValue(fv);
+        return out;
+    }
+    if ('arrayValue' in v) {
+        const vals = (v.arrayValue && v.arrayValue.values) || [];
+        return vals.map(parseFirestoreRestValue);
+    }
+    return undefined;
+}
+
+function parseFirestoreRestDoc(doc) {
+    const name = String(doc?.name || '');
+    const id = name.split('/').pop() || '';
+    const fields = doc?.fields || {};
+    const out = { id };
+    for (const [k, fv] of Object.entries(fields)) {
+        out[k] = parseFirestoreRestValue(fv);
+    }
+    return out;
+}
+
+async function resolveFirebaseProjectId() {
+    if (process.env.FIREBASE_PROJECT_ID) return String(process.env.FIREBASE_PROJECT_ID).trim();
+    try {
+        const rc = JSON.parse(await fs.readFile(path.join(REPO_ROOT, '.firebaserc'), 'utf8'));
+        if (rc?.projects?.default) return String(rc.projects.default).trim();
+    } catch {}
+    return 'busan-hak-port';
+}
+
+async function fetchLogsViaFirebaseCliToken({ sinceMs, dateKeys, device, limit }) {
+    const cfgPath = path.join(os.homedir(), '.config', 'configstore', 'firebase-tools.json');
+    let cfg;
+    try {
+        cfg = JSON.parse(await fs.readFile(cfgPath, 'utf8'));
+    } catch {
+        return null;
+    }
+    const accessToken = cfg?.tokens?.access_token;
+    const expiresAt = Number(cfg?.tokens?.expires_at || 0);
+    if (!accessToken || (expiresAt > 0 && expiresAt <= Date.now())) {
+        return null;
+    }
+    const projectId = await resolveFirebaseProjectId();
+    const baseUrl = `https://firestore.googleapis.com/v1/projects/${encodeURIComponent(projectId)}/databases/(default)/documents`;
+    const headers = { Authorization: `Bearer ${accessToken}` };
+
+    const allDocs = [];
+    let pageToken = '';
+    while (allDocs.length < limit * 2) {
+        const url = `${baseUrl}/visitor_ip_logs?pageSize=300${pageToken ? `&pageToken=${encodeURIComponent(pageToken)}` : ''}`;
+        const res = await fetch(url, { headers });
+        if (!res.ok) return null;
+        const payload = await res.json();
+        const docs = Array.isArray(payload.documents) ? payload.documents : [];
+        for (const d of docs) allDocs.push(parseFirestoreRestDoc(d));
+        if (!payload.nextPageToken) break;
+        pageToken = String(payload.nextPageToken);
+    }
+
+    const dailyPcDeviceCounts = {};
+    await Promise.all(
+        (dateKeys || []).map(async (dk) => {
+            try {
+                const r = await fetch(`${baseUrl}/visitor_stats/daily-${encodeURIComponent(dk)}`, { headers });
+                if (r.ok) {
+                    const doc = parseFirestoreRestDoc(await r.json());
+                    dailyPcDeviceCounts[dk] = Number(doc?.devices?.desktop || 0);
+                }
+            } catch {}
+        })
+    );
+
+    let logs = allDocs.map((l) => {
+        const ms = Number(l.accessedAtMs) || (l.accessedAt ? Date.parse(String(l.accessedAt)) || 0 : 0);
+        const loc = localizeVisitorLocation(l);
+        return {
+            ...l,
+            country: loc.country,
+            region: loc.region,
+            city: loc.city,
+            accessedAtMs: ms,
+            dateKey: String(l.dateKey || '').trim() || kstDateKey(ms),
+            accessedAt: formatKstDateTime(ms)
+        };
+    });
+    logs = logs.filter((l) => Number(l.accessedAtMs) >= sinceMs);
+    if (device && device !== 'all') logs = logs.filter((l) => l.device === device);
+    logs.sort((a, b) => Number(b.accessedAtMs || 0) - Number(a.accessedAtMs || 0));
+    return { logs: logs.slice(0, limit), dateKeys, sinceMs, dailyPcDeviceCounts };
+}
+
+/** Firestore 에서 최근 N일 방문 로그를 읽어옵니다. (firebase-admin 또는 로컬 Firebase CLI 인증 지원) */
 async function fetchLogsFromFirestore({ days, device, limit }) {
     const { sinceMs, dateKeys } = buildDayWindow(days);
+    const rawKey = String(process.env.FIREBASE_SERVICE_ACCOUNT_KEY || '').trim();
+    if (!rawKey && !process.env.GOOGLE_APPLICATION_CREDENTIALS) {
+        const cliResult = await fetchLogsViaFirebaseCliToken({ sinceMs, dateKeys, device, limit });
+        if (cliResult) return cliResult;
+    }
     let adminApp;
     let adminFirestore;
     try {
@@ -271,7 +494,6 @@ async function fetchLogsFromFirestore({ days, device, limit }) {
     } catch (e) {
         throw new Error('firebase-admin 패키지를 찾을 수 없습니다. 저장소 루트에서 `npm install` 을 먼저 실행하세요.');
     }
-    const rawKey = String(process.env.FIREBASE_SERVICE_ACCOUNT_KEY || '').trim();
     if (adminApp.getApps().length === 0) {
         if (rawKey) {
             const decoded = rawKey.startsWith('{') ? rawKey : Buffer.from(rawKey, 'base64').toString('utf-8');
@@ -280,8 +502,8 @@ async function fetchLogsFromFirestore({ days, device, limit }) {
             adminApp.initializeApp({});
         } else {
             throw new Error(
-                '인증 정보가 없습니다. FIREBASE_SERVICE_ACCOUNT_KEY(JSON 또는 Base64) 또는 ' +
-                'GOOGLE_APPLICATION_CREDENTIALS(키 파일 경로)를 지정하세요. 형식만 확인하려면 --demo 를 사용하세요.'
+                '인증 정보가 없습니다. FIREBASE_SERVICE_ACCOUNT_KEY(JSON 또는 Base64), ' +
+                'GOOGLE_APPLICATION_CREDENTIALS(키 파일 경로), 또는 `firebase login` 세션을 확인하세요. 형식만 확인하려면 --demo 를 사용하세요.'
             );
         }
     }
@@ -309,11 +531,24 @@ async function fetchLogsFromFirestore({ days, device, limit }) {
         }
     }
     if (!snap) throw lastErr || new Error('visitor_logs_query_failed');
-    let logs = snap.docs.map((doc) => ({ id: doc.id, ...(doc.data() || {}) }));
+    const dailyPcDeviceCounts = {};
+    await Promise.all(
+        (dateKeys || []).map(async (dk) => {
+            try {
+                const ds = await db.collection('visitor_stats').doc(`daily-${dk}`).get();
+                if (ds.exists) dailyPcDeviceCounts[dk] = Number(ds.data()?.devices?.desktop || 0);
+            } catch {}
+        })
+    );
+    let logs = snap.docs.map((doc) => {
+        const d = doc.data() || {};
+        const loc = localizeVisitorLocation(d);
+        return { id: doc.id, ...d, country: loc.country, region: loc.region, city: loc.city };
+    });
     logs = logs.filter((l) => Number(l.accessedAtMs) >= sinceMs);
     if (device && device !== 'all') logs = logs.filter((l) => l.device === device);
     logs.sort((a, b) => Number(b.accessedAtMs || 0) - Number(a.accessedAtMs || 0));
-    return { logs: logs.slice(0, limit), dateKeys, sinceMs };
+    return { logs: logs.slice(0, limit), dateKeys, sinceMs, dailyPcDeviceCounts };
 }
 
 function parseArgs(argv) {
@@ -381,11 +616,13 @@ async function main() {
 
     let logs;
     let source;
+    let dailyPcDeviceCounts = null;
     if (args.demo) {
         logs = buildDemoLogs(nowMs);
         source = '예시 데이터(--demo · 실제 방문 기록 아님)';
     } else {
         const fetched = await fetchLogsFromFirestore({ days, device: args.device, limit: args.limit });
+        dailyPcDeviceCounts = fetched.dailyPcDeviceCounts || null;
         logs = fetched.logs.map((log) => ({
             ...log,
             accessedAt: String(log.accessedAt || '').trim() || formatKstDateTime(Number(log.accessedAtMs))
@@ -403,7 +640,7 @@ async function main() {
     const baseName = args.demo ? `pc-visitors-demo` : `pc-visitors-${todayKey}`;
     const mdPath = path.join(args.outDir, `${baseName}.md`);
     const csvPath = path.join(args.outDir, `${baseName}.csv`);
-    const markdown = buildMarkdown({ logs, summary, days, dateKeys, generatedAt: nowMs, device: args.demo ? 'desktop' : args.device, maskIps, source });
+    const markdown = buildMarkdown({ logs, summary, days, dateKeys, generatedAt: nowMs, device: args.demo ? 'desktop' : args.device, maskIps, source, dailyPcDeviceCounts });
     await fs.writeFile(mdPath, markdown + '\n', 'utf8');
     await fs.writeFile(csvPath, '\uFEFF' + buildCsv(logs, { maskIps }) + '\r\n', 'utf8');
     console.log('');

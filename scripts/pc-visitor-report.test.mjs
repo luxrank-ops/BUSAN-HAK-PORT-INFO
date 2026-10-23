@@ -12,6 +12,7 @@ import {
     buildDemoLogs,
     formatDayLabel,
     kstDateKey,
+    localizeVisitorLocation,
     maskIp,
     summarizeVisitorLogs
 } from './pc-visitor-report.mjs';
@@ -49,6 +50,12 @@ test('maskIp / buildLocationLabel — 개인정보 마스킹과 위치 라벨', 
     assert.equal(buildLocationLabel({ country: '대한민국', region: '부산광역시', city: '해운대구' }), '대한민국 › 부산광역시 › 해운대구');
     assert.equal(buildLocationLabel({ country: 'Busan', region: 'Busan', city: 'Busan' }), 'Busan', '중복 값은 한 번만');
     assert.equal(buildLocationLabel({}), '위치 미확인');
+    assert.deepEqual(localizeVisitorLocation({ country: 'South Korea', region: 'Busan', city: 'Haeundae-gu' }), {
+        country: '대한민국',
+        region: '부산광역시',
+        city: '해운대구'
+    });
+    assert.equal(buildLocationLabel(localizeVisitorLocation({ country: 'South Korea', region: 'Busan', city: 'Busan' })), '대한민국 › 부산광역시');
 });
 
 test('summarizeVisitorLogs — 건수·고유 IP·날짜별·지역별 집계', () => {

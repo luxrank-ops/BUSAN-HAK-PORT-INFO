@@ -41,6 +41,7 @@ import type {
 import {
   buildDayWindow as buildVisitorDayWindow,
   buildLocationLabel as buildVisitorLocationLabel,
+  localizeVisitorLocation,
   summarizeVisitorLogs,
   kstDateKey
 } from './scripts/pc-visitor-report.mjs';
@@ -3227,8 +3228,11 @@ function localizeCountry(name: string): string {
   return IP_COUNTRY_KR_MAP[name] || name;
 }
 
-/** ip-api.com (무료, 키 불필요) 에서 IP 기반 위치 정보를 조회합니다. 실패하면 null. */
-async function fetchIpLocation(ip: string): Promise<{ country: string; region: string; city: string } | null> {
+/** ip-api.com (무료, 키 불필요) 및 Vercel 엣지 헤더 폴백으로 IP 기반 위치 정보를 조회합니다. */
+async function fetchIpLocation(
+  ip: string,
+  headers?: Record<string, unknown>
+): Promise<{ country: string; region: string; city: string } | null> {
   if (isPrivateOrLocalIp(ip)) return null;
   try {
     const res = await httpRequestText(
@@ -3236,16 +3240,33 @@ async function fetchIpLocation(ip: string): Promise<{ country: string; region: s
     );
     const parsed = JSON.parse(res.body || '{}');
     if (parsed && parsed.status === 'success') {
-      return {
-        country: localizeCountry(String(parsed.country || '')),
+      const loc = localizeVisitorLocation({
+        country: String(parsed.country || ''),
         region: String(parsed.regionName || ''),
         city: String(parsed.city || '')
+      });
+      return {
+        country: loc.country || localizeCountry(String(parsed.country || '')),
+        region: loc.region,
+        city: loc.city
       };
     }
-    return null;
   } catch {
-    return null;
+    // ip-api 조회 실패 시 아래 Vercel 헤더 폴백으로 이어집니다.
   }
+  if (headers) {
+    const vCountry = String(headers['x-vercel-ip-country'] || '').trim();
+    const vRegion = String(headers['x-vercel-ip-country-region'] || '').trim();
+    const vCityRaw = String(headers['x-vercel-ip-city'] || '').trim();
+    let vCity = vCityRaw;
+    try {
+      if (vCityRaw.includes('%')) vCity = decodeURIComponent(vCityRaw);
+    } catch {}
+    if (vCountry || vRegion || vCity) {
+      return localizeVisitorLocation({ country: vCountry, region: vRegion, city: vCity });
+    }
+  }
+  return null;
 }
 
 /** 앱 접속 비콘 수신 — 클라이언트 IP·기기 정보 + IP 지리 위치を記録합니다. (절대 실패 응답 안 함) */
@@ -3274,8 +3295,8 @@ const visitorBeaconHandler = async (req: Request, res: Response) => {
 
     const db = resolveServerFirestore();
     if (db && shouldWrite) {
-      const location = await fetchIpLocation(ip);
-      await db.collection('visitor_ip_logs').add({
+      const location = await fetchIpLocation(ip, req.headers as Record<string, unknown>);
+      const payload = {
         ip,
         device,
         userAgent: ua,
@@ -3285,7 +3306,16 @@ const visitorBeaconHandler = async (req: Request, res: Response) => {
         dateKey,
         accessedAt: FieldValue.serverTimestamp(),
         accessedAtMs: now
-      });
+      };
+      const col: any = db.collection('visitor_ip_logs');
+      const bucket = Math.floor(now / VISITOR_BEACON_DEDUP_WINDOW_MS);
+      const ipHash = crypto.createHash('sha256').update(ip).digest('hex').slice(0, 12);
+      const dedupDocId = `${dateKey}_${ipHash}_${bucket}`;
+      if (typeof col.doc === 'function') {
+        await col.doc(dedupDocId).set(payload, { merge: true });
+      } else {
+        await col.add(payload);
+      }
     }
   } catch {
     // 비콘 기록 실패는 페이지 동작에 영향 주지 않습니다.
@@ -3358,7 +3388,11 @@ const visitorLogsHandler = async (req: Request, res: Response) => {
     }
     if (!snap) throw lastErr || new Error('visitor_logs_query_failed');
 
-    let logs: any[] = snap.docs.map((doc) => ({ id: doc.id, ...(doc.data() || {}) }));
+    let logs: any[] = snap.docs.map((doc) => {
+      const raw = doc.data() || {};
+      const loc = localizeVisitorLocation(raw);
+      return { id: doc.id, ...raw, country: loc.country, region: loc.region, city: loc.city };
+    });
     logs = logs.filter((l) => Number(l.accessedAtMs) >= sinceMs);
     if (deviceFilter) logs = logs.filter((l) => l.device === deviceFilter);
     logs.sort((a, b) => Number(b.accessedAtMs || 0) - Number(a.accessedAtMs || 0));

@@ -1064,7 +1064,8 @@ async function loadPcVisitorLocationList(force) {
     pcVisitorLocationState.days = getPcVisitorDays();
     const box = document.getElementById("statsVisitorIpLogs");
     const adminToken = typeof getStoredAdminSessionToken === "function" ? getStoredAdminSessionToken() : "";
-    if (!adminToken) {
+    const canTryFirestoreFallback = Boolean(isAdminSessionVerified && typeof db !== "undefined" && db);
+    if (!adminToken && !canTryFirestoreFallback) {
         pcVisitorLocationState.error = "관리자 인증 후 확인할 수 있습니다.";
         pcVisitorLocationState.logs = [];
         pcVisitorLocationState.summary = null;
@@ -1074,25 +1075,90 @@ async function loadPcVisitorLocationList(force) {
     if (box && (!pcVisitorLocationState.loadedAt || force)) {
         box.innerHTML = `<div style="padding:12px 8px; text-align:center; font-size:0.76rem; color:var(--text-sub); font-weight:800;">🔄 최근 ${pcVisitorLocationState.days}일 PC 접속 기록을 불러오는 중...</div>`;
     }
-    try {
-        const resp = await fetchPortApiJson(`/api/visitor-logs?device=desktop&days=${pcVisitorLocationState.days}`, {
-            method: "GET",
-            headers: { Authorization: `Bearer ${adminToken}` }
-        });
-        if (resp && resp.status === 200 && resp.data && resp.data.ok) {
-            pcVisitorLocationState.logs = Array.isArray(resp.data.logs) ? resp.data.logs : [];
-            pcVisitorLocationState.summary = resp.data.summary || null;
-            pcVisitorLocationState.dateKeys = Array.isArray(resp.data.dateKeys) ? resp.data.dateKeys : [];
-            pcVisitorLocationState.rangeLabel = String(resp.data.rangeLabel || "");
+    let loaded = false;
+    if (adminToken) {
+        try {
+            const resp = await fetchPortApiJson(`/api/visitor-logs?device=desktop&days=${pcVisitorLocationState.days}`, {
+                method: "GET",
+                headers: { Authorization: `Bearer ${adminToken}` }
+            });
+            if (resp && resp.status === 200 && resp.data && resp.data.ok) {
+                pcVisitorLocationState.logs = Array.isArray(resp.data.logs) ? resp.data.logs : [];
+                pcVisitorLocationState.summary = resp.data.summary || null;
+                pcVisitorLocationState.dateKeys = Array.isArray(resp.data.dateKeys) ? resp.data.dateKeys : [];
+                pcVisitorLocationState.rangeLabel = String(resp.data.rangeLabel || "");
+                pcVisitorLocationState.error = "";
+                pcVisitorLocationState.loadedAt = Date.now();
+                cachedStatsModalData.visitorIpLogs = pcVisitorLocationState.logs;
+                loaded = true;
+            } else if (!canTryFirestoreFallback) {
+                pcVisitorLocationState.error = "PC 접속 기록을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.";
+            }
+        } catch (e) {
+            console.warn("PC 접속 위치 리스트 조회 실패:", e && e.message);
+            if (!canTryFirestoreFallback) {
+                pcVisitorLocationState.error = "PC 접속 기록 조회 실패: " + (e && e.message ? e.message : "네트워크 오류");
+            }
+        }
+    }
+    if (!loaded && canTryFirestoreFallback) {
+        try {
+            const now = new Date();
+            const dateKeys = [];
+            for (let i = pcVisitorLocationState.days - 1; i >= 0; i--) {
+                dateKeys.push(getVisitorDateKey(new Date(now.getFullYear(), now.getMonth(), now.getDate() - i)));
+            }
+            const sinceMs = new Date(now.getFullYear(), now.getMonth(), now.getDate() - (pcVisitorLocationState.days - 1)).getTime();
+            const snap = await db.collection("visitor_ip_logs").orderBy("accessedAtMs", "desc").limit(500).get();
+            const rows = [];
+            snap.forEach(doc => {
+                const d = doc.data() || {};
+                const ms = Number(d.accessedAtMs) || 0;
+                if (ms >= sinceMs && (!d.device || d.device === "desktop")) {
+                    const locationLabel = [d.country, d.region, d.city].filter(Boolean).filter((v, idx, arr) => arr.findIndex(x => String(x).toLowerCase() === String(v).toLowerCase()) === idx).join(" › ") || "위치 미확인";
+                    const dt = ms ? new Date(ms) : null;
+                    const accessedAt = dt ? `${getVisitorDateKey(dt)} ${String(dt.getHours()).padStart(2, "0")}:${String(dt.getMinutes()).padStart(2, "0")}` : "-";
+                    rows.push({
+                        id: doc.id,
+                        ip: String(d.ip || ""),
+                        device: String(d.device || "desktop"),
+                        country: String(d.country || ""),
+                        region: String(d.region || ""),
+                        city: String(d.city || ""),
+                        locationLabel,
+                        dateKey: String(d.dateKey || "") || (dt ? getVisitorDateKey(dt) : ""),
+                        accessedAtMs: ms,
+                        accessedAt
+                    });
+                }
+            });
+            const uniqueIps = new Set(rows.map(r => r.ip).filter(Boolean));
+            const locMap = new Map();
+            const dayMap = new Map(dateKeys.map(dk => [dk, { dateKey: dk, count: 0, ips: new Set() }]));
+            rows.forEach(r => {
+                if (!dayMap.has(r.dateKey)) dayMap.set(r.dateKey, { dateKey: r.dateKey, count: 0, ips: new Set() });
+                const dm = dayMap.get(r.dateKey);
+                dm.count += 1;
+                if (r.ip) dm.ips.add(r.ip);
+                if (!locMap.has(r.locationLabel)) locMap.set(r.locationLabel, { label: r.locationLabel, count: 0, ips: new Set() });
+                const lm = locMap.get(r.locationLabel);
+                lm.count += 1;
+                if (r.ip) lm.ips.add(r.ip);
+            });
+            const byLocation = [...locMap.values()].sort((a, b) => b.count - a.count).map(l => ({ label: l.label, count: l.count, uniqueIp: l.ips.size }));
+            const byDay = [...dayMap.values()].sort((a, b) => (a.dateKey < b.dateKey ? 1 : -1)).map(d => ({ dateKey: d.dateKey, count: d.count, uniqueIp: d.ips.size }));
+            pcVisitorLocationState.logs = rows;
+            pcVisitorLocationState.summary = { totalCount: rows.length, uniqueIp: uniqueIps.size, byDay, byLocation, topLocation: byLocation[0] || null };
+            pcVisitorLocationState.dateKeys = dateKeys;
+            pcVisitorLocationState.rangeLabel = `${dateKeys[0]} ~ ${dateKeys[dateKeys.length - 1]} (KST, 최근 ${pcVisitorLocationState.days}일)`;
             pcVisitorLocationState.error = "";
             pcVisitorLocationState.loadedAt = Date.now();
-            cachedStatsModalData.visitorIpLogs = pcVisitorLocationState.logs;
-        } else {
-            pcVisitorLocationState.error = "PC 접속 기록을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.";
+            cachedStatsModalData.visitorIpLogs = rows;
+        } catch (fbErr) {
+            if (!pcVisitorLocationState.error) {
+                pcVisitorLocationState.error = "관리자 인증 후 확인할 수 있습니다.";
+            }
         }
-    } catch (e) {
-        console.warn("PC 접속 위치 리스트 조회 실패:", e && e.message);
-        pcVisitorLocationState.error = "PC 접속 기록 조회 실패: " + (e && e.message ? e.message : "네트워크 오류");
     }
     renderStatsVisitorIpLogs(pcVisitorLocationState.logs);
 }
