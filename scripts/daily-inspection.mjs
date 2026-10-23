@@ -79,6 +79,10 @@ const REQUIRED_FILES = [
   'public/js/kkung-relay.js',
   'server.ts',
   'api/[...path].ts',
+  // 주간 자가 점검 · 자가 복구 (2026-10-23 추가)
+  'scripts/weekly-self-check.mjs',
+  'scripts/weekly-self-check-run.mjs',
+  'api/cron/weekly-self-check.ts',
 ];
 
 const JSON_FILES = ['.firebaserc', 'firebase.json', 'vercel.json', 'firestore.indexes.json', 'package.json', 'public/manifest.json'];
@@ -99,6 +103,8 @@ const EXPECTED_API_ROUTES = [
   'GET /api/cron/daily-cleanup',
   'GET /api/cron/weekly-backup',
   'GET /api/cron/daily-inspection',
+  'GET /api/cron/weekly-self-check',
+  'GET /api/self-check-report',
 ];
 
 // ── 점검 실행 ──────────────────────────────────────────────────
@@ -184,6 +190,7 @@ export async function runInspection(now = new Date()) {
         'GET /api/cron/daily-cleanup': ['GET /api/cron/daily-cleanup', 'GET /api/cron-daily-cleanup'],
         'GET /api/cron/weekly-backup': ['GET /api/cron/weekly-backup', 'GET /api/cron-weekly-backup'],
         'GET /api/cron/daily-inspection': ['GET /api/cron/daily-inspection', 'GET /api/cron-daily-inspection'],
+        'GET /api/cron/weekly-self-check': ['GET /api/cron/weekly-self-check', 'GET /api/cron-weekly-self-check'],
       };
       const candidates = aliasMap[expected] || [expected];
       const found = candidates.some(c => {
@@ -244,6 +251,7 @@ export async function runInspection(now = new Date()) {
       { pattern: `cron.schedule('0 3 * * *'`, name: 'DB 정리 (매일 03시)', required: true },
       { pattern: `cron.schedule('0 0 * * 0'`, name: '주간 백업 (일요일 00시)', required: true },
       { pattern: `cron.schedule('0 4 * * *'`, name: '일일 점검 (매일 04시)', required: false },
+      { pattern: `cron.schedule(WEEKLY_SELF_CHECK_CRON`, name: '주간 자가 점검 (월요일 05시)', required: false },
     ];
     for (const c of cronChecks) {
       if (serverCode.includes(c.pattern)) {
@@ -253,6 +261,13 @@ export async function runInspection(now = new Date()) {
       } else {
         addCheck('자동화 크론', c.name, 'WARN', '신규 크론 — 등록 권장', 'medium');
       }
+    }
+
+    // 주간 자가 점검 스케줄 상수 (0 5 * * 1 · Asia/Seoul)
+    if (/WEEKLY_SELF_CHECK_CRON\s*=\s*'0 5 \* \* 1'/.test(serverCode) && serverCode.includes("timezone: 'Asia/Seoul'")) {
+      addCheck('자동화 크론', '주간 자가 점검 시간대', 'PASS', '매주 월요일 05:00 (Asia/Seoul)');
+    } else {
+      addCheck('자동화 크론', '주간 자가 점검 시간대', 'WARN', '주간 점검 스케줄 상수/타임존 미확인', 'medium');
     }
 
     // automationRuntimeStatus 필드

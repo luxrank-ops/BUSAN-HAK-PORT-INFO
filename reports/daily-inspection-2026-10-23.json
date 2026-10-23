@@ -1,10 +1,10 @@
 {
   "kstDate": "2026-10-23",
-  "generatedAt": "2026-10-23T04:38:12.574Z",
-  "kstDateTime": "2026-10-23 (금) 13:38:12 KST",
+  "generatedAt": "2026-10-23T06:46:48.918Z",
+  "kstDateTime": "2026-10-23 (금) 15:46:48 KST",
   "summary": {
-    "total": 93,
-    "pass": 93,
+    "total": 100,
+    "pass": 100,
     "warn": 0,
     "fail": 0,
     "overall": "PASS"
@@ -146,6 +146,27 @@
     {
       "category": "파일 존재",
       "name": "api/[...path].ts",
+      "status": "PASS",
+      "detail": "파일 존재 확인",
+      "severity": "info"
+    },
+    {
+      "category": "파일 존재",
+      "name": "scripts/weekly-self-check.mjs",
+      "status": "PASS",
+      "detail": "파일 존재 확인",
+      "severity": "info"
+    },
+    {
+      "category": "파일 존재",
+      "name": "scripts/weekly-self-check-run.mjs",
+      "status": "PASS",
+      "detail": "파일 존재 확인",
+      "severity": "info"
+    },
+    {
+      "category": "파일 존재",
+      "name": "api/cron/weekly-self-check.ts",
       "status": "PASS",
       "detail": "파일 존재 확인",
       "severity": "info"
@@ -298,6 +319,20 @@
       "severity": "info"
     },
     {
+      "category": "API 라우트",
+      "name": "GET /api/cron/weekly-self-check",
+      "status": "PASS",
+      "detail": "라우트 존재",
+      "severity": "info"
+    },
+    {
+      "category": "API 라우트",
+      "name": "GET /api/self-check-report",
+      "status": "PASS",
+      "detail": "라우트 존재",
+      "severity": "info"
+    },
+    {
       "category": "터미널 지원",
       "name": "HJNC",
       "status": "PASS",
@@ -407,6 +442,20 @@
       "name": "일일 점검 (매일 04시)",
       "status": "PASS",
       "detail": "크론 등록됨",
+      "severity": "info"
+    },
+    {
+      "category": "자동화 크론",
+      "name": "주간 자가 점검 (월요일 05시)",
+      "status": "PASS",
+      "detail": "크론 등록됨",
+      "severity": "info"
+    },
+    {
+      "category": "자동화 크론",
+      "name": "주간 자가 점검 시간대",
+      "status": "PASS",
+      "detail": "매주 월요일 05:00 (Asia/Seoul)",
       "severity": "info"
     },
     {
@@ -588,7 +637,7 @@
       "category": "워크플로",
       "name": "워크플로 파일 수",
       "status": "PASS",
-      "detail": "4개 파일",
+      "detail": "5개 파일",
       "severity": "info"
     },
     {
