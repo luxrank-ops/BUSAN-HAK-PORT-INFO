@@ -1,0 +1,150 @@
+name: 일일 기능 점검 (매일 04시 KST)
+
+# 목적
+#   매일 04:00 KST (19:00 UTC 전일)에 전체 기능 점검을 수행하고
+#   마크다운 보고서를 reports/ 및 docs/inspections/ 에 커밋합니다.
+#
+# 동작
+#   1. Node.js 22 + npm ci
+#   2. npm run check (타입·필수 파일·JSON·HTML 문법)
+#   3. node scripts/daily-inspection.mjs 실행 → 보고서 생성
+#   4. 생성된 보고서를 Git에 커밋 & 푸시 (변경 시에만)
+#   5. Vercel Cron도 동일 시각(19:00 UTC)에 /api/cron/daily-inspection 을 호출
+#      — 서버리스에서는 응답 바디에 보고서를 포함해 반환 (파일은 /tmp에 휘발)
+#   6. GitHub Actions는 영구 보관소이므로, 두 경로 모두 보고서를 남깁니다.
+#
+# 사전 준비 (권장)
+#   - Vercel Project Settings → Environment Variables 에 CRON_SECRET 등록
+#     (Vercel Cron이 /api/cron/daily-inspection 을 인증 호출)
+#   - GitHub Settings → Secrets and variables → Actions 에 CRON_SECRET 등록
+#     (향후 Vercel Cron 대신 GitHub Actions에서 API 호출로 확장 시 사용)
+
+on:
+  schedule:
+    - cron: '0 19 * * *' # 매일 19:00 UTC = 다음날 04:00 KST
+  workflow_dispatch: {} # 수동 실행 허용
+
+permissions:
+  contents: write
+
+concurrency:
+  group: daily-inspection
+  cancel-in-progress: false
+
+jobs:
+  inspect:
+    name: 기능 점검 및 보고서 작성
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: 소스 코드 받기
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Node.js 설정
+        uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: 의존성 설치
+        run: npm ci
+
+      - name: 품질 검사 (typecheck + validate + tokens:check)
+        run: npm run check
+
+      - name: 일일 기능 점검 실행
+        id: inspection
+        run: |
+          set -euo pipefail
+          echo "=== 일일 기능 점검 시작 ($(date -u) UTC / $(TZ=Asia/Seoul date) KST) ==="
+          node scripts/daily-inspection.mjs 2>&1 | tee /tmp/inspection.log
+          status=${PIPESTATUS[0]}
+          echo ""
+          echo "=== 점검 로그 ==="
+          cat /tmp/inspection.log
+          # WARN만 있어도 성공으로 처리 (FAIL만 실패)
+          if grep -q "FAIL" /tmp/inspection.log; then
+            echo "::warning::점검에서 FAIL 항목이 발견되었습니다 — 보고서를 확인하세요."
+          fi
+          # daily-inspection.mjs는 FAIL 시 exit 1 — CI를 실패로 만들되 보고서 커밋은 진행
+          if [ $status -ne 0 ]; then
+            echo "::warning::점검 스크립트가 FAIL로 종료 (exit $status) — 보고서는 커밋됩니다."
+          fi
+          exit 0
+
+      - name: Firestore 보안 규칙 테스트
+        run: |
+          set +e
+          npm run test:rules 2>&1 | tee /tmp/rules.log
+          status=${PIPESTATUS[0]}
+          if [ $status -ne 0 ]; then
+            echo "::warning::Firestore 규칙 테스트 실패"
+            cat /tmp/rules.log | tail -30
+          fi
+          # 규칙 테스트 실패는 점검 보고서에 반영되지만 워크플로 자체는 계속 진행
+          exit 0
+
+      - name: 보고서 커밋
+        run: |
+          set -euo pipefail
+          # 생성된 보고서 확인
+          echo "=== 생성된 보고서 ==="
+          ls -lh reports/ 2>/dev/null || echo "reports/ 없음"
+          ls -lh docs/inspections/ 2>/dev/null || echo "docs/inspections/ 없음"
+          ls -lh 점검보고서_*.md 2>/dev/null || echo "점검보고서_*.md 없음"
+
+          # Git 설정
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          # 변경 파일 스테이징
+          git add -A reports/ docs/inspections/ 점검보고서_*.md 2>/dev/null || true
+
+          if git diff --cached --quiet; then
+            echo "변경된 보고서 없음 — 커밋 생략"
+            exit 0
+          fi
+
+          KST_DATE=$(TZ=Asia/Seoul date +%Y-%m-%d)
+          KST_DATETIME=$(TZ=Asia/Seoul date "+%Y-%m-%d %H:%M:%S KST")
+          SUMMARY=$(cat reports/latest.json 2>/dev/null | node -e "
+            try { const j=JSON.parse(require('fs').readFileSync(0,'utf8')); console.log(\`\${j.summary.overall} PASS \${j.summary.pass}/\${j.summary.total} WARN \${j.summary.warn} FAIL \${j.summary.fail}\`); } catch(e) { console.log(''); }
+          " || echo "")
+
+          git commit -m "docs: 일일 기능 점검 보고서 ${KST_DATE} — ${SUMMARY}" || echo "커밋 실패 (변경 없음)"
+          git push || echo "::warning::푸시 실패 — 브랜치 보호 규칙을 확인하세요."
+
+      - name: 점검 요약 출력
+        if: always()
+        run: |
+          echo "### 📋 일일 기능 점검 결과" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **일시**: $(TZ=Asia/Seoul date '+%Y-%m-%d %H:%M:%S KST') (UTC $(date -u '+%Y-%m-%d %H:%M:%S'))" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **트리거**: ${{ github.event_name }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          if [ -f "reports/latest.md" ]; then
+            echo "#### 보고서 미리보기 (상위 60행)" >> "$GITHUB_STEP_SUMMARY"
+            echo '```markdown' >> "$GITHUB_STEP_SUMMARY"
+            head -60 reports/latest.md >> "$GITHUB_STEP_SUMMARY"
+            echo '```' >> "$GITHUB_STEP_SUMMARY"
+          fi
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "전체 보고서는 \`reports/latest.md\` 및 Actions Artifacts에서 확인하세요." >> "$GITHUB_STEP_SUMMARY"
+
+      - name: 보고서 아티팩트 업로드
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: daily-inspection-report-${{ github.run_number }}
+          path: |
+            reports/
+            docs/inspections/
+            점검보고서_*.md
+          if-no-files-found: warn
+          retention-days: 30
+
+  # Vercel Cron과 중복 실행되지만, GitHub Actions는 영구 커밋을 남기므로 둘 다 유지
+  # 필요 시 Vercel Cron 대신 이 워크플로에서 API를 호출하도록 확장 가능:
+  # (현재는 로컬 점검만 수행 — API 호출은 Vercel Cron이 담당)

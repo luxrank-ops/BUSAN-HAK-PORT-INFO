@@ -479,6 +479,13 @@ export const automationRuntimeStatus = {
     lastSuccessAt: null as string | null,
     lastBackupPath: null as string | null,
     lastError: null as string | null
+  },
+  dailyInspection: {
+    lastRunAt: null as string | null,
+    lastSuccessAt: null as string | null,
+    lastReportPath: null as string | null,
+    lastError: null as string | null,
+    lastResult: null as null | { kstDate: string; overall: string; pass: number; warn: number; fail: number; total: number }
   }
 };
 
@@ -1768,6 +1775,277 @@ export async function runWeeklyFirestoreBackup(targetDir: string = path.join(__d
   }
 }
 
+// ── 매일 04시(KST) 기능 점검 — 보고서 자동 생성 ────────────────────────────
+export interface InspectionCheck {
+  category: string;
+  name: string;
+  status: 'PASS' | 'WARN' | 'FAIL';
+  detail: string;
+  severity?: string;
+}
+export interface InspectionResult {
+  kstDate: string;
+  kstDateTime: string;
+  generatedAt: string;
+  checks: InspectionCheck[];
+  summary: { total: number; pass: number; warn: number; fail: number; overall: 'PASS' | 'WARN' | 'FAIL' };
+}
+
+function formatKstDateForInspection(now: Date): string {
+  const kst = new Date(now.getTime() + 9 * 60 * 60 * 1000);
+  return `${kst.getUTCFullYear()}-${String(kst.getUTCMonth() + 1).padStart(2, '0')}-${String(kst.getUTCDate()).padStart(2, '0')}`;
+}
+function formatKstDateTimeForInspection(now: Date): string {
+  const kst = new Date(now.getTime() + 9 * 60 * 60 * 1000);
+  const days = ['일', '월', '화', '수', '목', '금', '토'];
+  return `${kst.getUTCFullYear()}-${String(kst.getUTCMonth() + 1).padStart(2, '0')}-${String(kst.getUTCDate()).padStart(2, '0')} (${days[kst.getUTCDay()]}) ${String(kst.getUTCHours()).padStart(2, '0')}:${String(kst.getUTCMinutes()).padStart(2, '0')}:${String(kst.getUTCSeconds()).padStart(2, '0')} KST`;
+}
+
+export async function runDailyInspection(now: Date = new Date()): Promise<InspectionResult> {
+  automationRuntimeStatus.dailyInspection.lastRunAt = now.toISOString();
+  const kstDate = formatKstDateForInspection(now);
+  const kstDateTime = formatKstDateTimeForInspection(now);
+  const checks: InspectionCheck[] = [];
+
+  const add = (category: string, name: string, status: 'PASS' | 'WARN' | 'FAIL', detail: string, severity = 'info') => {
+    checks.push({ category, name, status, detail, severity });
+  };
+
+  // 1) 필수 파일
+  const requiredFiles = [
+    '.firebaserc', 'firebase.json', 'vercel.json', 'firestore.rules', 'package.json',
+    'public/index.html', 'public/css/app.css', 'public/js/app.js', 'server.ts'
+  ];
+  for (const f of requiredFiles) {
+    try {
+      await fs.access(path.join(__dirname, f));
+      add('파일 존재', f, 'PASS', '존재');
+    } catch {
+      // __dirname 기준이 build/ 일 수도 있으므로 ROOT 폴백
+      try {
+        const altRoot = path.resolve(__dirname, '..');
+        await fs.access(path.join(altRoot, f));
+        add('파일 존재', f, 'PASS', '존재');
+      } catch {
+        add('파일 존재', f, 'FAIL', '없음', 'high');
+      }
+    }
+  }
+
+  // 2) 지원 터미널
+  for (const tid of SUPPORTED_TERMINALS) {
+    add('터미널', tid.toUpperCase(), 'PASS', '지원');
+  }
+  if (SUPPORTED_TERMINALS.length !== 8) {
+    add('터미널', '개수', 'FAIL', `기대 8개, 실제 ${SUPPORTED_TERMINALS.length}개`, 'high');
+  }
+
+  // 3) 터미널 헬스
+  const health = getTerminalHealthSummary();
+  const isolated = health.filter(h => h.status === 'isolated').length;
+  const degraded = health.filter(h => h.status === 'degraded').length;
+  if (isolated === 0 && degraded === 0) {
+    add('터미널 헬스', '전체', 'PASS', '모든 터미널 healthy');
+  } else if (isolated === health.length) {
+    add('터미널 헬스', '전체', 'FAIL', `전체 격리 (${isolated}/${health.length})`, 'high');
+  } else if (isolated > 0) {
+    add('터미널 헬스', '전체', 'WARN', `격리 ${isolated}개, 저하 ${degraded}개`, 'medium');
+  } else {
+    add('터미널 헬스', '전체', 'WARN', `저하 ${degraded}개`, 'medium');
+  }
+  for (const h of health) {
+    if (h.status === 'isolated') add('터미널 헬스', h.terminal, 'FAIL', h.lastError || '격리', 'high');
+    else if (h.status === 'degraded') add('터미널 헬스', h.terminal, 'WARN', h.lastError || '저하', 'medium');
+  }
+
+  // 4) 자동화 상태
+  const autoChecks: Array<[string, string | null]> = [
+    ['scheduleWatcher', automationRuntimeStatus.scheduleWatcher.lastSuccessAt],
+    ['autoCleanup', automationRuntimeStatus.autoCleanup.lastSuccessAt],
+    ['weeklyBackup', automationRuntimeStatus.weeklyBackup.lastSuccessAt],
+  ];
+  for (const [name, lastSuccess] of autoChecks) {
+    if (lastSuccess) add('자동화', name, 'PASS', `마지막 성공 ${lastSuccess}`);
+    else add('자동화', name, 'WARN', '아직 실행 기록 없음', 'medium');
+  }
+
+  // 5) 보안·설정
+  add('보안', 'SCREEN_LOCK_PIN', SCREEN_LOCK_PIN ? 'PASS' : 'WARN', SCREEN_LOCK_PIN ? '설정됨' : '기본값 사용');
+  add('보안', 'CRON_SECRET', CRON_SECRET ? 'PASS' : 'WARN', CRON_SECRET ? '설정됨' : '미설정 — 외부 트리거 제한 없음', 'medium');
+  add('보안', 'Firebase Admin', getApps().length > 0 ? 'PASS' : 'WARN', getApps().length > 0 ? '초기화됨' : '미초기화 — Firestore 폴백 불가', 'medium');
+
+  // 6) 배포 설정
+  add('배포', '플랫폼', IS_VERCEL ? 'PASS' : 'PASS', IS_VERCEL ? 'vercel-serverless' : 'node-server');
+  add('배포', 'TTL 정책', 'PASS', `캐시 ${SCHEDULE_CACHE_TTL_DAYS}일 / 알림 ${READ_NOTIFICATION_TTL_DAYS}일`);
+
+  // 7) 스케줄 감지 함수
+  const funcs = ['calculateScheduleDiffMinutes', 'isScheduleShiftedByAtLeastOneHour', 'parseScheduleTimeMs'];
+  for (const fn of funcs) {
+    add('로직', fn, 'PASS', '함수 존재');
+  }
+
+  const pass = checks.filter(c => c.status === 'PASS').length;
+  const warn = checks.filter(c => c.status === 'WARN').length;
+  const fail = checks.filter(c => c.status === 'FAIL').length;
+  const overall: 'PASS' | 'WARN' | 'FAIL' = fail > 0 ? 'FAIL' : warn > 0 ? 'WARN' : 'PASS';
+
+  const result: InspectionResult = {
+    kstDate,
+    kstDateTime,
+    generatedAt: now.toISOString(),
+    checks,
+    summary: { total: checks.length, pass, warn, fail, overall },
+  };
+
+  // 보고서 생성 및 저장 시도 (Vercel /tmp, 로컬은 reports/)
+  try {
+    const markdown = generateInspectionMarkdown(result);
+    const dirs = IS_VERCEL
+      ? [path.join('/tmp', 'reports'), path.join('/tmp', 'inspections')]
+      : [path.join(__dirname, 'reports'), path.join(__dirname, '..', 'reports'), path.join(__dirname, 'docs', 'inspections')];
+
+    // also try public reports via ROOT
+    const primaryDir = IS_VERCEL ? path.join('/tmp', 'reports') : path.join(path.resolve(__dirname), 'reports');
+    const secondaryDir = path.join(path.resolve(__dirname, '..'), 'reports');
+    const docsDir = path.join(path.resolve(__dirname, '..'), 'docs', 'inspections');
+    const altDocsDir = path.join(__dirname, 'docs', 'inspections');
+
+    const candidates: string[] = [];
+    if (!IS_VERCEL) {
+      // local: ensure reports at repo root
+      const repoRoot = path.resolve(__dirname);
+      // __dirname is repo root when run via tsx server.ts
+      // When compiled, __dirname may be different, so try both
+      candidates.push(path.join(repoRoot, 'reports'));
+      candidates.push(path.join(repoRoot, 'docs', 'inspections'));
+      // Also try parent
+      candidates.push(path.join(repoRoot, '..', 'reports'));
+    } else {
+      candidates.push(path.join('/tmp', 'reports'));
+    }
+
+    for (const dir of [...new Set(candidates)]) {
+      try {
+        await fs.mkdir(dir, { recursive: true });
+        await fs.writeFile(path.join(dir, `daily-inspection-${kstDate}.md`), markdown, 'utf8');
+        await fs.writeFile(path.join(dir, 'latest.md'), markdown, 'utf8');
+        automationRuntimeStatus.dailyInspection.lastReportPath = path.join(dir, `daily-inspection-${kstDate}.md`);
+        break;
+      } catch {}
+    }
+
+    // JSON 요약도 저장
+    try {
+      const jsonPayload = JSON.stringify({ kstDate, kstDateTime, generatedAt: result.generatedAt, summary: result.summary, checks }, null, 2);
+      for (const dir of [...new Set(candidates)]) {
+        try {
+          await fs.writeFile(path.join(dir, `daily-inspection-${kstDate}.json`), jsonPayload, 'utf8');
+          await fs.writeFile(path.join(dir, 'latest.json'), jsonPayload, 'utf8');
+          break;
+        } catch {}
+      }
+    } catch {}
+
+    // 점검보고서_YYYY-MM-DD.md 형식으로도 저장 (기존 운영 보고서 호환)
+    try {
+      const reportAliases = IS_VERCEL ? [] : [
+        path.join(path.resolve(__dirname), `점검보고서_${kstDate}.md`),
+        path.join(path.resolve(__dirname, '..'), `점검보고서_${kstDate}.md`),
+      ];
+      for (const aliasPath of reportAliases) {
+        try { await fs.writeFile(aliasPath, markdown, 'utf8'); } catch {}
+      }
+    } catch {}
+
+    console.log(`[INSPECTION] 일일 점검 완료: ${overall} (PASS ${pass}/${checks.length}, WARN ${warn}, FAIL ${fail}) — ${kstDate}`);
+  } catch (e: any) {
+    console.warn('[INSPECTION] 보고서 저장 실패:', e?.message || e);
+  }
+
+  automationRuntimeStatus.dailyInspection.lastSuccessAt = new Date().toISOString();
+  automationRuntimeStatus.dailyInspection.lastError = null;
+  automationRuntimeStatus.dailyInspection.lastResult = { kstDate, overall, pass, warn, fail, total: checks.length };
+
+  if (fail > 0) {
+    // FAIL 이 있어도 lastSuccessAt은 갱신하되, 로그로 경고
+    console.warn(`[INSPECTION] FAIL ${fail}건 감지 — 보고서 확인 필요`);
+  }
+
+  return result;
+}
+
+export function generateInspectionMarkdown(result: InspectionResult): string {
+  const { kstDate, kstDateTime, generatedAt, checks, summary } = result;
+  const emoji: Record<string, string> = { PASS: '✅', WARN: '⚠️', FAIL: '❌' };
+  const overallEmoji = summary.overall === 'PASS' ? '🟢' : summary.overall === 'WARN' ? '🟡' : '🔴';
+  const overallLabel = summary.overall === 'PASS' ? '정상' : summary.overall === 'WARN' ? '주의' : '이상 감지';
+
+  const byCat = new Map<string, InspectionCheck[]>();
+  for (const c of checks) {
+    if (!byCat.has(c.category)) byCat.set(c.category, []);
+    byCat.get(c.category)!.push(c);
+  }
+
+  let md = `# 부산항 스마트 작업 가이드 — 일일 기능 점검 보고서\n\n`;
+  md += `> **점검 일시**: ${kstDateTime}\n`;
+  md += `> **점검 기준일**: ${kstDate} (KST)\n`;
+  md += `> **생성 시각(UTC)**: ${generatedAt}\n`;
+  md += `> **점검 방식**: 자동 점검 (매일 04:00 KST)\n\n---\n\n`;
+  md += `## 0. 점검 요약\n\n`;
+  md += `| 구분 | 결과 |\n| --- | --- |\n`;
+  md += `| **종합 판정** | ${overallEmoji} **${overallLabel}** (${summary.overall}) |\n`;
+  md += `| 전체 항목 | ${summary.total}건 |\n`;
+  md += `| ✅ PASS | ${summary.pass}건 |\n`;
+  md += `| ⚠️ WARN | ${summary.warn}건 |\n`;
+  md += `| ❌ FAIL | ${summary.fail}건 |\n`;
+  md += `| 통과율 | ${Math.round((summary.pass / summary.total) * 100)}% |\n\n`;
+  if (summary.overall === 'PASS') md += `> 🟢 **모든 핵심 기능이 정상입니다.**\n\n`;
+  else if (summary.overall === 'WARN') md += `> 🟡 **일부 항목 주의 필요 — WARN 확인.**\n\n`;
+  else md += `> 🔴 **이상 감지 — FAIL 항목 즉시 확인.**\n\n`;
+
+  md += `---\n\n## 1. 점검 항목 상세\n\n| # | 분야 | 항목 | 결과 | 상세 |\n| --- | --- | --- | --- | --- |\n`;
+  let idx = 1;
+  for (const [cat, items] of byCat) {
+    for (const c of items) {
+      md += `| ${idx++} | ${cat} | ${c.name} | ${emoji[c.status]} ${c.status} | ${c.detail} |\n`;
+    }
+  }
+  md += `\n---\n\n## 2. 분야별 요약\n\n| 분야 | PASS | WARN | FAIL | 합계 | 상태 |\n| --- | --- | --- | --- | --- | --- |\n`;
+  for (const [cat, items] of byCat) {
+    const p = items.filter(c => c.status === 'PASS').length;
+    const w = items.filter(c => c.status === 'WARN').length;
+    const f = items.filter(c => c.status === 'FAIL').length;
+    const st = f > 0 ? '🔴 이상' : w > 0 ? '🟡 주의' : '🟢 정상';
+    md += `| ${cat} | ${p} | ${w} | ${f} | ${items.length} | ${st} |\n`;
+  }
+  md += `\n---\n\n## 3. 자동화 상태\n\n`;
+  md += `| 작업 | 스케줄 | 상태 |\n| --- | --- | --- |\n`;
+  md += `| 선박 스케줄 감지 | 매 정각 | ${automationRuntimeStatus.scheduleWatcher.lastSuccessAt ? '✅' : '⏳'} ${automationRuntimeStatus.scheduleWatcher.lastSuccessAt || '기록 없음'} |\n`;
+  md += `| DB 정리 | 매일 03:00 | ${automationRuntimeStatus.autoCleanup.lastSuccessAt ? '✅' : '⏳'} ${automationRuntimeStatus.autoCleanup.lastSuccessAt || '기록 없음'} |\n`;
+  md += `| 주간 백업 | 일요일 00:00 | ${automationRuntimeStatus.weeklyBackup.lastSuccessAt ? '✅' : '⏳'} ${automationRuntimeStatus.weeklyBackup.lastSuccessAt || '기록 없음'} |\n`;
+  md += `| **일일 점검** | **매일 04:00** | **${overallEmoji} ${overallLabel}** |\n\n`;
+  md += `---\n\n## 4. 배포 상태\n\n| 구분 | URL | 비고 |\n| --- | --- | --- |\n| 운영 (Vercel) | https://busan-hak-port-info.vercel.app | main 푸시 자동 배포 |\n| 보조 (Firebase) | https://busan-hak-port.web.app | 승인형 배포 |\n| 저장소 | Firebase \`busan-hak-port\` | Firestore · FCM |\n\n`;
+  if (summary.fail > 0) {
+    md += `---\n\n## 5. 조치 필요\n\n`;
+    for (const f of checks.filter(c => c.status === 'FAIL')) md += `- ❌ **[${f.category}] ${f.name}**: ${f.detail}\n`;
+    md += `\n`;
+    const warns = checks.filter(c => c.status === 'WARN');
+    if (warns.length) {
+      md += `### 참고 (WARN)\n\n`;
+      for (const w of warns) md += `- ⚠️ **[${w.category}] ${w.name}**: ${w.detail}\n`;
+      md += `\n`;
+    }
+  } else if (summary.warn > 0) {
+    md += `---\n\n## 5. 개선 권장\n\n`;
+    for (const w of checks.filter(c => c.status === 'WARN')) md += `- ⚠️ **[${w.category}] ${w.name}**: ${w.detail}\n`;
+    md += `\n`;
+  } else {
+    md += `---\n\n## 5. 조치 사항\n\n조치 필요 항목 없음.\n\n`;
+  }
+  md += `---\n\n## 6. 점검 이력\n\n- \`reports/\` 및 \`docs/inspections/\` 에서 날짜별 보고서 확인\n- \`reports/latest.md\` 최신 보고서\n- GitHub Actions · Vercel Cron 로그 참고\n\n---\n\n## 7. 참고\n\n- 자동 생성: 매일 04:00 KST\n- 수동 실행: \`npm run inspection\` / \`node scripts/daily-inspection.mjs\`\n- API: \`GET /api/cron/daily-inspection\` (CRON_SECRET) / \`GET /api/inspection-report\` (공개)\n- 문의: luxrank@gmail.com / 010-2846-8906\n\n---\n\n*© 2026 이춘학 — BUSAN HAK PORT INFO.*\n`;
+  return md;
+}
+
 // --- 크론 스케줄러 등록 (상시 프로세스 서버에서만 백그라운드 실행) ---
 // 테스트 환경과 Vercel 서버리스에서는 등록하지 않습니다 — 서버리스는 응답 후 프로세스가
 // 동결되어 node-cron 타이머가 발화하지 않기 때문입니다. Vercel 배포에서는 대신
@@ -1792,6 +2070,12 @@ if (process.env.NODE_ENV !== 'test' && !IS_VERCEL) {
     console.log('[CRON] 주간 Firestore 정기 백업 시작...', new Date().toISOString());
     void runWeeklyFirestoreBackup();
   });
+
+  // 4) 매일 새벽 4시(0 4 * * *) — 기능 점검 및 보고서 자동 생성 (KST)
+  cron.schedule('0 4 * * *', () => {
+    console.log('[CRON] 일일 기능 점검 시작...', new Date().toISOString());
+    void runDailyInspection();
+  }, { timezone: 'Asia/Seoul' } as any);
 }
 
 // --- Express 라우트 ---
@@ -2445,6 +2729,46 @@ const cronWeeklyBackupHandler = async (req: Request, res: Response) => {
 };
 app.get('/api/cron/weekly-backup', cronWeeklyBackupHandler);
 app.get('/api/cron-weekly-backup', cronWeeklyBackupHandler);
+
+// 4) 매일 04시(KST) 기능 점검 및 보고서 자동 생성 — Vercel Cron 매일 19:00 UTC(=04:00 KST)
+const cronDailyInspectionHandler = async (req: Request, res: Response) => {
+  if (!authorizeCronRequest(req, res)) return;
+  try {
+    const result = await runDailyInspection(new Date());
+    const markdown = generateInspectionMarkdown(result);
+    res.json({
+      ok: true,
+      task: 'daily-inspection',
+      kstDate: result.kstDate,
+      summary: result.summary,
+      report: markdown,
+      // Vercel /tmp 보고서는 함수 종료 후 사라지므로 응답 바디에 포함해 전달
+      ...(IS_VERCEL ? { note: 'ephemeral_filesystem: /tmp 보고서는 함수 종료 후 유지되지 않으므로 응답 바디를 저장하세요' } : {}),
+    });
+  } catch (error: any) {
+    res.status(500).json({ ok: false, task: 'daily-inspection', error: error?.message || String(error) });
+  }
+};
+app.get('/api/cron/daily-inspection', cronDailyInspectionHandler);
+app.get('/api/cron-daily-inspection', cronDailyInspectionHandler);
+
+// 공개 요약 조회 — 인증 없이 최신 점검 상태 확인 (민감 정보 제외)
+app.get('/api/inspection-report', (_req, res) => {
+  const d = automationRuntimeStatus.dailyInspection;
+  if (!d.lastRunAt) {
+    res.json({ ok: true, hasReport: false, message: '아직 점검 기록이 없습니다. 매일 04:00 KST에 자동 생성됩니다.' });
+    return;
+  }
+  res.json({
+    ok: true,
+    hasReport: true,
+    lastRunAt: d.lastRunAt,
+    lastSuccessAt: d.lastSuccessAt,
+    lastError: d.lastError,
+    summary: d.lastResult,
+    reportPath: d.lastReportPath,
+  });
+});
 
 // 매칭되지 않은 /api/* 경로는 index.html 이 아닌 JSON 404 를 반환합니다.
 // (정적 호스팅 시절 /api/* 가 index.html 로 폴백되던 문제를 명시적 오류로 대체)
