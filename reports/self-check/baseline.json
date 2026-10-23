@@ -1,0 +1,207 @@
+{
+  "version": 1,
+  "createdAt": "2026-10-23T07:39:53.245Z",
+  "updatedAt": "2026-10-23T07:39:53.245Z",
+  "terminals": {
+    "hjnc": {
+      "count": 32,
+      "fieldCoverage": {
+        "VSL_NM": 1,
+        "ETB": 1,
+        "ATD": 1,
+        "TERMINAL": 1,
+        "BERTH_NO": 1,
+        "PTNR_CODE": 1,
+        "VOY_NO": 1,
+        "ATA": 1,
+        "ATW": 0.4688,
+        "ATC": 0.3438
+      },
+      "samples": 1,
+      "updatedAt": "2026-10-23T07:39:53.245Z",
+      "lastObservedCount": 32,
+      "history": [
+        {
+          "at": "2026-10-23T07:39:53.245Z",
+          "count": 32
+        }
+      ]
+    },
+    "bnct": {
+      "count": 24,
+      "fieldCoverage": {
+        "VSL_NM": 1,
+        "ETB": 1,
+        "ATD": 1,
+        "TERMINAL": 1,
+        "BERTH_NO": 1,
+        "PTNR_CODE": 1,
+        "VOY_NO": 1,
+        "ATA": 1,
+        "ATW": 0.4583,
+        "ATC": 1
+      },
+      "samples": 1,
+      "updatedAt": "2026-10-23T07:39:53.245Z",
+      "lastObservedCount": 24,
+      "history": [
+        {
+          "at": "2026-10-23T07:39:53.245Z",
+          "count": 24
+        }
+      ]
+    },
+    "dgt": {
+      "count": 32,
+      "fieldCoverage": {
+        "VSL_NM": 1,
+        "ETB": 1,
+        "ATD": 1,
+        "TERMINAL": 1,
+        "BERTH_NO": 1,
+        "PTNR_CODE": 1,
+        "VOY_NO": 1,
+        "ATA": 1,
+        "ATW": 0.4688,
+        "ATC": 0.3438
+      },
+      "samples": 1,
+      "updatedAt": "2026-10-23T07:39:53.245Z",
+      "lastObservedCount": 32,
+      "history": [
+        {
+          "at": "2026-10-23T07:39:53.245Z",
+          "count": 32
+        }
+      ]
+    },
+    "pnc": {
+      "count": 32,
+      "fieldCoverage": {
+        "VSL_NM": 1,
+        "ETB": 1,
+        "ATD": 1,
+        "TERMINAL": 1,
+        "BERTH_NO": 1,
+        "PTNR_CODE": 1,
+        "VOY_NO": 1,
+        "ATA": 1,
+        "ATW": 1,
+        "ATC": 1
+      },
+      "samples": 1,
+      "updatedAt": "2026-10-23T07:39:53.245Z",
+      "lastObservedCount": 32,
+      "history": [
+        {
+          "at": "2026-10-23T07:39:53.245Z",
+          "count": 32
+        }
+      ]
+    },
+    "hpnt": {
+      "count": 21,
+      "fieldCoverage": {
+        "VSL_NM": 1,
+        "ETB": 1,
+        "ATD": 1,
+        "TERMINAL": 1,
+        "BERTH_NO": 1,
+        "PTNR_CODE": 1,
+        "VOY_NO": 1,
+        "ATA": 1,
+        "ATW": 1,
+        "ATC": 1
+      },
+      "samples": 1,
+      "updatedAt": "2026-10-23T07:39:53.245Z",
+      "lastObservedCount": 21,
+      "history": [
+        {
+          "at": "2026-10-23T07:39:53.245Z",
+          "count": 21
+        }
+      ]
+    },
+    "pnit": {
+      "count": 25,
+      "fieldCoverage": {
+        "VSL_NM": 1,
+        "ETB": 1,
+        "ATD": 1,
+        "TERMINAL": 1,
+        "BERTH_NO": 1,
+        "PTNR_CODE": 1,
+        "VOY_NO": 1,
+        "ATA": 1,
+        "ATW": 1,
+        "ATC": 1
+      },
+      "samples": 1,
+      "updatedAt": "2026-10-23T07:39:53.245Z",
+      "lastObservedCount": 25,
+      "history": [
+        {
+          "at": "2026-10-23T07:39:53.245Z",
+          "count": 25
+        }
+      ]
+    },
+    "bptc": {
+      "count": 108,
+      "fieldCoverage": {
+        "VSL_NM": 1,
+        "ETB": 1,
+        "ATD": 1,
+        "TERMINAL": 1,
+        "BERTH_NO": 1,
+        "PTNR_CODE": 1,
+        "VOY_NO": 1,
+        "ATA": 1,
+        "ATW": 1,
+        "ATC": 0.2593
+      },
+      "samples": 1,
+      "updatedAt": "2026-10-23T07:39:53.245Z",
+      "lastObservedCount": 108,
+      "history": [
+        {
+          "at": "2026-10-23T07:39:53.245Z",
+          "count": 108
+        }
+      ]
+    },
+    "hbct": {
+      "count": 59,
+      "fieldCoverage": {
+        "VSL_NM": 1,
+        "ETB": 1,
+        "ATD": 1,
+        "TERMINAL": 1,
+        "BERTH_NO": 1,
+        "PTNR_CODE": 1,
+        "VOY_NO": 1,
+        "ATA": 1,
+        "ATW": 1,
+        "ATC": 1
+      },
+      "samples": 1,
+      "updatedAt": "2026-10-23T07:39:53.245Z",
+      "lastObservedCount": 59,
+      "history": [
+        {
+          "at": "2026-10-23T07:39:53.245Z",
+          "count": 59
+        }
+      ]
+    }
+  },
+  "runs": [],
+  "lastRun": {
+    "at": "2026-10-23T07:39:53.245Z",
+    "overall": "WARN",
+    "pass": 14,
+    "warn": 2,
+    "fail": 0
+  }
+}
