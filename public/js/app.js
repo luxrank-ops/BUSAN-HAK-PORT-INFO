@@ -977,6 +977,11 @@ const pcVisitorLocationState = {
     maskIp: true,
     loadedAt: 0,
     deviceCounts: {},
+    // 🤖 봇/모니터링은 기본으로 숨깁니다. (미국 등 해외 데이터센터에서 오는 자동 접속이
+    //    'PC 접속자 위치'를 왜곡하기 때문 — 필요하면 체크를 풀어 원본을 확인)
+    hideBots: true,
+    hideVpn: false,
+    excluded: null,
     error: ""
 };
 
@@ -1126,7 +1131,9 @@ async function loadPcVisitorLocationList(force) {
     let loaded = false;
     if (adminToken) {
         try {
-            const resp = await fetchPortApiJson(`/api/visitor-logs?device=desktop&days=${pcVisitorLocationState.days}`, {
+            const botParam = pcVisitorLocationState.hideBots ? 1 : 0;
+            const vpnParam = pcVisitorLocationState.hideVpn ? 1 : 0;
+            const resp = await fetchPortApiJson(`/api/visitor-logs?device=desktop&days=${pcVisitorLocationState.days}&excludeBots=${botParam}&hideVpn=${vpnParam}`, {
                 method: "GET",
                 headers: { Authorization: `Bearer ${adminToken}` }
             });
@@ -1136,6 +1143,11 @@ async function loadPcVisitorLocationList(force) {
                 pcVisitorLocationState.dateKeys = Array.isArray(resp.data.dateKeys) ? resp.data.dateKeys : [];
                 pcVisitorLocationState.rangeLabel = String(resp.data.rangeLabel || "");
                 pcVisitorLocationState.deviceCounts = resp.data.deviceCounts || {};
+                pcVisitorLocationState.excluded = resp.data.excluded || null;
+                if (resp.data.filters && typeof resp.data.filters === "object") {
+                    if (typeof resp.data.filters.excludeBots === "boolean") pcVisitorLocationState.hideBots = resp.data.filters.excludeBots;
+                    if (typeof resp.data.filters.hideVpn === "boolean") pcVisitorLocationState.hideVpn = resp.data.filters.hideVpn;
+                }
                 pcVisitorLocationState.error = "";
                 pcVisitorLocationState.loadedAt = Date.now();
                 cachedStatsModalData.visitorIpLogs = pcVisitorLocationState.logs;
@@ -1225,6 +1237,40 @@ async function loadPcVisitorLocationList(force) {
     renderStatsVisitorIpLogs(pcVisitorLocationState.logs);
 }
 
+/** CSV·리포트용 접속 구분 라벨 (사람 / 봇 / VPN·데이터센터) */
+function pcVisitorKindLabel(l) {
+    const parts = [];
+    if (l.isBot) parts.push(`봇:${String(l.botName || "자동 접속")}`);
+    if (l.isProxy) parts.push("VPN/프록시");
+    else if (l.isHosting) parts.push("데이터센터/호스팅");
+    return parts.length ? parts.join(" · ") : "사람(일반 회선)";
+}
+
+/**
+ * 한 행의 접속 성격 태그 — 자동 접속(봇)·VPN/데이터센터 여부를 한눈에 보여 줍니다.
+ * (미국 등 해외에서 잡히는 접속이 '사람'인지 '서버'인지 구분하는 용도)
+ */
+function pcVisitorRowTags(l) {
+    const tags = [];
+    const badge = (bg, color, text) => `<span style="display:inline-block; margin-top:2px; margin-right:3px; padding:1px 5px; border-radius:4px; background:${bg}; color:${color}; font-size:0.62rem; font-weight:900;">${escapePcVisitorText(text)}</span>`;
+    if (l.isBot) tags.push(badge("rgba(239,68,68,0.12)", "#b91c1c", `🤖 ${String(l.botName || "자동 접속")}`));
+    if (l.isProxy) tags.push(badge("rgba(217,119,6,0.14)", "#b45309", "🛡️ VPN/프록시"));
+    else if (l.isHosting) tags.push(badge("rgba(217,119,6,0.14)", "#b45309", "☁️ 데이터센터/호스팅"));
+    if (l.isMobile === true) tags.push(badge("rgba(59,130,246,0.12)", "#1d4ed8", "📶 모바일망"));
+    return tags.length ? `<div style="line-height:1.1;">${tags.join("")}</div>` : "";
+}
+
+/** 봇·VPN 표시 토글 — 목록 필터를 바꿔 다시 조회합니다. */
+function togglePcVisitorBots(show) {
+    pcVisitorLocationState.hideBots = !show;
+    loadPcVisitorLocationList(true);
+}
+
+function togglePcVisitorVpn(show) {
+    pcVisitorLocationState.hideVpn = !show;
+    loadPcVisitorLocationList(true);
+}
+
 /** PC 접속자 위치 리스트를 날짜별 그룹 + IP·위치 표로 렌더링합니다. */
 function renderStatsVisitorIpLogs(logs) {
     const box = document.getElementById("statsVisitorIpLogs");
@@ -1240,8 +1286,13 @@ function renderStatsVisitorIpLogs(logs) {
 
     if (summaryEl) {
         const rangeText = pcVisitorLocationState.rangeLabel || `최근 ${pcVisitorLocationState.days}일`;
+        const excluded = pcVisitorLocationState.excluded || {};
+        const hiddenParts = [];
+        if (Number(excluded.bots) > 0) hiddenParts.push(`🤖 봇·모니터링 ${Number(excluded.bots).toLocaleString()}건${pcVisitorLocationState.hideBots ? " 제외" : " 포함"}`);
+        if (Number(excluded.vpn) > 0) hiddenParts.push(`🛡️ VPN·데이터센터 ${Number(excluded.vpn).toLocaleString()}건${pcVisitorLocationState.hideVpn ? " 제외" : " 포함"}`);
+        const hiddenText = hiddenParts.length ? ` · ${hiddenParts.join(" · ")}` : "";
         summaryEl.innerText = summary
-            ? `${rangeText} · 오늘 ${todayCnt.toLocaleString()}건 · 총 ${Number(summary.totalCount || 0).toLocaleString()}건 (관리자 전용)`
+            ? `${rangeText} · 오늘 ${todayCnt.toLocaleString()}건 · 총 ${Number(summary.totalCount || 0).toLocaleString()}건${hiddenText} (관리자 전용)`
             : `${rangeText} (관리자 전용)`;
     }
 
@@ -1261,6 +1312,9 @@ function renderStatsVisitorIpLogs(logs) {
             최근 ${pcVisitorLocationState.days}일 동안 기록된 PC 접속 위치가 없습니다.<br>
             <span style="font-size:0.7rem; font-weight:700;">※ PC(데스크톱) 접속 시에만 기록되며, 기록은 접속 후 최대 30분 간격으로 남습니다.</span>
             ${otherDevices ? `<br><span style="font-size:0.7rem; font-weight:800; color:var(--primary);">같은 기간 모바일 기록: ${escapePcVisitorText(otherDevices)}</span>` : ""}
+            ${Number((pcVisitorLocationState.excluded || {}).bots || 0) > 0 && pcVisitorLocationState.hideBots
+                ? `<br><span style="font-size:0.7rem; font-weight:800; color:#b91c1c;">🤖 자동 접속(봇·모니터링) ${Number(pcVisitorLocationState.excluded.bots).toLocaleString()}건은 제외되어 있습니다 — 위 체크를 풀면 확인할 수 있습니다.</span>`
+                : ""}
         </div>`;
         return;
     }
@@ -1277,11 +1331,18 @@ function renderStatsVisitorIpLogs(logs) {
         const timeText = String(l.accessedAt || "-").replace(/^\d{4}-\d{2}-\d{2}\s*/, "") || "-";
         const ipText = pcVisitorLocationState.maskIp ? maskVisitorIp(l.ip) : String(l.ip || "-");
         const location = l.locationLabel || [l.country, l.region, l.city].filter(Boolean).join(" › ") || "위치 미확인";
+        const netLabel = String(l.isp || l.org || "").trim();
+        const tags = pcVisitorRowTags(l);
+        const uaTitle = escapePcVisitorText(String(l.userAgent || "").slice(0, 120));
         return groupHeader + `<tr style="border-bottom:1px solid var(--border); background:${idx % 2 === 1 ? "rgba(10,27,63,0.03)" : "transparent"};">
             <td style="padding:6px 4px; text-align:center; font-weight:800; color:var(--text-sub); font-size:0.7rem;">${idx + 1}</td>
             <td style="padding:6px 4px; font-size:0.72rem; font-weight:800; color:var(--text-main); font-variant-numeric:tabular-nums; white-space:nowrap;">${escapePcVisitorText(timeText)}</td>
-            <td style="padding:6px 4px; font-size:0.72rem; font-weight:800; font-variant-numeric:tabular-nums; color:#334155; word-break:break-all;">${escapePcVisitorText(ipText)}</td>
-            <td style="padding:6px 4px; font-size:0.72rem; color:var(--primary); font-weight:800;">${escapePcVisitorText(location)}</td>
+            <td style="padding:6px 4px; font-size:0.72rem; font-weight:800; font-variant-numeric:tabular-nums; color:#334155; word-break:break-all;" title="${uaTitle}">${escapePcVisitorText(ipText)}</td>
+            <td style="padding:6px 4px; font-size:0.72rem; color:var(--primary); font-weight:800;">
+                ${escapePcVisitorText(location)}
+                ${netLabel ? `<div style="font-size:0.64rem; color:var(--text-sub); font-weight:700; margin-top:1px;">🌐 ${escapePcVisitorText(netLabel)}</div>` : ""}
+                ${tags}
+            </td>
             <td style="padding:6px 4px; text-align:center; font-size:0.7rem; font-weight:800; color:var(--text-sub);">💻 PC</td>
         </tr>`;
     }).join("");
@@ -1326,7 +1387,7 @@ function downloadPcVisitorLocationCsv() {
         return;
     }
     const esc = val => `"${String(val == null ? "" : val).replace(/"/g, '""')}"`;
-    const headers = ["No", "접속일시(KST)", "IP", "국가", "지역(시·도)", "도시", "위치 라벨", "기기", "접속일(dateKey)"];
+    const headers = ["No", "접속일시(KST)", "IP", "국가", "지역(시·도)", "도시", "위치 라벨", "통신사/ISP", "접속 구분", "기기", "접속일(dateKey)"];
     const lines = [headers.map(esc).join(",")];
     rows.forEach((l, idx) => {
         lines.push([
@@ -1337,6 +1398,8 @@ function downloadPcVisitorLocationCsv() {
             l.region || "",
             l.city || "",
             l.locationLabel || "",
+            l.isp || l.org || "",
+            pcVisitorKindLabel(l),
             l.device === "desktop" ? "PC" : (l.device || ""),
             l.dateKey || ""
         ].map(esc).join(","));
@@ -1364,12 +1427,18 @@ function buildPcVisitorLocationReportText() {
         `• 총 PC 접속: ${Number(summary.totalCount || rows.length).toLocaleString()}건 · 고유 IP ${Number(summary.uniqueIp || 0).toLocaleString()}개`,
         `• 날짜별: ` + ((summary.byDay || []).filter(d => d.count > 0).map(d => `${formatPcVisitorDayLabel(d.dateKey)} ${d.count}건`).join(" / ") || "없음"),
         `• 지역 TOP 5: ` + ((summary.byLocation || []).slice(0, 5).map((l, i) => `${i + 1}위 ${l.label}(${l.count}건)`).join(", ") || "없음"),
+        `• 자동 접속(봇) ${Number((pcVisitorLocationState.excluded || {}).bots || 0).toLocaleString()}건` +
+            (Object.keys(summary.botBreakdown || {}).length
+                ? ` (${Object.entries(summary.botBreakdown || {}).map(([k, v]) => `${k} ${v}건`).join(", ")})`
+                : "") +
+            ` · VPN·데이터센터 ${Number((pcVisitorLocationState.excluded || {}).vpn || 0).toLocaleString()}건` +
+            ` [${pcVisitorLocationState.hideBots ? "봇 제외" : "봇 포함"} / ${pcVisitorLocationState.hideVpn ? "VPN 제외" : "VPN 포함"}]`,
         "",
-        "No | 접속일시 | IP | 위치 | 기기"
+        "No | 접속일시 | IP | 위치 | ISP | 접속 구분 | 기기"
     ];
     rows.forEach((l, idx) => {
         const location = l.locationLabel || [l.country, l.region, l.city].filter(Boolean).join(" › ") || "위치 미확인";
-        lines.push(`${idx + 1} | ${l.accessedAt || "-"} | ${getPcVisitorIpText(l.ip)} | ${location} | PC`);
+        lines.push(`${idx + 1} | ${l.accessedAt || "-"} | ${getPcVisitorIpText(l.ip)} | ${location} | ${l.isp || "-"} | ${pcVisitorKindLabel(l)} | PC`);
     });
     lines.push("", `※ IP 기반 추정 위치이며 화면 정책(${pcVisitorLocationState.maskIp ? "IP 마스킹" : "IP 전체 표시"})이 적용된 값입니다.`);
     return lines.join("\n");

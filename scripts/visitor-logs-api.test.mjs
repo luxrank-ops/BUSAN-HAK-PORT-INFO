@@ -18,7 +18,10 @@ import { tsImport } from 'tsx/esm/api';
 process.env.VERCEL = '1';
 process.env.ADMIN_PASSWORD = 'test-admin-secret-9988';
 
-const { app, setFirebaseBackendOverrideForTests, issueAdminSessionToken } = await tsImport('../server.ts', import.meta.url);
+const { app, setFirebaseBackendOverrideForTests, issueAdminSessionToken, detectVisitorBot } = await tsImport(
+    '../server.ts',
+    import.meta.url
+);
 
 const KST_OFFSET_MS = 9 * 60 * 60 * 1000;
 const kstDateKey = (ms) => new Date(ms + KST_OFFSET_MS).toISOString().slice(0, 10);
@@ -120,6 +123,39 @@ const mock = buildMockFirestore({
             country: '대한민국',
             region: '부산광역시',
             city: '강서구'
+        },
+        // 🤖 미국 크롤러(Googlebot) — PC 로 잡히지만 사람이 아니므로 기본 목록에서 빠져야 합니다.
+        'bot-googlebot': {
+            ip: '66.249.66.10',
+            device: 'desktop',
+            userAgent: 'Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)',
+            isBot: true,
+            botName: 'Googlebot',
+            country: '미국',
+            countryCode: 'US',
+            region: 'California',
+            city: 'Mountain View',
+            isp: 'Google LLC',
+            isHosting: true,
+            dateKey: kstDateKey(NOW_MS - 90 * 60 * 1000),
+            accessedAtMs: NOW_MS - 90 * 60 * 1000
+        },
+        // 🛡️ VPN/데이터센터(Cloudflare WARP 등) — 사람이지만 위치가 미국으로 잡히는 접속
+        'vpn-warp': {
+            ip: '104.28.200.10',
+            device: 'desktop',
+            userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36',
+            isBot: false,
+            botName: '',
+            country: '미국',
+            countryCode: 'US',
+            region: 'California',
+            city: 'San Francisco',
+            isp: 'Cloudflare, Inc.',
+            isProxy: true,
+            isHosting: true,
+            dateKey: kstDateKey(NOW_MS - 2 * 60 * 60 * 1000),
+            accessedAtMs: NOW_MS - 2 * 60 * 60 * 1000
         },
         // 기간(최근 3일) 밖 기록 — 목록에 나오면 안 됩니다.
         'old-desktop': desktopLog('121.130.45.99', NOW_MS - 5 * 24 * 60 * 60 * 1000)
@@ -254,4 +290,75 @@ test('조회 — PC 기록이 없으면 같은 기간 기기별 건수를 함께
             'deviceCounts 로 다른 기기 기록 유무를 안내할 수 있어야 합니다'
         );
     }
+});
+
+
+test('봇 판별 — 크롤러/모니터링은 봇으로, 카카오톡·네이버 인앱 브라우저는 사람으로 본다', () => {
+    assert.equal(detectVisitorBot('Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)'), 'Googlebot');
+    assert.equal(
+        detectVisitorBot('Mozilla/5.0 (Linux; Android 11) AppleWebKit/537.36 Chrome/98 Mobile Safari/537.36 Chrome-Lighthouse'),
+        'Google PageSpeed/Lighthouse'
+    );
+    assert.match(detectVisitorBot('Mozilla/5.0 (Windows NT 10.0) HeadlessChrome/120.0'), /자동화/);
+    assert.equal(detectVisitorBot('python-requests/2.31.0'), '자동화·스크립트');
+    // 실제 사용자 — 카카오톡/네이버 인앱 브라우저는 절대 봇으로 분류하지 않습니다.
+    assert.equal(detectVisitorBot('Mozilla/5.0 (Linux; Android 12) AppleWebKit/537.36 KAKAOTALK/10.4.5 Chrome/120 Mobile Safari/537.36'), '');
+    assert.equal(detectVisitorBot('Mozilla/5.0 (iPhone; CPU iPhone OS 17_0) AppleWebKit/605.1.15 NAVER(inapp; search; 930; 12.5.0)'), '');
+    assert.equal(detectVisitorBot('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/126.0 Safari/537.36'), '');
+});
+
+test('조회 — 봇은 기본으로 제외되고, excludeBots=0 이면 포함된다', async () => {
+    const hidden = await callApi('/api/visitor-logs?device=desktop&days=3', {
+        headers: { Authorization: `Bearer ${adminToken}` }
+    });
+    assert.equal(hidden.status, 200);
+    assert.equal(hidden.json.filters.excludeBots, true);
+    assert.ok(!hidden.json.logs.some((l) => l.botName === 'Googlebot'), '기본 조회에는 Googlebot 이 없어야 합니다');
+    assert.ok(hidden.json.excluded.bots >= 1, '제외된 봇 건수를 함께 알려줍니다');
+    assert.ok(hidden.json.summary.botBreakdown.Googlebot >= 1, '봇 종류별 집계를 제공합니다');
+
+    const shown = await callApi('/api/visitor-logs?device=desktop&days=3&excludeBots=0', {
+        headers: { Authorization: `Bearer ${adminToken}` }
+    });
+    assert.equal(shown.status, 200);
+    assert.equal(shown.json.filters.excludeBots, false);
+    const bot = shown.json.logs.find((l) => l.botName === 'Googlebot');
+    assert.ok(bot, 'excludeBots=0 이면 봇 기록도 조회됩니다');
+    assert.equal(bot.country, '미국');
+    assert.equal(bot.isBot, true);
+});
+
+test('조회 — VPN·데이터센터는 개수만 알려주고, hideVpn=1 이면 숨긴다', async () => {
+    const withVpn = await callApi('/api/visitor-logs?device=desktop&days=3', {
+        headers: { Authorization: `Bearer ${adminToken}` }
+    });
+    assert.equal(withVpn.json.filters.hideVpn, false);
+    assert.ok(withVpn.json.excluded.vpn >= 1);
+    const warp = withVpn.json.logs.find((l) => l.ip === '104.28.200.10');
+    assert.ok(warp, '기본 조회에는 VPN 접속도 표시됩니다');
+    assert.equal(warp.isVpnOrDatacenter, true);
+    assert.equal(warp.isp, 'Cloudflare, Inc.');
+
+    const hiddenVpn = await callApi('/api/visitor-logs?device=desktop&days=3&hideVpn=1', {
+        headers: { Authorization: `Bearer ${adminToken}` }
+    });
+    assert.equal(hiddenVpn.json.filters.hideVpn, true);
+    assert.ok(!hiddenVpn.json.logs.some((l) => l.ip === '104.28.200.10'), 'hideVpn=1 이면 VPN 접속은 제외');
+});
+
+test('비콘 — 자동 접속은 저장 시점에 isBot/botName 이 함께 기록된다', async () => {
+    const before = mock.writes.length;
+    await callApi('/api/visitor-beacon', {
+        method: 'POST',
+        headers: {
+            'content-type': 'application/json',
+            'user-agent': 'Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)',
+            'x-forwarded-for': '66.249.66.55'
+        },
+        body: JSON.stringify({ device: 'desktop' })
+    });
+    const write = mock.writes.slice(before).find((w) => w.payload.ip === '66.249.66.55');
+    assert.ok(write, '봇 접속도 기록은 남깁니다(통계에서만 제외)');
+    assert.equal(write.payload.isBot, true);
+    assert.equal(write.payload.botName, 'Googlebot');
 });

@@ -3254,16 +3254,77 @@ function locationFromEdgeHeaders(
   };
 }
 
-/** ip-api.com(무료·키 불필요) → Vercel 엣지 헤더 순으로 IP 위치 정보를 조회합니다. */
+/**
+ * 크롤러·모니터링·자동화 도구의 User-Agent 목록.
+ * 이런 접속은 사람이 아닌 서버(주로 미국·유럽 데이터센터)에서 오기 때문에
+ * 'PC 접속자 위치' 통계에 섞이면 미국 접속이 비정상적으로 늘어납니다.
+ * ※ 카카오톡/네이버 인앱 브라우저(KAKAOTALK, NAVER)는 실제 사용자이므로 절대 포함하지 않습니다.
+ */
+const VISITOR_BOT_UA_PATTERNS: Array<{ name: string; re: RegExp }> = [
+  { name: 'Googlebot', re: /googlebot|google-inspectiontool|storebot-google|adsbot-google|mediapartners-google|googleother|google-read-aloud/i },
+  { name: 'Google PageSpeed/Lighthouse', re: /lighthouse|chrome-lighthouse|pagespeed|ptst\//i },
+  { name: 'Bingbot', re: /bingbot|bingpreview|adidxbot/i },
+  { name: 'Naver Yeti', re: /\byeti\/|naver-search/i },
+  { name: 'Daum 검색로봇', re: /daumoa|daumoa-feedstagram/i },
+  { name: 'Yandex', re: /yandexbot|yandeximages|yandexmetrica/i },
+  { name: 'Baidu', re: /baiduspider/i },
+  { name: 'AI 크롤러', re: /gptbot|oai-searchbot|chatgpt-user|claudebot|claude-web|perplexitybot|amazonbot|applebot|bytespider|ccbot|meta-externalagent/i },
+  { name: 'SEO·분석 크롤러', re: /ahrefs|semrush|mj12bot|dotbot|screaming frog|seokicks|serpstat|dataforseo|petalbot/i },
+  { name: 'SNS 미리보기', re: /facebookexternalhit|facebookcatalog|twitterbot|slackbot|discordbot|telegrambot|linkedinbot|embedly|whatsapp|pinterest/i },
+  { name: '모니터링·점검', re: /uptimerobot|pingdom|statuscake|site24x7|newrelicpinger|betteruptime|datadog|check_http|nagios/i },
+  { name: '자동화·스크립트', re: /headlesschrome|phantomjs|playwright|puppeteer|selenium|python-requests|python-urllib|aiohttp|go-http-client|okhttp|java\/|curl\/|wget\/|libwww-perl|postmanruntime|axios\/|node-fetch|undici/i }
+];
+
+/** User-Agent 로 사람/자동 접속을 구분합니다. (자동 접속이면 이름, 사람이면 빈 문자열) */
+export function detectVisitorBot(ua: string): string {
+  const raw = String(ua || '');
+  // UA 가 비어 있는 구버전 기록은 봇으로 단정하지 않습니다(사람일 수 있음).
+  if (!raw.trim()) return '';
+  for (const { name, re } of VISITOR_BOT_UA_PATTERNS) {
+    if (re.test(raw)) return name;
+  }
+  return '';
+}
+
+export type VisitorIpLocation = {
+  country: string;
+  countryCode: string;
+  region: string;
+  city: string;
+  isp: string;
+  org: string;
+  asn: string;
+  isMobile: boolean;
+  isProxy: boolean;
+  isHosting: boolean;
+  source: string;
+};
+
+const IP_API_FIELDS = 'status,country,countryCode,regionName,city,isp,org,as,asname,mobile,proxy,hosting,query';
+
+/** ip-api.com(무료·키 불필요) → Vercel 엣지 헤더 순으로 IP 위치·망 정보를 조회합니다. */
 async function fetchIpLocation(
   ip: string,
   headers?: Record<string, unknown>
-): Promise<{ country: string; region: string; city: string; source: string } | null> {
+): Promise<VisitorIpLocation | null> {
   const edgeLocation = locationFromEdgeHeaders(headers);
-  if (isPrivateOrLocalIp(ip)) return edgeLocation ? { ...edgeLocation, source: 'edge' } : null;
+  const edgeResult: VisitorIpLocation | null = edgeLocation
+    ? {
+        ...edgeLocation,
+        countryCode: String(headers?.['x-vercel-ip-country'] || '').trim(),
+        isp: '',
+        org: '',
+        asn: '',
+        isMobile: false,
+        isProxy: false,
+        isHosting: false,
+        source: 'edge'
+      }
+    : null;
+  if (isPrivateOrLocalIp(ip)) return edgeResult;
   try {
     const res = await httpRequestText(
-      `http://ip-api.com/json/${encodeURIComponent(ip)}?fields=status,country,regionName,city,query`,
+      `http://ip-api.com/json/${encodeURIComponent(ip)}?fields=${IP_API_FIELDS}`,
       { timeoutMs: 3000 }
     );
     const parsed = JSON.parse(res.body || '{}');
@@ -3274,16 +3335,23 @@ async function fetchIpLocation(
         city: String(parsed.city || '')
       });
       return {
-        country: localizeCountry(loc.country) || loc.country || edgeLocation?.country || '',
-        region: loc.region || edgeLocation?.region || '',
-        city: loc.city || edgeLocation?.city || '',
+        country: localizeCountry(loc.country) || loc.country || edgeResult?.country || '',
+        countryCode: String(parsed.countryCode || edgeResult?.countryCode || '').toUpperCase(),
+        region: loc.region || edgeResult?.region || '',
+        city: loc.city || edgeResult?.city || '',
+        isp: String(parsed.isp || ''),
+        org: String(parsed.org || ''),
+        asn: String(parsed.as || parsed.asname || ''),
+        isMobile: parsed.mobile === true,
+        isProxy: parsed.proxy === true,
+        isHosting: parsed.hosting === true,
         source: 'ip-api'
       };
     }
   } catch {
     // ip-api 조회 실패 시 Vercel 엣지 헤더 값으로 대체합니다.
   }
-  return edgeLocation ? { ...edgeLocation, source: 'edge' } : null;
+  return edgeResult;
 }
 
 /** 요청 소스 IP — 프록시 뒤에서도 실제 클라이언트 IP 를 최대한 정확히 고릅니다. */
@@ -3329,10 +3397,15 @@ const visitorBeaconHandler = async (req: Request, res: Response) => {
       const ipHash = crypto.createHash('sha256').update(ip).digest('hex').slice(0, 12);
       const dedupDocId = `${dateKey}_${ipHash}_${bucket}`;
       const docRef = typeof col.doc === 'function' ? col.doc(dedupDocId) : null;
+      // 봇/모니터링 여부는 외부 조회 없이 UA 만으로 즉시 확정합니다.
+      // (미국 데이터센터에서 오는 Googlebot·PageSpeed·모니터링 트래픽을 통계에서 걸러내기 위함)
+      const botName = detectVisitorBot(ua);
       const basePayload = {
         ip,
         device,
         userAgent: ua,
+        isBot: Boolean(botName),
+        botName,
         country: '',
         region: '',
         city: '',
@@ -3354,8 +3427,15 @@ const visitorBeaconHandler = async (req: Request, res: Response) => {
         if (location && (location.country || location.region || location.city)) {
           const enrichment = {
             country: location.country || '',
+            countryCode: location.countryCode || '',
             region: location.region || '',
             city: location.city || '',
+            isp: location.isp || '',
+            org: location.org || '',
+            asn: location.asn || '',
+            isMobile: Boolean(location.isMobile),
+            isProxy: Boolean(location.isProxy),
+            isHosting: Boolean(location.isHosting),
             locationSource: location.source || 'ip-api',
             locationUpdatedAtMs: Date.now()
           };
@@ -3446,7 +3526,28 @@ const visitorLogsHandler = async (req: Request, res: Response) => {
     logs = logs.filter((l) => Number(l.accessedAtMs) >= sinceMs);
     if (deviceFilter) logs = logs.filter((l) => l.device === deviceFilter);
     logs.sort((a, b) => Number(b.accessedAtMs || 0) - Number(a.accessedAtMs || 0));
-    logs = logs.slice(0, limit);
+
+    // 🚦 봇/모니터링·VPN/데이터센터 구분
+    //    - 구버전 문서(isBot 미저장)도 UA 로 즉시 재판정해, 과거 기록까지 같은 기준으로 걸러냅니다.
+    //    - 기본값: 봇은 제외(excludeBots=1), VPN·데이터센터는 표시(hideVpn=0).
+    const excludeBots = String(req.query.excludeBots ?? '1') !== '0';
+    const hideVpn = ['1', 'true'].includes(String(req.query.hideVpn || '').toLowerCase());
+    logs = logs.map((l) => {
+      const botName = String(l.botName || '').trim() || detectVisitorBot(String(l.userAgent || ''));
+      return {
+        ...l,
+        isBot: Boolean(botName) || l.isBot === true,
+        botName,
+        isVpnOrDatacenter: l.isProxy === true || l.isHosting === true
+      };
+    });
+    const botLogs = logs.filter((l) => l.isBot);
+    const vpnLogs = logs.filter((l) => !l.isBot && l.isVpnOrDatacenter);
+    let filteredLogs = logs;
+    if (excludeBots) filteredLogs = filteredLogs.filter((l) => !l.isBot);
+    if (hideVpn) filteredLogs = filteredLogs.filter((l) => !l.isVpnOrDatacenter);
+    const excluded = { bots: botLogs.length, vpn: vpnLogs.length, total: logs.length };
+    logs = filteredLogs.slice(0, limit);
 
     // PC(데스크톱) 기록이 비었을 때 '왜 비었는지'를 화면에서 바로 알 수 있게,
     // 같은 기간의 기기별 기록 수를 함께 계산합니다. (기록이 있으면 추가 조회 없음)
@@ -3498,15 +3599,34 @@ const visitorLogsHandler = async (req: Request, res: Response) => {
       }));
     }
 
-    const summary = summarizeVisitorLogs(logs, dateKeys);
+    const summary = Object.assign(summarizeVisitorLogs(logs, dateKeys), {
+      excluded,
+      botBreakdown: botLogs.reduce<Record<string, number>>((acc, l) => {
+        const key = String(l.botName || '기타 자동 접속');
+        acc[key] = (acc[key] || 0) + 1;
+        return acc;
+      }, {}),
+      filters: { excludeBots, hideVpn }
+    });
     const resultLogs = logs.map((l) => ({
       id: l.id,
       ip: String(l.ip || ''),
       device: String(l.device || ''),
       userAgent: String(l.userAgent || '').slice(0, 160),
       country: String(l.country || ''),
+      countryCode: String(l.countryCode || ''),
       region: String(l.region || ''),
       city: String(l.city || ''),
+      isp: String(l.isp || ''),
+      org: String(l.org || ''),
+      asn: String(l.asn || ''),
+      isMobile: l.isMobile === true,
+      isProxy: l.isProxy === true,
+      isHosting: l.isHosting === true,
+      isVpnOrDatacenter: l.isVpnOrDatacenter === true,
+      locationSource: String(l.locationSource || ''),
+      isBot: l.isBot === true,
+      botName: String(l.botName || ''),
       locationLabel: buildVisitorLocationLabel(l),
       dateKey: String(l.dateKey || '') || kstDateKey(Number(l.accessedAtMs) || 0),
       accessedAtMs: Number(l.accessedAtMs) || 0,
@@ -3528,7 +3648,9 @@ const visitorLogsHandler = async (req: Request, res: Response) => {
       sinceMs,
       rangeLabel: `${dateKeys[0]} ~ ${dateKeys[dateKeys.length - 1]} (KST, 최근 ${days}일)`,
       summary,
-      deviceCounts
+      deviceCounts,
+      excluded,
+      filters: { excludeBots, hideVpn }
     });
   } catch (error: any) {
     res.status(500).json({ ok: false, error: error?.message || 'visitor_logs_failed' });

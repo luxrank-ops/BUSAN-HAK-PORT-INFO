@@ -34,9 +34,9 @@
     <link rel="icon" href="./favicon.ico">
     <link rel="stylesheet" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.8/dist/web/static/pretendard.css" />
     <link rel="manifest" href="./manifest.json">
-    <link rel="stylesheet" href="./css/app.css?v=2027.15">
+    <link rel="stylesheet" href="./css/app.css?v=2027.16">
     <link rel="apple-touch-icon" href="./icon-192.png">
-<script src="./js/notifications.js?v=2027.15"></script></head>
+<script src="./js/notifications.js?v=2027.16"></script></head>
 <body data-app-view="legacy">
 <header>
     <div class="today-visitor-badge-slot" aria-hidden="true"></div>
@@ -1671,6 +1671,16 @@
                 <button type="button" onclick="copyPcVisitorLocationReport()" style="background:var(--primary); color:#fff; border:none; border-radius:6px; padding:4px 8px; font-size:0.72rem; font-weight:900; cursor:pointer;">📋 리포트 복사</button>
                 <button type="button" onclick="togglePcVisitorIpMask()" style="background:var(--bg-color); color:var(--text-sub); border:1px solid var(--border); border-radius:6px; padding:4px 8px; font-size:0.72rem; font-weight:900; cursor:pointer;">🔓 IP 전체 보기</button>
             </div>
+            <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-bottom:7px; font-size:0.71rem; font-weight:800; color:var(--text-sub);">
+                <label style="display:inline-flex; align-items:center; gap:4px; cursor:pointer;">
+                    <input type="checkbox" id="statsVisitorHideBots" checked onchange="togglePcVisitorBots(this.checked)" style="width:14px; height:14px; cursor:pointer;">
+                    🤖 봇·모니터링 제외 <span style="font-weight:700;">(Googlebot · PageSpeed 등 자동 접속)</span>
+                </label>
+                <label style="display:inline-flex; align-items:center; gap:4px; cursor:pointer;">
+                    <input type="checkbox" id="statsVisitorHideVpn" onchange="togglePcVisitorVpn(this.checked)" style="width:14px; height:14px; cursor:pointer;">
+                    🛡️ VPN·데이터센터 제외 <span style="font-weight:700;">(해외 IP 로 표시되는 우회 접속)</span>
+                </label>
+            </div>
             <div id="statsVisitorIpSummaryCards"></div>
             <div id="statsVisitorIpLogs" style="font-size:0.75rem;"></div>
         </div>
@@ -1757,16 +1767,16 @@
     </div>
 </div>
 
-<script src="./js/app.js?v=2027.15"></script>
+<script src="./js/app.js?v=2027.16"></script>
   
     <!-- [여기서부터 복사] 조장 근무일 비밀번호 검증 스크립트 -->
 <!-- [추가할 보안 및 실행 스크립트] -->
-<script src="./js/leader-access.js?v=2027.15"></script>
+<script src="./js/leader-access.js?v=2027.16"></script>
   <!-- [프로덕션 수준] 파이어베이스 'ships' 컬렉션 전체 데이터 조회 및 검색 모듈 -->
-<script src="./js/ships-board.js?v=2027.15"></script>
+<script src="./js/ships-board.js?v=2027.16"></script>
 
-<script src="./js/tab-views.js?v=2027.15"></script>
-<script src="./js/kkung-relay.js?v=2027.15"></script>
+<script src="./js/tab-views.js?v=2027.16"></script>
+<script src="./js/kkung-relay.js?v=2027.16"></script>
 </body>
 </html>
 
