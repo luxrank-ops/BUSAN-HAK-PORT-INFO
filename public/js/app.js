@@ -1010,11 +1010,11 @@ function renderPcVisitorSummaryCards() {
     }
     const top = (summary.byLocation || [])[0];
     const card = (icon, title, value, sub, color) => `
-        <div style="background:${color}11; border:1px solid ${color}44; border-radius:8px; padding:7px 5px; text-align:center;">
-            <div style="font-size:0.68rem; font-weight:800; color:var(--text-sub);">${icon} ${title}</div>
-            <div style="font-size:0.92rem; font-weight:900; color:${color}; margin-top:2px;">${value}</div>
-            <div style="font-size:0.64rem; font-weight:800; color:var(--text-sub); margin-top:1px;">${sub}</div>
-        </div>`;
+        <button type="button" onclick="focusPcVisitorLogs()" aria-label="${escapePcVisitorText(title)}: 접속 기록으로 이동" style="display:block; width:100%; font:inherit; cursor:pointer; background:${color}11; border:1px solid ${color}44; border-radius:8px; padding:7px 5px; text-align:center;">
+            <span style="display:block; font-size:0.68rem; font-weight:800; color:var(--text-sub);">${icon} ${title}</span>
+            <span style="display:block; font-size:0.92rem; font-weight:900; color:${color}; margin-top:2px;">${value}</span>
+            <span style="display:block; font-size:0.64rem; font-weight:800; color:var(--text-sub); margin-top:1px;">${sub}</span>
+        </button>`;
     box.innerHTML = `
         <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:6px; margin-bottom:8px;">
             ${card("🖥️", `최근 ${pcVisitorLocationState.days}일 PC 접속`, `${Number(summary.totalCount || 0).toLocaleString()}건`, `조회 ${logs.length.toLocaleString()}건 표시`, "#2563eb")}
@@ -1026,6 +1026,14 @@ function renderPcVisitorSummaryCards() {
 }
 
 /** 지역별 접속 순위 상위 5개 막대 */
+function focusPcVisitorLogs() {
+    const target = document.getElementById("statsVisitorIpLogs");
+    if (!target) return;
+    target.scrollIntoView({ behavior: "smooth", block: "start" });
+    target.setAttribute("tabindex", "-1");
+    target.focus({ preventScroll: true });
+}
+
 function renderPcVisitorLocationRank(byLocation) {
     const rows = (byLocation || []).slice(0, 5);
     if (rows.length === 0) return "";
@@ -1038,7 +1046,7 @@ function renderPcVisitorLocationRank(byLocation) {
                 const pct = Math.round((count / total) * 100);
                 const width = Math.max(5, Math.round((count / max) * 100));
                 const rank = idx === 0 ? "🥇" : idx === 1 ? "🥈" : idx === 2 ? "🥉" : `${idx + 1}.`;
-                return `<div style="margin-bottom:${idx === rows.length - 1 ? 0 : 6}px;">
+                return `<button type="button" onclick="focusPcVisitorLogs()" aria-label="${escapePcVisitorText(r.label)} 접속 기록 보기" style="display:block; width:100%; font:inherit; text-align:left; cursor:pointer; border:0; border-radius:5px; background:transparent; padding:0; margin-bottom:${idx === rows.length - 1 ? 0 : 6}px;">
                     <div style="display:flex; justify-content:space-between; gap:6px; font-size:0.7rem; font-weight:900; color:var(--text-main);">
                         <span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${rank} ${escapePcVisitorText(r.label)}</span>
                         <span style="color:var(--primary); font-variant-numeric:tabular-nums; white-space:nowrap;">${count.toLocaleString()}건 (${pct}%) · IP ${Number(r.uniqueIp || 0)}</span>
@@ -1046,7 +1054,7 @@ function renderPcVisitorLocationRank(byLocation) {
                     <div style="height:5px; background:var(--border); border-radius:3px; overflow:hidden; margin-top:2px;">
                         <div style="height:100%; width:${width}%; background:var(--primary); border-radius:3px;"></div>
                     </div>
-                </div>`;
+                </button>`;
             }).join("")}
         </div>`;
 }
