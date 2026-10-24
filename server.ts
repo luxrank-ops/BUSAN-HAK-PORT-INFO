@@ -672,7 +672,7 @@ function httpsGetBuffer(url: string, headers: Record<string, string> = {}): Prom
 
 function httpRequestText(
   urlStr: string,
-  options: { method?: string; headers?: Record<string, string>; body?: string; encoding?: string } = {}
+  options: { method?: string; headers?: Record<string, string>; body?: string; encoding?: string; timeoutMs?: number } = {}
 ): Promise<{ statusCode: number; headers: Record<string, any>; body: string }> {
   return new Promise((resolve, reject) => {
     const parsedUrl = new URL(urlStr);
@@ -712,7 +712,7 @@ function httpRequestText(
       }
     );
     req.on('error', reject);
-    req.setTimeout(10000, () => req.destroy(new Error('Terminal schedule request timeout')));
+    req.setTimeout(Number(options.timeoutMs) || 10000, () => req.destroy(new Error('request timeout')));
     if (options.body) req.write(options.body);
     req.end();
   });
@@ -3228,15 +3228,43 @@ function localizeCountry(name: string): string {
   return IP_COUNTRY_KR_MAP[name] || name;
 }
 
-/** ip-api.com (무료, 키 불필요) 및 Vercel 엣지 헤더 폴백으로 IP 기반 위치 정보를 조회합니다. */
+/** Vercel 엣지 지역 헤더(x-vercel-ip-*) 기반 위치 — 외부 API 호출 없이 즉시 확보됩니다. */
+function locationFromEdgeHeaders(
+  headers?: Record<string, unknown>
+): { country: string; region: string; city: string } | null {
+  if (!headers) return null;
+  const vCountry = String(headers['x-vercel-ip-country'] || '').trim();
+  let vRegion = String(headers['x-vercel-ip-country-region'] || '').trim();
+  const vCityRaw = String(headers['x-vercel-ip-city'] || '').trim();
+  let vCity = vCityRaw;
+  try {
+    if (vCityRaw.includes('%')) vCity = decodeURIComponent(vCityRaw);
+  } catch {}
+  if (!vCountry && !vRegion && !vCity) return null;
+  // Vercel 의 region 은 '26' 같은 ISO 코드입니다. 코드만 있으면 도시명으로 대체해
+  // 화면에 '대한민국 › 26 › 부산광역시' 처럼 어색한 값이 남지 않게 합니다.
+  if (vRegion && (/^\d{1,3}$/.test(vRegion) || /^[A-Za-z]{2}$/.test(vRegion))) {
+    vRegion = vCity ? '' : vRegion;
+  }
+  const loc = localizeVisitorLocation({ country: vCountry, region: vRegion, city: vCity });
+  return {
+    country: localizeCountry(loc.country) || loc.country,
+    region: loc.region,
+    city: loc.city
+  };
+}
+
+/** ip-api.com(무료·키 불필요) → Vercel 엣지 헤더 순으로 IP 위치 정보를 조회합니다. */
 async function fetchIpLocation(
   ip: string,
   headers?: Record<string, unknown>
-): Promise<{ country: string; region: string; city: string } | null> {
-  if (isPrivateOrLocalIp(ip)) return null;
+): Promise<{ country: string; region: string; city: string; source: string } | null> {
+  const edgeLocation = locationFromEdgeHeaders(headers);
+  if (isPrivateOrLocalIp(ip)) return edgeLocation ? { ...edgeLocation, source: 'edge' } : null;
   try {
     const res = await httpRequestText(
-      `http://ip-api.com/json/${encodeURIComponent(ip)}?fields=status,country,regionName,city,query`
+      `http://ip-api.com/json/${encodeURIComponent(ip)}?fields=status,country,regionName,city,query`,
+      { timeoutMs: 3000 }
     );
     const parsed = JSON.parse(res.body || '{}');
     if (parsed && parsed.status === 'success') {
@@ -3246,34 +3274,43 @@ async function fetchIpLocation(
         city: String(parsed.city || '')
       });
       return {
-        country: loc.country || localizeCountry(String(parsed.country || '')),
-        region: loc.region,
-        city: loc.city
+        country: localizeCountry(loc.country) || loc.country || edgeLocation?.country || '',
+        region: loc.region || edgeLocation?.region || '',
+        city: loc.city || edgeLocation?.city || '',
+        source: 'ip-api'
       };
     }
   } catch {
-    // ip-api 조회 실패 시 아래 Vercel 헤더 폴백으로 이어집니다.
+    // ip-api 조회 실패 시 Vercel 엣지 헤더 값으로 대체합니다.
   }
-  if (headers) {
-    const vCountry = String(headers['x-vercel-ip-country'] || '').trim();
-    const vRegion = String(headers['x-vercel-ip-country-region'] || '').trim();
-    const vCityRaw = String(headers['x-vercel-ip-city'] || '').trim();
-    let vCity = vCityRaw;
-    try {
-      if (vCityRaw.includes('%')) vCity = decodeURIComponent(vCityRaw);
-    } catch {}
-    if (vCountry || vRegion || vCity) {
-      return localizeVisitorLocation({ country: vCountry, region: vRegion, city: vCity });
-    }
-  }
-  return null;
+  return edgeLocation ? { ...edgeLocation, source: 'edge' } : null;
 }
 
-/** 앱 접속 비콘 수신 — 클라이언트 IP·기기 정보 + IP 지리 위치を記録합니다. (절대 실패 응답 안 함) */
+/** 요청 소스 IP — 프록시 뒤에서도 실제 클라이언트 IP 를 최대한 정확히 고릅니다. */
+function resolveVisitorRequestIp(req: Request): string {
+  const candidates: string[] = [];
+  const direct = String(req.ip || req.socket?.remoteAddress || '').trim();
+  if (direct) candidates.push(direct);
+  const xff = String(req.headers['x-forwarded-for'] || '');
+  if (xff) candidates.push(...xff.split(',').map((v) => v.trim()));
+  const realIp = String(req.headers['x-real-ip'] || '').trim();
+  if (realIp) candidates.push(realIp);
+  const normalized = candidates
+    .map((v) => v.replace(/^::ffff:/, '').trim())
+    .filter((v) => v && v !== 'unknown' && v !== 'localhost');
+  // 공인 IP 를 우선 사용하고, 없으면 첫 후보를 그대로 씁니다(내부 IP → 위치 미확인 처리).
+  return normalized.find((v) => !isPrivateOrLocalIp(v)) || normalized[0] || 'unknown';
+}
+
+/**
+ * 앱 접속 비콘 수신 — 클라이언트 IP·기기 정보 + IP 지리 위치를 기록합니다. (절대 실패 응답 안 함)
+ *
+ * 순서가 중요합니다: ① 접속 사실을 먼저 저장하고 ② 위치는 보강(enrich) 단계에서 채웁니다.
+ * (외부 IP 조회가 느리거나 실패해도 '최근 3일 PC 접속자 위치' 목록에 접속 기록은 남습니다)
+ */
 const visitorBeaconHandler = async (req: Request, res: Response) => {
-  let shouldWrite = false;
   try {
-    const ip = String(req.ip || req.socket?.remoteAddress || 'unknown');
+    const ip = resolveVisitorRequestIp(req);
     const ua = String(req.headers['user-agent'] || '').slice(0, 300);
     const body = (req.body && typeof req.body === 'object' ? req.body : {}) as { device?: unknown };
     const device = /^(android|ios|desktop)$/.test(String(body.device || ''))
@@ -3283,42 +3320,53 @@ const visitorBeaconHandler = async (req: Request, res: Response) => {
 
     const now = Date.now();
     const last = visitorBeaconLastWrite.get(ip);
-    if (last === undefined || now - last >= VISITOR_BEACON_DEDUP_WINDOW_MS) {
-      shouldWrite = true;
-      visitorBeaconLastWrite.set(ip, now);
-      if (visitorBeaconLastWrite.size > 2000) {
-        for (const [k, v] of visitorBeaconLastWrite.entries()) {
-          if (now - v >= VISITOR_BEACON_DEDUP_WINDOW_MS) visitorBeaconLastWrite.delete(k);
-        }
-      }
-    }
+    const recentlyWritten = last !== undefined && now - last < VISITOR_BEACON_DEDUP_WINDOW_MS;
 
     const db = resolveServerFirestore();
-    if (db && shouldWrite) {
-      const location = await fetchIpLocation(ip, req.headers as Record<string, unknown>);
-      const payload = {
-        ip,
-        device,
-        userAgent: ua,
-        country: location?.country ?? '',
-        region: location?.region ?? '',
-        city: location?.city ?? '',
-        dateKey,
-        accessedAt: FieldValue.serverTimestamp(),
-        accessedAtMs: now
-      };
+    if (db && !recentlyWritten) {
       const col: any = db.collection('visitor_ip_logs');
       const bucket = Math.floor(now / VISITOR_BEACON_DEDUP_WINDOW_MS);
       const ipHash = crypto.createHash('sha256').update(ip).digest('hex').slice(0, 12);
       const dedupDocId = `${dateKey}_${ipHash}_${bucket}`;
-      if (typeof col.doc === 'function') {
-        await col.doc(dedupDocId).set(payload, { merge: true });
-      } else {
-        await col.add(payload);
+      const docRef = typeof col.doc === 'function' ? col.doc(dedupDocId) : null;
+      const basePayload = {
+        ip,
+        device,
+        userAgent: ua,
+        country: '',
+        region: '',
+        city: '',
+        locationSource: 'pending',
+        dateKey,
+        accessedAt: FieldValue.serverTimestamp(),
+        accessedAtMs: now
+      };
+      try {
+        if (docRef) await docRef.set(basePayload, { merge: true });
+        else await col.add(basePayload);
+        visitorBeaconLastWrite.set(ip, now);
+        if (visitorBeaconLastWrite.size > 2000) {
+          for (const [k, v] of visitorBeaconLastWrite.entries()) {
+            if (now - v >= VISITOR_BEACON_DEDUP_WINDOW_MS) visitorBeaconLastWrite.delete(k);
+          }
+        }
+        const location = await fetchIpLocation(ip, req.headers as Record<string, unknown>);
+        if (location && (location.country || location.region || location.city)) {
+          const enrichment = {
+            country: location.country || '',
+            region: location.region || '',
+            city: location.city || '',
+            locationSource: location.source || 'ip-api',
+            locationUpdatedAtMs: Date.now()
+          };
+          if (docRef) await docRef.set(enrichment, { merge: true });
+        }
+      } catch {
+        // 기록 실패는 무시합니다. (중복 방지 캐시도 갱신하지 않아 다음 접속에서 재시도됩니다)
       }
     }
   } catch {
-    // 비콘 기록 실패는 페이지 동작에 영향 주지 않습니다.
+    // 비콘 처리 실패는 페이지 동작에 영향 주지 않습니다.
   }
   res.json({ ok: true });
 };
@@ -3342,7 +3390,9 @@ const visitorLogsHandler = async (req: Request, res: Response) => {
       res.status(503).json({ ok: false, error: 'firebase_admin_not_initialized' });
       return;
     }
-    const deviceFilter = String(req.query.device || '').trim();
+    // device=desktop|android|ios 로 기기를 추리고, all/빈 값은 전체 기기를 뜻합니다.
+    const deviceParam = String(req.query.device || '').trim().toLowerCase();
+    const deviceFilter = ['desktop', 'android', 'ios'].includes(deviceParam) ? deviceParam : '';
     const requestedDays = Number(req.query.days);
     const days = Math.min(7, Math.max(1, Number.isFinite(requestedDays) && requestedDays > 0 ? Math.floor(requestedDays) : 3));
     const requestedLimit = Number(req.query.limit);
@@ -3398,6 +3448,56 @@ const visitorLogsHandler = async (req: Request, res: Response) => {
     logs.sort((a, b) => Number(b.accessedAtMs || 0) - Number(a.accessedAtMs || 0));
     logs = logs.slice(0, limit);
 
+    // PC(데스크톱) 기록이 비었을 때 '왜 비었는지'를 화면에서 바로 알 수 있게,
+    // 같은 기간의 기기별 기록 수를 함께 계산합니다. (기록이 있으면 추가 조회 없음)
+    let deviceCounts: Record<string, number> = {};
+    if (logs.length === 0) {
+      try {
+        const rawSnap = await collection.orderBy('accessedAtMs', 'desc').limit(limit * 3).get();
+        rawSnap.docs.forEach((doc) => {
+          const raw = doc.data() || {};
+          if (Number(raw.accessedAtMs) < sinceMs) return;
+          const key = String(raw.device || 'unknown');
+          deviceCounts[key] = (deviceCounts[key] || 0) + 1;
+        });
+      } catch {
+        deviceCounts = {};
+      }
+    }
+
+    // 위치가 비어 있는 기록(위치 조회 실패·구버전 문서)은 조회 시점에 최대 3건까지 보정합니다.
+    // (한 번 보정하면 Firestore 에 저장되어 다음 조회부터는 즉시 표시됩니다)
+    const pendingLocationLogs = logs
+      .filter((l) => !String(l.country || '').trim() && !String(l.region || '').trim() && !String(l.city || '').trim())
+      .filter((l) => !isPrivateOrLocalIp(String(l.ip || '')))
+      .slice(0, 3);
+    if (pendingLocationLogs.length > 0) {
+      await Promise.all(pendingLocationLogs.map(async (l) => {
+        const location = await Promise.race([
+          fetchIpLocation(String(l.ip), req.headers as Record<string, unknown>),
+          new Promise<null>((resolve) => setTimeout(() => resolve(null), 1500))
+        ]);
+        if (!location || (!location.country && !location.region && !location.city)) return;
+        l.country = location.country || '';
+        l.region = location.region || '';
+        l.city = location.city || '';
+        try {
+          const docRef: any = typeof (collection as any).doc === 'function' ? (collection as any).doc(l.id) : null;
+          if (docRef) {
+            await docRef.set({
+              country: l.country,
+              region: l.region,
+              city: l.city,
+              locationSource: location.source || 'ip-api',
+              locationUpdatedAtMs: Date.now()
+            }, { merge: true });
+          }
+        } catch {
+          // 저장 실패는 무시 — 응답에는 보정된 위치를 그대로 사용합니다.
+        }
+      }));
+    }
+
     const summary = summarizeVisitorLogs(logs, dateKeys);
     const resultLogs = logs.map((l) => ({
       id: l.id,
@@ -3410,7 +3510,12 @@ const visitorLogsHandler = async (req: Request, res: Response) => {
       locationLabel: buildVisitorLocationLabel(l),
       dateKey: String(l.dateKey || '') || kstDateKey(Number(l.accessedAtMs) || 0),
       accessedAtMs: Number(l.accessedAtMs) || 0,
-      accessedAt: formatKstDateTime(l.accessedAt).formatted
+      // accessedAt(Timestamp) 이 없거나 변환 불가한 구버전 문서도 시각이 비지 않도록 보정합니다.
+      accessedAt: (() => {
+        const fromTs = formatKstDateTime(l.accessedAt).formatted;
+        if (fromTs && fromTs !== '-') return fromTs;
+        return formatKstDateTime(Number(l.accessedAtMs) || 0).formatted;
+      })()
     }));
 
     res.json({
@@ -3422,7 +3527,8 @@ const visitorLogsHandler = async (req: Request, res: Response) => {
       dateKeys,
       sinceMs,
       rangeLabel: `${dateKeys[0]} ~ ${dateKeys[dateKeys.length - 1]} (KST, 최근 ${days}일)`,
-      summary
+      summary,
+      deviceCounts
     });
   } catch (error: any) {
     res.status(500).json({ ok: false, error: error?.message || 'visitor_logs_failed' });

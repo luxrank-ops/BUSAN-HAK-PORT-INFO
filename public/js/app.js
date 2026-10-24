@@ -563,20 +563,31 @@ let cachedStatsModalData = { totalDoc: {}, todayDoc: {}, currentBlockMode: "tota
    서버가 요청 소스 IP(req.ip) 기반으로 IP 조회 서비에서 국가/도시를 조회해
    Firestore visitor_ip_logs 에 저장하며, 운영 통계(PC 접속 위치)에 사용됩니다. */
 let visitorBeaconSentKey = "";
+let visitorBeaconInFlight = false;
 async function sendVisitorBeacon() {
+    // 같은 탭에서 중복 전송하지 않되, 전송이 실패하면 다음 기회(새로고침·재방문)에 다시 시도합니다.
+    if (visitorBeaconInFlight) return;
+    visitorBeaconInFlight = true;
     try {
         const now = new Date();
         const dateKey = getVisitorDateKey(now);
         visitorBeaconSentKey = `busanHakPortBeaconSent:${dateKey}`;
-        if (sessionStorage.getItem(visitorBeaconSentKey)) return;
-        sessionStorage.setItem(visitorBeaconSentKey, "1");
-        await fetchPortApiJson("/api/visitor-beacon", {
+        try {
+            if (sessionStorage.getItem(visitorBeaconSentKey) === "1") return;
+        } catch (e) {}
+        const resp = await fetchPortApiJson("/api/visitor-beacon", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ device: detectVisitorDeviceKey() })
         });
+        // 서버가 정상 접수(200)했을 때만 '전송 완료' 로 기록해, 실패 시 재시도가 가능하게 합니다.
+        if (resp && resp.status === 200) {
+            try { sessionStorage.setItem(visitorBeaconSentKey, "1"); } catch (e) {}
+        }
     } catch (e) {
         console.warn("방문자 비콘 전송 실패(무시):", e && e.message);
+    } finally {
+        visitorBeaconInFlight = false;
     }
 }
 
@@ -965,6 +976,7 @@ const pcVisitorLocationState = {
     rangeLabel: "",
     maskIp: true,
     loadedAt: 0,
+    deviceCounts: {},
     error: ""
 };
 
@@ -1067,11 +1079,42 @@ function escapePcVisitorText(s) {
         .replace(/"/g, "&quot;");
 }
 
+/** 관리자 세션 토큰이 없으면(만료·로컬 검증 폴백) 서버 토큰을 한 번만 다시 발급받습니다. */
+let pcVisitorTokenRefreshTried = false;
+async function ensurePcVisitorAdminToken() {
+    let token = typeof getStoredAdminSessionToken === "function" ? getStoredAdminSessionToken() : "";
+    if (token) return token;
+    if (pcVisitorTokenRefreshTried) return "";
+    if (typeof verifyAdmin !== "function" || !isAdminSessionVerified) return "";
+    pcVisitorTokenRefreshTried = true;
+    try {
+        showToast("🔑 관리자 세션을 갱신한 뒤 PC 접속 위치를 다시 불러옵니다.");
+        await verifyAdmin(true);
+    } catch (e) {
+        console.warn("관리자 세션 갱신 실패:", e && e.message);
+    }
+    token = typeof getStoredAdminSessionToken === "function" ? getStoredAdminSessionToken() : "";
+    return token;
+}
+
+/** 401(만료·위조 토큰) 이면 저장된 토큰을 지워 다음 조회에서 재발급을 유도합니다. */
+function clearPcVisitorAdminToken() {
+    try {
+        sessionStorage.removeItem(ADMIN_SESSION_TOKEN_KEY);
+        sessionStorage.removeItem(ADMIN_SESSION_EXPIRY_KEY);
+    } catch (e) {}
+}
+
 /** 서버에서 조회한 PC 접속 로그를 상태에 저장하고 화면을 다시 그립니다. */
 async function loadPcVisitorLocationList(force) {
     pcVisitorLocationState.days = getPcVisitorDays();
     const box = document.getElementById("statsVisitorIpLogs");
-    const adminToken = typeof getStoredAdminSessionToken === "function" ? getStoredAdminSessionToken() : "";
+    if (box && (!pcVisitorLocationState.loadedAt || force)) {
+        box.innerHTML = `<div style="padding:12px 8px; text-align:center; font-size:0.76rem; color:var(--text-sub); font-weight:800;">🔄 최근 ${pcVisitorLocationState.days}일 PC 접속 기록을 불러오는 중...</div>`;
+    }
+    // 관리자 세션 토큰이 없으면 먼저 재발급을 시도합니다. (없으면 Firestore 직접 조회는 규칙상 차단됩니다)
+    let adminToken = typeof getStoredAdminSessionToken === "function" ? getStoredAdminSessionToken() : "";
+    if (!adminToken) adminToken = await ensurePcVisitorAdminToken();
     const canTryFirestoreFallback = Boolean(isAdminSessionVerified && typeof db !== "undefined" && db);
     if (!adminToken && !canTryFirestoreFallback) {
         pcVisitorLocationState.error = "관리자 인증 후 확인할 수 있습니다.";
@@ -1079,9 +1122,6 @@ async function loadPcVisitorLocationList(force) {
         pcVisitorLocationState.summary = null;
         renderStatsVisitorIpLogs([]);
         return;
-    }
-    if (box && (!pcVisitorLocationState.loadedAt || force)) {
-        box.innerHTML = `<div style="padding:12px 8px; text-align:center; font-size:0.76rem; color:var(--text-sub); font-weight:800;">🔄 최근 ${pcVisitorLocationState.days}일 PC 접속 기록을 불러오는 중...</div>`;
     }
     let loaded = false;
     if (adminToken) {
@@ -1095,12 +1135,21 @@ async function loadPcVisitorLocationList(force) {
                 pcVisitorLocationState.summary = resp.data.summary || null;
                 pcVisitorLocationState.dateKeys = Array.isArray(resp.data.dateKeys) ? resp.data.dateKeys : [];
                 pcVisitorLocationState.rangeLabel = String(resp.data.rangeLabel || "");
+                pcVisitorLocationState.deviceCounts = resp.data.deviceCounts || {};
                 pcVisitorLocationState.error = "";
                 pcVisitorLocationState.loadedAt = Date.now();
                 cachedStatsModalData.visitorIpLogs = pcVisitorLocationState.logs;
                 loaded = true;
+            } else if (resp && resp.status === 401) {
+                clearPcVisitorAdminToken();
+                if (!canTryFirestoreFallback) {
+                    pcVisitorLocationState.error = "관리자 인증이 만료되었습니다. [🔄 새로고침]을 눌러 다시 인증해 주세요.";
+                }
+            } else if (resp && resp.status === 503) {
+                pcVisitorLocationState.error = "서버 위치 기록 저장소(Firebase Admin)가 준비되지 않았습니다. 잠시 후 다시 시도해 주세요.";
             } else if (!canTryFirestoreFallback) {
-                pcVisitorLocationState.error = "PC 접속 기록을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.";
+                const code = resp && resp.status ? ` (HTTP ${resp.status})` : "";
+                pcVisitorLocationState.error = `PC 접속 기록을 불러오지 못했습니다${code}. 잠시 후 [🔄 새로고침]을 눌러 주세요.`;
             }
         } catch (e) {
             console.warn("PC 접속 위치 리스트 조회 실패:", e && e.message);
@@ -1156,6 +1205,11 @@ async function loadPcVisitorLocationList(force) {
             const byLocation = [...locMap.values()].sort((a, b) => b.count - a.count).map(l => ({ label: l.label, count: l.count, uniqueIp: l.ips.size }));
             const byDay = [...dayMap.values()].sort((a, b) => (a.dateKey < b.dateKey ? 1 : -1)).map(d => ({ dateKey: d.dateKey, count: d.count, uniqueIp: d.ips.size }));
             pcVisitorLocationState.logs = rows;
+            pcVisitorLocationState.deviceCounts = rows.reduce((acc, r) => {
+                const key = String(r.device || "desktop");
+                acc[key] = (acc[key] || 0) + 1;
+                return acc;
+            }, {});
             pcVisitorLocationState.summary = { totalCount: rows.length, uniqueIp: uniqueIps.size, byDay, byLocation, topLocation: byLocation[0] || null };
             pcVisitorLocationState.dateKeys = dateKeys;
             pcVisitorLocationState.rangeLabel = `${dateKeys[0]} ~ ${dateKeys[dateKeys.length - 1]} (KST, 최근 ${pcVisitorLocationState.days}일)`;
@@ -1197,9 +1251,16 @@ function renderStatsVisitorIpLogs(logs) {
     }
 
     if (rows.length === 0) {
+        const dc = pcVisitorLocationState.deviceCounts || {};
+        const deviceLabel = { android: "📱 안드로이드", ios: "🍎 아이폰", desktop: "💻 PC", unknown: "❔ 미확인" };
+        const otherDevices = Object.keys(dc)
+            .filter(k => k !== "desktop" && Number(dc[k]) > 0)
+            .map(k => `${deviceLabel[k] || k} ${Number(dc[k]).toLocaleString()}건`)
+            .join(" · ");
         box.innerHTML = `<div style="padding:14px 8px; text-align:center; font-size:0.78rem; color:var(--text-sub); font-weight:800;">
             최근 ${pcVisitorLocationState.days}일 동안 기록된 PC 접속 위치가 없습니다.<br>
             <span style="font-size:0.7rem; font-weight:700;">※ PC(데스크톱) 접속 시에만 기록되며, 기록은 접속 후 최대 30분 간격으로 남습니다.</span>
+            ${otherDevices ? `<br><span style="font-size:0.7rem; font-weight:800; color:var(--primary);">같은 기간 모바일 기록: ${escapePcVisitorText(otherDevices)}</span>` : ""}
         </div>`;
         return;
     }
@@ -10426,6 +10487,9 @@ async function stopEmergencyNotice() {
 }
 
 window.onload = async () => { 
+    // 🖥️ PC 접속 위치 기록 비콘은 가장 먼저 보냅니다.
+    //    (아래 초기화 코드에서 예외가 발생해도 '최근 3일 PC 접속자 위치' 기록이 비지 않도록)
+    try { sendVisitorBeacon(); } catch (e) { console.warn("방문자 비콘 준비 실패(무시):", e && e.message); }
     applyOfficialTerminalNames();
     appendTerminalMealBlocks();
     renderTerminalScheduleTabBar();
@@ -10433,7 +10497,6 @@ window.onload = async () => {
     initAppHistoryNavigation();
     ["t1", "t2", "t3"].forEach(loadSectionTicker);
     trackVisitorSession();
-    await sendVisitorBeacon();
     initTodayVisitorBadge();
     ensureTodayUpdateNotice();
     subscribeEmergencyNotice();
