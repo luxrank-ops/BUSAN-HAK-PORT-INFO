@@ -1,0 +1,714 @@
+{
+  "kstDate": "2026-10-25",
+  "generatedAt": "2026-10-24T21:27:53.304Z",
+  "kstDateTime": "2026-10-25 (일) 06:27:53 KST",
+  "summary": {
+    "total": 100,
+    "pass": 100,
+    "warn": 0,
+    "fail": 0,
+    "overall": "PASS"
+  },
+  "checks": [
+    {
+      "category": "파일 존재",
+      "name": ".firebaserc",
+      "status": "PASS",
+      "detail": "파일 존재 확인",
+      "severity": "info"
+    },
+    {
+      "category": "파일 존재",
+      "name": "firebase.json",
+      "status": "PASS",
+      "detail": "파일 존재 확인",
+      "severity": "info"
+    },
+    {
+      "category": "파일 존재",
+      "name": "vercel.json",
+      "status": "PASS",
+      "detail": "파일 존재 확인",
+      "severity": "info"
+    },
+    {
+      "category": "파일 존재",
+      "name": "firestore.rules",
+      "status": "PASS",
+      "detail": "파일 존재 확인",
+      "severity": "info"
+    },
+    {
+      "category": "파일 존재",
+      "name": "firestore.indexes.json",
+      "status": "PASS",
+      "detail": "파일 존재 확인",
+      "severity": "info"
+    },
+    {
+      "category": "파일 존재",
+      "name": "package.json",
+      "status": "PASS",
+      "detail": "파일 존재 확인",
+      "severity": "info"
+    },
+    {
+      "category": "파일 존재",
+      "name": "public/index.html",
+      "status": "PASS",
+      "detail": "파일 존재 확인",
+      "severity": "info"
+    },
+    {
+      "category": "파일 존재",
+      "name": "public/admin.html",
+      "status": "PASS",
+      "detail": "파일 존재 확인",
+      "severity": "info"
+    },
+    {
+      "category": "파일 존재",
+      "name": "public/manifest.json",
+      "status": "PASS",
+      "detail": "파일 존재 확인",
+      "severity": "info"
+    },
+    {
+      "category": "파일 존재",
+      "name": "public/service-worker.js",
+      "status": "PASS",
+      "detail": "파일 존재 확인",
+      "severity": "info"
+    },
+    {
+      "category": "파일 존재",
+      "name": "public/firebase-messaging-sw.js",
+      "status": "PASS",
+      "detail": "파일 존재 확인",
+      "severity": "info"
+    },
+    {
+      "category": "파일 존재",
+      "name": "public/css/app.css",
+      "status": "PASS",
+      "detail": "파일 존재 확인",
+      "severity": "info"
+    },
+    {
+      "category": "파일 존재",
+      "name": "public/js/app.js",
+      "status": "PASS",
+      "detail": "파일 존재 확인",
+      "severity": "info"
+    },
+    {
+      "category": "파일 존재",
+      "name": "public/js/notifications.js",
+      "status": "PASS",
+      "detail": "파일 존재 확인",
+      "severity": "info"
+    },
+    {
+      "category": "파일 존재",
+      "name": "public/js/leader-access.js",
+      "status": "PASS",
+      "detail": "파일 존재 확인",
+      "severity": "info"
+    },
+    {
+      "category": "파일 존재",
+      "name": "public/js/ships-board.js",
+      "status": "PASS",
+      "detail": "파일 존재 확인",
+      "severity": "info"
+    },
+    {
+      "category": "파일 존재",
+      "name": "public/js/tab-views.js",
+      "status": "PASS",
+      "detail": "파일 존재 확인",
+      "severity": "info"
+    },
+    {
+      "category": "파일 존재",
+      "name": "public/js/kkung-relay.js",
+      "status": "PASS",
+      "detail": "파일 존재 확인",
+      "severity": "info"
+    },
+    {
+      "category": "파일 존재",
+      "name": "server.ts",
+      "status": "PASS",
+      "detail": "파일 존재 확인",
+      "severity": "info"
+    },
+    {
+      "category": "파일 존재",
+      "name": "api/[...path].ts",
+      "status": "PASS",
+      "detail": "파일 존재 확인",
+      "severity": "info"
+    },
+    {
+      "category": "파일 존재",
+      "name": "scripts/weekly-self-check.mjs",
+      "status": "PASS",
+      "detail": "파일 존재 확인",
+      "severity": "info"
+    },
+    {
+      "category": "파일 존재",
+      "name": "scripts/weekly-self-check-run.mjs",
+      "status": "PASS",
+      "detail": "파일 존재 확인",
+      "severity": "info"
+    },
+    {
+      "category": "파일 존재",
+      "name": "api/cron/weekly-self-check.ts",
+      "status": "PASS",
+      "detail": "파일 존재 확인",
+      "severity": "info"
+    },
+    {
+      "category": "JSON 문법",
+      "name": ".firebaserc",
+      "status": "PASS",
+      "detail": "JSON 파싱 성공",
+      "severity": "info"
+    },
+    {
+      "category": "JSON 문법",
+      "name": "firebase.json",
+      "status": "PASS",
+      "detail": "JSON 파싱 성공",
+      "severity": "info"
+    },
+    {
+      "category": "JSON 문법",
+      "name": "vercel.json",
+      "status": "PASS",
+      "detail": "JSON 파싱 성공",
+      "severity": "info"
+    },
+    {
+      "category": "JSON 문법",
+      "name": "firestore.indexes.json",
+      "status": "PASS",
+      "detail": "JSON 파싱 성공",
+      "severity": "info"
+    },
+    {
+      "category": "JSON 문법",
+      "name": "package.json",
+      "status": "PASS",
+      "detail": "JSON 파싱 성공",
+      "severity": "info"
+    },
+    {
+      "category": "JSON 문법",
+      "name": "public/manifest.json",
+      "status": "PASS",
+      "detail": "JSON 파싱 성공",
+      "severity": "info"
+    },
+    {
+      "category": "HTML 구조",
+      "name": "public/index.html",
+      "status": "PASS",
+      "detail": "문서 구조 정상",
+      "severity": "info"
+    },
+    {
+      "category": "HTML 구조",
+      "name": "public/admin.html",
+      "status": "PASS",
+      "detail": "문서 구조 정상",
+      "severity": "info"
+    },
+    {
+      "category": "API 라우트",
+      "name": "GET /api/health",
+      "status": "PASS",
+      "detail": "라우트 존재",
+      "severity": "info"
+    },
+    {
+      "category": "API 라우트",
+      "name": "GET /api/config",
+      "status": "PASS",
+      "detail": "라우트 존재",
+      "severity": "info"
+    },
+    {
+      "category": "API 라우트",
+      "name": "POST /api/screen-unlock",
+      "status": "PASS",
+      "detail": "라우트 존재",
+      "severity": "info"
+    },
+    {
+      "category": "API 라우트",
+      "name": "POST /api/emergency-unlock",
+      "status": "PASS",
+      "detail": "라우트 존재",
+      "severity": "info"
+    },
+    {
+      "category": "API 라우트",
+      "name": "POST /api/auth-session",
+      "status": "PASS",
+      "detail": "라우트 존재",
+      "severity": "info"
+    },
+    {
+      "category": "API 라우트",
+      "name": "GET /api/analytics-summary",
+      "status": "PASS",
+      "detail": "라우트 존재",
+      "severity": "info"
+    },
+    {
+      "category": "API 라우트",
+      "name": "GET /api/admin-stats",
+      "status": "PASS",
+      "detail": "라우트 존재",
+      "severity": "info"
+    },
+    {
+      "category": "API 라우트",
+      "name": "GET /api/hjnc-schedule",
+      "status": "PASS",
+      "detail": "라우트 존재",
+      "severity": "info"
+    },
+    {
+      "category": "API 라우트",
+      "name": "GET /api/terminal-schedule",
+      "status": "PASS",
+      "detail": "라우트 존재",
+      "severity": "info"
+    },
+    {
+      "category": "API 라우트",
+      "name": "GET /api/cron/schedule-watch",
+      "status": "PASS",
+      "detail": "라우트 존재",
+      "severity": "info"
+    },
+    {
+      "category": "API 라우트",
+      "name": "GET /api/cron/daily-cleanup",
+      "status": "PASS",
+      "detail": "라우트 존재",
+      "severity": "info"
+    },
+    {
+      "category": "API 라우트",
+      "name": "GET /api/cron/weekly-backup",
+      "status": "PASS",
+      "detail": "라우트 존재",
+      "severity": "info"
+    },
+    {
+      "category": "API 라우트",
+      "name": "GET /api/cron/daily-inspection",
+      "status": "PASS",
+      "detail": "라우트 존재",
+      "severity": "info"
+    },
+    {
+      "category": "API 라우트",
+      "name": "GET /api/cron/weekly-self-check",
+      "status": "PASS",
+      "detail": "라우트 존재",
+      "severity": "info"
+    },
+    {
+      "category": "API 라우트",
+      "name": "GET /api/self-check-report",
+      "status": "PASS",
+      "detail": "라우트 존재",
+      "severity": "info"
+    },
+    {
+      "category": "터미널 지원",
+      "name": "HJNC",
+      "status": "PASS",
+      "detail": "지원 목록 포함",
+      "severity": "info"
+    },
+    {
+      "category": "터미널 지원",
+      "name": "BNCT",
+      "status": "PASS",
+      "detail": "지원 목록 포함",
+      "severity": "info"
+    },
+    {
+      "category": "터미널 지원",
+      "name": "DGT",
+      "status": "PASS",
+      "detail": "지원 목록 포함",
+      "severity": "info"
+    },
+    {
+      "category": "터미널 지원",
+      "name": "PNC",
+      "status": "PASS",
+      "detail": "지원 목록 포함",
+      "severity": "info"
+    },
+    {
+      "category": "터미널 지원",
+      "name": "HPNT",
+      "status": "PASS",
+      "detail": "지원 목록 포함",
+      "severity": "info"
+    },
+    {
+      "category": "터미널 지원",
+      "name": "PNIT",
+      "status": "PASS",
+      "detail": "지원 목록 포함",
+      "severity": "info"
+    },
+    {
+      "category": "터미널 지원",
+      "name": "BPTC",
+      "status": "PASS",
+      "detail": "지원 목록 포함",
+      "severity": "info"
+    },
+    {
+      "category": "터미널 지원",
+      "name": "HBCT",
+      "status": "PASS",
+      "detail": "지원 목록 포함",
+      "severity": "info"
+    },
+    {
+      "category": "터미널 파서",
+      "name": "parsePncScheduleHtml",
+      "status": "PASS",
+      "detail": "함수 존재",
+      "severity": "info"
+    },
+    {
+      "category": "터미널 파서",
+      "name": "parsePncWorkStatusHtml",
+      "status": "PASS",
+      "detail": "함수 존재",
+      "severity": "info"
+    },
+    {
+      "category": "터미널 파서",
+      "name": "extractPncSearchFormRequest",
+      "status": "PASS",
+      "detail": "함수 존재",
+      "severity": "info"
+    },
+    {
+      "category": "터미널 파서",
+      "name": "mergePncScheduleAndWorkStatus",
+      "status": "PASS",
+      "detail": "함수 존재",
+      "severity": "info"
+    },
+    {
+      "category": "자동화 크론",
+      "name": "스케줄 감시 (매 정각)",
+      "status": "PASS",
+      "detail": "크론 등록됨",
+      "severity": "info"
+    },
+    {
+      "category": "자동화 크론",
+      "name": "DB 정리 (매일 03시)",
+      "status": "PASS",
+      "detail": "크론 등록됨",
+      "severity": "info"
+    },
+    {
+      "category": "자동화 크론",
+      "name": "주간 백업 (일요일 00시)",
+      "status": "PASS",
+      "detail": "크론 등록됨",
+      "severity": "info"
+    },
+    {
+      "category": "자동화 크론",
+      "name": "일일 점검 (매일 04시)",
+      "status": "PASS",
+      "detail": "크론 등록됨",
+      "severity": "info"
+    },
+    {
+      "category": "자동화 크론",
+      "name": "주간 자가 점검 (월요일 05시)",
+      "status": "PASS",
+      "detail": "크론 등록됨",
+      "severity": "info"
+    },
+    {
+      "category": "자동화 크론",
+      "name": "주간 자가 점검 시간대",
+      "status": "PASS",
+      "detail": "매주 월요일 05:00 (Asia/Seoul)",
+      "severity": "info"
+    },
+    {
+      "category": "자동화 상태",
+      "name": "automationRuntimeStatus.scheduleWatcher",
+      "status": "PASS",
+      "detail": "상태 트래킹 존재",
+      "severity": "info"
+    },
+    {
+      "category": "자동화 상태",
+      "name": "automationRuntimeStatus.autoCleanup",
+      "status": "PASS",
+      "detail": "상태 트래킹 존재",
+      "severity": "info"
+    },
+    {
+      "category": "자동화 상태",
+      "name": "automationRuntimeStatus.weeklyBackup",
+      "status": "PASS",
+      "detail": "상태 트래킹 존재",
+      "severity": "info"
+    },
+    {
+      "category": "자동화 상태",
+      "name": "automationRuntimeStatus.dailyInspection",
+      "status": "PASS",
+      "detail": "일일 점검 상태 트래킹 존재",
+      "severity": "info"
+    },
+    {
+      "category": "자동화 함수",
+      "name": "runScheduleChangeDetection",
+      "status": "PASS",
+      "detail": "함수 존재",
+      "severity": "info"
+    },
+    {
+      "category": "자동화 함수",
+      "name": "runDatabaseAutoCleanup",
+      "status": "PASS",
+      "detail": "함수 존재",
+      "severity": "info"
+    },
+    {
+      "category": "자동화 함수",
+      "name": "runWeeklyFirestoreBackup",
+      "status": "PASS",
+      "detail": "함수 존재",
+      "severity": "info"
+    },
+    {
+      "category": "자동화 함수",
+      "name": "runDailyInspection",
+      "status": "PASS",
+      "detail": "일일 점검 함수 존재",
+      "severity": "info"
+    },
+    {
+      "category": "배포 설정",
+      "name": "vercel.json outputDirectory",
+      "status": "PASS",
+      "detail": "build/public 정상",
+      "severity": "info"
+    },
+    {
+      "category": "배포 설정",
+      "name": "vercel.json crons /api/cron/daily-cleanup",
+      "status": "PASS",
+      "detail": "크론 등록됨",
+      "severity": "info"
+    },
+    {
+      "category": "배포 설정",
+      "name": "vercel.json crons /api/cron/weekly-backup",
+      "status": "PASS",
+      "detail": "크론 등록됨",
+      "severity": "info"
+    },
+    {
+      "category": "배포 설정",
+      "name": "vercel.json crons /api/cron/daily-inspection",
+      "status": "PASS",
+      "detail": "크론 등록됨",
+      "severity": "info"
+    },
+    {
+      "category": "배포 설정",
+      "name": "firebase.json hosting.public",
+      "status": "PASS",
+      "detail": "build/public 정상",
+      "severity": "info"
+    },
+    {
+      "category": "배포 설정",
+      "name": "firebase.json predeploy",
+      "status": "PASS",
+      "detail": "build:obfuscate 등록됨",
+      "severity": "info"
+    },
+    {
+      "category": "보안·인증",
+      "name": "화면 잠금 PIN 검증",
+      "status": "PASS",
+      "detail": "구현 존재",
+      "severity": "info"
+    },
+    {
+      "category": "보안·인증",
+      "name": "긴급 공지 PIN 검증",
+      "status": "PASS",
+      "detail": "구현 존재",
+      "severity": "info"
+    },
+    {
+      "category": "보안·인증",
+      "name": "관리자 세션 토큰 검증",
+      "status": "PASS",
+      "detail": "구현 존재",
+      "severity": "info"
+    },
+    {
+      "category": "보안·인증",
+      "name": "CRON_SECRET 인증",
+      "status": "PASS",
+      "detail": "구현 존재",
+      "severity": "info"
+    },
+    {
+      "category": "보안·인증",
+      "name": "속도 제한 (Rate Limit)",
+      "status": "PASS",
+      "detail": "구현 존재",
+      "severity": "info"
+    },
+    {
+      "category": "보안·인증",
+      "name": "SCREEN_LOCK_PIN 환경변수 참조",
+      "status": "PASS",
+      "detail": "구현 존재",
+      "severity": "info"
+    },
+    {
+      "category": "보안·인증",
+      "name": "CRON_SECRET 환경변수 참조",
+      "status": "PASS",
+      "detail": "구현 존재",
+      "severity": "info"
+    },
+    {
+      "category": "보안·인증",
+      "name": "firestore.rules isAdmin",
+      "status": "PASS",
+      "detail": "관리자 규칙 존재",
+      "severity": "info"
+    },
+    {
+      "category": "보안·인증",
+      "name": "firestore.rules 크기",
+      "status": "PASS",
+      "detail": "17KB",
+      "severity": "info"
+    },
+    {
+      "category": "디자인 토큰",
+      "name": "토큰 정의 수",
+      "status": "PASS",
+      "detail": "419개 토큰 정의",
+      "severity": "info"
+    },
+    {
+      "category": "디자인 토큰",
+      "name": "CSS 토큰 참조",
+      "status": "PASS",
+      "detail": "var(--토큰) 사용 확인",
+      "severity": "info"
+    },
+    {
+      "category": "워크플로",
+      "name": "워크플로 파일 수",
+      "status": "PASS",
+      "detail": "5개 파일",
+      "severity": "info"
+    },
+    {
+      "category": "워크플로",
+      "name": "ci.yml",
+      "status": "PASS",
+      "detail": "파일 존재",
+      "severity": "info"
+    },
+    {
+      "category": "워크플로",
+      "name": "cron-schedule-watch.yml",
+      "status": "PASS",
+      "detail": "파일 존재",
+      "severity": "info"
+    },
+    {
+      "category": "워크플로",
+      "name": "deploy-firebase.yml",
+      "status": "PASS",
+      "detail": "파일 존재",
+      "severity": "info"
+    },
+    {
+      "category": "워크플로",
+      "name": "daily-inspection.yml",
+      "status": "PASS",
+      "detail": "파일 존재",
+      "severity": "info"
+    },
+    {
+      "category": "워크플로",
+      "name": "package.json script:dev",
+      "status": "PASS",
+      "detail": "스크립트 존재",
+      "severity": "info"
+    },
+    {
+      "category": "워크플로",
+      "name": "package.json script:build",
+      "status": "PASS",
+      "detail": "스크립트 존재",
+      "severity": "info"
+    },
+    {
+      "category": "워크플로",
+      "name": "package.json script:typecheck",
+      "status": "PASS",
+      "detail": "스크립트 존재",
+      "severity": "info"
+    },
+    {
+      "category": "워크플로",
+      "name": "package.json script:validate",
+      "status": "PASS",
+      "detail": "스크립트 존재",
+      "severity": "info"
+    },
+    {
+      "category": "워크플로",
+      "name": "package.json script:test",
+      "status": "PASS",
+      "detail": "스크립트 존재",
+      "severity": "info"
+    },
+    {
+      "category": "워크플로",
+      "name": "package.json script:check",
+      "status": "PASS",
+      "detail": "스크립트 존재",
+      "severity": "info"
+    }
+  ]
+}
