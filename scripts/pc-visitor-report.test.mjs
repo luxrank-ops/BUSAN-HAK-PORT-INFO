@@ -163,6 +163,8 @@ test('앱 렌더링 — 최근 3일 목록 마크업과 리포트 텍스트', ()
         'renderPcVisitorLocationRank',
         'renderPcVisitorSummaryCards',
         'getPcVisitorIpText',
+        'pcVisitorRowTags',
+        'pcVisitorKindLabel',
         'renderStatsVisitorIpLogs',
         'buildPcVisitorLocationReportText'
     ].map((name) => {
