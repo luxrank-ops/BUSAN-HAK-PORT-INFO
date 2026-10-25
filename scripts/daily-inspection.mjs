@@ -77,6 +77,7 @@ const REQUIRED_FILES = [
   'public/js/ships-board.js',
   'public/js/tab-views.js',
   'public/js/kkung-relay.js',
+  'public/js/want-board.js',
   'server.ts',
   'api/[...path].ts',
   // 주간 자가 점검 · 자가 복구 (2026-10-23 추가)
