@@ -1,8 +1,8 @@
 # 부산항 스마트 작업 가이드 — 일일 기능 점검 보고서
 
-> **점검 일시**: 2026-10-25 (일) 06:27:53 KST
-> **점검 기준일**: 2026-10-25 (KST)
-> **생성 시각(UTC)**: 2026-10-24T21:27:53.304Z
+> **점검 일시**: 2026-10-26 (월) 06:34:33 KST
+> **점검 기준일**: 2026-10-26 (KST)
+> **생성 시각(UTC)**: 2026-10-25T21:34:33.038Z
 > **점검 방식**: 자동 점검 (매일 04:00 KST · GitHub Actions + Vercel Cron + 로컬 node-cron)
 
 ---
@@ -12,8 +12,8 @@
 | 구분 | 결과 |
 | --- | --- |
 | **종합 판정** | 🟢 **정상** (PASS) |
-| 전체 점검 항목 | 100건 |
-| ✅ PASS | 100건 |
+| 전체 점검 항목 | 101건 |
+| ✅ PASS | 101건 |
 | ⚠️ WARN | 0건 |
 | ❌ FAIL | 0건 |
 | 통과율 | 100% |
@@ -44,88 +44,89 @@
 | 16 | 파일 존재 | public/js/ships-board.js | ✅ PASS | 파일 존재 확인 |
 | 17 | 파일 존재 | public/js/tab-views.js | ✅ PASS | 파일 존재 확인 |
 | 18 | 파일 존재 | public/js/kkung-relay.js | ✅ PASS | 파일 존재 확인 |
-| 19 | 파일 존재 | server.ts | ✅ PASS | 파일 존재 확인 |
-| 20 | 파일 존재 | api/[...path].ts | ✅ PASS | 파일 존재 확인 |
-| 21 | 파일 존재 | scripts/weekly-self-check.mjs | ✅ PASS | 파일 존재 확인 |
-| 22 | 파일 존재 | scripts/weekly-self-check-run.mjs | ✅ PASS | 파일 존재 확인 |
-| 23 | 파일 존재 | api/cron/weekly-self-check.ts | ✅ PASS | 파일 존재 확인 |
-| 24 | JSON 문법 | .firebaserc | ✅ PASS | JSON 파싱 성공 |
-| 25 | JSON 문법 | firebase.json | ✅ PASS | JSON 파싱 성공 |
-| 26 | JSON 문법 | vercel.json | ✅ PASS | JSON 파싱 성공 |
-| 27 | JSON 문법 | firestore.indexes.json | ✅ PASS | JSON 파싱 성공 |
-| 28 | JSON 문법 | package.json | ✅ PASS | JSON 파싱 성공 |
-| 29 | JSON 문법 | public/manifest.json | ✅ PASS | JSON 파싱 성공 |
-| 30 | HTML 구조 | public/index.html | ✅ PASS | 문서 구조 정상 |
-| 31 | HTML 구조 | public/admin.html | ✅ PASS | 문서 구조 정상 |
-| 32 | API 라우트 | GET /api/health | ✅ PASS | 라우트 존재 |
-| 33 | API 라우트 | GET /api/config | ✅ PASS | 라우트 존재 |
-| 34 | API 라우트 | POST /api/screen-unlock | ✅ PASS | 라우트 존재 |
-| 35 | API 라우트 | POST /api/emergency-unlock | ✅ PASS | 라우트 존재 |
-| 36 | API 라우트 | POST /api/auth-session | ✅ PASS | 라우트 존재 |
-| 37 | API 라우트 | GET /api/analytics-summary | ✅ PASS | 라우트 존재 |
-| 38 | API 라우트 | GET /api/admin-stats | ✅ PASS | 라우트 존재 |
-| 39 | API 라우트 | GET /api/hjnc-schedule | ✅ PASS | 라우트 존재 |
-| 40 | API 라우트 | GET /api/terminal-schedule | ✅ PASS | 라우트 존재 |
-| 41 | API 라우트 | GET /api/cron/schedule-watch | ✅ PASS | 라우트 존재 |
-| 42 | API 라우트 | GET /api/cron/daily-cleanup | ✅ PASS | 라우트 존재 |
-| 43 | API 라우트 | GET /api/cron/weekly-backup | ✅ PASS | 라우트 존재 |
-| 44 | API 라우트 | GET /api/cron/daily-inspection | ✅ PASS | 라우트 존재 |
-| 45 | API 라우트 | GET /api/cron/weekly-self-check | ✅ PASS | 라우트 존재 |
-| 46 | API 라우트 | GET /api/self-check-report | ✅ PASS | 라우트 존재 |
-| 47 | 터미널 지원 | HJNC | ✅ PASS | 지원 목록 포함 |
-| 48 | 터미널 지원 | BNCT | ✅ PASS | 지원 목록 포함 |
-| 49 | 터미널 지원 | DGT | ✅ PASS | 지원 목록 포함 |
-| 50 | 터미널 지원 | PNC | ✅ PASS | 지원 목록 포함 |
-| 51 | 터미널 지원 | HPNT | ✅ PASS | 지원 목록 포함 |
-| 52 | 터미널 지원 | PNIT | ✅ PASS | 지원 목록 포함 |
-| 53 | 터미널 지원 | BPTC | ✅ PASS | 지원 목록 포함 |
-| 54 | 터미널 지원 | HBCT | ✅ PASS | 지원 목록 포함 |
-| 55 | 터미널 파서 | parsePncScheduleHtml | ✅ PASS | 함수 존재 |
-| 56 | 터미널 파서 | parsePncWorkStatusHtml | ✅ PASS | 함수 존재 |
-| 57 | 터미널 파서 | extractPncSearchFormRequest | ✅ PASS | 함수 존재 |
-| 58 | 터미널 파서 | mergePncScheduleAndWorkStatus | ✅ PASS | 함수 존재 |
-| 59 | 자동화 크론 | 스케줄 감시 (매 정각) | ✅ PASS | 크론 등록됨 |
-| 60 | 자동화 크론 | DB 정리 (매일 03시) | ✅ PASS | 크론 등록됨 |
-| 61 | 자동화 크론 | 주간 백업 (일요일 00시) | ✅ PASS | 크론 등록됨 |
-| 62 | 자동화 크론 | 일일 점검 (매일 04시) | ✅ PASS | 크론 등록됨 |
-| 63 | 자동화 크론 | 주간 자가 점검 (월요일 05시) | ✅ PASS | 크론 등록됨 |
-| 64 | 자동화 크론 | 주간 자가 점검 시간대 | ✅ PASS | 매주 월요일 05:00 (Asia/Seoul) |
-| 65 | 자동화 상태 | automationRuntimeStatus.scheduleWatcher | ✅ PASS | 상태 트래킹 존재 |
-| 66 | 자동화 상태 | automationRuntimeStatus.autoCleanup | ✅ PASS | 상태 트래킹 존재 |
-| 67 | 자동화 상태 | automationRuntimeStatus.weeklyBackup | ✅ PASS | 상태 트래킹 존재 |
-| 68 | 자동화 상태 | automationRuntimeStatus.dailyInspection | ✅ PASS | 일일 점검 상태 트래킹 존재 |
-| 69 | 자동화 함수 | runScheduleChangeDetection | ✅ PASS | 함수 존재 |
-| 70 | 자동화 함수 | runDatabaseAutoCleanup | ✅ PASS | 함수 존재 |
-| 71 | 자동화 함수 | runWeeklyFirestoreBackup | ✅ PASS | 함수 존재 |
-| 72 | 자동화 함수 | runDailyInspection | ✅ PASS | 일일 점검 함수 존재 |
-| 73 | 배포 설정 | vercel.json outputDirectory | ✅ PASS | build/public 정상 |
-| 74 | 배포 설정 | vercel.json crons /api/cron/daily-cleanup | ✅ PASS | 크론 등록됨 |
-| 75 | 배포 설정 | vercel.json crons /api/cron/weekly-backup | ✅ PASS | 크론 등록됨 |
-| 76 | 배포 설정 | vercel.json crons /api/cron/daily-inspection | ✅ PASS | 크론 등록됨 |
-| 77 | 배포 설정 | firebase.json hosting.public | ✅ PASS | build/public 정상 |
-| 78 | 배포 설정 | firebase.json predeploy | ✅ PASS | build:obfuscate 등록됨 |
-| 79 | 보안·인증 | 화면 잠금 PIN 검증 | ✅ PASS | 구현 존재 |
-| 80 | 보안·인증 | 긴급 공지 PIN 검증 | ✅ PASS | 구현 존재 |
-| 81 | 보안·인증 | 관리자 세션 토큰 검증 | ✅ PASS | 구현 존재 |
-| 82 | 보안·인증 | CRON_SECRET 인증 | ✅ PASS | 구현 존재 |
-| 83 | 보안·인증 | 속도 제한 (Rate Limit) | ✅ PASS | 구현 존재 |
-| 84 | 보안·인증 | SCREEN_LOCK_PIN 환경변수 참조 | ✅ PASS | 구현 존재 |
-| 85 | 보안·인증 | CRON_SECRET 환경변수 참조 | ✅ PASS | 구현 존재 |
-| 86 | 보안·인증 | firestore.rules isAdmin | ✅ PASS | 관리자 규칙 존재 |
-| 87 | 보안·인증 | firestore.rules 크기 | ✅ PASS | 17KB |
-| 88 | 디자인 토큰 | 토큰 정의 수 | ✅ PASS | 419개 토큰 정의 |
-| 89 | 디자인 토큰 | CSS 토큰 참조 | ✅ PASS | var(--토큰) 사용 확인 |
-| 90 | 워크플로 | 워크플로 파일 수 | ✅ PASS | 5개 파일 |
-| 91 | 워크플로 | ci.yml | ✅ PASS | 파일 존재 |
-| 92 | 워크플로 | cron-schedule-watch.yml | ✅ PASS | 파일 존재 |
-| 93 | 워크플로 | deploy-firebase.yml | ✅ PASS | 파일 존재 |
-| 94 | 워크플로 | daily-inspection.yml | ✅ PASS | 파일 존재 |
-| 95 | 워크플로 | package.json script:dev | ✅ PASS | 스크립트 존재 |
-| 96 | 워크플로 | package.json script:build | ✅ PASS | 스크립트 존재 |
-| 97 | 워크플로 | package.json script:typecheck | ✅ PASS | 스크립트 존재 |
-| 98 | 워크플로 | package.json script:validate | ✅ PASS | 스크립트 존재 |
-| 99 | 워크플로 | package.json script:test | ✅ PASS | 스크립트 존재 |
-| 100 | 워크플로 | package.json script:check | ✅ PASS | 스크립트 존재 |
+| 19 | 파일 존재 | public/js/want-board.js | ✅ PASS | 파일 존재 확인 |
+| 20 | 파일 존재 | server.ts | ✅ PASS | 파일 존재 확인 |
+| 21 | 파일 존재 | api/[...path].ts | ✅ PASS | 파일 존재 확인 |
+| 22 | 파일 존재 | scripts/weekly-self-check.mjs | ✅ PASS | 파일 존재 확인 |
+| 23 | 파일 존재 | scripts/weekly-self-check-run.mjs | ✅ PASS | 파일 존재 확인 |
+| 24 | 파일 존재 | api/cron/weekly-self-check.ts | ✅ PASS | 파일 존재 확인 |
+| 25 | JSON 문법 | .firebaserc | ✅ PASS | JSON 파싱 성공 |
+| 26 | JSON 문법 | firebase.json | ✅ PASS | JSON 파싱 성공 |
+| 27 | JSON 문법 | vercel.json | ✅ PASS | JSON 파싱 성공 |
+| 28 | JSON 문법 | firestore.indexes.json | ✅ PASS | JSON 파싱 성공 |
+| 29 | JSON 문법 | package.json | ✅ PASS | JSON 파싱 성공 |
+| 30 | JSON 문법 | public/manifest.json | ✅ PASS | JSON 파싱 성공 |
+| 31 | HTML 구조 | public/index.html | ✅ PASS | 문서 구조 정상 |
+| 32 | HTML 구조 | public/admin.html | ✅ PASS | 문서 구조 정상 |
+| 33 | API 라우트 | GET /api/health | ✅ PASS | 라우트 존재 |
+| 34 | API 라우트 | GET /api/config | ✅ PASS | 라우트 존재 |
+| 35 | API 라우트 | POST /api/screen-unlock | ✅ PASS | 라우트 존재 |
+| 36 | API 라우트 | POST /api/emergency-unlock | ✅ PASS | 라우트 존재 |
+| 37 | API 라우트 | POST /api/auth-session | ✅ PASS | 라우트 존재 |
+| 38 | API 라우트 | GET /api/analytics-summary | ✅ PASS | 라우트 존재 |
+| 39 | API 라우트 | GET /api/admin-stats | ✅ PASS | 라우트 존재 |
+| 40 | API 라우트 | GET /api/hjnc-schedule | ✅ PASS | 라우트 존재 |
+| 41 | API 라우트 | GET /api/terminal-schedule | ✅ PASS | 라우트 존재 |
+| 42 | API 라우트 | GET /api/cron/schedule-watch | ✅ PASS | 라우트 존재 |
+| 43 | API 라우트 | GET /api/cron/daily-cleanup | ✅ PASS | 라우트 존재 |
+| 44 | API 라우트 | GET /api/cron/weekly-backup | ✅ PASS | 라우트 존재 |
+| 45 | API 라우트 | GET /api/cron/daily-inspection | ✅ PASS | 라우트 존재 |
+| 46 | API 라우트 | GET /api/cron/weekly-self-check | ✅ PASS | 라우트 존재 |
+| 47 | API 라우트 | GET /api/self-check-report | ✅ PASS | 라우트 존재 |
+| 48 | 터미널 지원 | HJNC | ✅ PASS | 지원 목록 포함 |
+| 49 | 터미널 지원 | BNCT | ✅ PASS | 지원 목록 포함 |
+| 50 | 터미널 지원 | DGT | ✅ PASS | 지원 목록 포함 |
+| 51 | 터미널 지원 | PNC | ✅ PASS | 지원 목록 포함 |
+| 52 | 터미널 지원 | HPNT | ✅ PASS | 지원 목록 포함 |
+| 53 | 터미널 지원 | PNIT | ✅ PASS | 지원 목록 포함 |
+| 54 | 터미널 지원 | BPTC | ✅ PASS | 지원 목록 포함 |
+| 55 | 터미널 지원 | HBCT | ✅ PASS | 지원 목록 포함 |
+| 56 | 터미널 파서 | parsePncScheduleHtml | ✅ PASS | 함수 존재 |
+| 57 | 터미널 파서 | parsePncWorkStatusHtml | ✅ PASS | 함수 존재 |
+| 58 | 터미널 파서 | extractPncSearchFormRequest | ✅ PASS | 함수 존재 |
+| 59 | 터미널 파서 | mergePncScheduleAndWorkStatus | ✅ PASS | 함수 존재 |
+| 60 | 자동화 크론 | 스케줄 감시 (매 정각) | ✅ PASS | 크론 등록됨 |
+| 61 | 자동화 크론 | DB 정리 (매일 03시) | ✅ PASS | 크론 등록됨 |
+| 62 | 자동화 크론 | 주간 백업 (일요일 00시) | ✅ PASS | 크론 등록됨 |
+| 63 | 자동화 크론 | 일일 점검 (매일 04시) | ✅ PASS | 크론 등록됨 |
+| 64 | 자동화 크론 | 주간 자가 점검 (월요일 05시) | ✅ PASS | 크론 등록됨 |
+| 65 | 자동화 크론 | 주간 자가 점검 시간대 | ✅ PASS | 매주 월요일 05:00 (Asia/Seoul) |
+| 66 | 자동화 상태 | automationRuntimeStatus.scheduleWatcher | ✅ PASS | 상태 트래킹 존재 |
+| 67 | 자동화 상태 | automationRuntimeStatus.autoCleanup | ✅ PASS | 상태 트래킹 존재 |
+| 68 | 자동화 상태 | automationRuntimeStatus.weeklyBackup | ✅ PASS | 상태 트래킹 존재 |
+| 69 | 자동화 상태 | automationRuntimeStatus.dailyInspection | ✅ PASS | 일일 점검 상태 트래킹 존재 |
+| 70 | 자동화 함수 | runScheduleChangeDetection | ✅ PASS | 함수 존재 |
+| 71 | 자동화 함수 | runDatabaseAutoCleanup | ✅ PASS | 함수 존재 |
+| 72 | 자동화 함수 | runWeeklyFirestoreBackup | ✅ PASS | 함수 존재 |
+| 73 | 자동화 함수 | runDailyInspection | ✅ PASS | 일일 점검 함수 존재 |
+| 74 | 배포 설정 | vercel.json outputDirectory | ✅ PASS | build/public 정상 |
+| 75 | 배포 설정 | vercel.json crons /api/cron/daily-cleanup | ✅ PASS | 크론 등록됨 |
+| 76 | 배포 설정 | vercel.json crons /api/cron/weekly-backup | ✅ PASS | 크론 등록됨 |
+| 77 | 배포 설정 | vercel.json crons /api/cron/daily-inspection | ✅ PASS | 크론 등록됨 |
+| 78 | 배포 설정 | firebase.json hosting.public | ✅ PASS | build/public 정상 |
+| 79 | 배포 설정 | firebase.json predeploy | ✅ PASS | build:obfuscate 등록됨 |
+| 80 | 보안·인증 | 화면 잠금 PIN 검증 | ✅ PASS | 구현 존재 |
+| 81 | 보안·인증 | 긴급 공지 PIN 검증 | ✅ PASS | 구현 존재 |
+| 82 | 보안·인증 | 관리자 세션 토큰 검증 | ✅ PASS | 구현 존재 |
+| 83 | 보안·인증 | CRON_SECRET 인증 | ✅ PASS | 구현 존재 |
+| 84 | 보안·인증 | 속도 제한 (Rate Limit) | ✅ PASS | 구현 존재 |
+| 85 | 보안·인증 | SCREEN_LOCK_PIN 환경변수 참조 | ✅ PASS | 구현 존재 |
+| 86 | 보안·인증 | CRON_SECRET 환경변수 참조 | ✅ PASS | 구현 존재 |
+| 87 | 보안·인증 | firestore.rules isAdmin | ✅ PASS | 관리자 규칙 존재 |
+| 88 | 보안·인증 | firestore.rules 크기 | ✅ PASS | 21KB |
+| 89 | 디자인 토큰 | 토큰 정의 수 | ✅ PASS | 419개 토큰 정의 |
+| 90 | 디자인 토큰 | CSS 토큰 참조 | ✅ PASS | var(--토큰) 사용 확인 |
+| 91 | 워크플로 | 워크플로 파일 수 | ✅ PASS | 5개 파일 |
+| 92 | 워크플로 | ci.yml | ✅ PASS | 파일 존재 |
+| 93 | 워크플로 | cron-schedule-watch.yml | ✅ PASS | 파일 존재 |
+| 94 | 워크플로 | deploy-firebase.yml | ✅ PASS | 파일 존재 |
+| 95 | 워크플로 | daily-inspection.yml | ✅ PASS | 파일 존재 |
+| 96 | 워크플로 | package.json script:dev | ✅ PASS | 스크립트 존재 |
+| 97 | 워크플로 | package.json script:build | ✅ PASS | 스크립트 존재 |
+| 98 | 워크플로 | package.json script:typecheck | ✅ PASS | 스크립트 존재 |
+| 99 | 워크플로 | package.json script:validate | ✅ PASS | 스크립트 존재 |
+| 100 | 워크플로 | package.json script:test | ✅ PASS | 스크립트 존재 |
+| 101 | 워크플로 | package.json script:check | ✅ PASS | 스크립트 존재 |
 
 ---
 
@@ -133,7 +134,7 @@
 
 | 분야 | PASS | WARN | FAIL | 합계 | 상태 |
 | --- | --- | --- | --- | --- | --- |
-| 파일 존재 | 23 | 0 | 0 | 23 | 🟢 정상 |
+| 파일 존재 | 24 | 0 | 0 | 24 | 🟢 정상 |
 | JSON 문법 | 6 | 0 | 0 | 6 | 🟢 정상 |
 | HTML 구조 | 2 | 0 | 0 | 2 | 🟢 정상 |
 | API 라우트 | 15 | 0 | 0 | 15 | 🟢 정상 |

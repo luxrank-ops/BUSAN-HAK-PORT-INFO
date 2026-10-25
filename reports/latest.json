@@ -1,10 +1,10 @@
 {
-  "kstDate": "2026-10-25",
-  "generatedAt": "2026-10-24T21:27:53.304Z",
-  "kstDateTime": "2026-10-25 (일) 06:27:53 KST",
+  "kstDate": "2026-10-26",
+  "generatedAt": "2026-10-25T21:34:33.038Z",
+  "kstDateTime": "2026-10-26 (월) 06:34:33 KST",
   "summary": {
-    "total": 100,
-    "pass": 100,
+    "total": 101,
+    "pass": 101,
     "warn": 0,
     "fail": 0,
     "overall": "PASS"
@@ -132,6 +132,13 @@
     {
       "category": "파일 존재",
       "name": "public/js/kkung-relay.js",
+      "status": "PASS",
+      "detail": "파일 존재 확인",
+      "severity": "info"
+    },
+    {
+      "category": "파일 존재",
+      "name": "public/js/want-board.js",
       "status": "PASS",
       "detail": "파일 존재 확인",
       "severity": "info"
@@ -616,7 +623,7 @@
       "category": "보안·인증",
       "name": "firestore.rules 크기",
       "status": "PASS",
-      "detail": "17KB",
+      "detail": "21KB",
       "severity": "info"
     },
     {
