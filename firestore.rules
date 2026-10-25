@@ -383,5 +383,99 @@ service cloud.firestore {
       allow get, list: if isAdmin();
       allow write: if false;
     }
+
+    // ---------------------------------------------------------
+    // 12. want_board (💡 운영자에게 바란다 — 관리자 전용 피드백 게시판)
+    //     - 일반 사용자: 본인이 작성한 항목만 읽을 수 있습니다(전체 목록 조회 불가).
+    //     - 관리자(isAdmin): 모든 항목을 열람하고 답글·삭제할 수 있습니다.
+    //     - 답글(replies)은 관리자만 작성할 수 있습니다.
+    //     - want_board/{itemId}              : 한 건의 피드백 (authorUid·nick·content·status)
+    //     - want_board/{itemId}/replies/... : 관리자 답글
+    //     - want_board_mine/{uid}            : 작성자 본인의提交 목록 인덱스
+    //     - 화면 코드(public/js/want-board.js)의 운영값과 이 규칙은 함께 바꿔야 합니다.
+    // ---------------------------------------------------------
+    function isValidWantNick(val) {
+      return val is string && val.size() >= 1 && val.size() <= 50;
+    }
+
+    function isValidWantItemDoc(data) {
+      return data is map &&
+        data.id is string && isValidId(data.id) &&
+        data.authorUid is string && data.authorUid.size() >= 1 && data.authorUid.size() <= 64 &&
+        isValidWantNick(data.nick) &&
+        data.content is string && data.content.size() >= 1 && data.content.size() <= 3000 &&
+        data.createdAt is timestamp &&
+        data.createdAtMs is int && data.createdAtMs > 0 && data.createdAtMs <= 4102444800000 &&
+        (!('status' in data) || data.status in ['pending', 'replied', 'closed']) &&
+        (!('deleted' in data) || data.deleted is bool) &&
+        (!('replyCount' in data) || (data.replyCount is int && data.replyCount >= 0 && data.replyCount <= 1000));
+    }
+
+    function isValidWantReply(data) {
+      return data is map &&
+        data.itemId is string && isValidId(data.itemId) &&
+        data.authorUid is string && data.authorUid.size() >= 1 && data.authorUid.size() <= 64 &&
+        isValidWantNick(data.name) &&
+        data.text is string && data.text.size() >= 1 && data.text.size() <= 3000 &&
+        data.createdAt is timestamp &&
+        data.createdAtMs is int && data.createdAtMs > 0 && data.createdAtMs <= 4102444800000 &&
+        (!('isAdminReply' in data) || data.isAdminReply is bool);
+    }
+
+    function isValidWantIndex(data) {
+      return data is map &&
+        data.uid is string && data.uid.size() >= 1 && data.uid.size() <= 64 &&
+        data.items is list && data.items.size() <= 200 &&
+        data.items.all(item => item is map &&
+          item.id is string && isValidId(item.id) &&
+          item.nick is string && item.nick.size() >= 1 && item.nick.size() <= 50 &&
+          item.snippet is string && item.snippet.size() <= 80 &&
+          (!('status' in item) || item.status in ['pending', 'replied', 'closed']) &&
+          (!('replyCount' in item) || (item.replyCount is int && item.replyCount >= 0 && item.replyCount <= 1000)) &&
+          (!('deleted' in item) || item.deleted is bool) &&
+          item.createdAtMs is int && item.createdAtMs > 0 && item.createdAtMs <= 4102444800000);
+    }
+
+    // 해당 항목을 작성한 사용자인지 확인 (부모 문서를 직접 읽어 대조합니다)
+    function isWantItemAuthor(itemId) {
+      return exists(/databases/$(database)/documents/want_board/$(itemId)) &&
+        get(/databases/$(database)/documents/want_board/$(itemId)).data.authorUid == request.auth.uid;
+    }
+
+    match /want_board/{itemId} {
+      allow get: if isSignedIn() && isValidId(itemId) && (
+        isAdmin() ||
+        isWantItemAuthor(itemId)
+      );
+      allow list: if isAdmin();
+      allow create: if isSignedIn() && isValidId(itemId) && isValidWantItemDoc(incoming()) &&
+        incoming().authorUid == request.auth.uid;
+      // 작성자는 삭제 표시만 바꿀 수 있습니다(내용·상태·답글 위조 차단).
+      allow update: if isSignedIn() && isValidId(itemId) && (
+        isAdmin() ||
+        (isWantItemAuthor(itemId) &&
+          incoming().diff(existing()).affectedKeys().hasOnly(['deleted']) &&
+          incoming().deleted == true)
+      );
+      allow delete: if isAdmin();
+
+      match /replies/{replyId} {
+        allow get, list: if isSignedIn() && isValidId(replyId) && (
+          isAdmin() ||
+          isWantItemAuthor(itemId)
+        );
+        allow create: if isSignedIn() && isValidId(replyId) && isAdmin() &&
+          isValidWantReply(incoming()) && incoming().itemId == itemId;
+        allow update, delete: if isAdmin();
+      }
+    }
+
+    match /want_board_mine/{uid} {
+      allow get: if isSignedIn() && isValidId(uid) && request.auth.uid == uid;
+      allow list: if false;
+      allow create, update: if isSignedIn() && isValidId(uid) && request.auth.uid == uid &&
+        isValidWantIndex(incoming()) && incoming().uid == uid;
+      allow delete: if isAdmin() || (isSignedIn() && request.auth.uid == uid);
+    }
   }
 }
