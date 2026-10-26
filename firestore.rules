@@ -404,8 +404,8 @@ service cloud.firestore {
         data.authorUid is string && data.authorUid.size() >= 1 && data.authorUid.size() <= 64 &&
         isValidWantNick(data.nick) &&
         data.content is string && data.content.size() >= 1 && data.content.size() <= 3000 &&
-        data.createdAt is timestamp &&
         data.createdAtMs is int && data.createdAtMs > 0 && data.createdAtMs <= 4102444800000 &&
+        (!('createdAt' in data) || data.createdAt is timestamp) &&
         (!('status' in data) || data.status in ['pending', 'replied', 'closed']) &&
         (!('deleted' in data) || data.deleted is bool) &&
         (!('replyCount' in data) || (data.replyCount is int && data.replyCount >= 0 && data.replyCount <= 1000));
@@ -417,8 +417,8 @@ service cloud.firestore {
         data.authorUid is string && data.authorUid.size() >= 1 && data.authorUid.size() <= 64 &&
         isValidWantNick(data.name) &&
         data.text is string && data.text.size() >= 1 && data.text.size() <= 3000 &&
-        data.createdAt is timestamp &&
         data.createdAtMs is int && data.createdAtMs > 0 && data.createdAtMs <= 4102444800000 &&
+        (!('createdAt' in data) || data.createdAt is timestamp) &&
         (!('isAdminReply' in data) || data.isAdminReply is bool);
     }
 
