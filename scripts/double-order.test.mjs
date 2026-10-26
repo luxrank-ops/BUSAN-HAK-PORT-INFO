@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import vm from 'node:vm';
-import { readAppJs } from './app-source.mjs';
+import { readAppJs, extractFunction } from './app-source.mjs';
 
 const html = readFileSync(new URL('../public/index.html', import.meta.url), 'utf8');
 // A-1 (2026-10-17): 앱 로직은 인라인 스크립트에서 public/js/* 로 이동 — 함수 추출은 통합 JS 에서.
@@ -10,7 +10,9 @@ const appJs = readAppJs();
 const segmentFn = appJs.split('function calculateWageSegment(')[1].split('function calculateWage() {')[0];
 const calculator = appJs.split('function calculateWage() {')[1].split('function onWageShipNameChange(')[0];
 const transfer = appJs.split('let wageToLogTransferPending = false;')[1].split('async function sendWorkLogShipToWage(')[0];
-assert.ok(segmentFn && calculator && transfer, 'calculator and transfer code found');
+const activeWorkLogDate = extractFunction(appJs, 'getActiveWorkLogDate');
+const wageLogTargetDate = extractFunction(appJs, 'getWageLogTargetDate');
+assert.ok(segmentFn && calculator && transfer && activeWorkLogDate && wageLogTargetDate, 'calculator, date routing and transfer code found');
 
 function setup({ doubleOrder = false, savedLog = null, sameDateDraft = false } = {}) {
     const elements = {};
@@ -45,23 +47,28 @@ function setup({ doubleOrder = false, savedLog = null, sameDateDraft = false } =
     }
     let fetchCount = 0;
     let jumpCount = 0;
+    let lastJumpDate = '';
     const messages = [];
     const logs = {};
+    const readPaths = [];
     const context = vm.createContext({
         document: { getElementById: id => elements[id] },
         currentWorkerId: 'worker', adminWorkLogs: logs, selectedWageScheduleShipName: '',
         selectedWageVessels: [],
         selectedScheduleTerminal: 'HJNC',
+        getAppLocalDateString: () => '2026-10-26',
         periodHours: () => 2,
         getSelectedVesselPeriod: () => ({ hours: 2 }),
         updateWageHoursBreakdown() {},
         escapeShipCommentHtml: s => String(s || ''),
-        db: { collection: () => ({ doc: () => ({ get: async () => {
+        db: { collection: collectionName => ({ doc: docId => ({ get: async () => {
             fetchCount++;
+            readPaths.push(`${collectionName}/${docId}`);
             return { exists: !!savedLog, data: () => savedLog };
         } }) }) },
         jumpToLogDate(date) {
             jumpCount++;
+            lastJumpDate = date;
             const record = logs[date];
             elements.dailyLogForm.date = date;
             elements.dailyLogForm.classList.remove('hidden');
@@ -76,8 +83,14 @@ function setup({ doubleOrder = false, savedLog = null, sameDateDraft = false } =
         renderRow: (label, amount) => `${label}: ${amount}`,
         setTimeout() {}, console: { error() {} }
     });
-    vm.runInContext(`let lastCalculatedWageData = null; function calculateWageSegment(${segmentFn}function calculateWage() {${calculator}let wageToLogTransferPending = false;${transfer}`, context);
-    return { elements, context, messages, get fetchCount() { return fetchCount; }, get jumpCount() { return jumpCount; } };
+    vm.runInContext(`let lastCalculatedWageData = null; ${activeWorkLogDate}\n${wageLogTargetDate}\nfunction calculateWageSegment(${segmentFn}function calculateWage() {${calculator}let wageToLogTransferPending = false;${transfer}`, context);
+    return {
+        elements, context, messages,
+        get fetchCount() { return fetchCount; },
+        get jumpCount() { return jumpCount; },
+        get lastJumpDate() { return lastJumpDate; },
+        readPaths
+    };
 }
 
 const flush = () => new Promise(resolve => setImmediate(resolve));
@@ -92,6 +105,63 @@ test('normal calculation leaves log untouched until explicitly transferred to wa
     await app.context.sendCalculatedWageToLog();
     assert.equal(app.elements.logWage1.value, 20640);
     assert.equal(app.elements.logWage2.value, '');
+});
+
+test('the active work-log day is preserved when the selected vessel has an earlier arrival date', async () => {
+    const app = setup();
+    app.elements.dailyLogForm.date = '2026-10-25';
+    app.elements.dailyLogForm.classList.remove('hidden');
+    app.elements.wageStartDate.value = '2026-10-01';
+    app.elements.wageEndDate.value = '2026-10-01';
+    app.context.selectedWageVessels.push({ name: 'VESSEL', date: '2026-10-24' });
+
+    app.context.calculateWage();
+    const calculated = vm.runInContext('lastCalculatedWageData', app.context);
+    assert.equal(calculated.date, '2026-10-01', 'ATA/ATD remain the wage calculation period');
+    assert.equal(calculated.workLogDate, '2026-10-25', 'the open work-log day is the destination');
+
+    await app.context.sendCalculatedWageToLog();
+    assert.equal(app.jumpCount, 0, 'do not jump away from an explicitly selected work-log day');
+    assert.equal(app.elements.dailyLogForm.date, '2026-10-25');
+    assert.equal(app.elements.logShipName.value, 'VESSEL');
+    assert.equal(app.elements.logWage1.value, 20640);
+});
+
+test('with no active work-log form, the selected schedule day wins over a stale hidden date and ATA', async () => {
+    const app = setup();
+    app.elements.dailyLogForm.date = '2026-10-01'; // hidden stale value from an earlier visit
+    app.elements.wageStartDate.value = '2026-10-01'; // vessel arrival date
+    app.elements.wageEndDate.value = '2026-10-01';
+    app.context.selectedWageVessels.push({ name: 'VESSEL', date: '2026-10-25' });
+
+    app.context.calculateWage();
+    const calculated = vm.runInContext('lastCalculatedWageData', app.context);
+    assert.equal(calculated.workLogDate, '2026-10-25');
+
+    await app.context.sendCalculatedWageToLog();
+    assert.equal(app.jumpCount, 1);
+    assert.equal(app.lastJumpDate, '2026-10-25');
+    assert.equal(app.elements.dailyLogForm.date, '2026-10-25');
+    assert.equal(app.elements.logShipName.value, 'VESSEL');
+});
+
+test('double-order lookup uses the work date, not the vessel arrival date', async () => {
+    const app = setup({ doubleOrder: true, savedLog: {
+        shipName: 'FIRST SHIP', wage1: 50000, wage2: 0, memo: '첫 번째 작업'
+    } });
+    app.elements.dailyLogForm.date = '2026-10-01'; // stale and hidden
+    app.elements.wageStartDate.value = '2026-10-01'; // ship ATA
+    app.elements.wageEndDate.value = '2026-10-01';
+    app.context.selectedWageVessels.push({ name: 'SECOND SHIP', date: '2026-10-25' });
+
+    app.context.calculateWage();
+    await flush();
+
+    assert.deepEqual(app.readPaths, ['work_logs/worker_2026-10-25']);
+    assert.equal(app.lastJumpDate, '2026-10-25');
+    assert.equal(app.elements.logWage1.value, 50000);
+    assert.equal(app.elements.logWage2.value, 20640);
+    assert.equal(app.elements.logShipName.value, 'FIRST SHIP / SECOND SHIP');
 });
 
 test('double order calculation adds second ship and wage 2 without losing saved first order', async () => {
