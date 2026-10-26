@@ -220,35 +220,181 @@
         return typeof document !== 'undefined' ? document.getElementById(id) : null;
     }
 
+    /**
+     * Firestore 인스턴스 해석
+     *
+     * app.js 는 `const db = firebase.firestore()` 로 선언합니다. 브라우저 classic script 규칙상
+     * 상위 레벨 `const`/`let` 은 전역 렉시컬 환경에만 binding 되고 `window.db` property 로는
+     * 붙지 않습니다. 그래서 `global.db` 로만 찾으면 항상 undefined 가 되어
+     * "데이터베이스를 준비하지 못했어요" 가 뜨게 됩니다(2026-10-25 운영자 피드백).
+     * 따라서 bare 식별자를 먼저 찾고, 없으면 `global.db` · `global.firebase.firestore()` 로 차례로 폴백합니다.
+     */
     function getFirestore() {
-        return typeof global.db !== 'undefined' && global.db ? global.db : null;
+        try {
+            if (typeof db !== 'undefined' && db) return db;
+        } catch (_) {
+            // TDZ(선언 이전 참조) — 무시
+        }
+        try {
+            if (typeof global.db !== 'undefined' && global.db) return global.db;
+        } catch (_) {
+            // 무시
+        }
+        try {
+            if (typeof global.firebase !== 'undefined' && global.firebase && typeof global.firebase.firestore === 'function') {
+                return global.firebase.firestore();
+            }
+        } catch (_) {
+            // 무시
+        }
+        return null;
     }
 
     function getAuth() {
-        return typeof global.auth !== 'undefined' && global.auth ? global.auth : null;
+        try {
+            if (typeof auth !== 'undefined' && auth) return auth;
+        } catch (_) {
+            // TDZ — 무시
+        }
+        try {
+            if (typeof global.auth !== 'undefined' && global.auth) return global.auth;
+        } catch (_) {
+            // 무시
+        }
+        return null;
+    }
+
+    /** 익명 인증 함수 — 상위 레벨 함수 선언은 window property 로도 붙습니다. */
+    function resolveAnonAuth() {
+        try {
+            if (typeof ensureAnonymousAuth === 'function') return ensureAnonymousAuth;
+        } catch (_) {
+            // 무시
+        }
+        try {
+            if (typeof global.ensureAnonymousAuth === 'function') return global.ensureAnonymousAuth;
+        } catch (_) {
+            // 무시
+        }
+        return null;
+    }
+
+    function notifyAlert(message) {
+        let fn = null;
+        try {
+            if (typeof alert === 'function') fn = alert;
+        } catch (_) {
+            // 무시
+        }
+        if (!fn) {
+            try {
+                if (typeof global.alert === 'function') fn = global.alert;
+            } catch (_) {
+                // 무시
+            }
+        }
+        if (fn) fn(message);
+    }
+
+    function notifyConfirm(message) {
+        let fn = null;
+        try {
+            if (typeof confirm === 'function') fn = confirm;
+        } catch (_) {
+            // 무시
+        }
+        if (!fn) {
+            try {
+                if (typeof global.confirm === 'function') fn = global.confirm;
+            } catch (_) {
+                // 무시
+            }
+        }
+        // confirm 이 없으면 안전하게 "취소" 로 처리합니다.
+        return fn ? Boolean(fn(message)) : false;
+    }
+
+    function notifyToast(message) {
+        let fn = null;
+        try {
+            if (typeof showToast === 'function') fn = showToast;
+        } catch (_) {
+            // 무시
+        }
+        if (!fn) {
+            try {
+                if (typeof global.showToast === 'function') fn = global.showToast;
+            } catch (_) {
+                // 무시
+            }
+        }
+        if (fn) fn(message);
+    }
+
+    /** 서버 타임스탬프 — Firebase SDK 가 없으면 없이 저장합니다(규칙은 createdAtMs 를 기준으로 합니다). */
+    function wantServerTimestamp() {
+        try {
+            if (typeof firebase !== 'undefined' && firebase && firebase.firestore && firebase.firestore.FieldValue) {
+                return firebase.firestore.FieldValue.serverTimestamp();
+            }
+        } catch (_) {
+            // 무시
+        }
+        try {
+            if (typeof global.firebase !== 'undefined' && global.firebase && global.firebase.firestore && global.firebase.firestore.FieldValue) {
+                return global.firebase.firestore.FieldValue.serverTimestamp();
+            }
+        } catch (_) {
+            // 무시
+        }
+        return null;
     }
 
     async function ensureBoardAuth() {
-        if (typeof global.ensureAnonymousAuth === 'function') {
-            await global.ensureAnonymousAuth();
+        const ensureAnon = resolveAnonAuth();
+        if (ensureAnon) {
+            await ensureAnon();
         }
         const auth = getAuth();
         const uid = auth && auth.currentUser ? String(auth.currentUser.uid || '') : '';
-        if (!uid && typeof global.fetchPortApiJson === 'function') {
+        if (!uid) {
+            let fetchAnon = null;
             try {
-                const fallback = await global.fetchPortApiJson('/api/auth-session', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ mode: 'anonymous', clientId: (typeof global.getOrCreateClientDeviceId === 'function' ? global.getOrCreateClientDeviceId() : 'dev_want') })
-                });
-                if (fallback && fallback.status === 200 && fallback.data && fallback.data.customToken && auth && typeof auth.signInWithCustomToken === 'function') {
-                    const cred = await auth.signInWithCustomToken(fallback.data.customToken);
-                    if (cred && cred.user) {
-                        return String(cred.user.uid || '');
-                    }
-                }
+                if (typeof fetchPortApiJson === 'function') fetchAnon = fetchPortApiJson;
             } catch (_) {
-                // 폴백 실패 시 auth.currentUser 를 그대로 사용합니다.
+                // 무시
+            }
+            if (!fetchAnon) {
+                try {
+                    if (typeof global.fetchPortApiJson === 'function') fetchAnon = global.fetchPortApiJson;
+                } catch (_) {
+                    // 무시
+                }
+            }
+            if (fetchAnon) {
+                let clientId = '';
+                try {
+                    clientId = typeof getOrCreateClientDeviceId === 'function'
+                        ? getOrCreateClientDeviceId()
+                        : (typeof global.getOrCreateClientDeviceId === 'function' ? global.getOrCreateClientDeviceId() : 'dev_want');
+                } catch (_) {
+                    clientId = 'dev_want';
+                }
+                try {
+                    const fallback = await fetchAnon('/api/auth-session', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ mode: 'anonymous', clientId })
+                    });
+                    if (fallback && fallback.status === 200 && fallback.data && fallback.data.customToken && auth && typeof auth.signInWithCustomToken === 'function') {
+                        const cred = await auth.signInWithCustomToken(fallback.data.customToken);
+                        if (cred && cred.user) {
+                            return String(cred.user.uid || '');
+                        }
+                    }
+                } catch (_) {
+                    // 폴백 실패 시 auth.currentUser 를 그대로 사용합니다.
+                }
             }
         }
         return auth && auth.currentUser ? String(auth.currentUser.uid || '') : '';
@@ -260,7 +406,7 @@
             const saved = String(global.localStorage && global.localStorage.getItem(NICK_STORAGE_KEY) || '').trim();
             if (saved && saved.length <= MAX_NICK_LENGTH) return saved;
         } catch (_) {
-            // localStorage 사용 불가 환경에서도 동작하도록继续
+            // localStorage 사용 불가 환경에서도 동작하도록 continue
         }
         return '';
     }
@@ -273,12 +419,55 @@
         }
     }
 
-    function pickWantNick(previousNick) {
-        const options = typeof global.PORT_NICKNAME_OPTIONS === 'function'
-            ? []
-            : (global.PORT_NICKNAME_OPTIONS || []);
-        const filtered = options.filter((option) => option !== previousNick);
-        const pool = filtered.length ? filtered : options;
+    /** 항만용어 닉네임 후보 — app.js 의 상위 레벨 const 를 bare 식별자로 먼저 찾습니다. */
+    function portNicknameOptions() {
+        let options = [];
+        try {
+            if (typeof PORT_NICKNAME_OPTIONS !== 'undefined' && Array.isArray(PORT_NICKNAME_OPTIONS)) {
+                options = PORT_NICKNAME_OPTIONS;
+            }
+        } catch (_) {
+            // 무시
+        }
+        if (!options.length) {
+            try {
+                if (global.PORT_NICKNAME_OPTIONS && Array.isArray(global.PORT_NICKNAME_OPTIONS)) {
+                    options = global.PORT_NICKNAME_OPTIONS;
+                }
+            } catch (_) {
+                // 무시
+            }
+        }
+        return options;
+    }
+
+    /** app.js 의 getPortNickname 가 있으면 거기에 위임합니다. */
+    function resolvePortNickname(forceNew) {
+        let fn = null;
+        try {
+            if (typeof getPortNickname === 'function') fn = getPortNickname;
+        } catch (_) {
+            // 무시
+        }
+        if (!fn) {
+            try {
+                if (typeof global.getPortNickname === 'function') fn = global.getPortNickname;
+            } catch (_) {
+                // 무시
+            }
+        }
+        try {
+            const nick = fn ? fn(Boolean(forceNew)) : '';
+            return nick ? String(nick) : '';
+        } catch (_) {
+            return '';
+        }
+    }
+
+    function pickWantNick(previousNick, options) {
+        const list = Array.isArray(options) ? options : [];
+        const filtered = list.filter((option) => option !== previousNick);
+        const pool = filtered.length ? filtered : list;
         if (!pool.length) return previousNick || '익명';
         return pool[Math.floor(Math.random() * pool.length)];
     }
@@ -286,14 +475,12 @@
     function getWantNick(forceNew) {
         const saved = loadSavedWantNick();
         if (!forceNew && saved) return saved;
-        if (typeof global.getPortNickname === 'function') {
-            const nick = global.getPortNickname(Boolean(forceNew));
-            if (nick) {
-                saveWantNick(nick);
-                return nick;
-            }
+        const fromApp = resolvePortNickname(forceNew);
+        if (fromApp) {
+            saveWantNick(fromApp);
+            return fromApp;
         }
-        const nick = pickWantNick(saved);
+        const nick = pickWantNick(saved, portNicknameOptions());
         saveWantNick(nick);
         return nick;
     }
@@ -375,7 +562,7 @@
             byId('wantBoardContent') && byId('wantBoardContent').value
         );
         if (!validation.ok) {
-            global.alert(validation.errors.join('\n'));
+            notifyAlert(validation.errors.join('\n'));
             return false;
         }
         draft = { nick: validation.nick, content: validation.content };
@@ -415,17 +602,17 @@
     async function confirmWantPreview() {
         const validation = validateWantDraft(draft.nick, draft.content);
         if (!validation.ok) {
-            global.alert(validation.errors.join('\n'));
+            notifyAlert(validation.errors.join('\n'));
             return;
         }
         const db = getFirestore();
         if (!db) {
-            global.alert('데이터베이스를 준비하지 못했어요. 앱을 새로고침해 주세요.');
+            notifyAlert('데이터베이스를 준비하지 못했어요. 앱을 새로고침해 주세요.');
             return;
         }
         const uid = boardUid || await ensureBoardAuth();
         if (!uid) {
-            global.alert('로그인 상태가 아니어서 제출할 수 없습니다. 앱을 새로고침해 주세요.');
+            notifyAlert('로그인 상태가 아니어서 제출할 수 없습니다. 앱을 새로고침해 주세요.');
             return;
         }
         boardUid = uid;
@@ -435,7 +622,7 @@
             authorUid: uid,
             nick: validation.nick,
             content: validation.content,
-            createdAt: global.firebase && global.firebase.firestore ? global.firebase.firestore.FieldValue.serverTimestamp() : null,
+            createdAt: wantServerTimestamp(),
             createdAtMs: Date.now(),
             status: STATUS_PENDING,
             deleted: false,
@@ -451,10 +638,10 @@
             await ensureWantIndexDoc(db, uid, [{ ...buildWantIndexItem({ ...itemDoc }), id: itemId }]);
             draft = { nick: '', content: '' };
             closeWantFormAndPreview();
-            global.showToast && global.showToast('📝 운영자에게 전달되었습니다.');
+            notifyToast('📝 운영자에게 전달되었습니다.');
             await loadWantMyIndex();
         } catch (error) {
-            global.alert('제출 실패: ' + ((error && error.message) || 'Unknown error'));
+            notifyAlert('제출 실패: ' + ((error && error.message) || 'Unknown error'));
         } finally {
             if (button) {
                 button.disabled = false;
@@ -658,7 +845,7 @@
     }
 
     async function deleteWantItem(itemId, isAdmin) {
-        if (!global.confirm('이 기록을 삭제하시겠습니까?')) return;
+        if (!notifyConfirm('이 기록을 삭제하시겠습니까?')) return;
         const db = getFirestore();
         if (!db) return;
         try {
@@ -677,9 +864,9 @@
             } else {
                 await loadWantMyIndex();
             }
-            global.showToast && global.showToast('삭제되었습니다.');
+            notifyToast('삭제되었습니다.');
         } catch (error) {
-            global.alert('삭제 실패: ' + ((error && error.message) || 'Unknown error'));
+            notifyAlert('삭제 실패: ' + ((error && error.message) || 'Unknown error'));
         }
     }
 
@@ -770,7 +957,7 @@
             }));
             renderWantAdminList();
         } catch (error) {
-            global.alert('관리자 기록 불러오기 실패: ' + ((error && error.message) || 'Unknown error'));
+            notifyAlert('관리자 기록 불러오기 실패: ' + ((error && error.message) || 'Unknown error'));
         }
     }
 
@@ -791,7 +978,7 @@
         const raw = area ? area.textContent : '';
         const validation = validateWantReply(raw);
         if (!validation.ok) {
-            global.alert(validation.errors.join('\n'));
+            notifyAlert(validation.errors.join('\n'));
             return;
         }
         const uid = boardUid || await ensureBoardAuth();
@@ -801,15 +988,15 @@
                 authorUid: uid,
                 name: '운영자',
                 text: validation.text,
-                createdAt: global.firebase && global.firebase.firestore ? global.firebase.firestore.FieldValue.serverTimestamp() : null,
+                createdAt: wantServerTimestamp(),
                 createdAtMs: Date.now(),
                 isAdminReply: true
             });
             if (area) area.textContent = '';
-            global.showToast && global.showToast('📢 답글이 등록되었습니다.');
+            notifyToast('📢 답글이 등록되었습니다.');
             await loadWantAdminItems();
         } catch (error) {
-            global.alert('답글 등록 실패: ' + ((error && error.message) || 'Unknown error'));
+            notifyAlert('답글 등록 실패: ' + ((error && error.message) || 'Unknown error'));
         }
     }
 
@@ -855,7 +1042,14 @@
         buildWantIndexItem,
         normalizeWantItem,
         normalizeWantIndex,
-        escapeWantHtml
+        escapeWantHtml,
+        resolveFirestore: getFirestore,
+        resolveAuth: getAuth,
+        portNicknameOptions,
+        resolvePortNickname,
+        notifyAlert,
+        notifyConfirm,
+        notifyToast
     });
 
     global.openWantBoard = openWantBoard;

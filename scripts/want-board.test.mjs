@@ -50,6 +50,57 @@ function loadCore() {
 
 const core = loadCore();
 
+/**
+ * app.js 와 똑같이 전역 바인딩을 만들어 모듈을 로드합니다.
+ * 브라우저에서는 상위 레벨 const/let 은 window property 로 붙지 않고
+ * 전역 렉시칼 환경에만 존재합니다(함수 선언만 window property 가 됩니다).
+ */
+function loadCoreWithAppGlobals() {
+    const sandbox = {
+        console, Date, Math, Set, Map, Array, String, Number, Object, JSON, RegExp, Error, Promise,
+        document: {
+            readyState: 'loading',
+            addEventListener() {},
+            getElementById() { return null; },
+            querySelector() { return null; },
+            querySelectorAll() { return []; }
+        },
+        firebase: { firestore: { FieldValue: { serverTimestamp: () => ({ __ts: true }) } } },
+        localStorage: { getItem() { return null; }, setItem() {} },
+        alert() {},
+        confirm() { return true; }
+    };
+    sandbox.__db = { __fake: 'firestore' };
+    sandbox.window = sandbox;
+    sandbox.globalThis = sandbox;
+    const context = vm.createContext(sandbox);
+    vm.runInContext([
+        'const db = __db;',
+        'const auth = { currentUser: { uid: "uid_writer_1" } };',
+        "const PORT_NICKNAME_OPTIONS = ['부산항 도선사', '라싱 반장'];",
+        'function ensureAnonymousAuth() { return Promise.resolve("uid_writer_1"); }'
+    ].join('\n'), context);
+    new vm.Script(script, { filename: 'want-board.js' }).runInContext(context);
+    return { core: sandbox.WantBoardCore, window: sandbox };
+}
+
+const appGlobals = loadCoreWithAppGlobals();
+
+test('상위 레벨 const(db·auth·PORT_NICKNAME_OPTIONS)가 window property 가 아니어도 Firestore·인증·항만용어를 얻는다', () => {
+    // 브라우저 규칙 재현: const 는 window property 로 붙지 않는다.
+    assert.equal(appGlobals.window.db, undefined);
+    assert.equal(appGlobals.window.auth, undefined);
+    assert.equal(appGlobals.window.PORT_NICKNAME_OPTIONS, undefined);
+    // 함수 선언은 window property 로 붙는다.
+    assert.equal(typeof appGlobals.window.ensureAnonymousAuth, 'function');
+
+    assert.equal(appGlobals.core.resolveFirestore().__fake, 'firestore', 'bare db 식별자를 해석해야 합니다');
+    assert.ok(appGlobals.core.resolveAuth(), 'bare auth 식별자를 해석해야 합니다');
+    assert.equal(appGlobals.core.resolveAuth().currentUser.uid, 'uid_writer_1');
+    // vm 문맥에서 나온 배열은 host realm 배열이 아니므로 host 배열로 재구성해 비교합니다.
+    assert.deepEqual([...appGlobals.core.portNicknameOptions()], ['부산항 도선사', '라싱 반장'], 'bare PORT_NICKNAME_OPTIONS를 읽어야 합니다');
+});
+
 test('플로팅 블록은 반짝이는样式를 갖고 전문 게시판 모달로 진입한다', () => {
     assert.match(html, /id="wantBoardFloatBtn"/);
     assert.match(html, /class="want-board-float"/);
@@ -172,6 +223,14 @@ test('규칙: 답글은 관리자만 작성하고, 작성자 본인 항목의 �
     assert.match(rules, /match \/replies\/\{replyId\} \{/);
     assert.match(rules, /allow create: if isSignedIn\(\) && isValidId\(replyId\) && isAdmin\(\) &&/);
     assert.match(rules, /allow update, delete: if isAdmin\(\);/);
+});
+
+test('규칙: 피드백 문서는 createdAtMs 를 정본으로, createdAt(서버 타임스탬프)는 선택으로 허용한다', () => {
+    // FieldValue.serverTimestamp() 가 설정되지 못한 경우에도 저장이 거부되지
+    // 않아야 하므로, createdAtMs(정수) 가 정본이고 createdAt 은 선택입니다.
+    const optionalCreatedAt = rules.match(/!\('createdAt' in data\) \|\| data\.createdAt is timestamp/g) || [];
+    assert.equal(optionalCreatedAt.length, 2, '항목 문서와 답글 문서 모두 createdAt 을 선택으로 허용해야 합니다');
+    assert.match(rules, /data\.createdAtMs is int && data\.createdAtMs > 0 && data\.createdAtMs <= 4102444800000/);
 });
 
 test('규칙: 작성자 인덱스 문서는 본인만读写할 수 있다', () => {
