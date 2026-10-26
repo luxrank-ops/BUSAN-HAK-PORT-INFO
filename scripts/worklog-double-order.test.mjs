@@ -28,7 +28,7 @@ const FUNCTIONS = [
     // C-2: 스케줄 데이터 출처(실시간/저장본) 기준 시각 표기 헬퍼
     'formatScheduleSourceLine',
     'getWorklogScheduleDate', 'setWorklogScheduleDateInput', 'openWorklogScheduleDatePicker',
-    'onWorklogScheduleDateChange', 'shiftWorklogScheduleDate',
+    'onWorklogScheduleDateChange', 'shiftWorklogScheduleDate', 'getActiveWorkLogDate', 'sendShipInfoToWorkLog',
     'parseWorklogShipNames', 'normalizeWorklogShipKey', 'getWorklogPickedNames', 'refreshWorklogVesselList',
     'resolveWorklogVesselMeta', 'buildWorklogDoubleOrderBlock', 'syncWorklogDoubleOrderMemo',
     'updateWorklogDoubleOrderStatus', 'toggleWorklogVesselPick', 'onWorklogShipNameEdited',
@@ -57,7 +57,7 @@ const SCHEDULE = [
     { VSL_NM: 'SHIP EPSILON', ATA: '2026-10-08 22:30', ATD: '2026-10-08 23:30', BERTH_NO: '5' }
 ];
 
-function setup({ logDate = '2026-10-08', shipName = '', memo = '', scheduleSource = null } = {}) {
+function setup({ logDate = '2026-10-08', todayDate = '2026-10-08', shipName = '', memo = '', scheduleSource = null } = {}) {
     const elements = {};
     const make = (id, value = '') => (elements[id] = {
         id, value, innerText: '', innerHTML: '', textContent: '', dataset: {},
@@ -72,6 +72,7 @@ function setup({ logDate = '2026-10-08', shipName = '', memo = '', scheduleSourc
         attrs: { 'data-date': logDate },
         getAttribute(name) { return this.attrs[name] ?? null; },
         setAttribute(name, value) { this.attrs[name] = String(value); },
+        focus() { this.focused = true; },
         scrollHeight: 0, offsetHeight: 0, clientHeight: 0
     });
     ['logShipName', 'logMemo', 'worklogScheduleDatePicker', 'hjncScheduleBoxTitle',
@@ -86,6 +87,7 @@ function setup({ logDate = '2026-10-08', shipName = '', memo = '', scheduleSourc
 
     const toasts = [];
     const fetchCalls = [];
+    const jumpedDates = [];
     const context = vm.createContext({
         document: { getElementById: id => elements[id] ?? null },
         Map, Number, String, Array, Object, Date, RegExp, JSON, Math,
@@ -99,7 +101,15 @@ function setup({ logDate = '2026-10-08', shipName = '', memo = '', scheduleSourc
         adminWorkLogs: {},
         autoGrowWorkLogMemo() {},
         showToast: m => toasts.push(m),
-        getAppLocalDateString: () => '2026-10-08',
+        getAppLocalDateString: () => todayDate,
+        async loadShipRecordById(id) { return { id, shipName: 'DIRECTORY SHIP' }; },
+        jumpToLogDate(date) {
+            jumpedDates.push(date);
+            elements.dailyLogForm.setAttribute('data-date', date);
+            elements.dailyLogForm.classList.remove('hidden');
+            elements.selectedDateText.innerText = date;
+        },
+        toggleDashItem() {},
         fetchHjncScheduleForMonth: async (ym, force, tid) => { fetchCalls.push([ym, tid]); return SCHEDULE; }
     });
     // 기존 상태 선언(let/const)과 필요한 함수만 옮긴다.
@@ -111,7 +121,7 @@ function setup({ logDate = '2026-10-08', shipName = '', memo = '', scheduleSourc
         ? `hjncScheduleSourceInfo["hjnc_2026-10"] = ${JSON.stringify(scheduleSource)};\n`
         : '';
     vm.runInContext(`${decls}\n${fns}\nhjncScheduleMonthCache["hjnc_2026-10"] = ${JSON.stringify(SCHEDULE)};\n${sourceSeed}`, context);
-    return { context, elements, toasts, fetchCalls };
+    return { context, elements, toasts, fetchCalls, jumpedDates };
 }
 
 function renderDay(app, date = '2026-10-08') {
@@ -168,6 +178,47 @@ test('prev/next buttons move the schedule date one day at a time across month en
     assert.equal(elements.worklogScheduleDatePicker.value, '2026-11-01');
     context.shiftWorklogScheduleDate(-2);
     assert.equal(elements.worklogScheduleDatePicker.value, '2026-10-30');
+});
+
+test('selecting a ship with an older ATA keeps yesterday as the work-log save date', () => {
+    const app = setup({ logDate: '2026-10-25' });
+    const { context, elements } = app;
+    elements.selectedDateText.innerText = '2026-10-25';
+    const vessel = {
+        VSL_NM: 'VESSEL WITH OLD ATA',
+        ATA: '2026-10-01 08:00',
+        ATD: '2026-10-25 16:00',
+        BERTH_NO: '1'
+    };
+
+    context.renderHjncScheduledShipsUI('2026-10-25', [vessel], 'hjnc');
+    context.toggleWorklogVesselPick(0);
+
+    assert.equal(elements.dailyLogForm.getAttribute('data-date'), '2026-10-25');
+    assert.equal(elements.selectedDateText.innerText, '2026-10-25', 'choosing a ship must not navigate the work-log calendar');
+    assert.equal(elements.worklogScheduleDatePicker.value, '2026-10-25');
+    assert.equal(elements.logShipName.value, 'VESSEL WITH OLD ATA');
+});
+
+test('sending a vessel to a hidden work log ignores its stale date and opens today', async () => {
+    const app = setup({ logDate: '2026-10-01', todayDate: '2026-10-26' });
+    app.elements.dailyLogForm.classList.add('hidden');
+
+    await app.context.sendShipInfoToWorkLog('ship-id');
+
+    assert.deepEqual(app.jumpedDates, ['2026-10-26']);
+    assert.equal(app.elements.dailyLogForm.getAttribute('data-date'), '2026-10-26');
+    assert.equal(app.elements.logShipName.value, 'DIRECTORY SHIP');
+});
+
+test('sending a vessel to an already selected work-log day preserves that day', async () => {
+    const app = setup({ logDate: '2026-10-25', todayDate: '2026-10-26' });
+
+    await app.context.sendShipInfoToWorkLog('ship-id');
+
+    assert.deepEqual(app.jumpedDates, []);
+    assert.equal(app.elements.dailyLogForm.getAttribute('data-date'), '2026-10-25');
+    assert.equal(app.elements.logShipName.value, 'DIRECTORY SHIP');
 });
 
 test('touching a vessel selects it, a second touch makes a double order and fills the work content', () => {

@@ -3954,6 +3954,22 @@ function getWageScheduleDate() {
     return dateInput.value;
 }
 
+// 임금 계산의 실제 시작일(선박 ATA)과 근무일지의 저장일은 별개입니다.
+// 우선순위: 사용자가 열어 둔 근무일지 날짜 → 선박을 고를 때 조회한 스케줄 날짜 → 수동 계산 시작일.
+function getWageLogTargetDate(fallbackDate = "") {
+    const activeLogDate = getActiveWorkLogDate();
+    if (activeLogDate) return activeLogDate;
+
+    const selectedVesselDate = selectedWageVessels.find(item =>
+        /^\d{4}-\d{2}-\d{2}$/.test(String(item?.date || ""))
+    )?.date;
+    if (selectedVesselDate) return selectedVesselDate;
+
+    const fallback = String(fallbackDate || "").trim();
+    if (/^\d{4}-\d{2}-\d{2}$/.test(fallback)) return fallback;
+    return getAppLocalDateString();
+}
+
 function setWageScheduleDate(dateStr) {
     const normalizedDate = String(dateStr || "");
     if (!/^\d{4}-\d{2}-\d{2}$/.test(normalizedDate)) return false;
@@ -6433,6 +6449,16 @@ function jumpToLogDate(dStr) {
     const formEl = document.getElementById('dailyLogForm');
     if (formEl) formEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
+
+// dailyLogForm 의 data-date 는 폼이 실제로 열려 있을 때만 현재 작업일로 취급합니다.
+// 숨겨진 폼에 남은 이전 날짜를 새 입력의 대상으로 재사용하지 않습니다.
+function getActiveWorkLogDate() {
+    const form = document.getElementById("dailyLogForm");
+    if (!form || form.classList?.contains("hidden")) return "";
+    const dateStr = String(form.getAttribute("data-date") || "").trim();
+    return /^\d{4}-\d{2}-\d{2}$/.test(dateStr) ? dateStr : "";
+}
+
 /* 근무일지 '작업 내용' 블록 높이 자동 조절: 내용 길이(글자 수)만큼 박스가 늘어나 항상 전체가 보이도록 함 */
 function autoGrowWorkLogMemo(el) {
     const target = el || (typeof document !== 'undefined' && document.getElementById ? document.getElementById('logMemo') : null);
@@ -7058,6 +7084,8 @@ function calculateWage() {
             isMultiVessel: multi,
             segments,
             date: sd,
+            // 선박 ATA/ATD로 계산한 날짜(date)와 근무일지 저장일은 별도 보관합니다.
+            workLogDate: getWageLogTargetDate(sd),
             endDate: wageEndDate,
             startHour: sh,
             endHour: wageEndHour,
@@ -7135,20 +7163,21 @@ async function sendCalculatedWageToLog() {
     // 체크박스나 선박 입력을 나중에 바꿔도 이미 계산한 내역의 대상이 바뀌지 않도록 고정한다.
     const calculatedData = lastCalculatedWageData;
     const { date, totalPay, summary, shipName, isDoubleOrder, isMultiVessel } = calculatedData;
+    // 레거시 계산 결과에 workLogDate 가 없으면 계산 시작일을 그대로 사용합니다.
+    const workLogDate = calculatedData.workLogDate || date;
     try {
-        const form = document.getElementById("dailyLogForm");
-        const sameDateDraft = form?.getAttribute("data-date") === date && !form.classList.contains("hidden");
+        const sameDateDraft = getActiveWorkLogDate() === workLogDate;
         if (isDoubleOrder && !isMultiVessel && !sameDateDraft && currentWorkerId) {
-            // 달력을 다른 달로 이동한 경우에도 저장된 첫 선박/임금을 읽어 덮어쓰지 않는다.
-            const doc = await db.collection('work_logs').doc(`${currentWorkerId}_${date}`).get();
+            // ATA/ATD 날짜가 아니라 실제 근무일의 저장 기록을 읽어 첫 선박·임금을 보존합니다.
+            const doc = await db.collection('work_logs').doc(`${currentWorkerId}_${workLogDate}`).get();
             if (lastCalculatedWageData !== calculatedData) return;
-            if (doc.exists) adminWorkLogs[date] = doc.data();
-            else delete adminWorkLogs[date];
+            if (doc.exists) adminWorkLogs[workLogDate] = doc.data();
+            else delete adminWorkLogs[workLogDate];
         }
 
         const logCard = document.getElementById("log-card");
         if (logCard && !logCard.classList.contains("expanded")) toggleDashItem("log-card");
-        if (!sameDateDraft) jumpToLogDate(date);
+        if (!sameDateDraft) jumpToLogDate(workLogDate);
 
         const memoInput = document.getElementById("logMemo");
         const logShipInput = document.getElementById("logShipName");
@@ -7255,10 +7284,7 @@ async function sendWorkLogShipToWage() {
         totalHoursInput.readOnly = false;
     }
 
-    const logDate =
-        document.getElementById("dailyLogForm")?.getAttribute("data-date") ||
-        document.getElementById("wageStartDate")?.value ||
-        getAppLocalDateString();
+    const logDate = getActiveWorkLogDate() || getAppLocalDateString();
 
     if (logDate) {
         const startDate = document.getElementById("wageStartDate");
@@ -8470,10 +8496,11 @@ async function sendShipInfoToWorkLog(shipId, event) {
         toggleDashItem("log-card");
     }
 
-    const form = document.getElementById("dailyLogForm");
-    const date = form?.getAttribute("data-date") || getAppLocalDateString();
+    const activeLogDate = getActiveWorkLogDate();
+    const date = activeLogDate || getAppLocalDateString();
 
-    if (form?.classList.contains("hidden")) {
+    // 숨겨진 폼의 data-date 는 이전에 열었던 날짜일 수 있으므로, 새 입력은 오늘로 엽니다.
+    if (!activeLogDate) {
         jumpToLogDate(date);
     }
 
