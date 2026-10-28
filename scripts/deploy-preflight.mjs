@@ -293,7 +293,7 @@ async function main(argv = process.argv.slice(2)) {
         }
         const results = [];
         for (const service of CHECKED_SERVICES) {
-            results.push(await checkService({ token, projectId: PROJECT_ID, service }));
+            results.push(await checkService({ token: accessToken, projectId: PROJECT_ID, service }));
         }
         const summary = describeCheckResults(results, { projectId: PROJECT_ID, serviceAccountEmail: saEmail });
         writeSummary(`### 🔎 Firebase 배포 권한 진단\n\n\`\`\`\n${summary}\n\`\`\``);

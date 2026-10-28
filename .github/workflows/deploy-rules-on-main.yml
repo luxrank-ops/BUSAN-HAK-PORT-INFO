@@ -73,6 +73,7 @@ jobs:
         run: node scripts/deploy-preflight.mjs seed-cache
 
       - name: Firestore 보안 규칙 배포
+        id: deploy
         run: |
           set -o pipefail
           status=0
@@ -88,11 +89,13 @@ jobs:
 
       - name: 배포 결과 요약
         if: always()
+        env:
+          DEPLOY_OUTCOME: ${{ steps.deploy.outcome }}
         run: |
           {
             echo "## Firestore 규칙 배포 결과"
             echo ""
-            if grep -aqs "Error:" /tmp/deploy-rules-only.log; then
+            if [ "$DEPLOY_OUTCOME" != "success" ]; then
               echo "❌ 실패 — 아래 원인 문장을 확인하세요."
             else
               echo "✅ 성공 — 운영 규칙이 최신 상태입니다."
