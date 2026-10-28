@@ -141,3 +141,33 @@ test('꿍꿍따 댓글 릴레이(kkung_chain)는 "이어쓰기·새 출발" 형�
     assert.match(appJs, /ensureRelayAuth/);
     assert.doesNotMatch(appJs, /chooseAiWord|TURN_SECONDS|isAiThinking/, '대전(AI 승부) 코드가 남아 있으면 안 됩니다');
 });
+
+test('규칙 파일에 보안 규칙 언어가 지원하지 않는 람다(=>)가 없어야 한다 (배포 거부 방지)', () => {
+    // 2026-10-28 사고: want_board 인덱스 검사에 `data.items.all(item => ...)` 를 썼는데,
+    // 보안 규칙 언어에는 리스트 반복(람다) 문법이 없어 규칙 전체가 컴파일 실패했습니다.
+    // 그 결과 2026-10-26 배포가 실패하고 운영에는 옛 규칙(기본 거부)이 남아
+    // "제출 실패: Missing or insufficient permissions" 가 발생했습니다.
+    const codeOnly = rules
+        .replace(/\/\*[\s\S]*?\*\//g, '')
+        .replace(/(^|[^:])\/\/.*$/gm, '$1');
+    assert.doesNotMatch(codeOnly, /=>/, '보안 규칙 언어에는 람다(=>) 문법이 없습니다. 반복 검사는 지원되는 연산(hasAll·size·diff 등)으로 바꾸세요.');
+    // 반복을 흉내 낸 이름들도 함께 막습니다(같은 컴파일 오류를 냅니다).
+    assert.doesNotMatch(codeOnly, /\.(all|exists|filter|map)\(\s*[A-Za-z_]\w*\s*(,|\))/, '리스트 반복 메서드(all/exists/filter/map)는 규칙 언어에 없습니다.');
+});
+
+test('규칙 파일의 중괄호·괄호 짝이 맞는다 (문법 오류 조기 발견)', () => {
+    // 주석과 문자열 리터럴(정규식 패턴 등)은 제외하고 구조만 셉니다.
+    const codeOnly = rules
+        .replace(/\/\*[\s\S]*?\*\//g, '')
+        .replace(/(^|[^:])\/\/.*$/gm, '$1')
+        .replace(/'(?:[^'\\]|\\.)*'/g, "''");
+    for (const [open, close] of [['{', '}'], ['(', ')'], ['[', ']']]) {
+        let depth = 0;
+        for (const ch of codeOnly) {
+            if (ch === open) depth++;
+            else if (ch === close) depth--;
+            assert.ok(depth >= 0, `${close} 가 먼저 닫혔습니다`);
+        }
+        assert.equal(depth, 0, `${open}${close} 짝이 맞지 않습니다`);
+    }
+});

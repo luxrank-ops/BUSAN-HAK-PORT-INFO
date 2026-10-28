@@ -87,9 +87,14 @@
 
 ### ⚠️ "제출 실패: Missing or insufficient permissions" 가 뜰 때
 
-이 문구는 **화면 버그가 아니라 Firestore 보안 규칙이 운영 서버에 배포되지 않았다는 신호**입니다.
-규칙 파일(`firestore.rules`)에 `want_board` 규칙이 있어도, 그 규칙이 실제 프로젝트에 배포되지 않으면
+이 문구는 **화면 버그가 아니라 Firestore 보안 규칙이 운영 프로젝트에 배포되지 않았다는 신호**입니다.
+규칙 파일(`firestore.rules`)에 `want_board` 규칙이 있어도, 실제 프로젝트에 배포되지 않으면
 기본 거부(`match /{document=**} { allow read, write: if false; }`)가 적용되어 모든 저장이 차단됩니다.
+
+> 2026-10-28 실제 원인: `isValidWantIndex()` 의 `data.items.all(item => ...)` —
+> 보안 규칙 언어에는 **람다(`=>`) 문법이 없어** 규칙 전체가 컴파일 실패 → 배포 거부 →
+> 운영에는 2026-10-21 자 옛 규칙이 남아 있었습니다.
+> 규칙 언어도 `npm test` 의 정적 가드(`scripts/security-rules.test.mjs`)가 검사합니다.
 
 | 확인 | 방법 |
 | --- | --- |

@@ -422,18 +422,17 @@ service cloud.firestore {
         (!('isAdminReply' in data) || data.isAdminReply is bool);
     }
 
+    // ⚠️ 2026-10-28 수정: 보안 규칙 언어에는 리스트 반복(람다 `x => ...`) 문법이 없습니다.
+    //    이전에는 `data.items.all(item => ...)` 로 항목 하나하나를 검사했는데,
+    //    이 한 줄 때문에 규칙 전체가 "컴파일 실패"하여 배포가 거부되었고,
+    //    운영에는 2026-10-21 자 규칙(기본 거부)이 그대로 남아
+    //    "제출 실패: Missing or insufficient permissions" 가 발생했습니다.
+    //    규칙 언어가 지원하는 범위(타입·개수 제한)로만 검사하고,
+    //    항목 내부 값은 화면 코드(normalizeWantIndex)가 항상 정규화해 기록합니다.
     function isValidWantIndex(data) {
       return data is map &&
         data.uid is string && data.uid.size() >= 1 && data.uid.size() <= 64 &&
-        data.items is list && data.items.size() <= 200 &&
-        data.items.all(item => item is map &&
-          item.id is string && isValidId(item.id) &&
-          item.nick is string && item.nick.size() >= 1 && item.nick.size() <= 50 &&
-          item.snippet is string && item.snippet.size() <= 80 &&
-          (!('status' in item) || item.status in ['pending', 'replied', 'closed']) &&
-          (!('replyCount' in item) || (item.replyCount is int && item.replyCount >= 0 && item.replyCount <= 1000)) &&
-          (!('deleted' in item) || item.deleted is bool) &&
-          item.createdAtMs is int && item.createdAtMs > 0 && item.createdAtMs <= 4102444800000);
+        data.items is list && data.items.size() <= 200;
     }
 
     // 해당 항목을 작성한 사용자인지 확인 (부모 문서를 직접 읽어 대조합니다)

@@ -453,6 +453,14 @@ if (!EMULATOR_AVAILABLE) {
             await ok(updateDoc(doc(worker(AUTHOR), 'want_board', ITEM_ID), { deleted: true }));
         });
 
+        test('인덱스 문서라도 형태가 틀리면(리스트 아님·개수 초과) 거부된다', async () => {
+            await seed(async () => {});
+            const db = worker(AUTHOR);
+            await denied(setDoc(doc(db, 'want_board_mine', AUTHOR), { uid: AUTHOR, items: 'not-a-list' }));
+            const tooMany = Array.from({ length: 201 }, (_, index) => ({ id: `fb_${index}` }));
+            await denied(setDoc(doc(db, 'want_board_mine', AUTHOR), { uid: AUTHOR, items: tooMany }));
+        });
+
         test('다른 사람의 UID 로 인덱스 문서를 만들 수 없다', async () => {
             await seed(async () => {});
             await denied(setDoc(doc(worker(AUTHOR), 'want_board_mine', 'stranger-uid'), indexDoc('stranger-uid')));
