@@ -15,6 +15,7 @@
  *   5) 배포 워크플로우가 진단 → 캐시 주입 → 규칙 → 색인 → 호스팅 순서를 지킨다
  */
 import { test } from 'node:test';
+import crypto from 'node:crypto';
 import assert from 'node:assert/strict';
 import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -25,6 +26,7 @@ import {
     RECOMMENDED_ROLE,
     buildSeededCache,
     checkService,
+    getAccessTokenFromServiceAccount,
     describeCheckResults,
     resolveConfigStorePath,
     resolveServiceAccountEmail,
@@ -210,4 +212,47 @@ test('main 에 규칙 파일이 올라오면 자동으로 규칙을 배포하는
     const deployStep = job.steps.find((step) => step.name.includes('Firestore 보안 규칙 배포'));
     assert.match(String(deployStep.run), /--only firestore:rules --project busan-hak-port/);
     assert.doesNotMatch(String(deployStep.run), /hosting/);
+});
+
+test('서비스 계정 키로 액세스 토큰을 직접 발급한다 (iamcredentials API 없이)', async () => {
+    // google-github-actions/auth 의 token_format: access_token 은
+    // iamcredentials.googleapis.com 이 켜져 있어야 해서 인증 단계에서 403 이 났습니다.
+    // JWT Bearer 흐름은 oauth2.googleapis.com 만 필요합니다.
+    const { privateKey, publicKey } = crypto.generateKeyPairSync('rsa', { modulusLength: 2048 });
+    const creds = {
+        client_email: 'deployer@busan-hak-port.iam.gserviceaccount.com',
+        private_key: privateKey.export({ type: 'pkcs8', format: 'pem' })
+    };
+    let captured = null;
+    const token = await getAccessTokenFromServiceAccount({
+        credentials: creds,
+        nowMs: 1_700_000_000_000,
+        fetchImpl: async (url, options) => {
+            captured = { url, options };
+            return { ok: true, status: 200, json: async () => ({ access_token: 'ya29.test' }) };
+        }
+    });
+    assert.equal(token, 'ya29.test');
+    assert.match(captured.url, /oauth2\.googleapis\.com\/token/);
+    assert.match(String(captured.options.body), /grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Ajwt-bearer/);
+
+    // 서명이 키와 맞는지(공개키로 검증) 확인합니다.
+    const assertion = decodeURIComponent(String(captured.options.body).split('&assertion=')[1]);
+    const [header, claims, signature] = assertion.split('.');
+    const fromB64 = (part) => Buffer.from(part.replace(/-/g, '+').replace(/_/g, '/'), 'base64');
+    assert.equal(crypto.createVerify('RSA-SHA256').update(`${header}.${claims}`).verify(publicKey, fromB64(signature)), true);
+    const payload = JSON.parse(fromB64(claims).toString('utf8'));
+    assert.equal(payload.iss, 'deployer@busan-hak-port.iam.gserviceaccount.com');
+    assert.match(payload.scope, /cloud-platform/);
+    assert.equal(payload.exp - payload.iat, 3600);
+
+    // 실패 응답은 원인 문장과 함께 예외로 바뀝니다.
+    await assert.rejects(
+        () => getAccessTokenFromServiceAccount({
+            credentials: creds,
+            fetchImpl: async () => ({ ok: false, status: 400, json: async () => ({ error: 'invalid_grant' }) })
+        }),
+        /invalid_grant/
+    );
+    await assert.rejects(() => getAccessTokenFromServiceAccount({ credentials: {} }), /client_email/);
 });
