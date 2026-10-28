@@ -466,18 +466,20 @@ if (!EMULATOR_AVAILABLE) {
             await denied(setDoc(doc(worker(AUTHOR), 'want_board_mine', 'stranger-uid'), indexDoc('stranger-uid')));
         });
 
-        test('답글은 관리자만 쓸 수 있고, 작성자는 자기 항목의 답글을 읽을 수 있다', async () => {
-            await seed(async (db) => {
-                await setDoc(doc(db, 'want_board', ITEM_ID), itemDoc());
-                await setDoc(doc(db, `want_board/${ITEM_ID}/replies/r1`), {
-                    itemId: ITEM_ID,
-                    authorUid: 'admin_luxrank',
-                    name: '운영자',
-                    text: '반영하겠습니다',
-                    createdAtMs: Date.now(),
-                    isAdminReply: true
-                });
+        const seedItemWithReply = () => seed(async (db) => {
+            await setDoc(doc(db, 'want_board', ITEM_ID), itemDoc());
+            await setDoc(doc(db, `want_board/${ITEM_ID}/replies/r1`), {
+                itemId: ITEM_ID,
+                authorUid: 'admin_luxrank',
+                name: '운영자',
+                text: '반영하겠습니다',
+                createdAtMs: Date.now(),
+                isAdminReply: true
             });
+        });
+
+        test('일반 작성자는 답글을 쓸 수 없다 (관리자 전용)', async () => {
+            await seedItemWithReply();
             await denied(addDoc(collection(worker(AUTHOR), `want_board/${ITEM_ID}/replies`), {
                 itemId: ITEM_ID,
                 authorUid: AUTHOR,
@@ -486,7 +488,16 @@ if (!EMULATOR_AVAILABLE) {
                 createdAtMs: Date.now(),
                 isAdminReply: true
             }));
-            await ok(getDocs(collection(worker(AUTHOR), `want_board/${ITEM_ID}/replies`)));
+        });
+
+        test('작성자는 자기 항목의 답글 목록을 읽을 수 있다', async () => {
+            await seedItemWithReply();
+            const snap = await ok(getDocs(collection(worker(AUTHOR), `want_board/${ITEM_ID}/replies`)));
+            assert.equal(snap.size, 1);
+        });
+
+        test('다른 사용자는 남의 항목 답글 목록을 읽을 수 없다', async () => {
+            await seedItemWithReply();
             await denied(getDocs(collection(stranger(), `want_board/${ITEM_ID}/replies`)));
         });
     });
