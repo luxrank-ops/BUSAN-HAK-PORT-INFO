@@ -160,8 +160,6 @@ jobs:
         uses: google-github-actions/auth@v3
         with:
           credentials_json: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_BUSAN_HAK_PORT }}
-          # 진단 단계에서 서비스 상태를 직접 조회하기 위해 액세스 토큰을 받아 둡니다.
-          token_format: access_token
 
       # 2026-10-28 사고: 배포용 서비스 계정에 serviceusage.services.get 권한이 없어
       #   "Permission denied to get service [firestore.googleapis.com]" (HTTP 403)
@@ -172,7 +170,6 @@ jobs:
       - name: 배포 권한 진단 (Service Usage)
         continue-on-error: true
         env:
-          GOOGLE_OAUTH_ACCESS_TOKEN: ${{ steps.auth.outputs.access_token }}
           # 자격 파일 경로만 넘기고, 스크립트가 client_email 만 읽습니다(키 본문은 출력하지 않음).
           GOOGLE_APPLICATION_CREDENTIALS: ${{ steps.auth.outputs.credentials_file_path }}
         run: node scripts/deploy-preflight.mjs check

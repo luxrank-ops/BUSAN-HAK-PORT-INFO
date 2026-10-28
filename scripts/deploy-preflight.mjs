@@ -29,6 +29,7 @@
  *   node scripts/deploy-preflight.mjs seed-cache
  */
 import { chmodSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import crypto from 'node:crypto';
 import { homedir } from 'node:os';
 import path from 'node:path';
 
@@ -162,6 +163,51 @@ export function describeCheckResults(results, { projectId = PROJECT_ID, serviceA
     return lines.join('\n');
 }
 
+/** base64url 인코딩(JWT 구성 요소) */
+function base64Url(input) {
+    return Buffer.from(input).toString('base64').replace(/=+$/, '').replace(/\+/g, '-').replace(/\//g, '_');
+}
+
+/**
+ * 서비스 계정 키로 OAuth 액세스 토큰을 직접 발급합니다(JWT Bearer 흐름).
+ *
+ * 왜 직접 만드나: google-github-actions/auth 의 `token_format: access_token` 은
+ * IAM Service Account Credentials API(iamcredentials.googleapis.com)가 켜져 있어야 하는데,
+ * 이 프로젝트에서는 그 API 가 꺼져 있어 인증 단계 자체가 403 으로 실패했습니다(2026-10-28).
+ * JWT Bearer 흐름은 oauth2.googleapis.com 만 있으면 되므로 추가 API 활성화가 필요 없습니다.
+ */
+export async function getAccessTokenFromServiceAccount({ credentials, fetchImpl = fetch, nowMs = Date.now() }) {
+    const creds = typeof credentials === 'string' ? JSON.parse(credentials) : (credentials || {});
+    if (!creds.client_email || !creds.private_key) {
+        throw new Error('서비스 계정 키에 client_email/private_key 가 없습니다');
+    }
+    const issuedAt = Math.floor(nowMs / 1000);
+    const header = base64Url(JSON.stringify({ alg: 'RS256', typ: 'JWT' }));
+    const claims = base64Url(JSON.stringify({
+        iss: creds.client_email,
+        scope: 'https://www.googleapis.com/auth/cloud-platform',
+        aud: 'https://oauth2.googleapis.com/token',
+        iat: issuedAt,
+        exp: issuedAt + 3600
+    }));
+    const signature = crypto.createSign('RSA-SHA256')
+        .update(`${header}.${claims}`)
+        .sign(creds.private_key);
+    const assertion = `${header}.${claims}.${base64Url(signature)}`;
+
+    const response = await fetchImpl('https://oauth2.googleapis.com/token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: `grant_type=${encodeURIComponent('urn:ietf:params:oauth:grant-type:jwt-bearer')}&assertion=${assertion}`
+    });
+    const body = await response.json().catch(() => null);
+    if (!response.ok || !body || !body.access_token) {
+        const message = body && (body.error_description || body.error) ? `${body.error || ''} ${body.error_description || ''}`.trim() : `HTTP ${response.status}`;
+        throw new Error(`액세스 토큰 발급 실패: ${message}`);
+    }
+    return String(body.access_token);
+}
+
 /**
  * 서비스 계정 이메일을 찾습니다.
  *  1) DEPLOY_SERVICE_ACCOUNT_EMAIL 환경변수
@@ -216,9 +262,32 @@ async function main(argv = process.argv.slice(2)) {
     }
 
     if (command === 'check') {
-        if (!token) {
-            writeSummary('### ⚠️ 배포 권한 진단 건너뜀\n\n`--token=` 또는 `GOOGLE_OAUTH_ACCESS_TOKEN` 이 없습니다.');
+        let accessToken = token;
+        const notes = [];
+        if (!accessToken) {
+            const file = String(process.env.GOOGLE_APPLICATION_CREDENTIALS || '').trim();
+            if (file && existsSync(file)) {
+                try {
+                    accessToken = await getAccessTokenFromServiceAccount({ credentials: readFileSync(file, 'utf8') });
+                } catch (error) {
+                    notes.push(`액세스 토큰을 발급하지 못해 진단을 건너뜁니다: ${String((error && error.message) || error)}`);
+                }
+            } else {
+                notes.push('서비스 계정 자격 파일이 없어 진단을 건너뜁니다.');
+            }
+        }
+        if (!accessToken) {
+            writeSummary([
+                '### ⚠️ 배포 권한 진단 건너뜀',
+                '',
+                ...notes.map((note) => `- ${note}`),
+                '',
+                '배포는 그대로 진행됩니다(진단은 참고용).'
+            ].join('\n'));
             return 0;
+        }
+        if (notes.length) {
+            writeSummary(`### 🔎 배포 권한 진단\n\n${notes.map((note) => `- ${note}`).join('\n')}`);
         }
         const results = [];
         for (const service of CHECKED_SERVICES) {
