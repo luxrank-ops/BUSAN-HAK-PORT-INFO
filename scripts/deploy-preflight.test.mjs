@@ -179,3 +179,35 @@ test('서비스 계정 이메일은 환경변수 → 자격 파일(client_email)
     assert.equal(resolveServiceAccountEmail({}, () => '{ broken'), '');
     assert.equal(resolveServiceAccountEmail({}, () => JSON.stringify({ type: 'service_account' })), '');
 });
+
+test('main 에 규칙 파일이 올라오면 자동으로 규칙을 배포하는 워크플로우가 있다', () => {
+    // 2026-10-28: 수동 배포만 있다 보니 실행을 잊거나 권한 문제로 실패하면
+    // 운영 규칙이 조용히 옛 버전으로 남아 "권한 거부" 증상이 반복되었습니다.
+    const workflow = yaml.load(readAppFile('.github/workflows/deploy-rules-on-main.yml'));
+    const trigger = workflow.on || workflow[true];
+    assert.ok(trigger.push, 'push 트리거가 필요합니다');
+    assert.deepEqual(trigger.push.branches, ['main']);
+    assert.ok(
+        trigger.push.paths.includes('firestore.rules'),
+        'firestore.rules 가 바뀔 때 실행되어야 합니다'
+    );
+    assert.ok(trigger.workflow_dispatch, '수동 실행도 가능해야 합니다');
+
+    const job = workflow.jobs['deploy-rules'];
+    assert.equal(workflow.permissions.contents, 'read');
+    // 배포 시크릿은 Production 환경에 있으므로 environment 를 지정해야 합니다.
+    assert.equal(job.environment.name, 'Production');
+
+    const steps = job.steps.map((step) => step.name);
+    const order = ['규칙 정적 검사', 'Google Cloud 인증', '배포 권한 진단 (Service Usage)', 'API 확인 캐시 주입', 'Firestore 보안 규칙 배포'];
+    let last = -1;
+    for (const name of order) {
+        const index = steps.findIndex((step) => step.includes(name));
+        assert.ok(index > last, `${name} 단계의 순서가 잘못되었습니다`);
+        last = index;
+    }
+    // 규칙만 배포해야 합니다(화면·색인은 별도 워크플로우 담당).
+    const deployStep = job.steps.find((step) => step.name.includes('Firestore 보안 규칙 배포'));
+    assert.match(String(deployStep.run), /--only firestore:rules --project busan-hak-port/);
+    assert.doesNotMatch(String(deployStep.run), /hosting/);
+});

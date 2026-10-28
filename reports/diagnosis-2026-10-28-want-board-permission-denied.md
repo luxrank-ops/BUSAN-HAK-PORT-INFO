@@ -160,6 +160,22 @@ Error: Request to https://serviceusage.googleapis.com/v1/projects/busan-hak-port
 캐시 있음 → check() 가 즉시 true 반환 (네트워크 호출 없음)   ← 우회 성립
 ```
 
+### 4-2. 재발 구조 개선 — 규칙 자동 배포
+
+문제의 본질은 "규칙이 배포되지 않은 상태를 아무도 모른다"였습니다. 규칙 배포가 수동 워크플로우에만
+묶여 있어, 실행을 잊거나 권한 문제로 실패하면 운영 규칙이 조용히 옛 버전으로 남았습니다.
+
+`firestore.rules`(또는 `firestore.indexes.json`)가 **main 에 push 되면** 규칙만 자동 배포하는
+워크플로우 `.github/workflows/deploy-rules-on-main.yml` 를 추가했습니다.
+
+| 단계 | 내용 |
+| --- | --- |
+| 1 | `node --test scripts/security-rules.test.mjs` — 람다·괄호 등 "배포하면 무조건 실패"하는 문법 실수를 먼저 차단 |
+| 2 | Google Cloud 인증 (`Production` 환경 시크릿) |
+| 3 | 배포 권한 진단 + API 확인 캐시 주입 (403 이어도 배포 진행) |
+| 4 | `--only firestore:rules` 배포 (화면·색인은 기존 워크플로우 담당) |
+| 5 | 결과를 Actions Step summary 에 성공/실패 + 로그 25줄로 기록 |
+
 ### 긴급 대안 — 서비스 계정 권한 없이 규칙만 배포
 
 ```bash

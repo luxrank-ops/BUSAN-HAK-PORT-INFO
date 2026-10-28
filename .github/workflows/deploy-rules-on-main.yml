@@ -1,0 +1,99 @@
+name: Firestore 규칙 자동 배포
+
+# 왜 이 워크플로우가 필요한가 (2026-10-28)
+#   규칙 배포는 지금까지 'Firebase 운영 배포'(수동 실행)에만 묶여 있어,
+#   실행을 잊거나 권한 문제로 실패하면 운영 규칙이 조용히 옛 버전으로 남았습니다.
+#   그 결과 화면은 새 기능을 보여 주는데 저장은 전부 거부되어
+#   "제출 실패: Missing or insufficient permissions" 가 반복되었습니다.
+#   → main 에 규칙 파일이 바뀌어 올라오면 자동으로 규칙만 배포합니다.
+#     (수동 실행 workflow_dispatch 도 그대로 지원)
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'firestore.rules'
+      - 'firestore.indexes.json'
+      - 'scripts/deploy-preflight.mjs'
+      - '.github/workflows/deploy-rules-on-main.yml'
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: firestore-rules-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy-rules:
+    name: Firestore 보안 규칙 자동 배포
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment:
+      name: Production
+      url: https://busan-hak-port.web.app
+
+    steps:
+      - name: 소스 코드 받기
+        uses: actions/checkout@v5
+
+      - name: Node.js 설정
+        uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: 의존성 설치
+        run: npm ci
+
+      # 규칙 파일을 배포하기 전에 저장소 안에서 먼저 검사합니다.
+      # (람다 문법·괄호 짝 등 "배포하면 무조건 실패"하는 실수를 여기서 걸러 냅니다)
+      - name: 규칙 정적 검사
+        run: node --test scripts/security-rules.test.mjs
+
+      - name: Google Cloud 인증
+        id: auth
+        uses: google-github-actions/auth@v3
+        with:
+          credentials_json: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_BUSAN_HAK_PORT }}
+          token_format: access_token
+
+      # 배포용 서비스 계정에 serviceusage.services.get 권한이 없으면
+      # CLI 의 "API 가 켜져 있나?" 확인(403)에서 멈춥니다.
+      # 아래 두 단계가 그 관문을 진단하고 우회합니다(둘 다 실패해도 배포는 계속 시도).
+      - name: 배포 권한 진단 (Service Usage)
+        continue-on-error: true
+        env:
+          GOOGLE_OAUTH_ACCESS_TOKEN: ${{ steps.auth.outputs.access_token }}
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ steps.auth.outputs.credentials_file_path }}
+        run: node scripts/deploy-preflight.mjs check
+
+      - name: API 확인 캐시 주입
+        continue-on-error: true
+        run: node scripts/deploy-preflight.mjs seed-cache
+
+      - name: Firestore 보안 규칙 배포
+        run: |
+          set -o pipefail
+          npx --yes firebase-tools@15.3.1 deploy --only firestore:rules --project busan-hak-port --non-interactive 2>&1 | tee /tmp/deploy-rules-only.log
+
+      - name: 배포 결과 요약
+        if: always()
+        run: |
+          {
+            echo "## Firestore 규칙 배포 결과"
+            echo ""
+            if grep -aqs "Error:" /tmp/deploy-rules-only.log; then
+              echo "❌ 실패 — 아래 원인 문장을 확인하세요."
+            else
+              echo "✅ 성공 — 운영 규칙이 최신 상태입니다."
+            fi
+            echo ""
+            echo '```'
+            tail -n 25 /tmp/deploy-rules-only.log 2>/dev/null || echo '(로그 없음)'
+            echo '```'
+            echo ""
+            echo "> 403(Permission denied to get service)이 보이면 서비스 계정에 'Service Usage 소비자' 역할을 부여하거나, PC 에서 \`npx firebase-tools@15.3.1 login\` 후 \`deploy --only firestore:rules --project busan-hak-port\` 로 규칙만 배포할 수 있습니다."
+          } >> "$GITHUB_STEP_SUMMARY"
