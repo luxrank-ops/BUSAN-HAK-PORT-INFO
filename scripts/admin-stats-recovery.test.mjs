@@ -174,8 +174,16 @@ test('Vercel 2세그먼트 서버리스 진입점 3종이 모두 존재하며 Ho
         `Vercel Hobby 플랜 함수 개수 한도(12개) 초과: 현재 ${apiFiles.length}개 (${apiFiles.join(', ')})`
     );
 
+    // 배포는 규칙 → 색인 → 호스팅 순서의 개별 단계로 실행합니다.
+    // (한 번에 묶으면 어느 단계에서 실패했는지 알 수 없어 규칙이 옛 버전으로 남습니다)
     const deployWorkflow = readAppFile('.github/workflows/deploy-firebase.yml');
-    assert.match(deployWorkflow, /--only hosting,firestore:rules,firestore:indexes/);
+    assert.match(deployWorkflow, /--only firestore:rules --project busan-hak-port/);
+    assert.match(deployWorkflow, /--only firestore:indexes --project busan-hak-port/);
+    assert.match(deployWorkflow, /--only hosting --project busan-hak-port/);
+    assert.ok(
+        deployWorkflow.indexOf('--only firestore:rules') < deployWorkflow.indexOf('--only hosting'),
+        '보안 규칙을 호스팅보다 먼저 배포해야 합니다'
+    );
 });
 
 test('CORS 정책은 Firebase Hosting(web.app) 및 Vercel 프리뷰 출처를 허용하고 외부 비인가 출처는 차단한다', async () => {

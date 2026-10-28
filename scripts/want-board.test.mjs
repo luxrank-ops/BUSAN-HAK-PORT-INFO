@@ -258,3 +258,59 @@ test('저장소 어디에도 관리자 비밀번호 평문(코드 본문)이 남
     }
     assert.match(readAppFile('public/js/app.js'), /DEFAULT_ADMIN_PW_HASH/);
 });
+
+test('오류 분류: 권한 거부(permission-denied)를 원인별 안내 문구로 바꾼다', () => {
+    // 2026-10-28 운영자 신고: "제출 실패: Missing or insufficient permissions"
+    // 원인(운영 Firestore 규칙 미배포)을 사용자·운영자가 바로 알 수 있어야 합니다.
+    const denied = {
+        code: 'permission-denied',
+        message: 'Missing or insufficient permissions.'
+    };
+    assert.equal(core.classifyWantError(denied), 'permission-denied');
+    const text = core.describeWantFailure(denied, '제출');
+    assert.match(text, /^제출 실패/);
+    assert.match(text, /permission-denied/);
+    assert.match(text, /보안 규칙/);
+    assert.match(text, /Firebase 운영 배포/);
+
+    // 코드 없이 메시지만 오는 경우(래핑된 오류)도 같은 안내로 처리합니다.
+    assert.equal(core.classifyWantError(new Error('Missing or insufficient permissions.')), 'permission-denied');
+
+    assert.equal(core.classifyWantError({ code: 'unavailable' }), 'network');
+    assert.match(core.describeWantFailure({ code: 'unavailable' }, '제출'), /네트워크/);
+    assert.equal(core.classifyWantError({ code: 'unauthenticated' }), 'unauthenticated');
+    assert.match(core.describeWantFailure({ code: 'unauthenticated' }, '제출'), /새로고침/);
+    assert.equal(core.classifyWantError({ code: 'failed-precondition', message: 'The query requires an index.' }), 'index');
+    assert.equal(core.classifyWantError({ code: 'weird', message: 'boom' }), 'unknown');
+    assert.match(core.describeWantFailure({ code: 'weird', message: 'boom' }, '답글 등록'), /답글 등록 실패: boom/);
+});
+
+test('제출은 항목·인덱스를 배치(원자적) 쓰기로 저장한다', () => {
+    // 두 번째 쓰기가 실패하면 항목만 남아 목록에서 사라지는 반쪽 상태를 막습니다.
+    assert.match(script, /async function commitWantItem\(/);
+    assert.match(script, /const batch = db\.batch\(\);/);
+    assert.match(script, /batch\.set\(itemRef, itemDoc\);/);
+    assert.match(script, /await batch\.commit\(\);/);
+    assert.match(script, /await commitWantItem\(db, uid, itemId, itemDoc\);/);
+});
+
+test('제출·삭제·답글 실패는 원인별 안내 문구를 사용한다(원문 노출 금지)', () => {
+    assert.match(script, /notifyAlert\(describeWantFailure\(error, '제출'\)\)/);
+    assert.match(script, /notifyAlert\(describeWantFailure\(error, '삭제'\)\)/);
+    assert.match(script, /notifyAlert\(describeWantFailure\(error, '답글 등록'\)\)/);
+    assert.doesNotMatch(script, /'제출 실패: ' \+ \(\(error && error\.message\) \|\| 'Unknown error'\)/);
+});
+
+test('내 기록을 못 읽으면 원인을 목록에 안내하고 글쓰기 버튼은 유지한다', () => {
+    assert.match(script, /let indexLoadError = null;/);
+    assert.match(script, /renderWantEmpty\(describeWantFailure\(indexLoadError, '기록 불러오기'\), \{ keepWriteButton: true \}\)/);
+    assert.match(script, /if \(writeBtn\) writeBtn\.style\.display = keepWriteButton \? '' : 'none';/);
+});
+
+test('규칙: 답글 목록 조회(list)는 문서 ID 와일드카드를 요구하지 않는다', () => {
+    // list 조회에서는 {replyId} 가 묶이지 않아 isValidId(replyId) 를 넣으면 항상 거부됩니다.
+    // (2026-10-28: 답글이 화면에 보이지 않던 원인)
+    assert.match(rules, /allow get: if isSignedIn\(\) && isValidId\(replyId\) && \(/);
+    assert.match(rules, /allow list: if isSignedIn\(\) && \(\s*isAdmin\(\) \|\|\s*isWantItemAuthor\(itemId\)\s*\)/);
+    assert.doesNotMatch(rules, /allow get, list: if isSignedIn\(\) && isValidId\(replyId\)/);
+});

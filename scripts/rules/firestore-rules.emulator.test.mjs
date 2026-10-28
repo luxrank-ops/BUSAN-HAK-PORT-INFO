@@ -20,7 +20,7 @@ import {
     assertSucceeds,
     initializeTestEnvironment
 } from '@firebase/rules-unit-testing';
-import { doc, getDoc, setDoc, updateDoc, deleteDoc, collection, addDoc } from 'firebase/firestore';
+import { doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, collection, addDoc, writeBatch, serverTimestamp } from 'firebase/firestore';
 
 const PROJECT_ID = 'demo-busan-hak-port';
 const RULES_PATH = fileURLToPath(new URL('../../firestore.rules', import.meta.url));
@@ -390,6 +390,115 @@ if (!EMULATOR_AVAILABLE) {
             await ok(getDoc(comment(stranger())));
             await denied(updateDoc(comment(worker()), { word: '이층집' }));
             await denied(deleteDoc(comment(worker())));
+        });
+    });
+
+    // 💡 운영자에게 바란다 — 2026-10-28 운영 신고("제출 실패: Missing or insufficient permissions")
+    // 이후 화면 코드가 실제로 보내는 문서 모양 그대로 규칙을 검증합니다.
+    describe('want_board (운영자에게 바란다)', () => {
+        const AUTHOR = 'worker-a';
+        const ITEM_ID = 'fb_test1';
+
+        /** 화면(confirmWantPreview → commitWantItem)이 만드는 항목 문서와 같은 모양 */
+        const itemDoc = (overrides = {}) => ({
+            id: ITEM_ID,
+            authorUid: AUTHOR,
+            nick: '신항 도선사',
+            content: '1234',
+            createdAt: serverTimestamp(),
+            createdAtMs: Date.now(),
+            status: 'pending',
+            deleted: false,
+            replyCount: 0,
+            ...overrides
+        });
+
+        const indexDoc = (uid = AUTHOR) => ({
+            uid,
+            items: [{
+                id: ITEM_ID,
+                nick: '신항 도선사',
+                snippet: '1234',
+                status: 'pending',
+                replyCount: 0,
+                deleted: false,
+                createdAtMs: Date.now()
+            }]
+        });
+
+        test('작성자는 피드백과 내 기록 인덱스를 한 번에(배치) 저장할 수 있다', async () => {
+            await seed(async () => {});
+            const db = worker(AUTHOR);
+            const batch = writeBatch(db);
+            batch.set(doc(db, 'want_board', ITEM_ID), itemDoc());
+            batch.set(doc(db, 'want_board_mine', AUTHOR), indexDoc(), { merge: true });
+            await ok(batch.commit());
+        });
+
+        test('남의 피드백은 읽을 수 없고, 전체 목록 조회도 불가능하다', async () => {
+            await seed(async (db) => {
+                await setDoc(doc(db, 'want_board', ITEM_ID), itemDoc());
+            });
+            await ok(getDoc(doc(worker(AUTHOR), 'want_board', ITEM_ID)));
+            await denied(getDoc(doc(stranger(), 'want_board', ITEM_ID)));
+            await denied(getDocs(collection(stranger(), 'want_board')));
+        });
+
+        test('작성자도 내용·상태를 위조할 수 없고 삭제 표시만 바꿀 수 있다', async () => {
+            await seed(async (db) => {
+                await setDoc(doc(db, 'want_board', ITEM_ID), itemDoc());
+            });
+            await denied(updateDoc(doc(worker(AUTHOR), 'want_board', ITEM_ID), { content: '위조' }));
+            await denied(updateDoc(doc(worker(AUTHOR), 'want_board', ITEM_ID), { status: 'replied' }));
+            await ok(updateDoc(doc(worker(AUTHOR), 'want_board', ITEM_ID), { deleted: true }));
+        });
+
+        test('인덱스 문서라도 형태가 틀리면(리스트 아님·개수 초과) 거부된다', async () => {
+            await seed(async () => {});
+            const db = worker(AUTHOR);
+            await denied(setDoc(doc(db, 'want_board_mine', AUTHOR), { uid: AUTHOR, items: 'not-a-list' }));
+            const tooMany = Array.from({ length: 201 }, (_, index) => ({ id: `fb_${index}` }));
+            await denied(setDoc(doc(db, 'want_board_mine', AUTHOR), { uid: AUTHOR, items: tooMany }));
+        });
+
+        test('다른 사람의 UID 로 인덱스 문서를 만들 수 없다', async () => {
+            await seed(async () => {});
+            await denied(setDoc(doc(worker(AUTHOR), 'want_board_mine', 'stranger-uid'), indexDoc('stranger-uid')));
+        });
+
+        const seedItemWithReply = () => seed(async (db) => {
+            await setDoc(doc(db, 'want_board', ITEM_ID), itemDoc());
+            await setDoc(doc(db, `want_board/${ITEM_ID}/replies/r1`), {
+                itemId: ITEM_ID,
+                authorUid: 'admin_luxrank',
+                name: '운영자',
+                text: '반영하겠습니다',
+                createdAtMs: Date.now(),
+                isAdminReply: true
+            });
+        });
+
+        test('일반 작성자는 답글을 쓸 수 없다 (관리자 전용)', async () => {
+            await seedItemWithReply();
+            await denied(addDoc(collection(worker(AUTHOR), `want_board/${ITEM_ID}/replies`), {
+                itemId: ITEM_ID,
+                authorUid: AUTHOR,
+                name: '신항 도선사',
+                text: '위조 답글',
+                createdAtMs: Date.now(),
+                isAdminReply: true
+            }));
+        });
+
+        test('작성자는 자기 항목의 답글 목록을 읽을 수 있다', async () => {
+            await seedItemWithReply();
+            const snap = await ok(getDocs(collection(worker(AUTHOR), `want_board/${ITEM_ID}/replies`)));
+            assert.equal(snap.size, 1);
+        });
+
+        test('다른 사용자는 남의 항목 답글 목록을 읽을 수 없다', async () => {
+            await seedItemWithReply();
+            await denied(getDocs(collection(stranger(), `want_board/${ITEM_ID}/replies`)));
         });
     });
 

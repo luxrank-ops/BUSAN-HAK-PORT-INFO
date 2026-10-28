@@ -53,7 +53,9 @@ jobs:
             {
               grep -E "^# (tests|pass|fail|cancelled)" /tmp/rules.log
               grep -E "^ +not ok" /tmp/rules.log | head -4
-              grep -A1 -E "^ +error:" /tmp/rules.log | grep -v "did not finish before its parent" | head -4
+              # 실패한 케이스의 원인(기대값·실제값)까지 요약에 남깁니다.
+              grep -B2 -A12 -E "^ +not ok" /tmp/rules.log | grep -vE "^\s*$" | head -30
+              grep -A3 -E "^ +error:" /tmp/rules.log | grep -v "did not finish before its parent" | head -10
               grep -E "\[규칙테스트\]" /tmp/rules.log | head -3
             } | while IFS= read -r line; do
               echo "::error::${line//$'\r'/}"
