@@ -105,6 +105,28 @@
 - 배포 워크플로우는 이제 **① 보안 규칙 → ② 색인 → ③ Hosting** 순서로 따로 실행합니다.
   예전처럼 한 번에 묶어 배포하면 어느 단계에서 실패했는지 알 수 없어, 규칙이 옛 버전으로 남은 채
   새 기능만 먼저 배포되는 사고가 생깁니다(2026-10-26 실제 발생).
+
+#### 🔑 배포가 `Permission denied to get service [firestore.googleapis.com]` (HTTP 403) 로 멈출 때
+
+배포용 서비스 계정에 `serviceusage.services.get` 권한이 없어서, Firebase CLI 가 배포 **전에** 하는
+"Firestore API 가 켜져 있나?" 확인 요청이 거부되는 상태입니다. 규칙/색인 배포가 시작조차 못 합니다.
+
+| 방법 | 내용 |
+| --- | --- |
+| ✅ 자동 (코드에 반영됨) | 워크플로우의 **API 확인 캐시 주입** 단계가 CLI 의 API 확인 캐시(`~/.config/configstore/firebase-tools.json`)를 채워, 이미 켜진 API 를 매번 조회하지 않게 합니다. 그대로 다시 실행하면 됩니다. |
+| 권장 (근본) | GCP 콘솔 → **IAM 및 관리자** → 시크릿 JSON 의 `client_email` 에 **Service Usage 소비자**(`roles/serviceusage.serviceUsageConsumer`) 역할 부여 |
+| 긴급 (PC 에서 직접) | `npx firebase-tools@15.3.1 login` → `npx firebase-tools@15.3.1 deploy --only firestore:rules --project busan-hak-port` (본인 Google 계정 권한으로 배포, 서비스 계정 권한 문제를 우회) |
+
+```bash
+# 터미널로 역할을 부여할 때
+gcloud projects add-iam-policy-binding busan-hak-port \
+  --member="serviceAccount:<시크릿 JSON 의 client_email>" \
+  --role="roles/serviceusage.serviceUsageConsumer"
+```
+
+- 진단 스크립트: `node scripts/deploy-preflight.mjs check --token="$TOKEN"` (무엇이 막혔는지 한국어로 안내)
+- 캐시 주입만 따로: `node scripts/deploy-preflight.mjs seed-cache`
+- 배포 워크플로우는 실패 시 **Actions 요약(Step summary)** 에 규칙·색인·호스팅 단계별 성공/실패 표를 남깁니다.
 - 화면은 이제 같은 오류를 그대로 노출하지 않고, 원인별 안내(권한 거부·세션 만료·네트워크)로 바꿔 보여 줍니다.
 - 제출은 **항목 + 내 기록 인덱스를 배치(원자적) 쓰기**로 저장하므로, 도중에 실패해도 반쪽 상태가 남지 않습니다.
 

@@ -128,6 +128,49 @@ http://... 429행 (수정 전)
 
 ---
 
+## 4-1. 2차 원인 — 배포용 서비스 계정 권한 (`serviceusage.services.get`)
+
+규칙 문법 오류를 고친 뒤 배포를 다시 실행하자, 이번에는 배포가 **다른 이유로** 막혔습니다.
+
+```
+Error: Request to https://serviceusage.googleapis.com/v1/projects/busan-hak-port/
+       services/firestore.googleapis.com had HTTP Error: 403,
+       Permission denied to get service [firestore.googleapis.com]
+```
+
+- Firebase CLI 는 `firestore:rules`/`firestore:indexes` 배포 **전에** Service Usage API 로
+  "Firestore API 가 켜져 있는지" 확인합니다(`ensureApiEnabled.check`).
+- 배포용 서비스 계정에 `serviceusage.services.get` 권한이 없으면 이 확인이 403으로 거부되어
+  **규칙 배포가 시작조차 못 합니다.**
+- 즉 지금 남은 것은 코드 문제가 아니라 **GCP IAM 권한 문제**입니다.
+
+### 조치 (코드에 반영)
+
+| 단계 | 내용 |
+| --- | --- |
+| 진단 | `scripts/deploy-preflight.mjs check` — 403이면 "누가 무슨 역할을 부여해야 하는지"를 Actions 요약에 한국어로 안내(실패해도 계속) |
+| 우회 | `scripts/deploy-preflight.mjs seed-cache` — Firebase CLI 의 API 확인 캐시(`~/.config/configstore/firebase-tools.json` 의 `apiEnablementCache[projectId][api]`)를 미리 채워 확인 요청을 생략시킵니다. **쓰기 권한 검사는 그대로**입니다. |
+| 근본 | 서비스 계정에 `roles/serviceusage.serviceUsageConsumer`(Service Usage 소비자) 부여 |
+| 안내 | 배포 실패 시 요약(Step summary)에 규칙·색인·호스팅 단계별 성공/실패 표 + 해결 명령 |
+
+검증(로컬, firebase-tools 15.3.1 코드로 직접 확인):
+
+```
+캐시 없음 → check() 가 인증/네트워크로 진입 (403 또는 인증 오류)
+캐시 있음 → check() 가 즉시 true 반환 (네트워크 호출 없음)   ← 우회 성립
+```
+
+### 긴급 대안 — 서비스 계정 권한 없이 규칙만 배포
+
+```bash
+npx firebase-tools@15.3.1 login      # luxrank@gmail.com (프로젝트 소유자) 로그인
+npx firebase-tools@15.3.1 deploy --only firestore:rules --project busan-hak-port
+```
+
+---
+
+---
+
 ## 5. 교훈 (다음에 같은 일을 피하려면)
 
 - 보안 규칙은 **문법 오류가 나면 파일 전체가 배포되지 않습니다.** 한 줄만 틀려도 신규 기능 전체가 조용히 막힙니다.

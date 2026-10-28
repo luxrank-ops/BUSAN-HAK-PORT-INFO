@@ -156,9 +156,30 @@ jobs:
         run: npm run check
 
       - name: Google Cloud 인증
+        id: auth
         uses: google-github-actions/auth@v3
         with:
           credentials_json: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_BUSAN_HAK_PORT }}
+          # 진단 단계에서 서비스 상태를 직접 조회하기 위해 액세스 토큰을 받아 둡니다.
+          token_format: access_token
+
+      # 2026-10-28 사고: 배포용 서비스 계정에 serviceusage.services.get 권한이 없어
+      #   "Permission denied to get service [firestore.googleapis.com]" (HTTP 403)
+      # 로 규칙 배포가 시작조차 못 했습니다. 아래 두 단계가 그 관문을 처리합니다.
+      #   1) 진단 → 무엇이 막혔는지, 누가 무슨 역할을 부여해야 하는지 요약에 남깁니다(실패해도 계속).
+      #   2) 캐시 주입 → CLI 가 매번 하는 "API 켜져 있나?" 조회를 생략시켜 배포를 진행합니다.
+      #      (쓰기 권한 검사는 그대로이므로 권한이 없으면 다음 단계에서 정확한 오류가 납니다.)
+      - name: 배포 권한 진단 (Service Usage)
+        continue-on-error: true
+        env:
+          GOOGLE_OAUTH_ACCESS_TOKEN: ${{ steps.auth.outputs.access_token }}
+          # 자격 파일 경로만 넘기고, 스크립트가 client_email 만 읽습니다(키 본문은 출력하지 않음).
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ steps.auth.outputs.credentials_file_path }}
+        run: node scripts/deploy-preflight.mjs check
+
+      - name: API 확인 캐시 주입 (Service Usage 권한 없이도 배포 진행)
+        continue-on-error: true
+        run: node scripts/deploy-preflight.mjs seed-cache
 
       # 배포는 세 단계로 나눠 실행합니다.
       #   1) Firestore 보안 규칙 → 화면 기능(운영자에게 바란다·꿍꿍따 릴레이)의 쓰기 권한을 먼저 살립니다.
@@ -201,4 +222,34 @@ jobs:
           if [ "$found" -eq 0 ]; then
             echo "::error::배포 단계가 실행되기 전에 실패했습니다(인증·검사 단계 로그를 확인해 주세요)."
           fi
+
+          # 이번 배포가 Service Usage 권한(403) 때문에 막혔다면, 무엇을 하면 되는지 남깁니다.
+          if grep -aq "Permission denied to get service" /tmp/deploy-*.log 2>/dev/null; then
+            echo "::error::배포용 서비스 계정에 serviceusage.services.get 권한이 없습니다. GCP 콘솔 → IAM 및 관리자에서 시크릿 JSON 의 client_email 에 'Service Usage 소비자'(roles/serviceusage.serviceUsageConsumer) 역할을 부여하세요."
+            echo "::notice::우회 방법: 워크플로우의 'API 확인 캐시 주입' 단계가 자동으로 처리합니다. 이 단계가 실패했다면 아래 명령으로 직접 부여할 수 있습니다."
+            echo "::notice::gcloud projects add-iam-policy-binding busan-hak-port --member=\"serviceAccount:<서비스 계정 이메일>\" --role=\"roles/serviceusage.serviceUsageConsumer\""
+          fi
+
+          # 배포 결과를 요약(Step summary)으로도 남깁니다.
+          {
+            echo "## Firebase 운영 배포 결과"
+            echo ""
+            echo "| 단계 | 결과 |"
+            echo "| --- | --- |"
+            for pair in "규칙:/tmp/deploy-rules.log" "색인:/tmp/deploy-indexes.log" "호스팅:/tmp/deploy-hosting.log"; do
+              label="${pair%%:*}"
+              file="${pair#*:}"
+              if [ -f "$file" ]; then
+                if grep -aqE "Deploy complete|Successfully|released" "$file" && ! grep -aqE "Error:|HTTP Error" "$file"; then
+                  echo "| $label | ✅ 성공 |"
+                else
+                  echo "| $label | ❌ 실패 |"
+                fi
+              else
+                echo "| $label | ⏭ 실행 안 됨 |"
+              fi
+            done
+            echo ""
+            echo "> 권한(403)으로 실패했다면 이 워크플로우를 다시 실행하거나, PC 에서 \`npx firebase-tools login\` 후 \`deploy --only firestore:rules\` 로 규칙만 배포할 수 있습니다."
+          } >> "$GITHUB_STEP_SUMMARY"
           exit 0
