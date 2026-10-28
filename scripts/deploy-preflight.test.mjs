@@ -80,7 +80,8 @@ test('캐시 파일을 실제로 쓰고, 깨진 JSON 이어도 다시 만든다'
 
     writeFileSync(filePath, '{ broken json');
     const second = seedCacheFile({ filePath });
-    assert.deepEqual(second.added, ['firestore.googleapis.com']);
+    assert.ok(second.added.includes('firestore.googleapis.com'));
+    assert.ok(second.added.includes('firebaserules.googleapis.com'));
     assert.equal(JSON.parse(readFileSync(filePath, 'utf8')).apiEnablementCache[PROJECT_ID]['firestore.googleapis.com'], true);
 });
 

@@ -73,17 +73,29 @@ jobs:
         run: node scripts/deploy-preflight.mjs seed-cache
 
       - name: Firestore 보안 규칙 배포
+        id: deploy
         run: |
           set -o pipefail
-          npx --yes firebase-tools@15.3.1 deploy --only firestore:rules --project busan-hak-port --non-interactive 2>&1 | tee /tmp/deploy-rules-only.log
+          status=0
+          npx --yes firebase-tools@15.3.1 deploy --only firestore:rules --project busan-hak-port --non-interactive 2>&1 | tee /tmp/deploy-rules-only.log || status=$?
+          if [ "$status" -ne 0 ]; then
+            # 로그를 열지 않아도 원인이 보이도록 핵심 문장을 오류 주석(annotation)으로 올립니다.
+            grep -aiE "Error:|HTTP Error|[Pp]ermission denied|PERMISSION_DENIED|has not been used|not been enabled|Failed to" /tmp/deploy-rules-only.log \
+              | grep -av "^\s*$" | head -n 5 | while IFS= read -r line; do
+                  echo "::error::${line//$'\r'/}"
+                done || true
+          fi
+          exit $status
 
       - name: 배포 결과 요약
         if: always()
+        env:
+          DEPLOY_OUTCOME: ${{ steps.deploy.outcome }}
         run: |
           {
             echo "## Firestore 규칙 배포 결과"
             echo ""
-            if grep -aqs "Error:" /tmp/deploy-rules-only.log; then
+            if [ "$DEPLOY_OUTCOME" != "success" ]; then
               echo "❌ 실패 — 아래 원인 문장을 확인하세요."
             else
               echo "✅ 성공 — 운영 규칙이 최신 상태입니다."
