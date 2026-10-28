@@ -306,3 +306,11 @@ test('내 기록을 못 읽으면 원인을 목록에 안내하고 글쓰기 버
     assert.match(script, /renderWantEmpty\(describeWantFailure\(indexLoadError, '기록 불러오기'\), \{ keepWriteButton: true \}\)/);
     assert.match(script, /if \(writeBtn\) writeBtn\.style\.display = keepWriteButton \? '' : 'none';/);
 });
+
+test('규칙: 답글 목록 조회(list)는 문서 ID 와일드카드를 요구하지 않는다', () => {
+    // list 조회에서는 {replyId} 가 묶이지 않아 isValidId(replyId) 를 넣으면 항상 거부됩니다.
+    // (2026-10-28: 답글이 화면에 보이지 않던 원인)
+    assert.match(rules, /allow get: if isSignedIn\(\) && isValidId\(replyId\) && \(/);
+    assert.match(rules, /allow list: if isSignedIn\(\) && \(\s*isAdmin\(\) \|\|\s*isWantItemAuthor\(itemId\)\s*\)/);
+    assert.doesNotMatch(rules, /allow get, list: if isSignedIn\(\) && isValidId\(replyId\)/);
+});
