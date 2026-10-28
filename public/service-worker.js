@@ -3,7 +3,7 @@
 // 사유 소프트웨어입니다. 저작권자의 사전 서면 동의 없이 복제·배포·수정·2차적 저작물 작성·
 // 역분석·디컴파일을 할 수 없습니다. 자세한 내용은 저장소의 LICENSE 파일을 참고하세요.
 // ============================================================================
-const CACHE_VERSION = "busan-hak-port-v2027.18";
+const CACHE_VERSION = "busan-hak-port-v2027.19";
 // 실제로 화면에 로드되는 자산만 프리캐시합니다 (A-3).
 // A-1 (2026-10-17): index.html 의 인라인 스타일·스크립트를 외부 파일(css/app.css + js/*) 로
 // 분리했습니다. ?v= 버전 쿼리와 server.ts 의 immutable 헤더가 함께 작용해 변경이 없으면
@@ -18,14 +18,14 @@ const STATIC_PRECACHE_ASSETS = [
   "/manifest.json",
   "/favicon.ico",
   "/icon-192.png",
-  "/css/app.css?v=2027.18",
-  "/js/notifications.js?v=2027.18",
-  "/js/app.js?v=2027.18",
-  "/js/leader-access.js?v=2027.18",
-  "/js/ships-board.js?v=2027.18",
-  "/js/tab-views.js?v=2027.18",
-  "/js/kkung-relay.js?v=2027.18",
-  "/js/want-board.js?v=2027.18"
+  "/css/app.css?v=2027.19",
+  "/js/notifications.js?v=2027.19",
+  "/js/app.js?v=2027.19",
+  "/js/leader-access.js?v=2027.19",
+  "/js/ships-board.js?v=2027.19",
+  "/js/tab-views.js?v=2027.19",
+  "/js/kkung-relay.js?v=2027.19",
+  "/js/want-board.js?v=2027.19"
 ];
 
 self.addEventListener("install", (event) => {

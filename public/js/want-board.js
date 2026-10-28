@@ -142,6 +142,53 @@
             .replace(/'/g, '&#39;');
     }
 
+    /* ------------------------------------------------------------------
+       오류 분류 — "Missing or insufficient permissions" 만 보고는 원인을 알 수 없어
+       운영자·사용자가 바로 조치할 수 있도록 원인별 안내 문구로 바꿔 줍니다.
+       (2026-10-28 운영자 신고: 제출 실패: Missing or insufficient permissions)
+       ------------------------------------------------------------------ */
+
+    /** Firestore 오류를 원인 종류로 분류합니다(순수 함수). */
+    function classifyWantError(error) {
+        const code = String((error && (error.code || error.status)) || '');
+        const message = String((error && error.message) || '');
+        const haystack = `${code} ${message}`;
+        if (/permission-denied|insufficient permissions|insufficient_permissions/i.test(haystack)) return 'permission-denied';
+        if (/unauthenticated|invalid-credential|auth\/user/i.test(haystack)) return 'unauthenticated';
+        if (/failed-precondition|requires an index|index/i.test(haystack)) return 'index';
+        if (/unavailable|network-request-failed|deadline-exceeded|timeout|offline/i.test(haystack)) return 'network';
+        return 'unknown';
+    }
+
+    /**
+     * 사용자에게 보여 줄 오류 문구를 만듭니다.
+     * @param {*} error  Firestore 오류 객체
+     * @param {string} action  '제출' · '답글 등록' · '삭제' · '기록 불러오기'
+     */
+    function describeWantFailure(error, action) {
+        const label = String(action || '저장') + ' 실패';
+        const kind = classifyWantError(error);
+        const raw = String((error && error.message) || 'Unknown error');
+        if (kind === 'permission-denied') {
+            return [
+                `${label}: 서버가 저장을 거부했습니다 (permission-denied).`,
+                '운영 Firestore 보안 규칙(firestore.rules)이 아직 배포되지 않았을 가능성이 큽니다.',
+                '운영자: GitHub → Actions → "Firebase 운영 배포" 워크플로우를 실행해 규칙을 배포해 주세요.',
+                '규칙이 배포된 뒤에도 계속 실패하면 이 문구를 운영자에게 알려 주세요.'
+            ].join('\n');
+        }
+        if (kind === 'unauthenticated') {
+            return [`${label}: 로그인(세션)이 만료되었습니다. 앱을 새로고침한 뒤 다시 시도해 주세요.`, `(${raw})`].join('\n');
+        }
+        if (kind === 'index') {
+            return [`${label}: 데이터베이스 색인(index)이 필요합니다. 운영자에게 알려 주세요.`, `(${raw})`].join('\n');
+        }
+        if (kind === 'network') {
+            return [`${label}: 네트워크가 불안정합니다. 연결을 확인한 뒤 다시 시도해 주세요.`, `(${raw})`].join('\n');
+        }
+        return `${label}: ${raw}`;
+    }
+
     /** 인덱스용 요약 생성 */
     function buildWantIndexItem(item) {
         const content = sanitizeWantText(item && item.content, MAX_CONTENT_LENGTH);
@@ -215,6 +262,8 @@
     let adminMode = false;
     let adminItems = [];
     let draft = { nick: '', content: '' };
+    /** 내 기록(인덱스) 읽기 오류 — 목록 화면에 원인을 안내하기 위해 보관합니다. */
+    let indexLoadError = null;
 
     function byId(id) {
         return typeof document !== 'undefined' ? document.getElementById(id) : null;
@@ -634,14 +683,16 @@
                 button.disabled = true;
                 button.innerText = '📝 전달 중...';
             }
-            await db.collection(BOARD_COLLECTION).doc(itemId).set(itemDoc);
-            await ensureWantIndexDoc(db, uid, [{ ...buildWantIndexItem({ ...itemDoc }), id: itemId }]);
+            await commitWantItem(db, uid, itemId, itemDoc);
             draft = { nick: '', content: '' };
             closeWantFormAndPreview();
             notifyToast('📝 운영자에게 전달되었습니다.');
             await loadWantMyIndex();
         } catch (error) {
-            notifyAlert('제출 실패: ' + ((error && error.message) || 'Unknown error'));
+            // 원인별 안내(권한 거부 = 보안 규칙 미배포 가능성)를 그대로 노출하고,
+            // 자세한 값은 콘솔에 남겨 운영자가 확인할 수 있게 합니다.
+            try { console.warn('[want-board] 제출 실패', error); } catch (_) { /* 무시 */ }
+            notifyAlert(describeWantFailure(error, '제출'));
         } finally {
             if (button) {
                 button.disabled = false;
@@ -650,17 +701,53 @@
         }
     }
 
+    /**
+     * 피드백 문서 + 작성자 인덱스를 "한 번에" 저장합니다(원자적 쓰기).
+     *
+     * 이전 구현은 항목 저장 → 인덱스 저장을 순서대로 호출했기 때문에,
+     * 두 번째 쓰기에서 권한 오류가 나면 항목만 남고 목록에는 보이지 않는
+     * 반쪽 상태가 생겼습니다. 배치 쓰기로 묶어 그런 상태를 없앱니다.
+     */
+    async function commitWantItem(db, uid, itemId, itemDoc) {
+        const indexRef = db.collection(MINE_COLLECTION).doc(uid);
+        const items = await buildWantIndexItems(db, uid, [{ ...buildWantIndexItem({ ...itemDoc }), id: itemId }]);
+        const itemRef = db.collection(BOARD_COLLECTION).doc(itemId);
+        if (typeof db.batch === 'function') {
+            const batch = db.batch();
+            batch.set(itemRef, itemDoc);
+            batch.set(indexRef, { uid, items }, { merge: true });
+            await batch.commit();
+            return;
+        }
+        // batch 를 지원하지 않는 아주 오래된 SDK 폴백
+        await itemRef.set(itemDoc);
+        await indexRef.set({ uid, items }, { merge: true });
+    }
+
+    /**
+     * 인덱스에 넣을 목록을 만듭니다(최대 MAX_MY_ITEMS 개).
+     * 인덱스 읽기는 실패해도 치명적이지 않으므로 최선 노력(best effort)으로 처리합니다.
+     */
+    async function buildWantIndexItems(db, uid, additions) {
+        let existing = { uid, items: [] };
+        try {
+            const snapshot = await db.collection(MINE_COLLECTION).doc(uid).get();
+            existing = normalizeWantIndex(snapshot.exists ? snapshot.data() : null, uid);
+        } catch (_) {
+            // 읽기 실패(권한·오프라인)해도 새 항목만 담아 저장을 시도합니다.
+        }
+        const byIdMap = new Map();
+        existing.items.forEach((entry) => byIdMap.set(entry.id, entry));
+        (Array.isArray(additions) ? additions : []).forEach((entry) => byIdMap.set(entry.id, entry));
+        return Array.from(byIdMap.values())
+            .filter((entry) => !entry.deleted)
+            .slice(0, MAX_MY_ITEMS);
+    }
+
     /** 인덱스 문서에 아이템을 추가 (최대 MAX_MY_ITEMS 개) */
     async function ensureWantIndexDoc(db, uid, additions) {
         const ref = db.collection(MINE_COLLECTION).doc(uid);
-        const snapshot = await ref.get();
-        const existing = normalizeWantIndex(snapshot.exists ? snapshot.data() : null, uid);
-        const byIdMap = new Map();
-        existing.items.forEach((entry) => byIdMap.set(entry.id, entry));
-        additions.forEach((entry) => byIdMap.set(entry.id, entry));
-        const items = Array.from(byIdMap.values())
-            .filter((entry) => !entry.deleted)
-            .slice(0, MAX_MY_ITEMS);
+        const items = await buildWantIndexItems(db, uid, additions);
         await ref.set({ uid, items }, { merge: true });
     }
 
@@ -711,8 +798,13 @@
         try {
             const snapshot = await db.collection(MINE_COLLECTION).doc(uid).get();
             myIndex = normalizeWantIndex(snapshot.exists ? snapshot.data() : null, uid);
-        } catch (_) {
+            indexLoadError = null;
+        } catch (error) {
+            // 권한 거부(보안 규칙 미배포)를 조용히 삼키면 "기록이 없다"로만 보이므로
+            // 원인을 보관해 두었다가 목록 화면에 안내합니다.
+            indexLoadError = error || null;
             myIndex = { uid, items: [] };
+            try { console.warn('[want-board] 내 기록 불러오기 실패', error); } catch (_) { /* 무시 */ }
         }
         await loadWantMyItems();
     }
@@ -721,6 +813,10 @@
         const db = getFirestore();
         stopWantItemListeners();
         myItems = [];
+        if (indexLoadError) {
+            renderWantEmpty(describeWantFailure(indexLoadError, '기록 불러오기'), { keepWriteButton: true });
+            return;
+        }
         if (!db) {
             renderWantMyList();
             return;
@@ -777,13 +873,15 @@
         }
     }
 
-    function renderWantEmpty(message) {
+    function renderWantEmpty(message, options) {
+        const keepWriteButton = Boolean(options && options.keepWriteButton);
         const list = byId('wantBoardList');
         const adminBar = byId('wantBoardAdminBar');
         const writeBtn = byId('wantBoardWriteBtn');
         if (list) list.innerHTML = `<div class="want-board-empty">${escapeWantHtml(message)}</div>`;
         if (adminBar) adminBar.classList.add('hidden');
-        if (writeBtn) writeBtn.style.display = 'none';
+        // 권한 오류 안내일 때는 "희망 사항 남기기" 버튼을 숨기지 않습니다.
+        if (writeBtn) writeBtn.style.display = keepWriteButton ? '' : 'none';
     }
 
     function renderWantMyList() {
@@ -866,7 +964,7 @@
             }
             notifyToast('삭제되었습니다.');
         } catch (error) {
-            notifyAlert('삭제 실패: ' + ((error && error.message) || 'Unknown error'));
+            notifyAlert(describeWantFailure(error, '삭제'));
         }
     }
 
@@ -957,7 +1055,7 @@
             }));
             renderWantAdminList();
         } catch (error) {
-            notifyAlert('관리자 기록 불러오기 실패: ' + ((error && error.message) || 'Unknown error'));
+            notifyAlert(describeWantFailure(error, '기록 불러오기'));
         }
     }
 
@@ -996,7 +1094,7 @@
             notifyToast('📢 답글이 등록되었습니다.');
             await loadWantAdminItems();
         } catch (error) {
-            notifyAlert('답글 등록 실패: ' + ((error && error.message) || 'Unknown error'));
+            notifyAlert(describeWantFailure(error, '답글 등록'));
         }
     }
 
@@ -1043,6 +1141,8 @@
         normalizeWantItem,
         normalizeWantIndex,
         escapeWantHtml,
+        classifyWantError,
+        describeWantFailure,
         resolveFirestore: getFirestore,
         resolveAuth: getAuth,
         portNicknameOptions,
