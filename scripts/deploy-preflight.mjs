@@ -37,7 +37,7 @@ import path from 'node:path';
 export const PROJECT_ID = 'busan-hak-port';
 
 /** 배포 전에 상태를 확인하는 API 목록 — CLI(firestore prepare)가 조회하는 값과 같습니다. */
-export const CHECKED_SERVICES = ['firestore.googleapis.com'];
+export const CHECKED_SERVICES = ['firestore.googleapis.com', 'firebaserules.googleapis.com'];
 
 const SERVICE_USAGE_ORIGIN = 'https://serviceusage.googleapis.com';
 
@@ -157,7 +157,9 @@ export function describeCheckResults(results, { projectId = PROJECT_ID, serviceA
         lines.push(`   gcloud projects add-iam-policy-binding ${projectId} \\`);
         lines.push(`     --member="serviceAccount:${serviceAccountEmail || '<서비스 계정 이메일>'}" \\`);
         lines.push(`     --role="${RECOMMENDED_ROLE}"`);
-        lines.push('2) 이 워크플로우의 "API 확인 캐시 주입" 단계가 자동으로 우회합니다.');
+        lines.push('2) 필요한 API 가 꺼져 있다면 활성화합니다:');
+        lines.push(`   gcloud services enable firestore.googleapis.com firebaserules.googleapis.com --project ${projectId}`);
+        lines.push('3) 이 워크플로우의 "API 확인 캐시 주입" 단계가 자동으로 우회합니다.');
         lines.push('   (CLI 가 매번 하는 "API 켜져 있나?" 조회만 생략합니다. 쓰기 권한은 그대로 검사됩니다.)');
     }
     return lines.join('\n');
