@@ -41,6 +41,17 @@ http://... 429행 (수정 전)
 
 ## 3. 조치 내용
 
+### 3-0. 검증 결과 (CI 에뮬레이터)
+
+수정 후 CI 규칙 에뮬레이터 테스트가 **40여 건 모두 통과**했습니다.
+(= 그동안 `cancelled 39 · pass 0` 이던 단계가 정상 동작을 시작했습니다.)
+이 과정에서 규칙의 두 번째 문제도 드러나 함께 고쳤습니다.
+
+| 문제 | 증상 | 수정 |
+| --- | --- | --- |
+| 람다 문법 | 규칙 컴파일 실패 → 배포 거부 → 기본 거부 | `items.all(item => ...)` 제거 |
+| 답글 `list` 규칙 | 목록 조회 시 문서 ID 와일드카드(`{replyId}`)가 묶이지 않아 작성자·관리자 모두 **답글이 화면에 보이지 않음** | `allow get` / `allow list` 분리 |
+
 ### 3-1. 규칙 (근본 수정)
 
 `firestore.rules` — `isValidWantIndex()` 에서 람다 제거:
@@ -55,6 +66,12 @@ http://... 429행 (수정 전)
   `normalizeWantIndex()` 가 항상 정규화해 기록합니다.
 - 인덱스 문서는 **본인(uid 일치)만** 쓸 수 있으므로, 항목 단위 검사를 줄여도 다른 사용자에게 미치는 영향은 없습니다.
 - 수정 후 공식 ANTLR 문법 파서로 **문법 오류 0건** 확인.
+
+```diff
+- allow get, list: if isSignedIn() && isValidId(replyId) && (isAdmin() || isWantItemAuthor(itemId));
++ allow get:  if isSignedIn() && isValidId(replyId) && (isAdmin() || isWantItemAuthor(itemId));
++ allow list: if isSignedIn() && (isAdmin() || isWantItemAuthor(itemId));
+```
 
 ### 3-2. 재발 방지 — 정적 가드
 
@@ -92,8 +109,10 @@ http://... 429행 (수정 전)
 - `scripts/rules/firestore-rules.emulator.test.mjs` — 화면이 보내는 문서 모양 그대로
   `want_board` 저장·조회·위조·답글·인덱스 권한 (6건)
 - `scripts/security-rules.test.mjs` — 람다 금지·괄호 짝 (2건)
+- `scripts/want-board.test.mjs` — 답글 list 규칙이 문서 ID 를 요구하지 않는지 (1건)
 - `scripts/admin-stats-recovery.test.mjs` — 배포 워크플로우 단계 순서 (1건)
-- `npm run check` : **303/303 통과**
+- `npm run check` : **304/304 통과**
+- CI `Firestore 보안 규칙 테스트 (에뮬레이터)` : **40여 건 전부 통과**(기존에는 cancelled)
 
 ---
 
