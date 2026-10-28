@@ -1,7 +1,7 @@
 {
-  "kstDate": "2026-10-28",
-  "generatedAt": "2026-10-27T22:54:43.890Z",
-  "kstDateTime": "2026-10-28 (수) 07:54:43 KST",
+  "kstDate": "2026-10-29",
+  "generatedAt": "2026-10-28T23:02:51.094Z",
+  "kstDateTime": "2026-10-29 (목) 08:02:51 KST",
   "summary": {
     "total": 101,
     "pass": 101,
@@ -644,7 +644,7 @@
       "category": "워크플로",
       "name": "워크플로 파일 수",
       "status": "PASS",
-      "detail": "5개 파일",
+      "detail": "6개 파일",
       "severity": "info"
     },
     {
