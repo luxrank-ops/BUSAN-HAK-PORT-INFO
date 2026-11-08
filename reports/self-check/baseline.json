@@ -1,10 +1,10 @@
 {
   "version": 1,
   "createdAt": "2026-10-23T07:39:53.245Z",
-  "updatedAt": "2026-10-25T22:09:20.994Z",
+  "updatedAt": "2026-11-08T23:16:11.446Z",
   "terminals": {
     "hjnc": {
-      "count": 35,
+      "count": 33,
       "fieldCoverage": {
         "VSL_NM": 1,
         "ETB": 1,
@@ -14,12 +14,12 @@
         "PTNR_CODE": 1,
         "VOY_NO": 1,
         "ATA": 1,
-        "ATW": 0.4506,
-        "ATC": 0.3206
+        "ATW": 0.4995,
+        "ATC": 0.3861
       },
-      "samples": 2,
-      "updatedAt": "2026-10-25T22:09:20.994Z",
-      "lastObservedCount": 37,
+      "samples": 3,
+      "updatedAt": "2026-11-08T23:16:11.446Z",
+      "lastObservedCount": 31,
       "history": [
         {
           "at": "2026-10-23T07:39:53.245Z",
@@ -28,6 +28,10 @@
         {
           "at": "2026-10-25T22:09:20.994Z",
           "count": 37
+        },
+        {
+          "at": "2026-11-08T23:16:11.446Z",
+          "count": 31
         }
       ]
     },
@@ -42,12 +46,12 @@
         "PTNR_CODE": 1,
         "VOY_NO": 1,
         "ATA": 1,
-        "ATW": 0.5386,
+        "ATW": 0.5084,
         "ATC": 1
       },
-      "samples": 2,
-      "updatedAt": "2026-10-25T22:09:20.994Z",
-      "lastObservedCount": 21,
+      "samples": 3,
+      "updatedAt": "2026-11-08T23:16:11.446Z",
+      "lastObservedCount": 23,
       "history": [
         {
           "at": "2026-10-23T07:39:53.245Z",
@@ -56,6 +60,10 @@
         {
           "at": "2026-10-25T22:09:20.994Z",
           "count": 21
+        },
+        {
+          "at": "2026-11-08T23:16:11.446Z",
+          "count": 23
         }
       ]
     },
@@ -70,12 +78,12 @@
         "PTNR_CODE": 1,
         "VOY_NO": 1,
         "ATA": 1,
-        "ATW": 0.4566,
-        "ATC": 0.3664
+        "ATW": 0.4636,
+        "ATC": 0.4038
       },
-      "samples": 2,
-      "updatedAt": "2026-10-25T22:09:20.994Z",
-      "lastObservedCount": 36,
+      "samples": 3,
+      "updatedAt": "2026-11-08T23:16:11.446Z",
+      "lastObservedCount": 34,
       "history": [
         {
           "at": "2026-10-23T07:39:53.245Z",
@@ -84,11 +92,15 @@
         {
           "at": "2026-10-25T22:09:20.994Z",
           "count": 36
+        },
+        {
+          "at": "2026-11-08T23:16:11.446Z",
+          "count": 34
         }
       ]
     },
     "pnc": {
-      "count": 33,
+      "count": 32,
       "fieldCoverage": {
         "VSL_NM": 1,
         "ETB": 1,
@@ -101,9 +113,9 @@
         "ATW": 1,
         "ATC": 1
       },
-      "samples": 2,
-      "updatedAt": "2026-10-25T22:09:20.994Z",
-      "lastObservedCount": 33,
+      "samples": 3,
+      "updatedAt": "2026-11-08T23:16:11.446Z",
+      "lastObservedCount": 31,
       "history": [
         {
           "at": "2026-10-23T07:39:53.245Z",
@@ -112,11 +124,15 @@
         {
           "at": "2026-10-25T22:09:20.994Z",
           "count": 33
+        },
+        {
+          "at": "2026-11-08T23:16:11.446Z",
+          "count": 31
         }
       ]
     },
     "hpnt": {
-      "count": 21,
+      "count": 23,
       "fieldCoverage": {
         "VSL_NM": 1,
         "ETB": 1,
@@ -129,9 +145,9 @@
         "ATW": 1,
         "ATC": 1
       },
-      "samples": 2,
-      "updatedAt": "2026-10-25T22:09:20.994Z",
-      "lastObservedCount": 20,
+      "samples": 3,
+      "updatedAt": "2026-11-08T23:16:11.446Z",
+      "lastObservedCount": 24,
       "history": [
         {
           "at": "2026-10-23T07:39:53.245Z",
@@ -140,6 +156,10 @@
         {
           "at": "2026-10-25T22:09:20.994Z",
           "count": 20
+        },
+        {
+          "at": "2026-11-08T23:16:11.446Z",
+          "count": 24
         }
       ]
     },
@@ -157,9 +177,9 @@
         "ATW": 1,
         "ATC": 1
       },
-      "samples": 2,
-      "updatedAt": "2026-10-25T22:09:20.994Z",
-      "lastObservedCount": 25,
+      "samples": 3,
+      "updatedAt": "2026-11-08T23:16:11.446Z",
+      "lastObservedCount": 24,
       "history": [
         {
           "at": "2026-10-23T07:39:53.245Z",
@@ -168,11 +188,15 @@
         {
           "at": "2026-10-25T22:09:20.994Z",
           "count": 25
+        },
+        {
+          "at": "2026-11-08T23:16:11.446Z",
+          "count": 24
         }
       ]
     },
     "bptc": {
-      "count": 111,
+      "count": 106,
       "fieldCoverage": {
         "VSL_NM": 1,
         "ETB": 1,
@@ -183,11 +207,11 @@
         "VOY_NO": 1,
         "ATA": 1,
         "ATW": 1,
-        "ATC": 0.2978
+        "ATC": 0.3419
       },
-      "samples": 2,
-      "updatedAt": "2026-10-25T22:09:20.994Z",
-      "lastObservedCount": 113,
+      "samples": 3,
+      "updatedAt": "2026-11-08T23:16:11.446Z",
+      "lastObservedCount": 101,
       "history": [
         {
           "at": "2026-10-23T07:39:53.245Z",
@@ -196,6 +220,10 @@
         {
           "at": "2026-10-25T22:09:20.994Z",
           "count": 113
+        },
+        {
+          "at": "2026-11-08T23:16:11.446Z",
+          "count": 101
         }
       ]
     },
@@ -213,8 +241,8 @@
         "ATW": 1,
         "ATC": 1
       },
-      "samples": 2,
-      "updatedAt": "2026-10-25T22:09:20.994Z",
+      "samples": 3,
+      "updatedAt": "2026-11-08T23:16:11.446Z",
       "lastObservedCount": 60,
       "history": [
         {
@@ -224,13 +252,17 @@
         {
           "at": "2026-10-25T22:09:20.994Z",
           "count": 60
+        },
+        {
+          "at": "2026-11-08T23:16:11.446Z",
+          "count": 60
         }
       ]
     }
   },
   "runs": [],
   "lastRun": {
-    "at": "2026-10-25T22:09:20.994Z",
+    "at": "2026-11-08T23:16:11.446Z",
     "overall": "WARN",
     "pass": 15,
     "warn": 1,
