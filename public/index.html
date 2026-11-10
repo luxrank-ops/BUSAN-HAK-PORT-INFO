@@ -34,9 +34,9 @@
     <link rel="icon" href="./favicon.ico">
     <link rel="stylesheet" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.8/dist/web/static/pretendard.css" />
     <link rel="manifest" href="./manifest.json">
-    <link rel="stylesheet" href="./css/app.css?v=2027.32">
+    <link rel="stylesheet" href="./css/app.css?v=2027.33">
     <link rel="apple-touch-icon" href="./icon-192.png">
-<script src="./js/notifications.js?v=2027.32"></script></head>
+<script src="./js/notifications.js?v=2027.33"></script></head>
 <body data-app-view="legacy">
 <header>
     <div class="today-visitor-badge-slot" aria-hidden="true"></div>
@@ -277,9 +277,9 @@
                         </div>
 
                         <button type="button"
-                                class="roster-finder-jump-btn"
-                                onclick="focusRosterFinder()">
-                            🔍 이름으로 선박 찾기 <small>메인 화면 [근무배치(오더 종이) 자동 기입] 블럭에서 이름 입력 → 차트·스케줄 선박 → 임금·일지 자동 등록 (중복 제외)</small>
+                                class="work-assignment-jump-btn"
+                                onclick="openWorkAssignmentDesk()">
+                            📋 작업 배정 빠른 입력 <small>날짜·터미널·선박·동료를 한 번에 정리해 임금계산기와 근무일지로 안전하게 이어갑니다.</small>
                         </button>
                     </section>
 
@@ -514,12 +514,7 @@
                                 onclick="sendWorkLogShipToWage()">
                             ↗ 임금계산기로 보내기
                         </button>
-                        <button type="button"
-                                class="mini-btn tap-effect"
-                                style="flex:1; height:38px; padding:0 10px; border-radius:8px; border:1.5px solid #2563eb; background:linear-gradient(135deg, #eff6ff, #dbeafe); color:#1d4ed8; font-size:clamp(0.78rem, 2.7vw, 0.88rem); font-weight:900; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; gap:4px; white-space:nowrap; box-shadow:0 2px 5px rgba(37, 99, 235, 0.12); transition:transform 0.12s ease, filter 0.15s ease;"
-                                onclick="focusRosterFinder()">
-                            📋 근무배치 자동 기입
-                        </button>
+                        <button type="button" class="mini-btn tap-effect work-assignment-mini-jump" onclick="openWorkAssignmentDesk()">📋 작업 배정 입력</button>
                     </div>
                     <div id="hjncScheduledShipBox" class="hjnc-schedule-box">
                         <div class="hjnc-schedule-header">
@@ -648,95 +643,100 @@
         </div>
     </div> 
     <!-- ============================================================
-         📋 근무배치(오더 종이) 자동 기입 — 메인 화면 독립 펼침 블럭
-         · 기존에는 근무일지 카드 안에 있었으나 메인 화면으로 이동했습니다.
-         · 헤더를 누르면 펼침/접힘 (toggleRosterDeck)
-         · 사진은 서버 저장 없이 이 기기에서만 읽습니다.
+         📋 작업 배정 빠른 입력
+         · 사진 OCR·기본 명단·이름 검색 없이, 현재 작업 정보를 직접 확인해 연결합니다.
+         · 입력 초안은 이 브라우저에만 임시 저장되며 저장 버튼을 누르기 전에는 서버에 전송되지 않습니다.
          ============================================================ -->
-    <div id="rosterDeckCard" class="dash-card roster-deck-card" data-view-group="wage-log">
-        <div id="rosterDeckHeader" class="dash-header tap-effect" role="button" tabindex="0"
-             aria-expanded="false" aria-controls="rosterDeckContent"
-             onclick="toggleRosterDeck()"
-             onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleRosterDeck();}">
-            <span class="dash-icon-badge roster-deck-badge" aria-hidden="true">📋</span>
-            <span class="roster-deck-copy">
-                <span class="dash-title">근무배치(오더 종이) 자동 기입</span>
-                <span class="dash-sub-meta">오더 종이 사진 → 명단 → 전 터미널 차트·스케줄 → 임금·근무일지 자동 등록</span>
+    <div id="workAssignmentDeck" class="dash-card work-assignment-deck" data-view-group="wage-log">
+        <div id="workAssignmentDeckHeader" class="dash-header tap-effect" role="button" tabindex="0"
+             aria-expanded="false" aria-controls="workAssignmentDeckContent"
+             onclick="toggleWorkAssignmentDesk()"
+             onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleWorkAssignmentDesk();}">
+            <span class="dash-icon-badge work-assignment-deck-badge" aria-hidden="true">📋</span>
+            <span class="work-assignment-deck-copy">
+                <span class="dash-title">작업 배정 빠른 입력</span>
+                <span class="dash-sub-meta">작업 정보를 직접 확인하고 · 임금계산기 · 근무일지로 한 번에 연결</span>
             </span>
-            <span class="roster-deck-chevron" aria-hidden="true">▼</span>
+            <span class="work-assignment-deck-chevron" aria-hidden="true">▼</span>
         </div>
-        <div id="rosterDeckContent" class="dash-content">
-            <section class="roster-finder-box" aria-labelledby="rosterFinderTitle">
-                <div id="rosterFinderTitle" class="roster-finder-title">
-                    🔍 이름으로 선박 찾기
-                    <small>사진으로 만든 명단 이름 → 차트·스케줄 선박 → 임금·일지 자동 등록 · 이미 등록된 선박은 중복 제외</small>
-                </div>
-                <div id="rosterFinderLockBanner" class="roster-finder-lock-banner hidden" role="button" tabindex="0"
-                     onclick="unlockRosterFinder()"
-                     onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();unlockRosterFinder();}">
-                    <span class="roster-finder-lock-icon" aria-hidden="true">🔒</span>
-                    <span class="roster-finder-lock-text">
-                        <b>잠금 상태</b> — 비밀번호를 입력하면 사용할 수 있습니다
-                        <small>사진 명단 → 전 터미널 차트·스케줄 대입 → 임금·근무일지 자동 등록</small>
-                    </span>
-                    <span class="roster-finder-lock-btn">비밀번호 입력</span>
-                </div>
-                <div id="rosterFinderPanel" class="hidden">
-                <div class="roster-photo-box">
-                    <div class="roster-photo-head">
-                        <strong>📷 근무 배치 사진으로 명단 만들기</strong>
-                        <small>사진은 <b>서버로 전송되지 않고</b> 이 기기에서만 읽습니다. 사진 자체는 저장하지 않습니다.</small>
+        <div id="workAssignmentDeckContent" class="dash-content">
+            <section class="work-assignment-workspace" aria-labelledby="workAssignmentTitle">
+                <div class="work-assignment-intro">
+                    <div>
+                        <span class="work-assignment-eyebrow">WORKFLOW</span>
+                        <h3 id="workAssignmentTitle">오늘의 작업을 깔끔하게 준비하세요</h3>
+                        <p>사진 인식이나 오래된 명단 검색 없이, 확인한 배정 정보를 직접 입력합니다. 초안은 현재 기기에만 저장됩니다.</p>
                     </div>
-                    <div class="roster-photo-actions">
-                        <label id="rosterPhotoUploadLabel" class="roster-photo-upload" for="rosterPhotoInput">📷 사진 촬영</label>
-                        <input type="file" id="rosterPhotoInput" accept="image/*" capture="environment"
-                               onchange="handleRosterPhotoSelected(event)">
-                        <label id="rosterPhotoGalleryLabel" class="roster-photo-gallery" for="rosterPhotoGalleryInput">🖼️ 갤러리에서 선택</label>
-                        <input type="file" id="rosterPhotoGalleryInput" accept="image/*"
-                               onchange="handleRosterPhotoSelected(event)">
-                        <button type="button" id="rosterPhotoOcrBtn" class="roster-photo-ocr-btn" onclick="runRosterPhotoOcr()" disabled>🔍 사진에서 명단 읽기</button>
-                        <button type="button" id="rosterPhotoClearBtn" class="roster-photo-clear-btn" onclick="clearRosterPhoto()" disabled>✖ 사진 지우기</button>
-                    </div>
-                    <div id="rosterPhotoStatus" class="roster-photo-status" aria-live="polite">사진을 고르면 이 기기에서만 글자를 읽어 명단으로 만들어 줍니다.</div>
-                    <div id="rosterPhotoPreviewWrap" class="roster-photo-preview-wrap hidden">
-                        <img id="rosterPhotoPreview" class="roster-photo-preview" alt="업로드한 근무 배치 사진 (기기에서만 표시)">
-                    </div>
-                    <details id="rosterPhotoTextDetails" class="roster-photo-text-details hidden">
-                        <summary>✍️ 읽은 글자 확인·수정 (사진 없이 직접 적어도 됩니다)</summary>
-                        <textarea id="rosterPhotoText" class="input-field roster-photo-textarea" rows="6"
-                                  placeholder="예) 2026.11.11&#10;PRESIDENT CARTER 00:00 고려 BNCT 지원 ②&#10;조훈철 오규환 신경호 이춘학 ..."></textarea>
-                        <button type="button" class="roster-photo-parse-btn" onclick="parseRosterPhotoTextFromBox()">명단으로 변환</button>
-                    </details>
-                    <div id="rosterPhotoRows" class="roster-photo-rows" aria-live="polite"></div>
-                    <div id="rosterPhotoSaved" class="roster-photo-saved"></div>
+                    <span id="workAssignmentShipCount" class="work-assignment-count" aria-live="polite">선박 0 / 4</span>
                 </div>
-                <div class="roster-finder-row">
-                    <input type="text"
-                           id="rosterFinderInput"
-                           class="input-field"
-                           placeholder="작업자 이름 또는 선박명 (예: 이춘학, PRESIDENT CARTER)"
-                           aria-label="작업자 이름 또는 선박명 검색"
-                           onkeydown="if(event.key==='Enter'){event.preventDefault();searchRosterVessels();}">
-                    <button type="button" class="roster-finder-search-btn" onclick="searchRosterVessels()">찾기</button>
+
+                <div class="work-assignment-steps" aria-label="작업 배정 입력 순서">
+                    <span><b>01</b> 작업 정보</span>
+                    <span><b>02</b> 검토</span>
+                    <span><b>03</b> 연결</span>
                 </div>
-                <div id="rosterFinderResults" class="roster-finder-results" aria-live="polite">
-                    <div class="roster-finder-empty">작업자 이름(이춘학 등) 또는 선박명을 입력하면 명단 배정 선박을 찾아 전 터미널 차트·스케줄에서 대입 조회하고, 임금계산기·근무일지에 자동 등록합니다. 같은 날짜에 이미 등록된 선박은 건너뜁니다.</div>
+
+                <div class="work-assignment-grid">
+                    <label class="work-assignment-field" for="workAssignmentDate">
+                        <span>작업 날짜 <em>필수</em></span>
+                        <input type="date" id="workAssignmentDate" class="input-field"
+                               aria-describedby="workAssignmentHint"
+                               onchange="syncWorkAssignmentInput()">
+                    </label>
+                    <label class="work-assignment-field" for="workAssignmentTerminal">
+                        <span>작업 터미널 <em>필수</em></span>
+                        <select id="workAssignmentTerminal" class="input-field"
+                                onchange="syncWorkAssignmentTerminal(this.value)">
+                            <option value="hjnc">한진(HJNC)</option>
+                            <option value="bnct">고려(BNCT)</option>
+                            <option value="dgt">동원(DGT)</option>
+                            <option value="bct">BCT</option>
+                            <option value="pnc">PNC</option>
+                            <option value="hpnt">HMM(HPNT)</option>
+                            <option value="pnit">국제(PNIT)</option>
+                            <option value="bptc">신선대감만(BPTC)</option>
+                            <option value="hbct">허치슨(HBCT)</option>
+                        </select>
+                    </label>
+                    <label class="work-assignment-field work-assignment-field-wide" for="workAssignmentShips">
+                        <span>작업 선박 <em>필수</em></span>
+                        <input type="text" id="workAssignmentShips" class="input-field"
+                               maxlength="240"
+                               placeholder="예: MAERSK A / ONE HAMBURG (최대 4척)"
+                               oninput="syncWorkAssignmentInput()">
+                        <small id="workAssignmentHint">선박은 / 또는 쉼표로 구분하세요. 같은 이름은 한 번만 반영됩니다.</small>
+                    </label>
+                    <label class="work-assignment-field work-assignment-field-wide" for="workAssignmentCoworkers">
+                        <span>함께 일한 동료 <i>선택</i></span>
+                        <input type="text" id="workAssignmentCoworkers" class="input-field"
+                               maxlength="240"
+                               placeholder="예: 재경, 성철"
+                               oninput="syncWorkAssignmentInput()">
+                    </label>
+                    <label class="work-assignment-field work-assignment-field-wide" for="workAssignmentMemo">
+                        <span>작업 메모 <i>선택</i></span>
+                        <input type="text" id="workAssignmentMemo" class="input-field"
+                               maxlength="300"
+                               placeholder="예: 야간 · 브릿지 작업"
+                               oninput="syncWorkAssignmentInput()">
+                    </label>
                 </div>
-                <details class="roster-finder-extra">
-                    <summary>➕ 내 명단 추가 (사진 명단 외 배정)</summary>
-                    <div class="roster-finder-extra-grid">
-                        <input type="text" id="rosterExtraWorker" class="input-field" placeholder="작업자 이름" aria-label="추가할 작업자 이름">
-                        <input type="text" id="rosterExtraVessel" class="input-field" placeholder="선박명" aria-label="추가할 선박명">
-                        <input type="date" id="rosterExtraDate" class="input-field" aria-label="추가할 날짜">
-                        <button type="button" onclick="addRosterExtraEntry()">추가</button>
-                    </div>
-                    <div id="rosterExtraList"></div>
-                </details>
+
+                <div class="work-assignment-preview" aria-live="polite">
+                    <span class="work-assignment-preview-label">준비된 작업</span>
+                    <strong id="workAssignmentSummary">날짜와 선박을 입력해 주세요.</strong>
                 </div>
+
+                <div class="work-assignment-actions" role="group" aria-label="작업 배정 연결 작업">
+                    <button type="button" class="work-assignment-action subtle" onclick="loadWorkAssignmentFromLog()">↙ 현재 근무일지 불러오기</button>
+                    <button type="button" class="work-assignment-action secondary" onclick="applyWorkAssignmentToLog()">📅 근무일지에 채우기</button>
+                    <button type="button" class="work-assignment-action primary" onclick="applyWorkAssignmentToWage()">🧮 임금계산기로 보내기</button>
+                    <button type="button" class="work-assignment-reset" onclick="clearWorkAssignmentDraft()">초안 비우기</button>
+                </div>
+                <p id="workAssignmentStatus" class="work-assignment-status" aria-live="polite">입력한 정보는 저장을 누르기 전까지 서버에 전송되지 않습니다.</p>
             </section>
         </div>
     </div>
-
 
     <div class="card" data-view-group="ships" style="margin-bottom: 8px; border: none; box-shadow: none; background: transparent;">
         <div class="section-header tap-effect port-banner-t3" onclick="toggleSection('t3-content', this)" style="color: white; border-radius: 10px; padding: 14px 15px; gap: 8px; flex-wrap: wrap;">
@@ -1989,17 +1989,17 @@
     </div>
 </div>
 
-<script src="./js/app.js?v=2027.32"></script>
+<script src="./js/app.js?v=2027.33"></script>
   
     <!-- [여기서부터 복사] 조장 근무일 비밀번호 검증 스크립트 -->
 <!-- [추가할 보안 및 실행 스크립트] -->
-<script src="./js/leader-access.js?v=2027.32"></script>
+<script src="./js/leader-access.js?v=2027.33"></script>
   <!-- [프로덕션 수준] 파이어베이스 'ships' 컬렉션 전체 데이터 조회 및 검색 모듈 -->
-<script src="./js/ships-board.js?v=2027.32"></script>
+<script src="./js/ships-board.js?v=2027.33"></script>
 
-<script src="./js/tab-views.js?v=2027.32"></script>
-<script src="./js/kkung-relay.js?v=2027.32"></script>
-<script src="./js/want-board.js?v=2027.32"></script>
+<script src="./js/tab-views.js?v=2027.33"></script>
+<script src="./js/kkung-relay.js?v=2027.33"></script>
+<script src="./js/want-board.js?v=2027.33"></script>
 </body>
 </html>
 
