@@ -132,14 +132,22 @@ test('내 명단 추가 항목이 기본 명단과 합쳐져 조회된다', () =
     assert.equal(withExtra.findRosterAssignmentsByWorker('이춘학').length, 2);
 });
 
-test('화면: 임금계산기에 이름으로 선박 찾기 패널과 근무일지 진입 버튼이 있다', () => {
+test('화면: 이름으로 선박 찾기 패널은 근무일지 카드에 있고 임금계산기에는 진입 버튼만 있다', () => {
     for (const id of ['rosterFinderInput', 'rosterFinderResults', 'rosterExtraWorker', 'rosterExtraVessel', 'rosterExtraDate', 'rosterExtraList']) {
         assert.ok(html.includes(`id="${id}"`), `missing #${id}`);
+        // 중복 ID 금지 — 패널은 한 곳에만 존재한다
+        assert.equal(html.split(`id="${id}"`).length - 1, 1, `duplicate #${id}`);
     }
     assert.ok(html.includes('searchRosterVessels()'));
     assert.ok(html.includes('focusRosterFinder()'));
     // 전체 등록 버튼은 결과 렌더링 시 동적 생성되므로 app.js 에서 확인
     assert.ok(appJs.includes('registerAllRosterResults()'));
+    // 배치: 패널은 달력 뒤·일지 폼 앞에, 임금계산기에는 진입 버튼
+    const finderIdx = html.indexOf('id="rosterFinderInput"');
+    const calendarIdx = html.indexOf('id="calendarGrid"');
+    const formIdx = html.indexOf('id="dailyLogForm"');
+    assert.ok(calendarIdx < finderIdx && finderIdx < formIdx, 'finder should sit between calendar and dailyLogForm');
+    assert.ok(html.includes('roster-finder-jump-btn'), 'wage card should keep a jump button');
 });
 
 test('자동 등록 함수가 임금·일지 기존 흐름을 재사용한다', () => {
@@ -154,4 +162,75 @@ test('자동 등록 함수가 임금·일지 기존 흐름을 재사용한다', 
     const search = extractFunction('searchRosterVessels');
     assert.ok(search.includes('fetchHjncScheduleForMonth'), 'schedule lookup should reuse fetchHjncScheduleForMonth');
     assert.ok(search.includes('TERMINAL_SCHEDULE_LIST'), 'schedule lookup should search all terminals');
+});
+
+// ===== 동일 날짜 중복 등록 방지 =====
+function setupDedup({ savedLogs = {}, formDate = '', formValue = '' } = {}) {
+    const context = vm.createContext({
+        console,
+        document: {
+            getElementById: (id) => {
+                if (id === 'logShipName') return { value: formValue };
+                if (id === 'dailyLogForm') return { getAttribute: () => formDate, classList: { contains: () => formDate === '' } };
+                return null;
+            }
+        }
+    });
+    vm.runInContext(`let adminWorkLogs = ${JSON.stringify(savedLogs)};`, context);
+    for (const fn of ['parseWorklogShipNames', 'normalizeWorklogShipKey', 'normalizeRosterVesselKey', 'getActiveWorkLogDate']) {
+        vm.runInContext(extractFunction(fn), context);
+    }
+    for (const fn of ['dedupeVesselNameList', 'getSavedWorklogVesselNames', 'getExistingWorklogVesselNames', 'isVesselRegisteredOnDate', 'splitNewAndDuplicateVessels']) {
+        vm.runInContext(extractFunction(fn), context);
+    }
+    return vm.runInContext(`({
+        dedupeVesselNameList, getSavedWorklogVesselNames, getExistingWorklogVesselNames,
+        isVesselRegisteredOnDate, splitNewAndDuplicateVessels
+    })`, context);
+}
+
+test('중복 제거: 순서 유지 + 대소문자·공백·머리말 정규화 기준', () => {
+    const d = setupDedup();
+    const r = d.dedupeVesselNameList(['PRESIDENT CARTER', 'presidentcarter', '[BNCT] PRESIDENT CARTER', 'CMA CGM PANAMA', 'CMA CGM PANAMA']);
+    assert.equal(r.unique.join('|'), 'PRESIDENT CARTER|CMA CGM PANAMA');
+    assert.equal(r.duplicates.length, 3);
+    assert.equal(d.dedupeVesselNameList([]).unique.length, 0);
+});
+
+test('동일 날짜 저장 기록 + 폼을 합쳐 이미 등록된 선박을 판정한다', () => {
+    const d = setupDedup({
+        savedLogs: { '2026-11-11': { shipName: 'PRESIDENT CARTER' } },
+        formDate: '2026-11-11',
+        formValue: 'PRESIDENT CARTER / CMA CGM PANAMA'
+    });
+    assert.equal(d.isVesselRegisteredOnDate('PRESIDENT CARTER', '2026-11-11'), true);
+    assert.equal(d.isVesselRegisteredOnDate('president carter', '2026-11-11'), true);
+    assert.equal(d.isVesselRegisteredOnDate('CMA CGM PANAMA', '2026-11-11'), true);
+    assert.equal(d.isVesselRegisteredOnDate('WILLIAM', '2026-11-11'), false);
+    // 다른 날짜는 등록으로 보지 않는다
+    assert.equal(d.isVesselRegisteredOnDate('PRESIDENT CARTER', '2026-11-12'), false);
+});
+
+test('신규/중복 분리: 이미 있는 배는 건너뛰고 없는 배만 추가한다', () => {
+    const d = setupDedup();
+    const r = d.splitNewAndDuplicateVessels(['PRESIDENT CARTER', 'CMA CGM PANAMA'], ['PRESIDENT CARTER']);
+    assert.equal(r.toAdd.join('|'), 'CMA CGM PANAMA');
+    assert.equal(r.skipped.join('|'), 'PRESIDENT CARTER');
+});
+
+test('등록·저장 경로에 중복 방지가 연결되어 있다', () => {
+    const single = extractFunction('registerRosterResultToWorkLog');
+    assert.ok(single.includes('isVesselRegisteredOnDate'), 'single worklog register should skip duplicates');
+    const all = extractFunction('registerAllRosterResults');
+    assert.ok(all.includes('splitNewAndDuplicateVessels'), 'register-all should split new/duplicate per date');
+    const wageSingle = extractFunction('registerRosterResultToWage');
+    assert.ok(wageSingle.includes('alreadySelected'), 'single wage register should be idempotent (no toggle-off)');
+    const render = extractFunction('renderRosterFinderResults');
+    assert.ok(render.includes('isVesselRegisteredOnDate'), 'results should check already-registered vessels');
+    assert.ok(render.includes('등록됨'), 'results should badge already-registered vessels');
+    assert.ok(render.includes('disabled'), 'already-registered vessels should disable register buttons');
+    const save = extractFunction('saveWorkLog');
+    assert.ok(save.includes('dedupeVesselNameList'), 'save should dedupe ship names as safety net');
+    const send = extractFunction('sendCalculatedWageToLog');
+    assert.ok(send.includes('dedupeVesselNameList'), 'wage-to-log transfer should merge instead of overwrite');
 });

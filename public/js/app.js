@@ -4822,6 +4822,53 @@ function buildRosterVesselPlan(assignments, scheduleByTerminal) {
         return { assignment: a, vessel: found, terminalId: foundTerminal, found: !!found };
     });
 }
+
+/* ===== 동일 날짜 중복 등록 방지 (근무일지 기준) =====
+   사진 명단으로 자동 기입할 때, 이미 같은 날짜 근무일지에 등록된 선박은
+   다시 등록하지 않는다. 판정은 선박명 정규화 키(normalizeWorklogShipKey) 기준이며,
+   저장 기록(adminWorkLogs) + 현재 폼(logShipName, 폼 날짜가 같은 경우)을 함께 본다. */
+function dedupeVesselNameList(names) {
+    const seen = new Set();
+    const unique = [];
+    const duplicates = [];
+    (names || []).forEach(name => {
+        const clean = String(name || "").trim();
+        if (!clean) return;
+        // 공백·대소문자·[터미널] 머리말을 무시해 같은 배로 판정한다.
+        const key = normalizeRosterVesselKey(clean);
+        if (seen.has(key)) duplicates.push(clean);
+        else { seen.add(key); unique.push(clean); }
+    });
+    return { unique, duplicates };
+}
+function getSavedWorklogVesselNames(dateStr) {
+    const d = adminWorkLogs[dateStr];
+    return d && d.shipName ? parseWorklogShipNames(d.shipName) : [];
+}
+function getExistingWorklogVesselNames(dateStr) {
+    const saved = getSavedWorklogVesselNames(dateStr);
+    const formNames = getActiveWorkLogDate() === dateStr
+        ? parseWorklogShipNames(document.getElementById("logShipName")?.value)
+        : [];
+    return dedupeVesselNameList([...saved, ...formNames]).unique;
+}
+function isVesselRegisteredOnDate(vesselName, dateStr) {
+    const key = normalizeRosterVesselKey(vesselName);
+    if (!key || !dateStr) return false;
+    return getExistingWorklogVesselNames(dateStr).some(n => normalizeRosterVesselKey(n) === key);
+}
+function splitNewAndDuplicateVessels(newNames, existingNames) {
+    const existingKeys = new Set((existingNames || []).map(n => normalizeRosterVesselKey(n)));
+    const toAdd = [];
+    const skipped = [];
+    (newNames || []).forEach(name => {
+        const clean = String(name || "").trim();
+        if (!clean) return;
+        if (existingKeys.has(normalizeRosterVesselKey(clean))) skipped.push(clean);
+        else toAdd.push(clean);
+    });
+    return { toAdd, skipped };
+}
 async function searchRosterVessels() {
     const input = document.getElementById("rosterFinderInput");
     const resultsEl = document.getElementById("rosterFinderResults");
@@ -4866,10 +4913,12 @@ function renderRosterFinderResults(plan, query, searchMode) {
     if (!el) return;
     const foundCount = plan.filter(p => p.found).length;
     const modeLabel = searchMode === "worker" ? "작업자" : "선박";
+    const registeredCount = plan.filter(p => isVesselRegisteredOnDate(p.assignment.vessel, p.assignment.date)).length;
     const cards = plan.map((p, i) => {
         const a = p.assignment;
         const meta = p.terminalId ? getTerminalMeta(p.terminalId) : null;
         const cfg = p.terminalId ? (terminalQuickConfig[p.terminalId] || {}) : {};
+        const alreadyRegistered = isVesselRegisteredOnDate(a.vessel, a.date);
         let scheduleLine = "";
         let hoursLine = "";
         if (p.found && p.vessel) {
@@ -4880,36 +4929,56 @@ function renderRosterFinderResults(plan, query, searchMode) {
         } else {
             scheduleLine = "⚠️ 차트·스케줄에서 찾지 못함 — 명단 선박명으로만 등록됩니다";
         }
+        if (alreadyRegistered) {
+            scheduleLine += " · ✅ 이미 근무일지에 등록됨 (중복 등록 안 함)";
+        }
         const badge = meta ? `<span class="roster-finder-badge" style="background:${meta.color};">${meta.badge}</span>` : "";
+        const registeredBadge = alreadyRegistered ? `<span class="roster-finder-registered-badge">✅ 등록됨</span>` : "";
         const links = p.terminalId
             ? `<a href="${cfg.schedule || "#"}" target="_blank" rel="noopener noreferrer" class="roster-finder-link">🗓️ 스케줄 ↗</a><a href="${cfg.chart || "#"}" target="_blank" rel="noopener noreferrer" class="roster-finder-link">📊 차트 ↗</a>`
             : "";
-        return `<div class="roster-finder-card${p.found ? "" : " is-missing"}">
-            <div class="roster-finder-card-head">${badge}<strong>🚢 ${escapeShipCommentHtml(a.vessel)}</strong><span>${escapeShipCommentHtml(a.date)}${a.time ? " · 명단 " + escapeShipCommentHtml(a.time) : ""}${a.company ? " · " + escapeShipCommentHtml(a.company) : ""}${a.support ? " · " + escapeShipCommentHtml(a.support) : ""}${a.group ? " · " + escapeShipCommentHtml(a.group) : ""}</span></div>
+        const disabledAttr = alreadyRegistered ? " disabled" : "";
+        return `<div class="roster-finder-card${p.found ? "" : " is-missing"}${alreadyRegistered ? " is-registered" : ""}">
+            <div class="roster-finder-card-head">${badge}${registeredBadge}<strong>🚢 ${escapeShipCommentHtml(a.vessel)}</strong><span>${escapeShipCommentHtml(a.date)}${a.time ? " · 명단 " + escapeShipCommentHtml(a.time) : ""}${a.company ? " · " + escapeShipCommentHtml(a.company) : ""}${a.support ? " · " + escapeShipCommentHtml(a.support) : ""}${a.group ? " · " + escapeShipCommentHtml(a.group) : ""}</span></div>
             <div class="roster-finder-card-sub">${scheduleLine}${hoursLine}</div>
             <div class="roster-finder-card-actions">
-                <button type="button" onclick="registerRosterResultToWage(${i})">🧮 임금계산기 등록</button>
-                <button type="button" onclick="registerRosterResultToWorkLog(${i})">📅 근무일지 등록</button>
+                <button type="button" onclick="registerRosterResultToWage(${i})"${disabledAttr}>🧮 임금계산기 등록</button>
+                <button type="button" onclick="registerRosterResultToWorkLog(${i})"${disabledAttr}>📅 근무일지 등록</button>
                 ${links}
             </div>
         </div>`;
     }).join("");
+    const allRegistered = plan.length > 0 && registeredCount === plan.length;
     const allBtn = plan.length > 1
-        ? `<button type="button" class="roster-finder-all-btn" onclick="registerAllRosterResults()">✨ 전체 자동 등록 (임금계산기 + 근무일지${foundCount > 0 ? " · 임금 자동 계산" : ""})</button>`
+        ? (allRegistered
+            ? `<button type="button" class="roster-finder-all-btn is-done" disabled>✅ 모두 이미 근무일지에 등록됨</button>`
+            : `<button type="button" class="roster-finder-all-btn" onclick="registerAllRosterResults()">✨ 전체 자동 등록 (임금계산기 + 근무일지${foundCount > 0 ? " · 임금 자동 계산" : ""}${registeredCount > 0 ? " · 중복 제외" : ""})</button>`)
         : "";
-    el.innerHTML = `<div class="roster-finder-summary">🔍 '${escapeShipCommentHtml(query)}' (${modeLabel}) · ${plan.length}척 배정 · 스케줄 매칭 ${foundCount}척</div>${cards}${allBtn}`;
+    const registeredNote = registeredCount > 0 && !allRegistered ? ` · 이미 등록 ${registeredCount}척 제외` : "";
+    el.innerHTML = `<div class="roster-finder-summary">🔍 '${escapeShipCommentHtml(query)}' (${modeLabel}) · ${plan.length}척 배정 · 스케줄 매칭 ${foundCount}척${registeredNote}</div>${cards}${allBtn}`;
 }
 function registerRosterResultToWage(index) {
     const item = rosterFinderResults[index];
     if (!item) return;
     const wageCard = document.getElementById("wage-card");
     if (wageCard && !wageCard.classList.contains("expanded")) toggleDashItem("wage-card");
+    // 이미 선택된 선박은 다시 누르면 해제(토글)되므로, 등록은 멱등하게 건너뛴다.
+    const alreadySelected = selectedWageVessels.some(v => normalizeWorklogShipKey(v.name) === normalizeWorklogShipKey(item.assignment.vessel));
+    if (alreadySelected) {
+        showToast(`🧮 ${item.assignment.vessel}은(는) 이미 임금계산기에 선택되어 있어 중복 등록하지 않았습니다.`);
+        document.getElementById("wage-card")?.scrollIntoView({ behavior: "smooth", block: "start" });
+        return;
+    }
     if (item.found && item.vessel) {
         if (item.terminalId && item.terminalId !== selectedScheduleTerminal) selectScheduleTerminal(item.terminalId);
         applyWageScheduleShip(item.vessel, item.assignment.date, item.terminalId || selectedScheduleTerminal);
     } else {
         const input = document.getElementById("wageShipName");
-        if (input) { input.value = item.assignment.vessel; onWageShipNameChange(input.value); }
+        if (input) {
+            const merged = dedupeVesselNameList([...parseWorklogShipNames(input.value), item.assignment.vessel]);
+            input.value = merged.unique.slice(0, MAX_WORK_VESSELS).join(" / ");
+            onWageShipNameChange(input.value);
+        }
         showToast(`🧮 ${item.assignment.vessel} 선박명을 임금계산기에 입력했습니다. 근무 시간은 직접 확인해 주세요.`);
     }
     document.getElementById("wage-card")?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -4922,6 +4991,12 @@ function registerRosterResultToWorkLog(index) {
     jumpToLogDate(item.assignment.date);
     const input = document.getElementById("logShipName");
     if (!input) return;
+    // 동일 날짜에 이미 등록된 선박은 중복 등록하지 않는다.
+    if (isVesselRegisteredOnDate(item.assignment.vessel, item.assignment.date)) {
+        showToast(`📅 ${item.assignment.vessel}은(는) 이미 ${item.assignment.date} 근무일지에 등록되어 있어 중복 등록하지 않았습니다.`);
+        document.getElementById("dailyLogForm")?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+        return;
+    }
     const names = parseWorklogShipNames(input.value);
     const key = normalizeWorklogShipKey(item.assignment.vessel);
     if (!names.some(n => normalizeWorklogShipKey(n) === key)) names.push(item.assignment.vessel);
@@ -4941,35 +5016,43 @@ async function registerAllRosterResults() {
     const wageCard = document.getElementById("wage-card");
     if (wageCard && !wageCard.classList.contains("expanded")) toggleDashItem("wage-card");
 
-    // 임금계산기: 기존 선택을 비우고 전체를 다시 등록(재실행해도 중복·토글 오류 없음)
-    selectedWageVessels = [];
-    selectedWageScheduleShipName = "";
+    // 임금계산기: 기존 선택과 합쳐 등록한다. 이미 선택된 선박은 건너뛰어
+    // 재실행해도 중복·토글 해제(선택 해제)가 일어나지 않는다.
     const wageInput = document.getElementById("wageShipName");
-    if (wageInput) wageInput.value = "";
+    const wageSkipped = [];
     const foundItems = sorted.filter(p => p.found && p.vessel).slice(0, MAX_WORK_VESSELS);
-    if (foundItems.length > 0) {
-        const firstTid = foundItems[0].terminalId;
+    const newFoundItems = foundItems.filter(p => !selectedWageVessels.some(v => normalizeWorklogShipKey(v.name) === normalizeWorklogShipKey(p.assignment.vessel)));
+    wageSkipped.push(...foundItems.filter(p => !newFoundItems.includes(p)).map(p => p.assignment.vessel));
+    if (newFoundItems.length > 0) {
+        const firstTid = newFoundItems[0].terminalId;
         if (firstTid && firstTid !== selectedScheduleTerminal) selectScheduleTerminal(firstTid);
-        foundItems.forEach(p => applyWageScheduleShip(p.vessel, p.assignment.date, p.terminalId || selectedScheduleTerminal));
-    } else {
-        const namesOnly = sorted.slice(0, MAX_WORK_VESSELS).map(p => p.assignment.vessel).join(" / ");
-        if (wageInput) wageInput.value = namesOnly;
-        onWageShipNameChange(namesOnly);
+        newFoundItems.forEach(p => applyWageScheduleShip(p.vessel, p.assignment.date, p.terminalId || selectedScheduleTerminal));
+    } else if (foundItems.length === 0) {
+        const merged = dedupeVesselNameList([...parseWorklogShipNames(wageInput?.value), ...sorted.slice(0, MAX_WORK_VESSELS).map(p => p.assignment.vessel)]);
+        if (wageInput) wageInput.value = merged.unique.slice(0, MAX_WORK_VESSELS).join(" / ");
+        onWageShipNameChange(wageInput?.value || "");
     }
 
     // 근무일지: 같은 날짜 배정은 한 번에, 날짜가 여러 개면 날짜별로 순차 등록(마지막 날짜 폼이 열림)
+    // 동일 날짜에 이미 등록된 선박은 중복 등록하지 않고 건너뛴다.
     const dates = [...new Set(sorted.map(p => p.assignment.date))];
     const logCard = document.getElementById("log-card");
     if (logCard && !logCard.classList.contains("expanded")) toggleDashItem("log-card");
+    const logSkipped = [];
+    const logAdded = [];
     for (const d of dates) {
         jumpToLogDate(d);
         const input = document.getElementById("logShipName");
         if (!input) continue;
         const names = parseWorklogShipNames(input.value);
-        sorted.filter(p => p.assignment.date === d).slice(0, MAX_WORK_VESSELS).forEach(p => {
-            const key = normalizeWorklogShipKey(p.assignment.vessel);
-            if (!names.some(n => normalizeWorklogShipKey(n) === key)) names.push(p.assignment.vessel);
-            if (p.found && p.vessel) worklogVesselMeta.set(key, { name: p.assignment.vessel, vessel: p.vessel, date: p.assignment.date, terminalId: p.terminalId });
+        const dayItems = sorted.filter(p => p.assignment.date === d).slice(0, MAX_WORK_VESSELS);
+        const { toAdd, skipped } = splitNewAndDuplicateVessels(dayItems.map(p => p.assignment.vessel), names);
+        logSkipped.push(...skipped);
+        toAdd.forEach(vesselName => {
+            names.push(vesselName);
+            logAdded.push(vesselName);
+            const p = dayItems.find(item => normalizeWorklogShipKey(item.assignment.vessel) === normalizeWorklogShipKey(vesselName));
+            if (p && p.found && p.vessel) worklogVesselMeta.set(normalizeWorklogShipKey(vesselName), { name: p.assignment.vessel, vessel: p.vessel, date: p.assignment.date, terminalId: p.terminalId });
         });
         input.value = names.slice(0, MAX_WORK_VESSELS).join(" / ");
         syncWorklogDoubleOrderMemo();
@@ -4978,22 +5061,30 @@ async function registerAllRosterResults() {
     }
 
     // 스케줄 시각이 모두 있으면 임금 자동 계산 후 근무일지 임금 슬롯까지 전송
-    const allHaveHours = foundItems.length > 0 && foundItems.every(p => getSelectedVesselPeriod(p.vessel, p.assignment.date).hours > 0);
+    const allHaveHours = selectedWageVessels.length > 0 && selectedWageVessels.every(item => getSelectedVesselPeriod(item.vessel, item.date).hours > 0);
     if (allHaveHours) {
         try { calculateWage(); } catch (e) { console.error("이름으로 선박 찾기 자동 계산 실패:", e); }
         if (lastCalculatedWageData) {
             try { await sendCalculatedWageToLog(); } catch (e) { console.error("이름으로 선박 찾기 일지 전송 실패:", e); }
         }
     }
-    const vesselNames = sorted.map(p => p.assignment.vessel).join(" / ");
-    showToast(allHaveHours
-        ? `✨ ${vesselNames}을(를) 임금계산기·근무일지에 자동 등록하고 임금을 계산했습니다. 근무일지 저장을 눌러 기록하세요.`
-        : `✨ ${vesselNames}을(를) 임금계산기·근무일지에 등록했습니다. 입·출항 시각이 없어 임금 계산은 직접 확인해 주세요.`);
+    const skippedNote = [...new Set([...logSkipped, ...wageSkipped])];
+    const addedNames = logAdded.length > 0 ? logAdded.join(" / ") : sorted.map(p => p.assignment.vessel).join(" / ");
+    const skipNote = skippedNote.length > 0 ? ` · ${skippedNote.join(", ")}은(는) 이미 등록되어 건너뛰었습니다` : "";
+    if (logAdded.length === 0 && skippedNote.length > 0) {
+        showToast(`📅 ${skippedNote.join(", ")}은(는) 이미 근무일지에 등록되어 있어 중복 등록하지 않았습니다.`);
+    } else {
+        showToast(allHaveHours
+            ? `✨ ${addedNames}을(를) 임금계산기·근무일지에 자동 등록하고 임금을 계산했습니다${skipNote}. 근무일지 저장을 눌러 기록하세요.`
+            : `✨ ${addedNames}을(를) 임금계산기·근무일지에 등록했습니다${skipNote}. 입·출항 시각이 없어 임금 계산은 직접 확인해 주세요.`);
+    }
     trackAppEvent("actions", "roster_finder_register_all");
 }
 function focusRosterFinder() {
-    const wageCard = document.getElementById("wage-card");
-    if (wageCard && !wageCard.classList.contains("expanded")) toggleDashItem("wage-card");
+    // 이름으로 선박 찾기는 근무일지 카드에 배치되어 있다(날짜·등록 맥락이 가까움).
+    // 임금계산기에서 진입하면 근무일지 탭으로 이동해 입력창에 포커스한다.
+    const logCard = document.getElementById("log-card");
+    if (logCard && !logCard.classList.contains("expanded")) toggleDashItem("log-card");
     const input = document.getElementById("rosterFinderInput");
     if (input) {
         input.scrollIntoView({ behavior: "smooth", block: "center" });
@@ -6887,7 +6978,15 @@ function saveWorkLog(){
     btn.innerText = "저장 중... (0%)"; 
     btn.disabled = true; 
 
-    const shipNameInfo = document.getElementById('logShipName').value.trim(); 
+    // 저장 안전장치: 폼 안의 중복 선박명(수동 입력·붙여넣기 등)을 정리한다.
+    // (의도적 삭제는 폼이 기준이므로 저장 기록과 합치지 않고 폼 내 중복만 제거)
+    const rawShipNameInfo = document.getElementById('logShipName').value.trim();
+    const dedupedShipNames = dedupeVesselNameList(parseWorklogShipNames(rawShipNameInfo));
+    const shipNameInfo = dedupedShipNames.unique.join(" / ");
+    const removedDuplicateCount = dedupedShipNames.duplicates.length;
+    if (removedDuplicateCount > 0) {
+        document.getElementById('logShipName').value = shipNameInfo;
+    }
     const previousWorkLog = adminWorkLogs[dStr] || {};
     const previousShipName = previousWorkLog.shipName || "";
     const w1 = parseFloat(document.getElementById('logWage1').value) || 0; 
@@ -6934,7 +7033,9 @@ function saveWorkLog(){
             trackAppEvent('actions', 'log_save');
             btn.innerText = "✅ 저장 완료!"; 
             btn.style.background = "var(--success)"; 
-            showToast("근무일지가 안전하게 저장되었습니다."); 
+            showToast(removedDuplicateCount > 0
+                ? `근무일지가 안전하게 저장되었습니다. (중복 선박명 ${removedDuplicateCount}개 정리)`
+                : "근무일지가 안전하게 저장되었습니다."); 
             
             // 데이터 즉시 갱신. 기간 조회 결과를 따로 캐시하고 있으므로 그 캐시도 함께 갱신해야
             // 저장 후 검색 결과/임금 내역서로 돌아갈 때 수정 전 기록이 다시 나타나지 않습니다.
@@ -7522,7 +7623,12 @@ async function sendCalculatedWageToLog() {
             syncWorklogWageSlotVisibility(parts.length);
 
             if (logShipInput) {
-                logShipInput.value = parts.map(item => item.name).join(" / ");
+                // 기존에 등록된 선박을 덮어쓰지 않고 합친다(중복 제외).
+                const mergedShips = dedupeVesselNameList([
+                    ...parseWorklogShipNames(logShipInput.value),
+                    ...parts.map(item => item.name)
+                ]);
+                logShipInput.value = mergedShips.unique.slice(0, MAX_WORK_VESSELS).join(" / ");
             }
 
             const lines = parts.map((part, index) =>
