@@ -90,7 +90,10 @@ test('화면: 근무일지 카드의 기간·키워드 검색 자리가 근무�
     for (const id of ['whStatTotal', 'whStatWeekday', 'whStatDay', 'whStatNight', 'whStatWeekend',
         'whStatWeekdayPct', 'whStatDayPct', 'whStatNightPct', 'whStatWeekendPct',
         'whStatTotalSub', 'whBarDay', 'whBarNight', 'workHourStatsRange', 'workHourStatsNote',
-        'workHourStatsPeriodBar']) {
+        'workHourStatsPeriodBar',
+        'whStatTotalBreak', 'whStatWeekdayBreak', 'whStatDayBreak', 'whStatNightBreak', 'whStatWeekendBreak',
+        'whQWeekdayDay', 'whQWeekdayNight', 'whQWeekendDay', 'whQWeekendNight', 'whQuadSum',
+        'whStatQuadrantDetails']) {
         assert.ok(html.includes(`id="${id}"`), `missing #${id}`);
         assert.equal(html.split(`id="${id}"`).length - 1, 1, `duplicate #${id}`);
     }
@@ -116,7 +119,8 @@ test('화면: 근무일지 카드의 기간·키워드 검색 자리가 근무�
 
 test('스타일: 근무시간 통계는 디자인 토큰 클래스로만 그린다', () => {
     for (const cls of ['.work-hours-box', '.work-hours-grid', '.work-hours-card', '.work-hours-value',
-        '.work-hours-period-btn.is-active', '.work-hours-bar', '.work-hours-note']) {
+        '.work-hours-period-btn.is-active', '.work-hours-bar', '.work-hours-note',
+        '.work-hours-break', '.work-hours-quad', '.work-hours-quad-grid', '.work-hours-quad-cell']) {
         assert.ok(css.includes(cls), `missing css ${cls}`);
     }
     // 라이트/다크 모두 대응
@@ -124,7 +128,7 @@ test('스타일: 근무시간 통계는 디자인 토큰 클래스로만 그린�
 });
 
 // ---- 2. 집계 규칙 ----------------------------------------------------------
-test('집계: 총/주간/야간/주말·공휴일을 더하고 평일 = 총 − 주말·공휴일 로 계산한다', () => {
+test('집계: 총/주간/야간/주말·공휴일 합계와 근무일수·추정일수를 계산한다', () => {
     const stats = setupStats();
     const out = stats.build([LOG_DAY, LOG_WEEKEND]);
     assert.equal(out.days, 2);
@@ -132,10 +136,94 @@ test('집계: 총/주간/야간/주말·공휴일을 더하고 평일 = 총 − 
     assert.equal(out.dayHours, 16, '주간 12H + 4H');
     assert.equal(out.nightHours, 4, '야간 0H + 4H');
     assert.equal(out.weekendHours, 8, '주말·공휴일 8H');
-    assert.equal(out.weekdayHours, 12, '평일 = 총 − 주말·공휴일');
+    assert.equal(out.weekdayHours, 12, '평일 = 평일주간 + 평일야간 (총 − 주말·공휴일)');
+    assert.equal(out.weekdayHours, 12);
     assert.equal(out.totalPay, 210000);
     assert.equal(out.timeRecordedDays, 2);
     assert.equal(out.estimatedDays, 0);
+});
+
+test('4분면: 평일 = 평일주간 + 평일야간, 주말·공휴일 = 주말주간 + 주말야간 으로 나뉘고 4개 합이 총근무시간이다', () => {
+    const stats = setupStats();
+    const out = stats.build([LOG_DAY, LOG_WEEKEND]);
+    // 평일 기록(12H 전부 주간) → 평일 주간 12 / 평일 야간 0
+    assert.equal(out.weekdayDayHours, 12);
+    assert.equal(out.weekdayNightHours, 0);
+    // 토요일 기록(주간 4 / 야간 4) → 주말 주간 4 / 주말 야간 4
+    assert.equal(out.weekendDayHours, 4);
+    assert.equal(out.weekendNightHours, 4);
+    // 파생 값 검산
+    assert.equal(out.weekdayHours, out.weekdayDayHours + out.weekdayNightHours);
+    assert.equal(out.weekendHours, out.weekendDayHours + out.weekendNightHours);
+    assert.equal(out.dayHours, out.weekdayDayHours + out.weekendDayHours);
+    assert.equal(out.nightHours, out.weekdayNightHours + out.weekendNightHours);
+    assert.equal(out.totalHours, out.weekdayDayHours + out.weekdayNightHours + out.weekendDayHours + out.weekendNightHours);
+    assert.equal(out.totalHours, out.weekdayHours + out.weekendHours);
+    assert.equal(out.totalHours, out.dayHours + out.nightHours);
+});
+
+test('4분면: 어떤 조합에서도 (평일주간+평일야간)+(주말주간+주말야간) = 총 이 맞는다', () => {
+    const stats = setupStats();
+    const nightShift = {
+        date: '2026-11-08', shipName: 'ULTIMA', totalPay: 150000,
+        memo: '총 9H (주간 0H / 야간 9H / 주말·공휴일 9H)'
+    };
+    const mixed = {
+        date: '2026-11-05', shipName: 'MAGNA', totalPay: 160000,
+        memo: '총 12.5H (주간 9.5H / 야간 3H / 주말·공휴일 0H)'
+    };
+    const onlyPayWeekend = { date: '2026-11-07', shipName: 'WILLIAM', totalPay: 100000 };
+    const sets = [
+        [], [nightShift], [mixed], [onlyPayWeekend],
+        [LOG_DAY, LOG_WEEKEND], [nightShift, mixed], [nightShift, mixed, onlyPayWeekend, LOG_DAY, LOG_WEEKEND]
+    ];
+    for (const logs of sets) {
+        const out = stats.build(logs);
+        const r = (v) => Math.round(v * 10) / 10;
+        const quadSum = r(out.weekdayDayHours + out.weekdayNightHours + out.weekendDayHours + out.weekendNightHours);
+        assert.equal(quadSum, r(out.totalHours), '4분면 합 = 총근무시간');
+        assert.equal(r(out.weekdayHours + out.weekendHours), r(out.totalHours), '평일 + 주말 = 총');
+        assert.equal(r(out.dayHours + out.nightHours), r(out.totalHours), '주간 + 야간 = 총');
+        assert.equal(r(out.weekdayHours), r(out.weekdayDayHours + out.weekdayNightHours), '평일 = 평일주간 + 평일야간');
+        assert.equal(r(out.weekendHours), r(out.weekendDayHours + out.weekendNightHours), '주말 = 주말주간 + 주말야간');
+        assert.equal(r(out.dayHours), r(out.weekdayDayHours + out.weekendDayHours), '주간 = 평일주간 + 주말주간');
+        assert.equal(r(out.nightHours), r(out.weekdayNightHours + out.weekendNightHours), '야간 = 평일야간 + 주말야간');
+        for (const key of ['weekdayDayHours', 'weekdayNightHours', 'weekendDayHours', 'weekendNightHours']) {
+            assert.ok(out[key] >= 0, `${key} 는 음수가 될 수 없습니다`);
+        }
+    }
+});
+
+test('4분면: 자정을 넘긴 근무(금 20시→토 04시)는 평일야간 4H + 주말야간 4H 로 정확히 갈린다', () => {
+    const stats = setupStats();
+    const out = stats.build([{
+        date: '2026-11-06', totalPay: 150000,
+        memo: '① ULTIMA 입항 2026-11-06 20:00 → 출항 2026-11-07 04:00 · 8H'
+    }]);
+    assert.equal(out.weekdayNightHours, 4, '금요일 20~24시');
+    assert.equal(out.weekendNightHours, 4, '토요일 0~4시');
+    assert.equal(out.weekdayDayHours, 0);
+    assert.equal(out.weekendDayHours, 0);
+    assert.equal(out.weekdayHours, 4);
+    assert.equal(out.weekendHours, 4);
+    assert.equal(out.dayHours, 0);
+    assert.equal(out.nightHours, 8);
+    assert.equal(out.totalHours, 8);
+});
+
+test('4분면: 주말 야간 근무는 주말야간에만 잡히고 평일 값은 0 이다', () => {
+    const stats = setupStats();
+    const out = stats.build([{
+        date: '2026-11-08', shipName: 'ULTIMA', totalPay: 150000,
+        memo: '총 9H (주간 0H / 야간 9H / 주말·공휴일 9H)'
+    }]);
+    assert.equal(out.weekendNightHours, 9);
+    assert.equal(out.weekendDayHours, 0);
+    assert.equal(out.weekdayDayHours, 0);
+    assert.equal(out.weekdayNightHours, 0);
+    assert.equal(out.nightHours, 9);
+    assert.equal(out.weekdayHours, 0);
+    assert.equal(out.weekendHours, 9);
 });
 
 test('집계: 평일 + 주말·공휴일 = 총근무시간, 주간 + 야간 ≤ 총근무시간 이 항상 성립한다', () => {
@@ -237,6 +325,23 @@ test('화면 반영: 5개 값·비율·기간·안내문을 DOM 에 쓴다', () 
     assert.equal(nodes.whBarNight.style.width, '20.0%');
     assert.match(nodes.workHourStatsRange.innerText, /2026년 11월/);
     assert.match(nodes.workHourStatsRange.innerText, /근무 2일/);
+    // 하위 분해 문구 — 화면에서 바로 검산할 수 있어야 합니다.
+    assert.equal(nodes.whStatTotalBreak.innerText, '12 + 8 = 20시간');
+    assert.equal(nodes.whStatWeekdayBreak.innerText, '☀️ 12 + 🌙 0');
+    assert.equal(nodes.whStatDayBreak.innerText, '평일 12 + 주말 4');
+    assert.equal(nodes.whStatNightBreak.innerText, '평일 0 + 주말 4');
+    assert.equal(nodes.whStatWeekendBreak.innerText, '☀️ 4 + 🌙 4');
+    // 4분면 자세히
+    assert.equal(nodes.whQWeekdayDay.innerText, '12시간');
+    assert.equal(nodes.whQWeekdayNight.innerText, '0시간');
+    assert.equal(nodes.whQWeekendDay.innerText, '4시간');
+    assert.equal(nodes.whQWeekendNight.innerText, '4시간');
+    assert.match(nodes.whQuadSum.innerText, /20시간/);
+    // 비율 짝은 100% 가 되어야 합니다.
+    assert.equal(nodes.whStatWeekdayPct.innerText, '60%');
+    assert.equal(nodes.whStatWeekendPct.innerText, '40%');
+    assert.equal(nodes.whStatDayPct.innerText, '80%');
+    assert.equal(nodes.whStatNightPct.innerText, '20%');
 });
 
 test('화면 반영: 추정 일수·오프라인 안내를 덧붙인다', () => {

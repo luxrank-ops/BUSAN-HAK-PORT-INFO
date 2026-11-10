@@ -1739,6 +1739,74 @@
     body.dark-mode .work-hours-card.is-night .work-hours-value { color: var(--blue-300); }
     .work-hours-card.is-weekday .work-hours-value { color: var(--emerald-700); }
     .work-hours-card.is-weekend .work-hours-value { color: var(--orange-700); }
+    .work-hours-break {
+        font-size: var(--fs-2);
+        font-weight: var(--fw-bold);
+        color: var(--text-sub);
+        line-height: var(--lh-3);
+        font-variant-numeric: tabular-nums;
+    }
+    .work-hours-quad { margin-top: var(--sp-6); }
+    .work-hours-quad > summary {
+        display: block;
+        cursor: pointer;
+        list-style: none;
+        padding: var(--sp-4) var(--sp-6);
+        border-radius: var(--radius-md);
+        border: 1.5px dashed var(--blue-300);
+        background: var(--n-000);
+        color: var(--blue-700);
+        font-size: var(--fs-2);
+        font-weight: var(--fw-extrabold);
+        line-height: var(--lh-3);
+    }
+    .work-hours-quad > summary::-webkit-details-marker { display: none; }
+    body.dark-mode .work-hours-quad > summary {
+        background: var(--n-900);
+        border-color: var(--blue-600);
+        color: var(--blue-300);
+    }
+    .work-hours-quad-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: var(--sp-4);
+        margin-top: var(--sp-5);
+    }
+    .work-hours-quad-cell {
+        display: flex;
+        flex-direction: column;
+        gap: var(--sp-2);
+        padding: var(--sp-4) var(--sp-5);
+        border-radius: var(--radius-sm);
+        border: 1px solid var(--border);
+        background: var(--n-000);
+    }
+    body.dark-mode .work-hours-quad-cell {
+        background: var(--n-900);
+        border-color: var(--n-650);
+    }
+    .work-hours-quad-cell span {
+        font-size: var(--fs-2);
+        font-weight: var(--fw-bold);
+        color: var(--text-sub);
+        line-height: var(--lh-3);
+    }
+    .work-hours-quad-cell strong {
+        font-size: var(--fs-6);
+        font-weight: var(--fw-black);
+        color: var(--primary);
+        font-variant-numeric: tabular-nums;
+        line-height: var(--lh-4);
+    }
+    .work-hours-quad-cell.is-weekday strong { color: var(--emerald-700); }
+    .work-hours-quad-cell.is-weekend strong { color: var(--orange-700); }
+    .work-hours-quad-sum {
+        margin-top: var(--sp-4);
+        font-size: var(--fs-2);
+        font-weight: var(--fw-bold);
+        color: var(--text-sub);
+        line-height: var(--lh-4);
+    }
     .work-hours-sub,
     .work-hours-pct {
         font-size: var(--fs-2);

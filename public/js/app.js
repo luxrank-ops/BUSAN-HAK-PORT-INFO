@@ -6713,11 +6713,19 @@ function roundWorkHours1(value) {
     return Math.round((Number(value) || 0) * 10) / 10;
 }
 
-/** 순수 집계 함수: 근무일지 배열(또는 date→log 맵) → 근무시간 통계 */
+/** 순수 집계 함수: 근무일지 배열(또는 date→log 맵) → 근무시간 통계
+ *  ① 4분면(평일/주말·공휴일 × 주간/야간)을 먼저 더한 뒤
+ *  ② 나머지 값은 전부 4분면에서 파생시켜 계산이 항상 맞아떨어지게 합니다.
+ *     · 평일 = 평일주간 + 평일야간
+ *     · 주말·공휴일 = 주말주간 + 주말야간
+ *     · 주간 = 평일주간 + 주말주간 / 야간 = 평일야간 + 주말야간
+ *     · 총근무시간 = 평일 + 주말·공휴일 = 주간 + 야간 = 4분면 합 */
 function buildWorkHourStats(logs) {
     const list = Array.isArray(logs) ? logs : Object.values(logs || {});
     const out = {
-        days: 0, totalHours: 0, weekdayHours: 0, dayHours: 0, nightHours: 0, weekendHours: 0,
+        days: 0,
+        weekdayDayHours: 0, weekdayNightHours: 0, weekendDayHours: 0, weekendNightHours: 0,
+        weekdayHours: 0, weekendHours: 0, dayHours: 0, nightHours: 0, totalHours: 0,
         estimatedDays: 0, timeRecordedDays: 0, totalPay: 0
     };
     list.forEach(log => {
@@ -6728,21 +6736,45 @@ function buildWorkHourStats(logs) {
         if (!pay && !log.shipName && !log.memo && !log.coworkers) return;
         out.days += 1;
         if (wt) {
-            out.totalHours += Number(wt.totalHours) || 0;
-            out.dayHours += Number(wt.dayHours) || 0;
-            out.nightHours += Number(wt.nightHours) || 0;
-            out.weekendHours += Number(wt.weekendHours) || 0;
+            let wdDay = Number(wt.weekdayDayHours) || 0;
+            let wdNight = Number(wt.weekdayNightHours) || 0;
+            let weDay = Number(wt.weekendDayHours) || 0;
+            let weNight = Number(wt.weekendNightHours) || 0;
+            // 예전 계산 경로(4분면 값이 없는 기록)는 주·야간/주말 값에서 복원합니다.
+            if (wdDay + wdNight + weDay + weNight <= 0) {
+                const day = Number(wt.dayHours) || 0;
+                const night = Number(wt.nightHours) || 0;
+                const wknd = Math.min(Number(wt.weekendHours) || 0, day + night);
+                const dnSum = day + night;
+                weDay = dnSum > 0 ? wknd * (day / dnSum) : wknd;
+                weNight = wknd - weDay;
+                wdDay = Math.max(0, day - weDay);
+                wdNight = Math.max(0, night - weNight);
+            }
+            out.weekdayDayHours += wdDay;
+            out.weekdayNightHours += wdNight;
+            out.weekendDayHours += weDay;
+            out.weekendNightHours += weNight;
             if (wt.estimated) out.estimatedDays += 1;
             // 시간이 실제로 적힌 기록만 "시간 기록일" 로 셉니다(급여 추정일은 제외).
             if (wt.hasTime && !wt.estimated) out.timeRecordedDays += 1;
         }
         out.totalPay += pay;
     });
-    out.totalHours = roundWorkHours1(out.totalHours);
-    out.dayHours = roundWorkHours1(out.dayHours);
-    out.nightHours = roundWorkHours1(out.nightHours);
-    out.weekendHours = Math.min(roundWorkHours1(out.weekendHours), out.totalHours);
-    out.weekdayHours = Math.max(0, roundWorkHours1(out.totalHours - out.weekendHours));
+    const r1 = roundWorkHours1;
+    const b1 = r1(out.weekdayDayHours);
+    const b2 = r1(out.weekdayNightHours);
+    const b3 = r1(out.weekendDayHours);
+    const b4 = r1(out.weekendNightHours);
+    out.weekdayDayHours = b1;
+    out.weekdayNightHours = b2;
+    out.weekendDayHours = b3;
+    out.weekendNightHours = b4;
+    out.weekdayHours = r1(b1 + b2);          // 평일 = 평일주간 + 평일야간
+    out.weekendHours = r1(b3 + b4);          // 주말·공휴일 = 주말주간 + 주말야간
+    out.dayHours = r1(b1 + b3);              // 주간 = 평일주간 + 주말주간
+    out.nightHours = r1(b2 + b4);            // 야간 = 평일야간 + 주말야간
+    out.totalHours = r1(b1 + b2 + b3 + b4);  // 총 = 4분면 합 = 평일 + 주말
     return out;
 }
 
@@ -6830,18 +6862,42 @@ function renderWorkHourStats(stats, meta) {
         const el = document.getElementById(id);
         if (el) el.innerText = text;
     };
+    // 4분면 → 나머지 값은 모두 여기서 파생되어 표시 숫자가 항상 맞아떨어집니다.
+    const wdDay = Number(s.weekdayDayHours) || 0;
+    const wdNight = Number(s.weekdayNightHours) || 0;
+    const weDay = Number(s.weekendDayHours) || 0;
+    const weNight = Number(s.weekendNightHours) || 0;
+    const hShort = (v) => `${roundWorkHours1(v).toLocaleString("ko-KR")}`;
+
     setText("whStatTotal", formatWorkHourValue(s.totalHours));
     setText("whStatTotalSub", `근무 ${s.days}일`);
     setText("whStatWeekday", formatWorkHourValue(s.weekdayHours));
     setText("whStatDay", formatWorkHourValue(s.dayHours));
     setText("whStatNight", formatWorkHourValue(s.nightHours));
     setText("whStatWeekend", formatWorkHourValue(s.weekendHours));
-    [
-        ["whStatWeekdayPct", s.weekdayHours],
-        ["whStatDayPct", s.dayHours],
-        ["whStatNightPct", s.nightHours],
-        ["whStatWeekendPct", s.weekendHours]
-    ].forEach(([id, value]) => setText(id, `${workHourStatsPercent(value, s.totalHours)}%`));
+
+    // 하위 분해 문구 (평일 = 평일주간 + 평일야간, 주말 = 주말주간 + 주말야간 …)
+    setText("whStatTotalBreak", `${hShort(s.weekdayHours)} + ${hShort(s.weekendHours)} = ${hShort(s.totalHours)}시간`);
+    setText("whStatWeekdayBreak", `☀️ ${hShort(wdDay)} + 🌙 ${hShort(wdNight)}`);
+    setText("whStatDayBreak", `평일 ${hShort(wdDay)} + 주말 ${hShort(weDay)}`);
+    setText("whStatNightBreak", `평일 ${hShort(wdNight)} + 주말 ${hShort(weNight)}`);
+    setText("whStatWeekendBreak", `☀️ ${hShort(weDay)} + 🌙 ${hShort(weNight)}`);
+
+    // 4분면 자세히
+    setText("whQWeekdayDay", formatWorkHourValue(wdDay));
+    setText("whQWeekdayNight", formatWorkHourValue(wdNight));
+    setText("whQWeekendDay", formatWorkHourValue(weDay));
+    setText("whQWeekendNight", formatWorkHourValue(weNight));
+    setText("whQuadSum", `4분면 합 ${hShort(s.totalHours)}시간 · 평일 ${hShort(s.weekdayHours)} + 주말·공휴일 ${hShort(s.weekendHours)} = ${hShort(s.totalHours)}시간`);
+
+    // 비율은 짝이 100%가 되도록 한쪽을 나머지로 계산합니다.
+    const weekdayPct = workHourStatsPercent(s.weekdayHours, s.totalHours);
+    const dayPct = workHourStatsPercent(s.dayHours, s.totalHours);
+    const hasTotal = (Number(s.totalHours) || 0) > 0;
+    setText("whStatWeekdayPct", `${weekdayPct}%`);
+    setText("whStatDayPct", `${dayPct}%`);
+    setText("whStatNightPct", `${hasTotal ? 100 - dayPct : 0}%`);
+    setText("whStatWeekendPct", `${hasTotal ? 100 - weekdayPct : 0}%`);
 
     const total = Number(s.totalHours) || 0;
     const setBar = (id, share) => {
@@ -6865,7 +6921,7 @@ function renderWorkHourStats(stats, meta) {
 
     const noteEl = document.getElementById("workHourStatsNote");
     if (noteEl) {
-        let note = "주간·야간은 실제 근무 시간대, 평일·주말·공휴일은 근무 날짜 기준입니다.";
+        let note = "주간·야간은 실제 근무 시간대, 평일·주말·공휴일은 근무 날짜 기준입니다. 평일(주간+야간) + 주말·공휴일(주간+야간) = 총근무시간.";
         if (!currentWorkerId) note = "로그인하면 내 근무기록만 모아 자동으로 계산합니다.";
         else if (info.offline) note += " · 화면에 불러온 기록만 집계했습니다.";
         if (s.estimatedDays > 0) note += ` · 시간이 비어 있는 ${s.estimatedDays}일은 급여로 시간을 추정했습니다.`;
@@ -7021,14 +7077,23 @@ function extractWorkLogTimeAndWageMetrics(log) {
         return dt.getDay() === 0 || dt.getDay() === 6 || HOLIDAYS.has(key);
     };
     const splitInterval = (startDt, hoursFloat) => {
-        const out = { totalHours: 0, dayHours: 0, nightHours: 0, weekendHours: 0 };
+        // 4분면(평일/주말·공휴일 × 주간/야간)으로 분당 누적해 합이 항상 총 시간과 맞도록 합니다.
+        const out = {
+            totalHours: 0, dayHours: 0, nightHours: 0, weekendHours: 0,
+            weekdayDayHours: 0, weekdayNightHours: 0, weekendDayHours: 0, weekendNightHours: 0
+        };
         const minutes = Math.max(0, Math.round((Number(hoursFloat) || 0) * 60));
         for (let i = 0; i < minutes; i++) {
             const slot = new Date(startDt.getTime() + i * 60000);
             const s = seasonFor(slot.getMonth() + 1);
             const h = slot.getHours();
-            if (h >= s.dayStart && h < s.dayEnd) out.dayHours += 1 / 60; else out.nightHours += 1 / 60;
-            if (isWknd(slot)) out.weekendHours += 1 / 60;
+            const isDaySlot = (h >= s.dayStart && h < s.dayEnd);
+            const isWkndSlot = isWknd(slot);
+            if (isDaySlot) out.dayHours += 1 / 60; else out.nightHours += 1 / 60;
+            if (isWkndSlot) {
+                out.weekendHours += 1 / 60;
+                if (isDaySlot) out.weekendDayHours += 1 / 60; else out.weekendNightHours += 1 / 60;
+            } else if (isDaySlot) out.weekdayDayHours += 1 / 60; else out.weekdayNightHours += 1 / 60;
             out.totalHours += 1 / 60;
         }
         return out;
@@ -7049,7 +7114,9 @@ function extractWorkLogTimeAndWageMetrics(log) {
     const wage3 = Number(d.wage3) || 0;
     const wage4 = Number(d.wage4) || 0;
     const memo = String(d.memo || "");
-    const empty = { date: dateStr, totalHours: 0, dayHours: 0, nightHours: 0, weekendHours: 0, dayAmt: 0, nightAmt: 0, weekendAmt: 0, skilledAmt: 0, extraAmt: 0, totalPay, wage1, wage2, wage3, wage4, source: "none", estimated: false, hasTime: false };
+    const empty = { date: dateStr, totalHours: 0, dayHours: 0, nightHours: 0, weekendHours: 0,
+        weekdayDayHours: 0, weekdayNightHours: 0, weekendDayHours: 0, weekendNightHours: 0,
+        dayAmt: 0, nightAmt: 0, weekendAmt: 0, skilledAmt: 0, extraAmt: 0, totalPay, wage1, wage2, wage3, wage4, source: "none", estimated: false, hasTime: false };
     let acc = null;
     let source = "none";
     const addTo = (target, part) => {
@@ -7057,6 +7124,10 @@ function extractWorkLogTimeAndWageMetrics(log) {
         target.dayHours += part.dayHours || 0;
         target.nightHours += part.nightHours || 0;
         target.weekendHours += part.weekendHours || 0;
+        target.weekdayDayHours = (Number(target.weekdayDayHours) || 0) + (Number(part.weekdayDayHours) || 0);
+        target.weekdayNightHours = (Number(target.weekdayNightHours) || 0) + (Number(part.weekdayNightHours) || 0);
+        target.weekendDayHours = (Number(target.weekendDayHours) || 0) + (Number(part.weekendDayHours) || 0);
+        target.weekendNightHours = (Number(target.weekendNightHours) || 0) + (Number(part.weekendNightHours) || 0);
         return target;
     };
     // 0) 구조화 필드가 직접 저장된 경우
@@ -7121,7 +7192,8 @@ function extractWorkLogTimeAndWageMetrics(log) {
         let cum = 0;
         let best = splitInterval(startDt, 0);
         let bestDiff = Math.abs(totalPay);
-        let running = { totalHours: 0, dayHours: 0, nightHours: 0, weekendHours: 0 };
+        let running = { totalHours: 0, dayHours: 0, nightHours: 0, weekendHours: 0,
+            weekdayDayHours: 0, weekdayNightHours: 0, weekendDayHours: 0, weekendNightHours: 0 };
         for (let i = 0; i < 24; i++) {
             const slot = new Date(startDt.getTime() + i * 3600000);
             const s = seasonFor(slot.getMonth() + 1);
@@ -7130,12 +7202,56 @@ function extractWorkLogTimeAndWageMetrics(log) {
             const one = splitInterval(slot, 1);
             running = addTo(running, one);
             const diff = Math.abs(totalPay - cum);
-            if (diff < bestDiff) { bestDiff = diff; best = { totalHours: running.totalHours, dayHours: running.dayHours, nightHours: running.nightHours, weekendHours: running.weekendHours }; }
+            if (diff < bestDiff) {
+                bestDiff = diff;
+                best = {
+                    totalHours: running.totalHours, dayHours: running.dayHours,
+                    nightHours: running.nightHours, weekendHours: running.weekendHours,
+                    weekdayDayHours: running.weekdayDayHours || 0, weekdayNightHours: running.weekdayNightHours || 0,
+                    weekendDayHours: running.weekendDayHours || 0, weekendNightHours: running.weekendNightHours || 0
+                };
+            }
             if (cum >= totalPay) break;
         }
         if (best.totalHours > 0) { acc = best; source = "estimate"; estimated = true; }
     }
     if (!acc || acc.totalHours <= 0) return { ...empty, extraAmt: totalPay };
+    /* 4분면(평일/주말·공휴일 × 주간/야간) 정리:
+       - 주간+야간 = 총 시간 이 되도록 비율을 맞춥니다(수기 메모의 합이 어긋난 경우 보정).
+       - 주말·공휴일 시간은 주·야간 비율로 나눠 주말 주간/야간 합이 주말 시간과 같게 맞춥니다.
+       - 평일 주간/야간 = 주간/야간 − 주말 주간/야간 (그래서 4개 합 = 총 시간). */
+    const normTotal = Math.max(0, Number(acc.totalHours) || 0);
+    let normDay = Math.max(0, Number(acc.dayHours) || 0);
+    let normNight = Math.max(0, Number(acc.nightHours) || 0);
+    if (normDay + normNight <= 0) {
+        normDay = normTotal;
+        normNight = 0;
+    } else if (Math.abs(normDay + normNight - normTotal) > 0.05) {
+        const k = normTotal / (normDay + normNight);
+        normDay *= k;
+        normNight *= k;
+    }
+    const normWknd = Math.min(Math.max(0, Number(acc.weekendHours) || 0), normTotal);
+    let wkndDay = Math.max(0, Number(acc.weekendDayHours) || 0);
+    let wkndNight = Math.max(0, Number(acc.weekendNightHours) || 0);
+    if (normWknd > 0 && Math.abs(wkndDay + wkndNight - normWknd) > 0.05) {
+        const dnSum = normDay + normNight;
+        wkndDay = dnSum > 0 ? normWknd * (normDay / dnSum) : normWknd;
+        wkndNight = normWknd - wkndDay;
+    }
+    if (normWknd <= 0) {
+        wkndDay = 0;
+        wkndNight = 0;
+    }
+    wkndDay = Math.min(wkndDay, normDay);
+    wkndNight = Math.min(wkndNight, normNight);
+    const r1 = (v) => Math.round((Number(v) || 0) * 10) / 10;
+    const quadrant = {
+        weekdayDayHours: r1(Math.max(0, normDay - wkndDay)),
+        weekdayNightHours: r1(Math.max(0, normNight - wkndNight)),
+        weekendDayHours: r1(wkndDay),
+        weekendNightHours: r1(wkndNight)
+    };
     // Allocate the recorded (possibly net) pay, not an uncapped theoretical gross.
     const weights = [acc.dayHours * baseRate, acc.nightHours * baseRate * 1.5, acc.weekendHours * baseRate * 0.5];
     const theoretical = weights.reduce((sum, value) => sum + value, 0);
@@ -7159,6 +7275,7 @@ function extractWorkLogTimeAndWageMetrics(log) {
         dayHours: Math.round(acc.dayHours * 10) / 10,
         nightHours: Math.round(acc.nightHours * 10) / 10,
         weekendHours: Math.round(acc.weekendHours * 10) / 10,
+        ...quadrant,
         dayAmt, nightAmt, weekendAmt,
         skilledAmt,
         extraAmt,
