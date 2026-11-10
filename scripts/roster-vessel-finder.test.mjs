@@ -75,6 +75,20 @@ test('사진 명단 모드에서는 시작용 명단을 완전히 제외하고 �
     assert.equal(vmRoster.run('getAllRosterAssignments().length'), 2);
 });
 
+test('사진 명단에서도 이수열이 배정된 모든 선박을 검색 결과로 반환한다', () => {
+    const vmRoster = createRosterVm();
+    vmRoster.run(`appendRosterPhotoEntries([
+        { date: '2026-11-11', vessel: 'PRESIDENT CARTER', workers: ['이수열'] },
+        { date: '2026-11-11', vessel: 'CMA CGM PANAMA', workers: ['이수열'] }
+    ]);`);
+    vmRoster.run(`appendRosterPhotoEntries([
+        { date: '2026-11-11', vessel: 'SM LONG BEACH', workers: ['다른 작업자'] }
+    ]);`);
+    const found = JSON.parse(JSON.stringify(vmRoster.run('findAllRosterAssignments("이수열")')));
+    assert.deepEqual(found.assignments.map((row) => row.vessel).sort(), ['CMA CGM PANAMA', 'PRESIDENT CARTER']);
+    assert.equal(found.mode, '작업자');
+});
+
 test('직접 추가 명단은 로컬 저장소에서 복원되며 유효하지 않은 데이터는 무시한다', () => {
     const vmRoster = createRosterVm({ storage: {
         busanPortRosterExtra: JSON.stringify([
