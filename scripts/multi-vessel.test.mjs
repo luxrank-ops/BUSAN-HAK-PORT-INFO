@@ -43,7 +43,9 @@ const WAGE_FUNCTIONS = [
     'calcTimeAndFill', 'autoFillWeekendHoliday', 'changeWageAllowanceType',
     'updateSelectedWageAllowanceHours', 'calculateWageSegment', 'calculateWage',
     'onWageShipNameChange', 'autoGrowWorkLogMemo', 'sendCalculatedWageToLog',
-    'sendWorkLogShipToWage', 'resetWageForm', 'selectBestCalcSegment'
+    'sendWorkLogShipToWage', 'resetWageForm', 'selectBestCalcSegment',
+    // sendCalculatedWageToLog 멀티 경로의 선박명 병합(중복 제외)이 전이적으로 호출
+    'parseWorklogShipNames', 'normalizeWorklogShipKey', 'normalizeRosterVesselKey', 'dedupeVesselNameList'
 ];
 
 const appBundle = [
