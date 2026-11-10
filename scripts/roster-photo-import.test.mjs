@@ -68,6 +68,29 @@ test('OCR 결과가 날짜 또는 선박을 찾지 못하면 검토용 경고를
     assert.ok(noVessel.warnings.some((warning) => warning.includes('선박명')));
 });
 
+test('짧은 선박명도 따로 읽고, 읽지 못한 다음 선박 머리말의 이름을 앞 선박에 붙이지 않는다', () => {
+    const photo = createPhotoVm();
+    const parsed = JSON.parse(JSON.stringify(photo.run(`parseRosterPhotoText(${JSON.stringify(`2026. 11. 12
+SM LONG BEACH 08:00
+김성원
+ONE HAI 10:00
+이수열
+ABC DEF 12:00
+김명준`)}, { defaultYear: 2026 })`)));
+    const byVessel = Object.fromEntries(parsed.entries.map((entry) => [entry.vessel, entry]));
+    assert.deepEqual(byVessel['SM LONG BEACH'].workers, ['김성원']);
+    assert.deepEqual(byVessel['ONE HAI'].workers, ['이수열']);
+    assert.deepEqual(byVessel['ABC DEF'].workers, ['김명준']);
+
+    const guarded = JSON.parse(JSON.stringify(photo.run(`parseRosterPhotoText(${JSON.stringify(`2026. 11. 12
+SM LONG BEACH 08:00
+김성원
+ABC DEF
+이수열`)}, { defaultYear: 2026 })`)));
+    assert.deepEqual(guarded.entries[0].workers, ['김성원']);
+    assert.ok(guarded.warnings.some((warning) => warning.includes('앞선 선박')));
+});
+
 test('사진 명단은 같은 선박·같은 이름만 합치고, 같은 이름의 다른 선박은 보존한다', () => {
     const photo = createPhotoVm();
     const rows = JSON.parse(JSON.stringify(photo.run(`mergeRosterPhotoEntries([

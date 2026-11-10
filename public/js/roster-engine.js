@@ -27,6 +27,7 @@ const ROSTER_MAX_IMAGE_BYTES = 15 * 1024 * 1024;
 const ROSTER_MAX_IMAGE_EDGE = 2000;
 const ROSTER_FINDER_BETA_LOCK = true;
 const ROSTER_COMPANIES = ["고려", "세정", "코엠", "조영", "한진", "동원", "국제", "북항", "허치슨", "KML", "KMT", "PNC", "HMM", "PNIT", "BPTC", "BNCT", "HJNC", "DGT", "HPNT", "HBCT", "BCT"];
+const ROSTER_VESSEL_PREFIXES = new Set(["CMA", "COSCO", "EVER", "EVERGREEN", "HAPAG", "HMM", "KMTC", "MAERSK", "MSC", "ONE", "OOCL", "PIL", "SITC", "SM", "WAN", "YANG", "ZIM"]);
 const ROSTER_NAME_NOISE = new Set(["지원", "명단", "작업", "선박", "배치", "입항", "출항", "접안", "선석", "부산", "신항", "터미널", "근무", "당일", "전체", "이름", "비고", "합계", "시간", "회사", "야간", "주간", "조출", "잔업", "휴무", "연장", "정상", "확정", "예정", "변경", "공지", "안내", "첨부", "사진", "명령", "작성", "확인", "담당", "기사", "본부", "센터", "지점", "계획", "실시"]);
 
 const rosterRuntime = {
@@ -648,6 +649,18 @@ function readTimeFromOcrLine(line) {
     return hour >= 0 && hour < 24 && minute >= 0 && minute < 60 ? `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}` : "";
 }
 
+function rosterLatinWords(value) {
+    return String(value || "").match(/[A-Za-z][A-Za-z0-9&'.-]*/g) || [];
+}
+
+function isLikelyUnrecognizedVesselHeading(line) {
+    const words = rosterLatinWords(line);
+    if (words.length < 2) return false;
+    const hasTime = Boolean(readTimeFromOcrLine(line));
+    const uppercaseLabel = words.every((word) => word === word.toUpperCase());
+    return hasTime || uppercaseLabel || ROSTER_VESSEL_PREFIXES.has(words[0].toUpperCase());
+}
+
 function pickVesselFromOcrLine(line) {
     const candidates = String(line).match(/[A-Za-z][A-Za-z0-9&'.-]*(?:\s+[A-Za-z0-9&'.-]{2,})*/g) || [];
     return candidates.reduce((winner, candidate) => {
@@ -655,8 +668,10 @@ function pickVesselFromOcrLine(line) {
         const name = words.join(" ").trim().toUpperCase();
         const isTerminal = /^(BNCT|HJNC|DGT|PNC|HMM|PNIT|BPTC|HBCT|BCT|KML|KMT)$/.test(name);
         const isCompany = ROSTER_COMPANIES.some((company) => company.toUpperCase() === name);
+        const hasKnownPrefix = ROSTER_VESSEL_PREFIXES.has(words[0]?.toUpperCase());
         const enoughLetters = words.some((word) => word.length >= 4);
-        return !name || isTerminal || isCompany || !enoughLetters || name.length <= winner.length ? winner : name;
+        const vesselLikeShortName = words.length >= 2 && (hasKnownPrefix || Boolean(readTimeFromOcrLine(line)));
+        return !name || isTerminal || isCompany || (!enoughLetters && !vesselLikeShortName) || name.length <= winner.length ? winner : name;
     }, "");
 }
 
@@ -709,13 +724,20 @@ function parseRosterPhotoText(rawText, options) {
     const lines = cleanOcrText(rawText).split("\n").map((line) => line.trim()).filter(Boolean);
     if (!lines.length) return { entries: [], warnings: ["글자가 없습니다. 사진을 다시 고르거나 직접 입력해 주세요."] };
 
-    const result = { date: suppliedDate, current: null, byKey: new Map(), entries: [] };
+    const result = { date: suppliedDate, current: null, byKey: new Map(), entries: [], unrecognizedVesselHeadings: 0 };
     lines.forEach((line) => {
         const date = readDateFromOcrLine(line, fallbackYear);
         if (date) result.date = date;
         const workers = pickWorkersFromOcrLine(line);
         const vessel = pickVesselFromOcrLine(line);
         if (!vessel) {
+            // OCR이 다음 선박 머리말을 읽지 못했을 때, 이어지는 이름이 직전 선박으로
+            // 잘못 붙는 것을 막습니다. 이런 경우에는 검토 경고를 보여 직접 고칠 수 있습니다.
+            if (isLikelyUnrecognizedVesselHeading(line)) {
+                result.current = null;
+                result.unrecognizedVesselHeadings += 1;
+                return;
+            }
             if (result.current) result.current.workers = mergeWorkers(result.current.workers, workers);
             return;
         }
@@ -748,6 +770,9 @@ function parseRosterPhotoText(rawText, options) {
     const missingWorkers = result.entries.filter((row) => !row.workers.length).length;
     if (missingDates) warnings.push(`${missingDates}척은 날짜를 찾지 못했습니다. 검토 표에서 날짜를 채워 주세요.`);
     if (missingWorkers) warnings.push(`${missingWorkers}척은 작업자 이름을 찾지 못했습니다. 사진을 보며 직접 입력해 주세요.`);
+    if (result.unrecognizedVesselHeadings) {
+        warnings.push(`${result.unrecognizedVesselHeadings}개 선박 머리말을 확실히 읽지 못해, 뒤 이름을 앞선 선박에 넣지 않았습니다. 원문을 수정하거나 ‘내 명단 추가’로 해당 배정을 넣어 주세요.`);
+    }
     return { entries: result.entries, warnings };
 }
 
