@@ -4881,6 +4881,10 @@ function getRosterExtraEntries() {
 function getAllRosterAssignments() {
     // 우선순위: 사진으로 만든 명단 → 직접 추가 명단 → 기본(전사) 명단.
     // 같은 날짜·같은 배는 앞의(최신) 항목만 남겨 중복 배정을 만들지 않습니다.
+    // 새 사진을 올렸는데 그 전 근무가 같이 나오지 않도록, 사진 명단에 있는 '날짜'는
+    // 기본(전사) 명단을 아예 쓰지 않습니다.
+    const photoEntries = getPhotoRosterEntries();
+    const photoDates = new Set((photoEntries || []).map(a => String(a && a.date || "")).filter(Boolean));
     const seen = new Set();
     const merged = [];
     const addAll = (list) => {
@@ -4892,9 +4896,9 @@ function getAllRosterAssignments() {
             merged.push(a);
         });
     };
-    addAll(getPhotoRosterEntries());
+    addAll(photoEntries);
     addAll(getRosterExtraEntries());
-    addAll(PHOTO_ROSTER_20261110);
+    addAll(PHOTO_ROSTER_20261110.filter(a => !photoDates.has(String(a && a.date || ""))));
     return merged;
 }
 function findRosterAssignmentsByWorker(workerName) {
@@ -5509,6 +5513,15 @@ function mergeRosterPhotoEntries(rows) {
     return result;
 }
 
+/**
+ * 새로 읽은 명단으로 사진 명단을 '교체'합니다.
+ * 이전 사진의 배가 검색 결과에 계속 남는 문제를 막기 위해 병합하지 않고 덮어씁니다.
+ */
+function replaceRosterPhotoEntries(rows) {
+    rosterPhotoEntries = mergeRosterPhotoEntries(rows || []);
+    return rosterPhotoEntries;
+}
+
 function getPhotoRosterEntries() {
     return rosterPhotoEntries;
 }
@@ -5617,6 +5630,14 @@ function handleRosterPhotoSelected(event) {
     } catch (e) {
         rosterPhotoObjectUrl = "";
     }
+    // 새 사진을 고르면 이전 사진의 인식 글자·검토 줄은 지웁니다(예전 명단이 화면에 남지 않도록).
+    rosterPhotoOcrText = "";
+    rosterPhotoParsedRows = [];
+    const textBox = document.getElementById("rosterPhotoText");
+    if (textBox) textBox.value = "";
+    const oldRows = document.getElementById("rosterPhotoRows");
+    if (oldRows) oldRows.innerHTML = "";
+    document.getElementById("rosterPhotoTextDetails")?.classList.add("hidden");
     const preview = document.getElementById("rosterPhotoPreview");
     if (preview && rosterPhotoObjectUrl) preview.src = rosterPhotoObjectUrl;
     document.getElementById("rosterPhotoPreviewWrap")?.classList.remove("hidden");
@@ -5747,6 +5768,8 @@ function parseRosterPhotoTextFromBox() {
     const parsed = parseRosterPhotoText(raw, { defaultYear: new Date().getFullYear(), defaultDate: fallbackDate });
     rosterPhotoParsedRows = parsed.entries.map(e => Object.assign({}, e));
     renderRosterPhotoRows(parsed.warnings);
+    // 사진을 새로 읽었는데 반영을 누르지 않으면 예전 명단으로 검색되므로, 바로 교체해 둡니다.
+    autoApplyRosterPhotoRows();
     return parsed;
 }
 
@@ -5795,24 +5818,46 @@ function removeRosterPhotoRow(index) {
     renderRosterPhotoRows([]);
 }
 
-/** 검토한 명단을 실제 검색 명단에 반영합니다. */
-function applyRosterPhotoRoster() {
+/**
+ * 검토한 명단을 실제 검색 명단에 반영합니다.
+ * - 새 사진 명단은 이전 명단을 '교체'합니다(예전 근무가 결과에 남지 않게).
+ * - options.auto 는 사진 인식 직후 자동 반영할 때 사용합니다(기기 저장 설정은 기존 값을 유지).
+ */
+function applyRosterPhotoRoster(options) {
+    const opts = options || {};
     const usable = rosterPhotoParsedRows.filter(r => r && r.vessel && /^\d{4}-\d{2}-\d{2}$/.test(String(r.date || "")));
     if (!usable.length) {
         showToast("⚠️ 반영할 명단이 없습니다. 날짜와 선박명을 확인해 주세요.");
         return;
     }
+    const previousCount = rosterPhotoEntries.length;
     const persistBox = document.getElementById("rosterPhotoPersist");
-    const persist = !!(persistBox && persistBox.checked);
-    rosterPhotoEntries = mergeRosterPhotoEntries([...rosterPhotoEntries, ...usable]);
+    const persist = opts.auto ? rosterPhotoPersist : !!(persistBox && persistBox.checked);
+    replaceRosterPhotoEntries(usable);
     rosterPhotoPersist = persist;
     if (persist) savePhotoRosterToDevice();
-    else clearRosterPhotoStorageOnly();
+    else if (!opts.auto) clearRosterPhotoStorageOnly();
     renderRosterPhotoSaved();
-    showToast(`✅ 사진 명단 ${usable.length}척을 반영했습니다. 이제 이름으로 찾을 수 있습니다.${persist ? " (내 기기에 저장됨)" : " (탭을 닫으면 사라짐)"}`);
+    // 이전 사진으로 조회한 결과가 화면에 그대로 남지 않도록 지우고, 검색어가 있으면 다시 조회합니다.
+    rosterFinderResults = [];
+    const resultsEl = document.getElementById("rosterFinderResults");
+    if (resultsEl) resultsEl.innerHTML = "";
+    if (previousCount > 0) {
+        showToast(`✅ 사진 명단을 ${usable.length}척으로 바꿨습니다. (이전 명단 ${previousCount}척은 지웠습니다)`);
+    } else {
+        showToast(`✅ 사진 명단 ${usable.length}척을 반영했습니다. 이제 이름으로 찾을 수 있습니다.${persist ? " (내 기기에 저장됨)" : ""}`);
+    }
     trackAppEvent("actions", "roster_photo_applied");
     const query = String(document.getElementById("rosterFinderInput")?.value || "").trim();
     if (query) searchRosterVessels();
+}
+
+/** 날짜·선박명이 확실한 줄이 있으면 사진 인식 직후 바로 반영합니다. */
+function autoApplyRosterPhotoRows() {
+    const usable = rosterPhotoParsedRows.filter(r => r && r.vessel && /^\d{4}-\d{2}-\d{2}$/.test(String(r.date || "")));
+    if (!usable.length) return false;
+    applyRosterPhotoRoster({ auto: true });
+    return true;
 }
 
 /** 저장된 명단만 지우고, 이번 세션에 만든 명단은 유지합니다. */

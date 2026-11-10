@@ -144,7 +144,7 @@ test('사진 명단 병합: 같은 날짜·같은 배는 최신 정보로 덮어
     assert.equal(merged[0].source, 'photo');
 });
 
-test('사진 명단이 기본 명단보다 우선하고 중복 배정을 만들지 않는다', () => {
+test('사진 명단이 기본 명단보다 우선하고, 같은 날짜의 기본 명단은 쓰지 않는다', () => {
     const context = vm.createContext({
         console,
         localStorage: { _s: {}, getItem(k) { return this._s[k] ?? null; }, setItem(k, v) { this._s[k] = String(v); } }
@@ -159,10 +159,42 @@ test('사진 명단이 기본 명단보다 우선하고 중복 배정을 만들�
     const carter = all.filter(a => a.vessel === 'PRESIDENT CARTER' && a.date === '2026-11-11');
     assert.equal(carter.length, 1, '같은 날짜·같은 배가 두 번 들어가면 안 됩니다');
     assert.equal(carter[0].workers.length, 1, '사진 명단(최신)이 우선해야 합니다');
-    // 사진 명단에 없는 기본 선박은 그대로 남는다
+    // 새 사진으로 그 날짜를 올렸다면, 그 날짜의 기본(전사) 명단은 결과에서 빠진다
+    const nov11Base = all.filter(a => a.date === '2026-11-11' && a.vessel !== 'PRESIDENT CARTER');
+    assert.equal(nov11Base.length, 0, '같은 날짜 기본 명단이 섞이면 예전 근무가 계속 보입니다');
+    // 사진 명단이 없는 다른 날짜의 기본 선박은 그대로 남는다 (fallback 유지)
     assert.ok(all.some(a => a.vessel === 'YM WAYFINDER'));
-    // 사진 명단의 CARTER + 기본 명단의 PANAMA = 2척
-    assert.equal(vm.runInContext('findRosterAssignmentsByWorker("이춘학").length', context), 2);
+    assert.equal(vm.runInContext('findRosterAssignmentsByWorker("이춘학").length', context), 1);
+});
+
+test('새 사진 명단은 이전 사진 명단을 교체한다 (병합 아님)', () => {
+    const context = vm.createContext({ console });
+    vm.runInContext('let rosterPhotoEntries = [];', context);
+    for (const fn of ['normalizeRosterWorkerName', 'normalizeRosterVesselKey', 'normalizeRosterPhotoEntry',
+        'mergeRosterPhotoEntries', 'replaceRosterPhotoEntries', 'getPhotoRosterEntries']) {
+        vm.runInContext(extractFunction(fn), context);
+    }
+    vm.runInContext('replaceRosterPhotoEntries([{ date: "2026-11-11", vessel: "OLD SHIP", workers: ["이춘학"] }])', context);
+    assert.equal(vm.runInContext('getPhotoRosterEntries().length', context), 1);
+    vm.runInContext('replaceRosterPhotoEntries([{ date: "2026-11-12", vessel: "NEW SHIP", workers: ["이춘학"] }])', context);
+    const entries = vm.runInContext('JSON.parse(JSON.stringify(getPhotoRosterEntries()))', context);
+    assert.equal(entries.length, 1, '이전 사진 명단이 남으면 예전 근무가 결과로 나옵니다');
+    assert.equal(entries[0].vessel, 'NEW SHIP');
+    // 같은 사진을 두 번 반영해도 중복되지 않는다
+    vm.runInContext('replaceRosterPhotoEntries([{ date: "2026-11-12", vessel: "NEW SHIP", workers: ["이춘학"] }])', context);
+    assert.equal(vm.runInContext('getPhotoRosterEntries().length', context), 1);
+});
+
+test('새 사진을 고르면 이전 인식 결과·검토 줄이 지워지고, 인식 직후 자동 반영된다', () => {
+    const onSelect = extractFunction('handleRosterPhotoSelected');
+    assert.ok(onSelect.includes('rosterPhotoParsedRows = []'), '이전 검토 줄을 비워야 합니다');
+    assert.ok(onSelect.includes('rosterPhotoOcrText = ""'), '이전 인식 글자를 비워야 합니다');
+    assert.ok(onSelect.includes('rosterPhotoRows'), '이전 검토 줄 UI 를 지워야 합니다');
+    const parseFromBox = extractFunction('parseRosterPhotoTextFromBox');
+    assert.ok(parseFromBox.includes('autoApplyRosterPhotoRows'), '인식 직후 바로 반영해야 예전 명단으로 검색되지 않습니다');
+    const apply = extractFunction('applyRosterPhotoRoster');
+    assert.ok(apply.includes('replaceRosterPhotoEntries'), '반영은 병합이 아니라 교체여야 합니다');
+    assert.ok(apply.includes('rosterFinderResults'), '이전 검색 결과를 비워야 합니다');
 });
 
 test('프라이버시: 사진은 서버로 보내지 않고 기기에서만 처리한다', () => {
