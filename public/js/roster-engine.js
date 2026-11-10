@@ -62,6 +62,11 @@ function rosterAssignmentKey(row) {
     return `${String(row?.date || "")}|${normalizeRosterVesselKey(row?.vessel)}`;
 }
 
+/** 같은 날짜·선박 안에서 같은 작업자일 때만 같은 배정으로 봅니다. */
+function rosterWorkerAssignmentKey(row, worker) {
+    return `${rosterAssignmentKey(row)}|${normalizeRosterWorkerName(worker)}`;
+}
+
 function normalizeRosterAssignment(row, source) {
     const vessel = String(row?.vessel || "").trim();
     if (!vessel) return null;
@@ -131,7 +136,14 @@ function getAllRosterAssignments() {
             const row = normalizeRosterAssignment(raw, raw?.source);
             if (!row || !row.workers.length) continue;
             const key = rosterAssignmentKey(row);
-            if (!assignments.has(key)) assignments.set(key, row);
+            const existing = assignments.get(key);
+            if (!existing) {
+                assignments.set(key, row);
+                continue;
+            }
+            // 같은 선박의 다른 작업자는 별도 배정입니다. 한 선박 카드에 모두 보존하되,
+            // 같은 이름만 정규화해 한 번으로 합칩니다.
+            assignments.set(key, { ...existing, workers: mergeWorkers(existing.workers, row.workers) });
         }
     }
     return [...assignments.values()];
@@ -567,8 +579,18 @@ function addRosterExtraEntry() {
         showToast("작업자 이름·선박명·날짜를 모두 입력해 주세요.");
         return;
     }
+    const entry = normalizeRosterAssignment({ date, vessel, workers: [worker] }, "manual");
+    if (!entry) return showToast("⚠️ 유효한 작업자 이름과 선박명을 입력해 주세요.");
+    const workerAssignmentKey = rosterWorkerAssignmentKey(entry, entry.workers[0]);
     const entries = getRosterExtraEntries();
-    entries.push(normalizeRosterAssignment({ date, vessel, workers: [worker] }, "manual"));
+    const duplicate = entries.some((saved) => saved.workers.some((savedWorker) =>
+        rosterWorkerAssignmentKey(saved, savedWorker) === workerAssignmentKey
+    ));
+    if (duplicate) {
+        showToast(`⚠️ ${worker}은(는) ${vessel} ${date} 배정에 이미 있습니다.`);
+        return;
+    }
+    entries.push(entry);
     if (!saveRosterExtraEntries(entries)) return showToast("⚠️ 이 기기에 명단을 저장하지 못했습니다.");
     ["rosterExtraWorker", "rosterExtraVessel", "rosterExtraDate"].forEach((id) => { const input = rosterElement(id); if (input) input.value = ""; });
     renderRosterExtraList();
@@ -741,7 +763,9 @@ function mergeRosterPhotoEntries(rows) {
             positions.set(key, output.length);
             output.push(row);
         } else {
-            output[index] = row;
+            // 최신 선박 정보는 반영하되, 다른 작업자를 지우지 않습니다.
+            // 같은 선박의 같은 이름만 정규화하여 한 번으로 유지합니다.
+            output[index] = { ...row, workers: mergeWorkers(output[index].workers, row.workers) };
         }
     }
     return output;
