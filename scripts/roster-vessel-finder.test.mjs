@@ -44,6 +44,24 @@ test('시작용 명단은 작업자와 선박명으로 같은 배정을 찾는�
     assert.equal(roster.run('findRosterAssignmentsByVessel("PRESIDENTCARTER").length'), 1);
 });
 
+test('이름 일부를 검색하면 그 이름이 들어간 모든 배정을 한 번에 반환한다', () => {
+    const matches = JSON.parse(JSON.stringify(roster.run('findRosterAssignmentsByWorker("김근우")')));
+    assert.equal(matches.length, 5, '김근우와 김근우1이 들어간 5척을 모두 보여야 합니다');
+    assert.deepEqual(matches.map((row) => row.vessel).sort(), ['CMA CGM AUSTRAL', 'CMA CGM PANAMA', 'PRESIDENT CARTER', 'ULTIMA', 'YM WAYFINDER']);
+
+    // 작업자·선박명 양쪽에서 나온 결과는 모두 합치되, 같은 배정은 한 번만 보입니다.
+    const unionRoster = createRosterVm();
+    unionRoster.run(`rosterRuntime.photoAssignments = mergeRosterPhotoEntries([
+        { date: '2026-11-12', vessel: '김성원호', workers: ['김성원'] },
+        { date: '2026-11-12', vessel: '다른 선박', workers: ['김성원'] },
+        { date: '2026-11-13', vessel: '김성원2호', workers: ['다른 작업자'] }
+    ]);`);
+    const combined = JSON.parse(JSON.stringify(unionRoster.run('findAllRosterAssignments("김성원")')));
+    assert.equal(combined.assignments.length, 3, '작업자 2척과 선박명 2척의 합집합에서 겹친 1척은 한 번만 보여야 합니다');
+    assert.deepEqual(combined.assignments.map((row) => row.vessel).sort(), ['김성원2호', '김성원호', '다른 선박']);
+    assert.equal(combined.mode, '작업자·선박');
+});
+
 test('사진 명단 모드에서는 시작용 명단을 완전히 제외하고 사진 명단만 우선한다', () => {
     const vmRoster = createRosterVm();
     vmRoster.run(`rosterRuntime.photoAssignments = mergeRosterPhotoEntries([
@@ -117,6 +135,7 @@ test('화면은 기존 근무배치 카드와 검색·직접 추가·PIN 진입�
     assert.match(html, /onclick="focusRosterFinder\(\)"/);
     assert.match(engine, /const ROSTER_FINDER_BETA_LOCK = true;/);
     assert.match(engine, /openWorkLogPinModal/);
+    assert.match(engine, /const match = findAllRosterAssignments\(query\);/);
     assert.match(engine, /collectRosterSchedules/);
     assert.match(engine, /requestId !== rosterRuntime\.requestId/);
 });

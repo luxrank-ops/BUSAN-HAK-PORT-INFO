@@ -137,11 +137,16 @@ function getAllRosterAssignments() {
     return [...assignments.values()];
 }
 
+/**
+ * 작업자 검색은 정확한 이름뿐 아니라 입력한 글자가 포함된 이름도 찾습니다.
+ * 예: "김근우" → "김근우"와 "김근우1" 배정을 모두 반환합니다.
+ */
 function findRosterAssignmentsByWorker(query) {
     const key = normalizeRosterWorkerName(query);
-    return key ? getAllRosterAssignments().filter((row) =>
-        row.workers.some((worker) => normalizeRosterWorkerName(worker) === key)
-    ) : [];
+    if (!key) return [];
+    return getAllRosterAssignments().filter((row) =>
+        row.workers.some((worker) => normalizeRosterWorkerName(worker).includes(key))
+    );
 }
 
 function findRosterAssignmentsByVessel(query) {
@@ -150,6 +155,20 @@ function findRosterAssignmentsByVessel(query) {
         const vesselKey = normalizeRosterVesselKey(row.vessel);
         return vesselKey === key || vesselKey.includes(key) || key.includes(vesselKey);
     }) : [];
+}
+
+/** 작업자·선박명 두 검색 결과를 합쳐 날짜·선박 단위로 한 번만 표시합니다. */
+function findAllRosterAssignments(query) {
+    const workerMatches = findRosterAssignmentsByWorker(query);
+    const vesselMatches = findRosterAssignmentsByVessel(query);
+    const unique = new Map();
+    [...workerMatches, ...vesselMatches].forEach((assignment) => {
+        unique.set(rosterAssignmentKey(assignment), assignment);
+    });
+    return {
+        assignments: [...unique.values()],
+        mode: workerMatches.length && vesselMatches.length ? "작업자·선박" : (workerMatches.length ? "작업자" : "선박")
+    };
 }
 
 function dedupeVesselNameList(names) {
@@ -350,9 +369,10 @@ async function searchRosterVessels() {
     if (!query) return showToast("작업자 이름 또는 선박명을 입력해 주세요.");
     if (!output) return;
 
-    const workerMatches = findRosterAssignmentsByWorker(query);
-    const assignments = workerMatches.length ? workerMatches : findRosterAssignmentsByVessel(query);
-    const mode = workerMatches.length ? "작업자" : "선박";
+    // 한 검색어가 작업자와 선박명 양쪽에 걸려도 어느 한쪽을 버리지 않습니다.
+    // 따라서 이름이 들어간 모든 배정 선박을 결과 카드에 보여 줍니다.
+    const match = findAllRosterAssignments(query);
+    const { assignments, mode } = match;
     if (!assignments.length) {
         rosterRuntime.finderResults = [];
         output.innerHTML = describeNoRosterMatch(query);
