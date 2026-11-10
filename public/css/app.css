@@ -1638,8 +1638,56 @@
         align-items: center;
         justify-content: space-between;
         gap: var(--sp-6);
-        flex-wrap: wrap;
+        flex-wrap: nowrap;
+        cursor: pointer;
+        user-select: none;
+        touch-action: manipulation;
     }
+    .work-hours-head:active { filter: brightness(0.98); }
+    .work-hours-head-side {
+        display: inline-flex;
+        align-items: center;
+        gap: var(--sp-5);
+        flex-shrink: 0;
+    }
+    .work-hours-head-total {
+        font-size: var(--fs-3);
+        font-weight: var(--fw-black);
+        color: var(--blue-700);
+        background: var(--n-000);
+        border: 1.5px solid var(--blue-300);
+        border-radius: var(--radius-pill);
+        padding: var(--sp-2) var(--sp-6);
+        line-height: var(--lh-3);
+        white-space: nowrap;
+        font-variant-numeric: tabular-nums;
+    }
+    body.dark-mode .work-hours-head-total {
+        background: var(--n-900);
+        border-color: var(--blue-600);
+        color: var(--blue-300);
+    }
+    .work-hours-chevron {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 26px;
+        height: 26px;
+        border-radius: var(--radius-md);
+        background: var(--n-000);
+        border: 1.5px solid var(--blue-300);
+        color: var(--blue-700);
+        font-size: var(--fs-2);
+        line-height: var(--lh-1);
+        transition: transform var(--dur-200) ease;
+    }
+    body.dark-mode .work-hours-chevron {
+        background: var(--n-900);
+        border-color: var(--blue-600);
+        color: var(--blue-300);
+    }
+    .work-hours-box:not(.is-collapsed) .work-hours-chevron { transform: rotate(180deg); }
+    .work-hours-body { margin-top: var(--sp-7); }
     .work-hours-title {
         font-size: var(--fs-6);
         font-weight: var(--fw-black);

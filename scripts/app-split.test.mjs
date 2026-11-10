@@ -77,9 +77,10 @@ test('service-worker.js 프리캐시와 HTML 의 css/js 참조가 1:1 로 일치
     }
 });
 
-test('index.html 이 마크업만 담고(175KB 선) 전역 로직은 app.js 가 담고 있다', () => {
-    // 분리 전 index.html 은 830KB 였습니다. 마크업만 남으면 200KB 를 넘어서면 안 됩니다.
-    assert.ok(Buffer.byteLength(html, 'utf8') < 200_000,
+test('index.html 이 마크업만 담고(210KB 선) 전역 로직은 app.js 가 담고 있다', () => {
+    // 분리 전 index.html 은 830KB 였습니다. 마크업만 남으면 210KB 를 넘어서면 안 됩니다.
+    // (2026-11-10: 근무배치 자동 기입 블럭·근무시간 통계 블럭 마크업 추가로 상한을 200KB → 210KB 로 조정)
+    assert.ok(Buffer.byteLength(html, 'utf8') < 210_000,
         `index.html 이 ${Buffer.byteLength(html, 'utf8')}B 로 너무 큽니다 — 인라인 코드가 다시 들어온 것 같습니다.`);
     assert.ok(appAll.length > Buffer.byteLength(html, 'utf8'), '전역 로직은 app.js 쪽에 더 많이 있어야 합니다');
 });

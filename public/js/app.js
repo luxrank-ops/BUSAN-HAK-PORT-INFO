@@ -6869,6 +6869,12 @@ function renderWorkHourStats(stats, meta) {
     const weNight = Number(s.weekendNightHours) || 0;
     const hShort = (v) => `${roundWorkHours1(v).toLocaleString("ko-KR")}`;
 
+    // 접힌 상태에서도 총 시간을 볼 수 있게 헤더에 요약을 씁니다.
+    const headTotal = !currentWorkerId
+        ? "로그인 필요"
+        : `총 ${formatWorkHourValue(s.totalHours)}${s.days > 0 ? ` · ${s.days}일` : ""}`;
+    setText("workHourStatsHeadTotal", headTotal);
+
     setText("whStatTotal", formatWorkHourValue(s.totalHours));
     setText("whStatTotalSub", `근무 ${s.days}일`);
     setText("whStatWeekday", formatWorkHourValue(s.weekdayHours));
@@ -6977,6 +6983,37 @@ async function refreshWorkHourStats(options) {
     const stats = buildWorkHourStats(fetched || loaded);
     workHourStatsCache[cacheKey] = { stats, offline };
     renderWorkHourStats(stats, { period, title: range.title, label: range.label, offline });
+}
+
+/* 📖 근무시간 통계 블럭 펼침/접힘 — 기본은 접힘, 헤더(블럭)를 누르면 펼쳐집니다. */
+function syncWorkHourStatsAria() {
+    const box = document.getElementById("workHourStatsBox");
+    const header = document.getElementById("workHourStatsHeader");
+    const body = document.getElementById("workHourStatsBody");
+    const expanded = Boolean(box && !box.classList.contains("is-collapsed"));
+    if (header) header.setAttribute("aria-expanded", expanded ? "true" : "false");
+    if (body) body.classList.toggle("hidden", !expanded);
+}
+
+function setWorkHourStatsExpanded(expanded) {
+    const box = document.getElementById("workHourStatsBox");
+    if (!box) return;
+    box.classList.toggle("is-collapsed", !expanded);
+    syncWorkHourStatsAria();
+    if (!expanded) return;
+    // 펼칠 때 최신 값으로 한 번 더 맞춥니다(캐시가 있으면 즉시).
+    if (typeof refreshWorkHourStats === "function") refreshWorkHourStats();
+    if (typeof trackAppEvent === "function") trackAppEvent("blocks", "workHourStatsBox");
+}
+
+function openWorkHourStats() {
+    setWorkHourStatsExpanded(true);
+}
+
+function toggleWorkHourStats() {
+    const box = document.getElementById("workHourStatsBox");
+    if (!box) return;
+    setWorkHourStatsExpanded(box.classList.contains("is-collapsed"));
 }
 
 function setWorkHourStatsPeriod(period) {
