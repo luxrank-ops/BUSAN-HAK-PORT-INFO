@@ -801,6 +801,18 @@ function replaceRosterPhotoEntries(rows) {
     return getPhotoRosterEntries();
 }
 
+/**
+ * 여러 장의 오더 사진을 차례로 읽어도 앞 사진의 다른 선박을 지우지 않습니다.
+ * 같은 날짜·선박은 최신 정보에 작업자 명단을 합쳐 갱신합니다.
+ */
+function appendRosterPhotoEntries(rows) {
+    rosterRuntime.photoAssignments = mergeRosterPhotoEntries([
+        ...rosterRuntime.photoAssignments,
+        ...(rows || [])
+    ]);
+    return getPhotoRosterEntries();
+}
+
 function savePhotoRosterToDevice() {
     if (!safelyWriteRosterStorage(ROSTER_STORAGE.photo, rosterRuntime.photoAssignments)) return false;
     try { localStorage.setItem(ROSTER_STORAGE.persist, "1"); } catch (error) { return false; }
@@ -1002,7 +1014,7 @@ function renderRosterPhotoRows(warnings) {
         <label class="roster-photo-row-workers">작업자 (${row.workers.length}명)<textarea rows="2" onchange="updateRosterPhotoRow(${index}, 'workers', this.value)">${escapeShipCommentHtml(row.workers.join(", "))}</textarea></label>
         <button type="button" class="roster-photo-row-del" onclick="removeRosterPhotoRow(${index})">이 줄 삭제</button>
     </div>`).join("");
-    container.innerHTML = `${warningHtml}${rows}<label class="roster-photo-persist"><input type="checkbox" id="rosterPhotoPersist"${rosterRuntime.persistPhotoText ? " checked" : ""}> 이 명단을 내 기기에 저장 (사진은 저장하지 않습니다)</label><button type="button" class="roster-photo-apply-btn" onclick="applyRosterPhotoRoster()">✅ 이 명단으로 검색하기 (${rosterRuntime.reviewRows.length}척)</button>`;
+    container.innerHTML = `${warningHtml}${rows}<label class="roster-photo-persist"><input type="checkbox" id="rosterPhotoPersist"${rosterRuntime.persistPhotoText ? " checked" : ""}> 이 명단을 내 기기에 저장 (사진은 저장하지 않습니다)</label><button type="button" class="roster-photo-apply-btn" onclick="applyRosterPhotoRoster()">✅ 현재 검색 명단에 합치기 (${rosterRuntime.reviewRows.length}척)</button>`;
 }
 
 function updateRosterPhotoRow(index, field, value) {
@@ -1034,7 +1046,9 @@ function applyRosterPhotoRoster(options) {
     }
     const before = rosterRuntime.photoAssignments.length;
     rosterRuntime.photoModeEngaged = true;
-    replaceRosterPhotoEntries(usable);
+    // 새 사진은 현재 명단에 합칩니다. 같은 날짜·선박만 최신 사진으로 갱신되고,
+    // 다른 선박은 유지되어 한 작업자의 모든 배정을 검색할 수 있습니다.
+    appendRosterPhotoEntries(usable);
     const persistCheck = rosterElement("rosterPhotoPersist");
     const persist = (options || {}).automatic ? rosterRuntime.persistPhotoText : Boolean(persistCheck?.checked);
     if (persist) savePhotoRosterToDevice();
@@ -1048,7 +1062,10 @@ function applyRosterPhotoRoster(options) {
     clearRosterSearchResult();
     renderRosterPhotoSaved();
     if (!(options || {}).automatic) {
-        showToast(before ? `✅ 사진 명단을 ${usable.length}척으로 교체했습니다.` : `✅ 사진 명단 ${usable.length}척을 적용했습니다.${persist ? " (이 기기에 저장됨)" : ""}`);
+        const total = rosterRuntime.photoAssignments.length;
+        showToast(before
+            ? `✅ 사진 명단 ${usable.length}척을 합쳤습니다. 현재 ${total}척을 검색합니다.${persist ? " (이 기기에 저장됨)" : ""}`
+            : `✅ 사진 명단 ${total}척을 적용했습니다.${persist ? " (이 기기에 저장됨)" : ""}`);
         trackAppEvent?.("actions", "roster_photo_applied");
         if (rosterElement("rosterFinderInput")?.value.trim()) searchRosterVessels();
     }

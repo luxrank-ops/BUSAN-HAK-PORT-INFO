@@ -105,7 +105,9 @@ test('사진 명단은 같은 선박·같은 이름만 합치고, 같은 이름�
     assert.equal(rows[1].vessel, 'CMA CGM PANAMA');
     assert.equal(rows[2].date, '2026-11-12');
 
-    photo.run('replaceRosterPhotoEntries([{ date: "2026-11-11", vessel: "PRESIDENT CARTER", workers: ["이춘학"] }]); savePhotoRosterToDevice()');
+    photo.run('replaceRosterPhotoEntries([{ date: "2026-11-11", vessel: "PRESIDENT CARTER", workers: ["이춘학"] }]); appendRosterPhotoEntries([{ date: "2026-11-11", vessel: "CMA CGM PANAMA", workers: ["이춘학"] }]); savePhotoRosterToDevice()');
+    const accumulated = JSON.parse(JSON.stringify(photo.run('getPhotoRosterEntries()')));
+    assert.deepEqual(accumulated.map((row) => row.vessel), ['PRESIDENT CARTER', 'CMA CGM PANAMA']);
     assert.ok(photo.data.busanPortRosterPhoto.includes('PRESIDENT CARTER'));
     assert.ok(!photo.data.busanPortRosterPhoto.includes('data:image'));
     assert.equal(photo.data.busanPortRosterPhotoPersist, '1');
@@ -132,6 +134,7 @@ test('화면은 카메라·갤러리·수정·기기저장 UI를 그대로 제�
     assert.match(html, /id="rosterPhotoGalleryInput" accept="image\/\*"/);
     assert.ok(html.includes('서버로 전송되지 않고'));
     assert.ok(html.includes('사진 자체는 저장하지 않습니다'));
+    assert.ok(html.includes('여러 장을 읽으면 선박 명단을 합치며'));
     assert.match(html, /parseRosterPhotoTextFromBox\(\)/);
     assert.match(engine, /function applyRosterPhotoRoster\(/);
 });
