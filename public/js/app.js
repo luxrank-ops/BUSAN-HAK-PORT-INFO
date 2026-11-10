@@ -4745,18 +4745,16 @@ const PHOTO_ROSTER_20261110 = [
 ];
 const ROSTER_EXTRA_STORAGE_KEY = "busanPortRosterExtra";
 
-/* 🔓 사진 명단(이름으로 선박 찾기) — 2026-11-10 부터 전체 공개 (PIN 잠금 해제)
- *   · 이제 비밀번호 없이 누구나 바로 사용할 수 있습니다.
- *   · 다시 잠그고 싶을 때는 아래 ROSTER_FINDER_BETA_LOCK 을 true 로 되돌리면
- *     기존 잠금 배너·PIN 확인 흐름(기본 9445, 서버 SCREEN_LOCK_PIN)이 그대로 살아납니다.
+/* 🔒 근무배치(오더 종이) 기능은 테스트가 끝날 때까지 PIN 잠금 상태로 유지합니다.
+ *   잠금은 기존 근무일지 PIN 모달/서버 검증(SCREEN_LOCK_PIN)을 사용합니다.
  */
-const ROSTER_FINDER_BETA_LOCK = false;
+const ROSTER_FINDER_BETA_LOCK = true;
 const ROSTER_FINDER_UNLOCK_KEY = "rosterFinderBetaUnlocked";
 
 /** 사진 명단 기능을 지금 쓸 수 있는지 (잠금이 꺼져 있거나, 근무일지 잠금/전용 잠금을 푼 상태) */
 function isRosterFinderUnlocked() {
     if (!ROSTER_FINDER_BETA_LOCK) return true;
-    if (typeof isWorkLogUnlocked !== "undefined" && isWorkLogUnlocked) return true;
+    // 근무일지 잠금 해제 상태와 분리: 테스트 중에는 이 기능도 별도로 PIN 입력을 요구합니다.
     return readSessionValue(ROSTER_FINDER_UNLOCK_KEY) === "1";
 }
 

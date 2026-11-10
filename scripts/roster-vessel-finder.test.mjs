@@ -57,6 +57,13 @@ function setupFinder(extraEntries = [], photoEntries = [], photoSessionActive = 
 
 const finder = setupFinder();
 
+test('근무배치(오더 종이) 기능은 테스트 완료 전까지 기존 PIN 잠금 상태다', () => {
+    assert.match(appJs, /const ROSTER_FINDER_BETA_LOCK = true;/);
+    assert.match(extractFunction('isRosterFinderUnlocked'), /ROSTER_FINDER_BETA_LOCK/);
+    assert.match(extractFunction('syncRosterFinderLockUI'), /rosterFinderLockBanner/);
+    assert.match(extractFunction('unlockRosterFinder'), /openWorkLogPinModal/);
+});
+
 test('사진 명단이 7척으로 전사되어 있다', () => {
     assert.equal(finder.PHOTO_ROSTER_20261110.length, 7);
     const vessels = finder.PHOTO_ROSTER_20261110.map(a => a.vessel);
@@ -347,8 +354,8 @@ test('잠금 로직: 잠금 플래그·해제 저장 키·동기화 함수가 �
     for (const fn of ['isRosterFinderUnlocked', 'syncRosterFinderLockUI', 'unlockRosterFinder']) {
         assert.ok(extractFunction(fn).length > 0, `missing function ${fn}`);
     }
-    // 2026-11-10 전체 공개: 잠금 플래그는 false (비밀번호 없이 사용)
-    assert.match(appJs, /const ROSTER_FINDER_BETA_LOCK = false;/);
+    // 테스트가 끝날 때까지 다시 잠금: PIN 배너를 표시하고 비밀번호 입력을 요구
+    assert.match(appJs, /const ROSTER_FINDER_BETA_LOCK = true;/);
     // 다시 잠글 때를 대비해 PIN 흐름 자체는 남겨 둔다
     assert.ok(appJs.includes('function unlockRosterFinder'));
     assert.match(appJs, /const ROSTER_FINDER_UNLOCK_KEY = "rosterFinderBetaUnlocked";/);
@@ -391,8 +398,14 @@ test('잠금 동작: 숨김/표시 토글이 상태에 맞게 동작한다', () 
     assert.equal(bannerEl.classes.has('hidden'), false, 'banner visible when locked');
     assert.equal(panelEl.classes.has('hidden'), true, 'panel hidden when locked');
 
-    // 근무일지 잠금을 푼 상태(같은 PIN) → 배너 숨김 / 패널 표시
+    // 근무일지 잠금이 풀려 있어도 별도 잠금은 유지
     context.isWorkLogUnlocked = true;
+    assert.equal(vm.runInContext('syncRosterFinderLockUI()', context), false);
+    assert.equal(bannerEl.classes.has('hidden'), false);
+    assert.equal(panelEl.classes.has('hidden'), true);
+
+    // 이 기능에서 PIN 을 직접 입력해 세션 해제하면 패널을 표시
+    context.readSessionValue = () => '1';
     assert.equal(vm.runInContext('syncRosterFinderLockUI()', context), true);
     assert.equal(bannerEl.classes.has('hidden'), true);
     assert.equal(panelEl.classes.has('hidden'), false);
