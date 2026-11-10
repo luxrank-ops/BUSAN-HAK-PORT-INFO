@@ -1540,6 +1540,87 @@
         color: var(--text-sub);
         line-height: var(--lh-7);
     }
+    /* 📋 근무배치(오더 종이) 자동 기입 — 메인 화면 독립 펼침 블럭 */
+    .roster-deck-card {
+        margin-bottom: var(--sp-12);
+        border: 2px solid var(--blue-300) !important;
+        background: linear-gradient(135deg, var(--blue-50), var(--card-bg));
+    }
+    body.dark-mode .roster-deck-card {
+        border-color: var(--blue-600) !important;
+        background: linear-gradient(135deg, var(--n-800), var(--card-bg));
+    }
+    .roster-deck-card > .dash-header {
+        gap: var(--sp-10);
+        align-items: center;
+        border-radius: var(--radius-xl);
+    }
+    .roster-deck-card > .dash-header:hover { filter: brightness(1.02); }
+    .roster-deck-badge {
+        width: 44px;
+        height: 44px;
+        border-radius: var(--radius-lg);
+        font-size: var(--fs-15);
+        background: linear-gradient(135deg, var(--blue-100), var(--blue-200));
+        border: 1.5px solid var(--blue-300);
+    }
+    .roster-deck-copy {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        justify-content: center;
+        gap: var(--sp-2);
+        flex: 1 1 auto;
+        min-width: 0;
+        text-align: left;
+    }
+    .roster-deck-copy .dash-title {
+        flex: 0 0 auto;
+        text-align: left;
+        color: var(--primary);
+        line-height: var(--lh-6);
+    }
+    .roster-deck-copy .dash-sub-meta {
+        text-align: left;
+        margin-top: 0;
+        overflow: hidden;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+    }
+    .roster-deck-chevron {
+        flex: 0 0 auto;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 30px;
+        height: 30px;
+        border-radius: var(--radius-md);
+        background: var(--n-000);
+        border: 1.5px solid var(--blue-300);
+        color: var(--blue-700);
+        font-size: var(--fs-3);
+        line-height: var(--lh-1);
+        transition: transform var(--dur-200) ease;
+    }
+    body.dark-mode .roster-deck-chevron {
+        background: var(--n-900);
+        border-color: var(--blue-600);
+        color: var(--blue-300);
+    }
+    .roster-deck-card.expanded { grid-column: 1 / -1; }
+    .roster-deck-card.expanded .roster-deck-chevron { transform: rotate(180deg); }
+    .roster-deck-card.expanded > .dash-header {
+        border-bottom: 2.5px solid var(--blue-600);
+        border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+    }
+    .roster-deck-card > .dash-content { padding-top: var(--sp-10); }
+    .roster-deck-card > .dash-content > .roster-finder-box { margin-top: 0; }
+    @media (max-width: 480px) {
+        .roster-deck-card > .dash-header { gap: var(--sp-6); padding: var(--sp-12) var(--sp-8); }
+        .roster-deck-badge { width: 38px; height: 38px; font-size: var(--fs-13); }
+        .roster-deck-chevron { width: 26px; height: 26px; }
+    }
     /* 🔍 이름으로 선박 찾기 (명단 → 차트·스케줄 → 임금·일지 자동 등록) */
     .roster-finder-box {
         margin-top: var(--sp-8);

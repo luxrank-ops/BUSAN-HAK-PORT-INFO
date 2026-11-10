@@ -135,7 +135,7 @@ test('내 명단 추가 항목이 기본 명단과 합쳐져 조회된다', () =
     assert.equal(withExtra.findRosterAssignmentsByWorker('이춘학').length, 2);
 });
 
-test('화면: 이름으로 선박 찾기 패널은 근무일지 카드에 있고 임금계산기에는 진입 버튼만 있다', () => {
+test('화면: 근무배치(오더 종이) 자동 기입 블럭이 메인 화면(임금계산기·근무일지 밑)에 펼침 형태로 있다', () => {
     for (const id of ['rosterFinderInput', 'rosterFinderResults', 'rosterExtraWorker', 'rosterExtraVessel', 'rosterExtraDate', 'rosterExtraList']) {
         assert.ok(html.includes(`id="${id}"`), `missing #${id}`);
         // 중복 ID 금지 — 패널은 한 곳에만 존재한다
@@ -145,12 +145,50 @@ test('화면: 이름으로 선박 찾기 패널은 근무일지 카드에 있고
     assert.ok(html.includes('focusRosterFinder()'));
     // 전체 등록 버튼은 결과 렌더링 시 동적 생성되므로 app.js 에서 확인
     assert.ok(appJs.includes('registerAllRosterResults()'));
-    // 배치: 패널은 달력 뒤·일지 폼 앞에, 임금계산기에는 진입 버튼
-    const finderIdx = html.indexOf('id="rosterFinderInput"');
-    const calendarIdx = html.indexOf('id="calendarGrid"');
+
+    // 배치: 근무일지 카드 안이 아니라, 임금계산기·근무일지 카드 뒤(선박도감 앞) 메인 블럭
+    const deckIdx = html.indexOf('id="rosterDeckCard"');
+    const logCardIdx = html.indexOf('id="log-card"');
+    const shipsIdx = html.indexOf('data-view-group="ships"');
     const formIdx = html.indexOf('id="dailyLogForm"');
-    assert.ok(calendarIdx < finderIdx && finderIdx < formIdx, 'finder should sit between calendar and dailyLogForm');
+    const finderIdx = html.indexOf('id="rosterFinderInput"');
+    assert.ok(deckIdx > -1, 'missing #rosterDeckCard');
+    assert.ok(logCardIdx < deckIdx && deckIdx < shipsIdx, 'deck block should sit below the wage/log cards on the main screen');
+    assert.ok(formIdx < deckIdx && deckIdx < finderIdx, 'roster panel must no longer sit inside the worklog card');
+    // 근무일지 카드(#workLogArea) 안에 패널이 남아 있지 않아야 한다
+    const workLogAreaIdx = html.indexOf('id="workLogArea"');
+    assert.ok(workLogAreaIdx > -1 && workLogAreaIdx < formIdx);
+    assert.equal(html.slice(workLogAreaIdx, deckIdx).includes('id="rosterFinderInput"'), false, 'panel must be removed from the worklog card');
+
+    // 블럭 이름·펼침(아코디언) 동작
+    assert.ok(html.includes('근무배치(오더 종이) 자동 기입'), 'block title must be 근무배치(오더 종이) 자동 기입');
+    assert.ok(html.includes('onclick="toggleRosterDeck()"'), 'block header should toggle on click');
+    assert.match(html, /id="rosterDeckHeader"[\s\S]{0,400}?aria-expanded="false"/);
+    assert.ok(html.includes('aria-controls="rosterDeckContent"'));
+    assert.ok(html.includes('id="rosterDeckContent"'));
+    // 접힌 상태로 시작 (dash-content 는 CSS 상 display:none)
+    assert.match(html, /id="rosterDeckContent" class="dash-content"/);
+
     assert.ok(html.includes('roster-finder-jump-btn'), 'wage card should keep a jump button');
+});
+
+test('펼침 동작: toggleRosterDeck 가 class·aria·내용 표시를 함께 맞춘다', () => {
+    for (const fn of ['toggleRosterDeck', 'openRosterDeck', 'setRosterDeckExpanded', 'syncRosterDeckAria']) {
+        assert.ok(extractFunction(fn).length > 0, `missing function ${fn}`);
+    }
+    const toggle = extractFunction('toggleRosterDeck');
+    assert.ok(toggle.includes('rosterDeckCard'));
+    assert.ok(toggle.includes('setRosterDeckExpanded'));
+    const setExpanded = extractFunction('setRosterDeckExpanded');
+    assert.ok(setExpanded.includes('expanded'));
+    assert.ok(setExpanded.includes('syncRosterFinderLockUI'), 'unlock banner must sync when the block opens');
+    const aria = extractFunction('syncRosterDeckAria');
+    assert.ok(aria.includes('rosterDeckHeader'));
+    assert.ok(aria.includes('aria-expanded'));
+    // 진입 버튼은 근무일지 카드가 아니라 메인 블럭을 펼친다
+    const focus = extractFunction('focusRosterFinder');
+    assert.ok(focus.includes('rosterDeckCard'), 'focusRosterFinder should open the main deck block');
+    assert.ok(!focus.includes('log-card'), 'focusRosterFinder must not open the worklog card any more');
 });
 
 test('자동 등록 함수가 임금·일지 기존 흐름을 재사용한다', () => {
