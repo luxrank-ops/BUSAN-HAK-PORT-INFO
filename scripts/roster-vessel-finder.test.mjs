@@ -87,6 +87,45 @@ test('직접 추가 명단은 로컬 저장소에서 복원되며 유효하지 �
     assert.equal(vmRoster.run('findRosterAssignmentsByWorker("홍 길 동")[0].vessel'), 'TEST SHIP');
 });
 
+test('작업자 중복은 같은 날짜·선박·이름 조합에서만 막고 다른 선박 배정은 유지한다', () => {
+    const fields = {
+        rosterExtraWorker: { value: '' },
+        rosterExtraVessel: { value: '' },
+        rosterExtraDate: { value: '2026-11-12' }
+    };
+    const toasts = [];
+    const vmRoster = createRosterVm({
+        showToast: (message) => toasts.push(message),
+        document: {
+            getElementById: (id) => fields[id] || null,
+            querySelector: () => null,
+            querySelectorAll: () => []
+        }
+    });
+    vmRoster.run('rosterRuntime.photoModeEngaged = true');
+    const add = (worker, vessel) => {
+        fields.rosterExtraWorker.value = worker;
+        fields.rosterExtraVessel.value = vessel;
+        fields.rosterExtraDate.value = '2026-11-12';
+        vmRoster.run('addRosterExtraEntry()');
+    };
+
+    add('홍길동', 'SHIP ALPHA');
+    add('홍 길 동', '[BNCT] ship alpha'); // 동일 선박·동일 이름: 중복
+    add('홍길동', 'SHIP BRAVO'); // 이름이 같아도 다른 선박: 별도 배정
+    add('김철수', 'SHIP ALPHA'); // 선박이 같아도 다른 이름: 별도 배정
+
+    assert.equal(vmRoster.localStorage.data.busanPortRosterExtra ? JSON.parse(vmRoster.localStorage.data.busanPortRosterExtra).length : 0, 3);
+    assert.ok(toasts.some((message) => message.includes('이미 있습니다')));
+    const assignments = JSON.parse(JSON.stringify(vmRoster.run('getAllRosterAssignments()')));
+    assert.equal(assignments.length, 2);
+    assert.deepEqual(assignments.find((row) => row.vessel === 'SHIP ALPHA').workers, ['홍길동', '김철수']);
+    assert.deepEqual(
+        JSON.parse(JSON.stringify(vmRoster.run('findRosterAssignmentsByWorker("홍길동").map((row) => row.vessel).sort()'))),
+        ['SHIP ALPHA', 'SHIP BRAVO']
+    );
+});
+
 test('전 터미널 대입은 정확 일치를 먼저 찾고 부분 일치는 폴백으로 쓴다', () => {
     const plan = roster.run(`buildRosterVesselPlan([
         { date: '2026-11-11', vessel: 'CMA CGM PANAMA', workers: ['이춘학'] }

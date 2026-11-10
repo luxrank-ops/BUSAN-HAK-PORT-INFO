@@ -68,16 +68,19 @@ test('OCR 결과가 날짜 또는 선박을 찾지 못하면 검토용 경고를
     assert.ok(noVessel.warnings.some((warning) => warning.includes('선박명')));
 });
 
-test('사진 명단은 같은 날짜·선박을 최신 값으로 교체하고 텍스트만 저장한다', () => {
+test('사진 명단은 같은 선박·같은 이름만 합치고, 같은 이름의 다른 선박은 보존한다', () => {
     const photo = createPhotoVm();
     const rows = JSON.parse(JSON.stringify(photo.run(`mergeRosterPhotoEntries([
         { date: '2026-11-11', vessel: 'PRESIDENT CARTER', workers: ['이춘학'] },
         { date: '2026-11-11', vessel: 'president  carter', workers: ['이춘학', '안영준'] },
+        { date: '2026-11-11', vessel: 'CMA CGM PANAMA', workers: ['이춘학'] },
         { date: '2026-11-12', vessel: 'PRESIDENT CARTER', workers: ['김명준'] }
     ])`)));
-    assert.equal(rows.length, 2);
+    assert.equal(rows.length, 3);
     assert.deepEqual(rows[0].workers, ['이춘학', '안영준']);
-    assert.equal(rows[1].date, '2026-11-12');
+    assert.deepEqual(rows[1].workers, ['이춘학']);
+    assert.equal(rows[1].vessel, 'CMA CGM PANAMA');
+    assert.equal(rows[2].date, '2026-11-12');
 
     photo.run('replaceRosterPhotoEntries([{ date: "2026-11-11", vessel: "PRESIDENT CARTER", workers: ["이춘학"] }]); savePhotoRosterToDevice()');
     assert.ok(photo.data.busanPortRosterPhoto.includes('PRESIDENT CARTER'));
