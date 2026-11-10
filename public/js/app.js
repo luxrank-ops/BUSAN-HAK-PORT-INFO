@@ -4745,13 +4745,12 @@ const PHOTO_ROSTER_20261110 = [
 ];
 const ROSTER_EXTRA_STORAGE_KEY = "busanPortRosterExtra";
 
-/* 🔒 사진 명단(이름으로 선박 찾기) 테스트 잠금
- *   대표 계정에서 먼저 검증한 뒤 전체 공개하려고 PIN 잠금을 둡니다.
- *   - 잠금 해제 비밀번호: 기존 화면 잠금 PIN 과 동일 체계(기본 9445, 서버 SCREEN_LOCK_PIN)
- *   - 전체 공개 시 아래 ROSTER_FINDER_BETA_LOCK 을 false 로 바꾸기만 하면 됩니다.
- *   - 한 번 풀면 세션(브라우저 탭) 동안 유지되고, 근무일지 잠금을 푼 경우에도 함께 열립니다.
+/* 🔓 사진 명단(이름으로 선박 찾기) — 2026-11-10 부터 전체 공개 (PIN 잠금 해제)
+ *   · 이제 비밀번호 없이 누구나 바로 사용할 수 있습니다.
+ *   · 다시 잠그고 싶을 때는 아래 ROSTER_FINDER_BETA_LOCK 을 true 로 되돌리면
+ *     기존 잠금 배너·PIN 확인 흐름(기본 9445, 서버 SCREEN_LOCK_PIN)이 그대로 살아납니다.
  */
-const ROSTER_FINDER_BETA_LOCK = true;
+const ROSTER_FINDER_BETA_LOCK = false;
 const ROSTER_FINDER_UNLOCK_KEY = "rosterFinderBetaUnlocked";
 
 /** 사진 명단 기능을 지금 쓸 수 있는지 (잠금이 꺼져 있거나, 근무일지 잠금/전용 잠금을 푼 상태) */
@@ -5209,7 +5208,7 @@ async function registerAllRosterResults() {
 }
 function focusRosterFinder() {
     // 📋 근무배치(오더 종이) 자동 기입은 근무일지 카드 안이 아니라 메인 화면의 독립 펼침 블럭에 있다.
-    // 임금계산기·근무일지에서 진입하면 이 블럭을 펼치고, 테스트 잠금 중이면 PIN 입력을 먼저 요청한다.
+    // 임금계산기·근무일지에서 진입하면 이 블럭을 펼칩니다. (2026-11-10 부터 PIN 잠금 없이 바로 사용)
     const deckCard = document.getElementById("rosterDeckCard");
     if (deckCard && !deckCard.classList.contains("expanded")) {
         if (typeof openRosterDeck === "function") openRosterDeck();
