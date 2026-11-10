@@ -577,8 +577,7 @@
         box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.25) !important;
     }
     .wage-terminal-picker:focus-within,
-    .wage-allowance-card:focus-within,
-    .log-filter-box:focus-within {
+    .wage-allowance-card:focus-within {
         border-color: var(--blue-600) !important;
         box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.16) !important;
     }
@@ -886,14 +885,8 @@
     .calendar-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)) !important; gap: clamp(2px, 1vw, 4px); text-align: center; width: 100%; box-sizing: border-box; }
     .cal-day { padding: var(--sp-8) var(--sp-2); border-radius: var(--radius-sm); background: rgba(255,255,255,0.5); border: 1px solid var(--border); font-weight: var(--fw-extrabold); font-size: clamp(0.9rem, 3.5vw, 1.05rem); cursor: pointer; min-height: 50px; display: flex; flex-direction: column; justify-content: center; align-items: center; box-sizing: border-box; touch-action: manipulation; overflow: hidden; }
     .cal-day.has-data { border: 2px solid var(--success); background: rgba(16, 185, 129, 0.1); }
-    .cal-day.filter-match { border: 2px solid var(--amber-500) !important; background: rgba(245, 158, 11, 0.2) !important; box-shadow: 0 0 8px rgba(245, 158, 11, 0.4); }
-    .cal-day.filter-dim { opacity: 0.35; }
     .cal-dot { width: 6px; height: 6px; background-color: var(--success); border-radius: var(--radius-circle); margin-top: 4px; display: none; }
     .cal-day.has-data .cal-dot { display: block; }
-    .log-filter-box { background: rgba(10, 27, 63, 0.04); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: var(--sp-10); margin-bottom: 12px; }
-    .log-filter-results { margin-top: 10px; max-height: 220px; overflow-y: auto; border-top: 1px dashed var(--border); padding-top: 8px; }
-    .log-filter-item { display: flex; justify-content: space-between; align-items: center; padding: var(--sp-8) var(--sp-10); background: var(--card-bg); border: 1px solid var(--border); border-radius: var(--radius-md); margin-bottom: 6px; cursor: pointer; font-size: var(--fs-7); gap: var(--sp-8); }
-    .log-filter-item:hover { border-color: var(--primary); background: rgba(59, 130, 246, 0.05); }
 
     .leader-badge { font-size: clamp(0.65rem, 2.8vw, 0.85rem); color: white; border-radius: var(--radius-sm); padding: var(--sp-3) var(--sp-2); margin-top: 4px; display: flex; justify-content: center; align-items: center; font-weight: var(--fw-black); white-space: normal !important; word-break: keep-all; overflow-wrap: break-word; line-height: var(--lh-4); width: 98%; max-width: 100%; box-sizing: border-box; text-align: center; margin-left: auto; margin-right: auto; }
     .coworker-badge { font-size: clamp(0.6rem, 2.5vw, 0.75rem); color: var(--blue-900); background: rgba(59, 130, 246, 0.15); border-radius: var(--radius-xs); padding: var(--sp-3) var(--sp-2); margin-top: 3px; width: 98%; max-width: 100%; white-space: normal !important; word-break: keep-all; overflow-wrap: break-word; text-align: center; font-weight: var(--fw-extrabold); line-height: var(--lh-3); box-sizing: border-box; }

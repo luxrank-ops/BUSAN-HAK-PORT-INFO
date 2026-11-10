@@ -2469,8 +2469,7 @@ async function verifyScreenLockPin(pin) {
     return { ok: false, reason: rateLimited ? "rate_limited" : "no_verifier" };
 }
 function syncWorkLogExtraUnlockUI() {
-    // 기간·키워드 검색(잠금 대상)은 2026-11-10 에 근무시간 통계 블럭으로 교체되어
-    // logExtraLockBanner / logExtraFilterContent 가 더 이상 없습니다.
+    // 기간·키워드 검색 UI 는 2026-11-10 에 완전히 삭제되었습니다(근무시간 통계 블럭으로 대체).
     const statsSummary = document.getElementById("monthlyStatsSummary");
     const d3LockBanner = document.getElementById("d3ChartLockBanner");
     const d3ChartSection = document.getElementById("monthlyD3ChartSection");
@@ -2550,7 +2549,7 @@ async function submitWorkLogPin() {
         if (typeof syncRosterFinderLockUI === "function") syncRosterFinderLockUI();
         const callback = pendingWorkLogAction;
         closeWorkLogPinModal();
-        showToast("🔓 추가 기능(검색·상세 통계) 잠금이 해제되었습니다.");
+        showToast("🔓 추가 기능(상세 통계) 잠금이 해제되었습니다.");
         if (typeof callback === "function") callback();
     } else {
         const reason = (result && result.reason) || "invalid_pin";
