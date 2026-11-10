@@ -1758,6 +1758,7 @@
         pointer-events: none;
     }
     .roster-photo-upload,
+    .roster-photo-gallery,
     .roster-photo-ocr-btn,
     .roster-photo-clear-btn,
     .roster-photo-parse-btn,
@@ -1778,7 +1779,17 @@
         background: var(--blue-600);
         color: var(--n-000);
     }
-    .roster-photo-upload.is-busy { opacity: 0.6; pointer-events: none; }
+    .roster-photo-gallery {
+        background: var(--n-000);
+        color: var(--blue-700);
+        border-color: var(--blue-300);
+    }
+    body.dark-mode .roster-photo-gallery {
+        background: rgba(37, 99, 235, 0.10);
+        color: var(--blue-300);
+    }
+    .roster-photo-upload.is-busy,
+    .roster-photo-gallery.is-busy { opacity: 0.6; pointer-events: none; }
     .roster-photo-ocr-btn {
         background: var(--blue-50);
         color: var(--blue-700);

@@ -34,9 +34,9 @@
     <link rel="icon" href="./favicon.ico">
     <link rel="stylesheet" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.8/dist/web/static/pretendard.css" />
     <link rel="manifest" href="./manifest.json">
-    <link rel="stylesheet" href="./css/app.css?v=2027.23">
+    <link rel="stylesheet" href="./css/app.css?v=2027.24">
     <link rel="apple-touch-icon" href="./icon-192.png">
-<script src="./js/notifications.js?v=2027.23"></script></head>
+<script src="./js/notifications.js?v=2027.24"></script></head>
 <body data-app-view="legacy">
 <header>
     <div class="today-visitor-badge-slot" aria-hidden="true"></div>
@@ -454,8 +454,11 @@
                             <small>사진은 <b>서버로 전송되지 않고</b> 이 기기에서만 읽습니다. 사진 자체는 저장하지 않습니다.</small>
                         </div>
                         <div class="roster-photo-actions">
-                            <label id="rosterPhotoUploadLabel" class="roster-photo-upload" for="rosterPhotoInput">📷 사진 선택 / 촬영</label>
+                            <label id="rosterPhotoUploadLabel" class="roster-photo-upload" for="rosterPhotoInput">📷 사진 촬영</label>
                             <input type="file" id="rosterPhotoInput" accept="image/*" capture="environment"
+                                   onchange="handleRosterPhotoSelected(event)">
+                            <label id="rosterPhotoGalleryLabel" class="roster-photo-gallery" for="rosterPhotoGalleryInput">🖼️ 갤러리에서 선택</label>
+                            <input type="file" id="rosterPhotoGalleryInput" accept="image/*"
                                    onchange="handleRosterPhotoSelected(event)">
                             <button type="button" id="rosterPhotoOcrBtn" class="roster-photo-ocr-btn" onclick="runRosterPhotoOcr()" disabled>🔍 사진에서 명단 읽기</button>
                             <button type="button" id="rosterPhotoClearBtn" class="roster-photo-clear-btn" onclick="clearRosterPhoto()" disabled>✖ 사진 지우기</button>
@@ -1904,17 +1907,17 @@
     </div>
 </div>
 
-<script src="./js/app.js?v=2027.23"></script>
+<script src="./js/app.js?v=2027.24"></script>
   
     <!-- [여기서부터 복사] 조장 근무일 비밀번호 검증 스크립트 -->
 <!-- [추가할 보안 및 실행 스크립트] -->
-<script src="./js/leader-access.js?v=2027.23"></script>
+<script src="./js/leader-access.js?v=2027.24"></script>
   <!-- [프로덕션 수준] 파이어베이스 'ships' 컬렉션 전체 데이터 조회 및 검색 모듈 -->
-<script src="./js/ships-board.js?v=2027.23"></script>
+<script src="./js/ships-board.js?v=2027.24"></script>
 
-<script src="./js/tab-views.js?v=2027.23"></script>
-<script src="./js/kkung-relay.js?v=2027.23"></script>
-<script src="./js/want-board.js?v=2027.23"></script>
+<script src="./js/tab-views.js?v=2027.24"></script>
+<script src="./js/kkung-relay.js?v=2027.24"></script>
+<script src="./js/want-board.js?v=2027.24"></script>
 </body>
 </html>
 
