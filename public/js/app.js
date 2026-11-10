@@ -4848,6 +4848,9 @@ function toggleRosterDeck() {
     setRosterDeckExpanded(true);
 }
 let rosterFinderResults = [];
+/** 이 탭에서 사용자가 근무 배치 사진을 골라 명단 읽기 흐름에 들어왔는지.
+ *  들어왔다면 예전 기본(전사) 명단은 이름 검색에서 제외합니다(사진에 없는 배가 나오는 문제 방지). */
+let rosterPhotoSessionActive = false;
 
 function normalizeRosterWorkerName(name) {
     return String(name || "").normalize("NFKC").replace(/[\s\u200B]+/g, "").trim();
@@ -4878,13 +4881,22 @@ function getRosterExtraEntries() {
         return [];
     }
 }
+/**
+ * 기본(전사) 명단(PHOTO_ROSTER_20261110)을 검색 대상에서 빼야 하는 상태인지 알려 줍니다.
+ * 이 명단은 2026-11-10/11 사진을 전사한 '시작용' 데이터라서, 사용자가 자기 사진 명단을
+ * 쓰기 시작하면(반영된 사진 명단이 있거나, 이 탭에서 사진을 골라 명단 읽기를 시도한 경우)
+ * 날짜가 달라도 예전 전사 명단의 배가 검색에 섞이지 않도록 전부 제외합니다.
+ * → 사진에 없는 배(PRESIDENT CARTER 등)가 이름 검색에 나오는 문제(2026-11-11 신고) 해결.
+ */
+function isBuiltinPhotoRosterSuppressed() {
+    if (typeof rosterPhotoSessionActive !== "undefined" && rosterPhotoSessionActive) return true;
+    const photoEntries = typeof getPhotoRosterEntries === "function" ? getPhotoRosterEntries() : [];
+    return Boolean(photoEntries && photoEntries.length > 0);
+}
 function getAllRosterAssignments() {
     // 우선순위: 사진으로 만든 명단 → 직접 추가 명단 → 기본(전사) 명단.
     // 같은 날짜·같은 배는 앞의(최신) 항목만 남겨 중복 배정을 만들지 않습니다.
-    // 새 사진을 올렸는데 그 전 근무가 같이 나오지 않도록, 사진 명단에 있는 '날짜'는
-    // 기본(전사) 명단을 아예 쓰지 않습니다.
-    const photoEntries = getPhotoRosterEntries();
-    const photoDates = new Set((photoEntries || []).map(a => String(a && a.date || "")).filter(Boolean));
+    // 기본(전사) 명단은 아직 내 사진 명단을 쓰기 전(사진을 올리지 않은 상태)에만 더합니다.
     const seen = new Set();
     const merged = [];
     const addAll = (list) => {
@@ -4896,9 +4908,9 @@ function getAllRosterAssignments() {
             merged.push(a);
         });
     };
-    addAll(photoEntries);
+    addAll(getPhotoRosterEntries());
     addAll(getRosterExtraEntries());
-    addAll(PHOTO_ROSTER_20261110.filter(a => !photoDates.has(String(a && a.date || ""))));
+    if (!isBuiltinPhotoRosterSuppressed()) addAll(PHOTO_ROSTER_20261110);
     return merged;
 }
 function findRosterAssignmentsByWorker(workerName) {
@@ -5014,7 +5026,13 @@ async function searchRosterVessels() {
     }
     if (assignments.length === 0) {
         rosterFinderResults = [];
-        resultsEl.innerHTML = `<div class="roster-finder-empty">🔍 '${escapeShipCommentHtml(query)}' 명단에서 찾지 못했습니다. 이름 철자(예: 이춘학) 또는 선박명(예: PRESIDENT CARTER)으로 다시 입력하거나, 아래 '내 명단 추가'로 배정을 등록해 주세요.</div>`;
+        // 내 사진 명단 사용 중에는 예전 기본(전사) 명단이 제외된다는 사실을 알려 줘야
+        // "사진에 없는 배가 안 나온다"는 오해 없이 다음 행동(명단 수정 · 직접 추가)으로 이어집니다.
+        const excludedBuiltin = typeof isBuiltinPhotoRosterSuppressed === "function" && isBuiltinPhotoRosterSuppressed();
+        const guide = excludedBuiltin
+            ? " 내 사진 명단을 쓰는 중이라 예전 기본 명단(11/10~11일 사진 전사분)은 찾지 않습니다. 위 검토 표에서 선박명·날짜·이름을 고쳐 [명단으로 변환]을 누르거나, 아래 '내 명단 추가'로 배정을 등록해 주세요."
+            : " 이름 철자(예: 이춘학) 또는 선박명(예: PRESIDENT CARTER)으로 다시 입력하거나, 아래 '내 명단 추가'로 배정을 등록해 주세요.";
+        resultsEl.innerHTML = `<div class="roster-finder-empty">🔍 '${escapeShipCommentHtml(query)}' 명단에서 찾지 못했습니다.${guide}</div>`;
         return;
     }
 
@@ -5624,6 +5642,9 @@ function handleRosterPhotoSelected(event) {
         showToast("⚠️ 사진이 너무 큽니다. 15MB 이하 사진을 골라 주세요.");
         return;
     }
+    // 사진을 고른 순간부터 예전 기본(전사) 명단은 이름 검색에서 제외합니다.
+    // (사진에 없는 배가 결과에 나오는 문제 방지 — 명단이 0척으로 읽혀도 동일)
+    rosterPhotoSessionActive = true;
     releaseRosterPhotoObjectUrl();
     try {
         rosterPhotoObjectUrl = URL.createObjectURL(file);
@@ -5778,7 +5799,10 @@ function renderRosterPhotoRows(warnings) {
     if (!el) return;
     const rows = rosterPhotoParsedRows;
     if (!rows.length) {
-        el.innerHTML = `<div class="roster-photo-empty">명단을 찾지 못했습니다. 선박명(영문)·날짜·이름이 보이게 사진을 다시 찍거나, 위 칸에 직접 적어 주세요.</div>`;
+        const suffix = (typeof rosterPhotoSessionActive !== "undefined" && rosterPhotoSessionActive)
+            ? " 명단을 만들기 전까지 이름 검색에 예전 기본 명단의 배는 나오지 않습니다."
+            : "";
+        el.innerHTML = `<div class="roster-photo-empty">명단을 찾지 못했습니다. 선박명(영문)·날짜·이름이 보이게 사진을 다시 찍거나, 위 칸에 직접 적어 주세요.${suffix}</div>`;
         return;
     }
     const warnHtml = (warnings || []).map(w => `<div class="roster-photo-warn">⚠️ ${escapeShipCommentHtml(w)}</div>`).join("");
@@ -5833,6 +5857,7 @@ function applyRosterPhotoRoster(options) {
     const previousCount = rosterPhotoEntries.length;
     const persistBox = document.getElementById("rosterPhotoPersist");
     const persist = opts.auto ? rosterPhotoPersist : !!(persistBox && persistBox.checked);
+    rosterPhotoSessionActive = true;
     replaceRosterPhotoEntries(usable);
     rosterPhotoPersist = persist;
     if (persist) savePhotoRosterToDevice();
@@ -5904,6 +5929,9 @@ function clearRosterPhoto() {
     releaseRosterPhotoObjectUrl();
     rosterPhotoOcrText = "";
     rosterPhotoParsedRows = [];
+    // 사진 흐름을 완전히 닫으면 기본(전사) 명단 검색을 다시 허용합니다.
+    // 단, 이미 반영된 사진 명단(rosterPhotoEntries)이 남아 있으면 그 명단이 계속 우선합니다.
+    rosterPhotoSessionActive = false;
     const preview = document.getElementById("rosterPhotoPreview");
     if (preview) preview.removeAttribute("src");
     document.getElementById("rosterPhotoPreviewWrap")?.classList.add("hidden");

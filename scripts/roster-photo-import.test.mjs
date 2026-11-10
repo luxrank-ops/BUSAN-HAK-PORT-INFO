@@ -144,15 +144,15 @@ test('사진 명단 병합: 같은 날짜·같은 배는 최신 정보로 덮어
     assert.equal(merged[0].source, 'photo');
 });
 
-test('사진 명단이 기본 명단보다 우선하고, 같은 날짜의 기본 명단은 쓰지 않는다', () => {
+test('사진 명단을 쓰기 시작하면 기본(예전 전사) 명단은 같은 날짜뿐 아니라 전부 빠진다', () => {
     const context = vm.createContext({
         console,
         localStorage: { _s: {}, getItem(k) { return this._s[k] ?? null; }, setItem(k, v) { this._s[k] = String(v); } }
     });
     vm.runInContext(extractDeclaration('PHOTO_ROSTER_20261110') + ';', context);
     vm.runInContext(extractDeclaration('ROSTER_EXTRA_STORAGE_KEY') + ';', context);
-    vm.runInContext('let rosterPhotoEntries = [{ date: "2026-11-11", vessel: "PRESIDENT CARTER", time: "00:00", company: "고려", support: "BNCT 지원", group: "2", workers: ["이춘학"] }];', context);
-    for (const fn of ['normalizeRosterWorkerName', 'normalizeRosterVesselKey', 'getRosterExtraEntries', 'getPhotoRosterEntries', 'getAllRosterAssignments', 'findRosterAssignmentsByWorker']) {
+    vm.runInContext('let rosterPhotoEntries = [{ date: "2026-11-11", vessel: "PRESIDENT CARTER", time: "00:00", company: "고려", support: "BNCT 지원", group: "2", workers: ["이춘학"] }]; let rosterPhotoSessionActive = false;', context);
+    for (const fn of ['normalizeRosterWorkerName', 'normalizeRosterVesselKey', 'getRosterExtraEntries', 'getPhotoRosterEntries', 'isBuiltinPhotoRosterSuppressed', 'getAllRosterAssignments', 'findRosterAssignmentsByWorker']) {
         vm.runInContext(extractFunction(fn), context);
     }
     const all = vm.runInContext('getAllRosterAssignments()', context);
@@ -162,9 +162,12 @@ test('사진 명단이 기본 명단보다 우선하고, 같은 날짜의 기본
     // 새 사진으로 그 날짜를 올렸다면, 그 날짜의 기본(전사) 명단은 결과에서 빠진다
     const nov11Base = all.filter(a => a.date === '2026-11-11' && a.vessel !== 'PRESIDENT CARTER');
     assert.equal(nov11Base.length, 0, '같은 날짜 기본 명단이 섞이면 예전 근무가 계속 보입니다');
-    // 사진 명단이 없는 다른 날짜의 기본 선박은 그대로 남는다 (fallback 유지)
-    assert.ok(all.some(a => a.vessel === 'YM WAYFINDER'));
+    // 사진에 없는 배는 날짜가 달라도 기본(전사) 명단에서 가져오지 않는다
+    // → 이름 검색에 사진에 없는 배(PRESIDENT CARTER·PANAMA 등)가 나오는 문제(2026-11-11 신고) 해결
+    assert.equal(all.some(a => a.vessel === 'YM WAYFINDER'), false, '사진 명단 사용 중에는 다른 날짜의 기본 선박도 빠져야 합니다');
+    assert.equal(all.some(a => a.vessel === 'ULTIMA'), false, '예전 전사 명단 배가 남아 있으면 안 됩니다');
     assert.equal(vm.runInContext('findRosterAssignmentsByWorker("이춘학").length', context), 1);
+    assert.equal(vm.runInContext('findRosterAssignmentsByWorker("김명준").length', context), 0, '사진에 없는 작업자를 기본 명단에서 찾으면 안 됩니다');
 });
 
 test('새 사진 명단은 이전 사진 명단을 교체한다 (병합 아님)', () => {
