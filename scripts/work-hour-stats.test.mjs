@@ -33,7 +33,8 @@ function setupStats() {
     });
     vm.runInContext('let currentWorkerId = "이춘학";', context);
     for (const fn of ['extractWorkLogTimeAndWageMetrics', 'roundWorkHours1', 'buildWorkHourStats',
-        'formatWorkHourValue', 'workHourStatsPercent', 'getWorkHourStatsRange', 'renderWorkHourStats']) {
+        'formatWorkHourValue', 'workHourStatsPercent', 'getWorkHourStatsRange', 'renderWorkHourStats',
+        'syncWorkHourStatsAria', 'setWorkHourStatsExpanded', 'openWorkHourStats', 'toggleWorkHourStats']) {
         vm.runInContext(extractFunction(fn), context);
     }
     return {
@@ -93,7 +94,7 @@ test('화면: 근무일지 카드의 기간·키워드 검색 자리가 근무�
         'workHourStatsPeriodBar',
         'whStatTotalBreak', 'whStatWeekdayBreak', 'whStatDayBreak', 'whStatNightBreak', 'whStatWeekendBreak',
         'whQWeekdayDay', 'whQWeekdayNight', 'whQWeekendDay', 'whQWeekendNight', 'whQuadSum',
-        'whStatQuadrantDetails']) {
+        'whStatQuadrantDetails', 'workHourStatsHeader', 'workHourStatsBody', 'workHourStatsHeadTotal']) {
         assert.ok(html.includes(`id="${id}"`), `missing #${id}`);
         assert.equal(html.split(`id="${id}"`).length - 1, 1, `duplicate #${id}`);
     }
@@ -117,10 +118,37 @@ test('화면: 근무일지 카드의 기간·키워드 검색 자리가 근무�
     assert.ok(statsIdx > 0 && statsIdx < calendarIdx, 'stats block should sit above the calendar');
 });
 
+test('펼침: 근무시간 통계는 접힌 상태로 시작하고 헤더를 누르면 펼쳐진다', () => {
+    // 기본은 접힘 — 블럭에 is-collapsed, 본문에 hidden, 헤더 aria-expanded=false
+    assert.match(html, /id="workHourStatsBox" class="work-hours-box is-collapsed"/);
+    assert.match(html, /id="workHourStatsBody" class="work-hours-body hidden"/);
+    assert.match(html, /id="workHourStatsHeader"[\s\S]{0,300}?aria-expanded="false"/);
+    assert.match(html, /id="workHourStatsHeader"[\s\S]{0,300}?aria-controls="workHourStatsBody"/);
+    assert.ok(html.includes('onclick="toggleWorkHourStats()"'), '헤더 클릭으로 펼침');
+    assert.ok(html.includes("onkeydown=\"if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleWorkHourStats();}\""));
+    // 펼치면 보이는 내용은 전부 본문(#workHourStatsBody) 안에 있어야 한다
+    const bodyStart = html.indexOf('id="workHourStatsBody"');
+    const bodyEnd = html.indexOf('id="workHourStatsNote"', bodyStart);
+    assert.ok(bodyStart > 0 && bodyEnd > bodyStart);
+    for (const inner of ['workHourStatsPeriodBar', 'whStatTotal', 'whStatWeekday', 'whStatDay',
+        'whStatNight', 'whStatWeekend', 'whStatQuadrantDetails']) {
+        const idx = html.indexOf(`id="${inner}"`);
+        assert.ok(idx > bodyStart, `#${inner} 는 접히는 본문 안에 있어야 합니다`);
+    }
+    // 헤더에는 접힌 상태에서도 보이는 요약(총 시간)이 있다
+    const headStart = html.indexOf('id="workHourStatsHeader"');
+    const headEnd = html.indexOf('id="workHourStatsBody"');
+    const headHtml = html.slice(headStart, headEnd);
+    assert.ok(headHtml.includes('id="workHourStatsHeadTotal"'), '헤더 요약(총 시간)');
+    assert.ok(headHtml.includes('work-hours-chevron'), '펼침 표시(▼)');
+});
+
 test('스타일: 근무시간 통계는 디자인 토큰 클래스로만 그린다', () => {
     for (const cls of ['.work-hours-box', '.work-hours-grid', '.work-hours-card', '.work-hours-value',
         '.work-hours-period-btn.is-active', '.work-hours-bar', '.work-hours-note',
-        '.work-hours-break', '.work-hours-quad', '.work-hours-quad-grid', '.work-hours-quad-cell']) {
+        '.work-hours-break', '.work-hours-quad', '.work-hours-quad-grid', '.work-hours-quad-cell',
+        '.work-hours-head', '.work-hours-head-side', '.work-hours-head-total', '.work-hours-chevron',
+        '.work-hours-body', '.work-hours-box:not(.is-collapsed) .work-hours-chevron']) {
         assert.ok(css.includes(cls), `missing css ${cls}`);
     }
     // 라이트/다크 모두 대응
@@ -354,12 +382,47 @@ test('화면 반영: 추정 일수·오프라인 안내를 덧붙인다', () => 
     assert.match(stats.document.nodes.workHourStatsRange.innerText, /2026년/);
 });
 
+test('펼침 동작: 토글하면 class·hidden·aria-expanded 가 함께 바뀐다', () => {
+    const stats = setupStats();
+    const box = stats.document.getElementById('workHourStatsBox');
+    const body = stats.document.getElementById('workHourStatsBody');
+    const header = stats.document.getElementById('workHourStatsHeader');
+    box.classList.add('is-collapsed');
+    body.classList.add('hidden');
+
+    const run = (code) => vm.runInContext(code, stats.context);
+
+    run('toggleWorkHourStats()');
+    assert.equal(box.classList.contains('is-collapsed'), false, '펼쳐짐');
+    assert.equal(body.classList.contains('hidden'), false, '본문 표시');
+    assert.equal(header.getAttribute('aria-expanded'), 'true');
+
+    run('toggleWorkHourStats()');
+    assert.equal(box.classList.contains('is-collapsed'), true, '접힘');
+    assert.equal(body.classList.contains('hidden'), true, '본문 숨김');
+    assert.equal(header.getAttribute('aria-expanded'), 'false');
+
+    run('openWorkHourStats()');
+    assert.equal(box.classList.contains('is-collapsed'), false, 'openWorkHourStats 는 항상 펼침');
+    run('openWorkHourStats()');
+    assert.equal(box.classList.contains('is-collapsed'), false, '이미 펼쳐져 있어도 유지');
+
+    run('setWorkHourStatsExpanded(false)');
+    assert.equal(box.classList.contains('is-collapsed'), true);
+    assert.equal(header.getAttribute('aria-expanded'), 'false');
+});
+
 test('함수 배선: 기간 선택·갱신·캐시 무효화가 서로 연결되어 있다', () => {
     for (const fn of ['buildWorkHourStats', 'refreshWorkHourStats', 'setWorkHourStatsPeriod',
         'invalidateWorkHourStatsCache', 'renderWorkHourStats', 'getWorkHourStatsRange',
         'collectLoadedWorkLogsForStats', 'fetchWorkLogsForStats']) {
         assert.ok(extractFunction(fn).length > 0, `missing function ${fn}`);
     }
+    for (const fn of ['toggleWorkHourStats', 'openWorkHourStats', 'setWorkHourStatsExpanded', 'syncWorkHourStatsAria']) {
+        assert.ok(extractFunction(fn).length > 0, `missing function ${fn}`);
+    }
+    assert.ok(extractFunction('toggleWorkHourStats').includes('setWorkHourStatsExpanded'));
+    assert.ok(extractFunction('syncWorkHourStatsAria').includes('aria-expanded'));
     const setter = extractFunction('setWorkHourStatsPeriod');
     assert.ok(setter.includes('refreshWorkHourStats'));
     assert.ok(setter.includes('WORK_HOUR_STATS_PERIODS'), '알 수 없는 기간은 무시해야 합니다');
