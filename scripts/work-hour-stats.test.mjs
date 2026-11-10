@@ -439,6 +439,28 @@ test('함수 배선: 기간 선택·갱신·캐시 무효화가 서로 연결되
     assert.equal(appJs.includes('function searchWorkLogsRange'), false);
 });
 
+test('기간·키워드 검색: 화면·스크립트·스타일에서 완전히 삭제되었다', () => {
+    // 1) 마크업에 검색 UI 의 흔적이 없다
+    for (const legacyId of ['logExtraLockBanner', 'logExtraFilterContent', 'logFilterStartDate',
+        'logFilterEndDate', 'logFilterKeyword', 'logFilterResults']) {
+        assert.equal(html.includes(legacyId), false, `마크업에 잔여: ${legacyId}`);
+    }
+    // 2) 스크립트에 검색 관련 식별자·문구가 없다
+    for (const token of ['logFilter', 'log-filter', 'applyWorkLogFilter', 'searchWorkLogsRange',
+        '검색·상세'] ) {
+        assert.equal(appJs.includes(token), false, `app.js 에 잔여: ${token}`);
+        assert.equal(html.includes(token), false, `index.html 에 잔여: ${token}`);
+    }
+    // 3) 스타일시트에 죽은 클래스가 없다 (.log-filter-*, 달력 필터 강조)
+    const css = readAppFile('public/css/app.css');
+    for (const token of ['.log-filter-box', '.log-filter-results', '.log-filter-item',
+        '.filter-match', '.filter-dim']) {
+        assert.equal(css.includes(token), false, `app.css 에 잔여: ${token}`);
+    }
+    // 4) 잠금 해제 안내 문구도 검색을 언급하지 않는다
+    assert.ok(appJs.includes('추가 기능(상세 통계)'), '잠금 해제 문구가 갱신되어야 합니다');
+});
+
 test('에셋 버전: index.html·service-worker 가 같은 버전을 쓴다', () => {
     assert.ok(html.includes(`app.js?v=${APP_ASSET_VERSION}`));
     assert.ok(html.includes(`app.css?v=${APP_ASSET_VERSION}`));
