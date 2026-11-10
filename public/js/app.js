@@ -2379,6 +2379,8 @@ function copyAdminWorkLogReport() {
 const SCREEN_UNLOCK_ENDPOINT = "/api/screen-unlock";
 const SCREEN_UNLOCK_TOKEN_KEY = "workLogUnlockToken";
 const SCREEN_UNLOCK_EXPIRY_KEY = "workLogUnlockExpiry";
+// 근무일지 PIN과 근무배치 모듈이 함께 쓰는 세션 플래그입니다.
+const ROSTER_FINDER_UNLOCK_KEY = "rosterFinderBetaUnlocked";
 const SCREEN_UNLOCK_TTL_MS = 12 * 60 * 60 * 1000; // 12시간
 
 /** PIN 정규화 — 전각 숫자·공백을 반각·무공백으로 통일해 모바일 오타를 방지합니다. */
@@ -2512,6 +2514,8 @@ function syncWorkLogExtraUnlockUI() {
         if (coworkerLockBanner) coworkerLockBanner.style.display = "flex";
         if (coworkerUnlockedArea) coworkerUnlockedArea.classList.add("hidden");
     }
+    // 근무일지 잠금과 사진 명단(테스트) 잠금은 같은 PIN 을 쓰므로 표시도 함께 맞춥니다.
+    if (typeof syncRosterFinderLockUI === "function") syncRosterFinderLockUI();
 }
 function openWorkLogPinModal(onUnlock) {
     pendingWorkLogAction = onUnlock || null;
@@ -2542,7 +2546,9 @@ async function submitWorkLogPin() {
         writeSessionValue("workLogPinUnlocked", "1");
         writeSessionValue(SCREEN_UNLOCK_TOKEN_KEY, result.token || "server");
         writeSessionValue(SCREEN_UNLOCK_EXPIRY_KEY, String(result.expiresAt || (Date.now() + SCREEN_UNLOCK_TTL_MS)));
+        writeSessionValue(ROSTER_FINDER_UNLOCK_KEY, "1");
         syncWorkLogExtraUnlockUI();
+        if (typeof syncRosterFinderLockUI === "function") syncRosterFinderLockUI();
         const callback = pendingWorkLogAction;
         closeWorkLogPinModal();
         showToast("🔓 추가 기능(상세 통계) 잠금이 해제되었습니다.");
@@ -2768,8 +2774,8 @@ function toggleDashItem(id) {
             syncBottomNavActive("nav-home");
         }
     }
-    // 작업 배정 패널도 대시보드 접힘 상태와 접근성 상태를 맞춥니다.
-    if (typeof syncWorkAssignmentDeskAria === "function") syncWorkAssignmentDeskAria();
+    // 📋 근무배치(오더 종이) 자동 기입 블럭이 함께 접혔을 때 상태 표시를 맞춥니다.
+    if (typeof syncRosterDeckAria === "function") syncRosterDeckAria();
     scheduleAppHistoryRecord();
 }
 function toggleSection(id){
@@ -2836,8 +2842,8 @@ function scrollToTop(){
         }
     });
     syncBottomNavActive('nav-home');
-    // 작업 배정 패널 헤더의 펼침 상태도 함께 맞춥니다.
-    if (typeof syncWorkAssignmentDeskAria === "function") syncWorkAssignmentDeskAria();
+    // 📋 근무배치(오더 종이) 자동 기입 블럭 헤더의 펼침 상태 표시도 함께 맞춥니다.
+    if (typeof syncRosterDeckAria === "function") syncRosterDeckAria();
     window.scrollTo({top:0, behavior:'smooth'});
     scheduleAppHistoryRecord();
 }
@@ -4717,292 +4723,8 @@ async function loadHjncScheduledShipsForDate(dateStr, forceRefresh = false) {
     renderHjncScheduledShipsUI(dateStr, allVessels, tid);
 }
 
-/* ===== 📋 작업 배정 빠른 입력 =====
-   사진 OCR·전사 명단·이름 검색을 제거하고, 현장에서 확인한 정보를 직접 입력하는 단일 흐름으로 다시 만들었습니다.
-   입력 초안은 브라우저에만 보관하며, 실제 서버 저장은 기존 근무일지의 [저장] 버튼에서만 수행됩니다. */
-const WORK_ASSIGNMENT_DRAFT_KEY = "busanPortWorkAssignmentDraftV1";
-const WORK_ASSIGNMENT_MAX_SHIPS = 4;
-let workAssignmentDraftLoaded = false;
-
-function getWorkAssignmentElement(id) {
-    return document.getElementById(id);
-}
-
-function normalizeWorkAssignmentList(value, limit) {
-    const max = Number.isFinite(Number(limit)) ? Number(limit) : Infinity;
-    const seen = new Set();
-    const values = [];
-    String(value || "")
-        .split(/[\n,;/]+/)
-        .map(item => item.trim().replace(/\s+/g, " "))
-        .filter(Boolean)
-        .forEach(item => {
-            const key = item.replace(/^\[[^\]]+\]\s*/, "").replace(/\s+/g, "").toUpperCase();
-            if (!key || seen.has(key) || values.length >= max) return;
-            seen.add(key);
-            values.push(item);
-        });
-    return values;
-}
-
-function normalizeWorkAssignmentShips(value) {
-    return normalizeWorkAssignmentList(value, WORK_ASSIGNMENT_MAX_SHIPS);
-}
-
-function normalizeWorkAssignmentCoworkers(value) {
-    return normalizeWorkAssignmentList(value, 30);
-}
-
-/** 선박명을 저장·전송하기 전 한 번 더 중복 제거합니다. (직접 입력·스케줄 선택 공통 안전망) */
-function dedupeVesselNameList(names) {
-    const unique = [];
-    const duplicates = [];
-    const seen = new Set();
-    (Array.isArray(names) ? names : []).forEach(rawName => {
-        const name = String(rawName || "").trim().replace(/\s+/g, " ");
-        if (!name) return;
-        const key = typeof normalizeWorklogShipKey === "function"
-            ? normalizeWorklogShipKey(name).replace(/\s+/g, "")
-            : name.replace(/^\[[^\]]+\]\s*/, "").replace(/\s+/g, "").toUpperCase();
-        if (!key || seen.has(key)) {
-            duplicates.push(name);
-            return;
-        }
-        seen.add(key);
-        unique.push(name);
-    });
-    return { unique, duplicates };
-}
-
-function getWorkAssignmentForm() {
-    const date = String(getWorkAssignmentElement("workAssignmentDate")?.value || "").trim();
-    const terminal = String(getWorkAssignmentElement("workAssignmentTerminal")?.value || selectedScheduleTerminal || "hjnc").trim();
-    const ships = normalizeWorkAssignmentShips(getWorkAssignmentElement("workAssignmentShips")?.value || "");
-    const coworkers = normalizeWorkAssignmentCoworkers(getWorkAssignmentElement("workAssignmentCoworkers")?.value || "");
-    const memo = String(getWorkAssignmentElement("workAssignmentMemo")?.value || "").trim().replace(/\s+/g, " ");
-    return { date, terminal, ships, coworkers, memo };
-}
-
-function setWorkAssignmentStatus(message) {
-    const status = getWorkAssignmentElement("workAssignmentStatus");
-    if (status) status.textContent = String(message || "");
-}
-
-function renderWorkAssignmentSummary() {
-    const form = getWorkAssignmentForm();
-    const summary = getWorkAssignmentElement("workAssignmentSummary");
-    const count = getWorkAssignmentElement("workAssignmentShipCount");
-    const meta = typeof getTerminalMeta === "function" ? getTerminalMeta(form.terminal) : null;
-    if (count) count.textContent = `선박 ${form.ships.length} / ${WORK_ASSIGNMENT_MAX_SHIPS}`;
-    if (!summary) return form;
-    if (!form.date && form.ships.length === 0) {
-        summary.textContent = "날짜와 선박을 입력해 주세요.";
-        return form;
-    }
-    const dateLabel = form.date || "날짜 미선택";
-    const terminalLabel = meta ? meta.label : "터미널 미선택";
-    const shipLabel = form.ships.length ? form.ships.join(" · ") : "선박 미입력";
-    summary.textContent = `${dateLabel} · ${terminalLabel} · ${shipLabel}${form.coworkers.length ? ` · 동료 ${form.coworkers.length}명` : ""}`;
-    return form;
-}
-
-function persistWorkAssignmentDraft() {
-    try {
-        localStorage.setItem(WORK_ASSIGNMENT_DRAFT_KEY, JSON.stringify(getWorkAssignmentForm()));
-    } catch (e) { }
-}
-
-function syncWorkAssignmentInput() {
-    const form = renderWorkAssignmentSummary();
-    persistWorkAssignmentDraft();
-    return form;
-}
-
-function syncWorkAssignmentTerminal(terminalId) {
-    const select = getWorkAssignmentElement("workAssignmentTerminal");
-    if (select && select.value !== terminalId) select.value = terminalId;
-    if (typeof selectScheduleTerminal === "function" && terminalId !== selectedScheduleTerminal) {
-        selectScheduleTerminal(terminalId);
-    }
-    return syncWorkAssignmentInput();
-}
-
-function initializeWorkAssignmentDesk() {
-    const dateInput = getWorkAssignmentElement("workAssignmentDate");
-    const terminalInput = getWorkAssignmentElement("workAssignmentTerminal");
-    if (!dateInput || !terminalInput) return;
-
-    if (!workAssignmentDraftLoaded) {
-        workAssignmentDraftLoaded = true;
-        try {
-            const saved = JSON.parse(localStorage.getItem(WORK_ASSIGNMENT_DRAFT_KEY) || "null");
-            if (saved && typeof saved === "object") {
-                dateInput.value = /^\d{4}-\d{2}-\d{2}$/.test(String(saved.date || "")) ? saved.date : "";
-                terminalInput.value = TERMINAL_SCHEDULE_LIST.some(item => item.id === saved.terminal) ? saved.terminal : selectedScheduleTerminal;
-                const shipsInput = getWorkAssignmentElement("workAssignmentShips");
-                const coworkersInput = getWorkAssignmentElement("workAssignmentCoworkers");
-                const memoInput = getWorkAssignmentElement("workAssignmentMemo");
-                if (shipsInput) shipsInput.value = normalizeWorkAssignmentShips(saved.ships || "").join(" / ");
-                if (coworkersInput) coworkersInput.value = normalizeWorkAssignmentCoworkers(saved.coworkers || "").join(", ");
-                if (memoInput) memoInput.value = String(saved.memo || "").slice(0, 300);
-            }
-        } catch (e) { }
-    }
-
-    if (!dateInput.value) dateInput.value = getActiveWorkLogDate() || getAppLocalDateString();
-    if (!terminalInput.value) terminalInput.value = selectedScheduleTerminal;
-    renderWorkAssignmentSummary();
-}
-
-function syncWorkAssignmentDeskAria() {
-    const card = getWorkAssignmentElement("workAssignmentDeck");
-    const header = getWorkAssignmentElement("workAssignmentDeckHeader");
-    if (!header) return;
-    header.setAttribute("aria-expanded", card?.classList.contains("expanded") ? "true" : "false");
-}
-
-function setWorkAssignmentDeskExpanded(expanded) {
-    const card = getWorkAssignmentElement("workAssignmentDeck");
-    if (!card) return;
-    const content = getWorkAssignmentElement("workAssignmentDeckContent");
-    card.classList.toggle("expanded", Boolean(expanded));
-    if (content) content.style.display = expanded ? "block" : "none";
-    syncWorkAssignmentDeskAria();
-    if (!expanded) return;
-    initializeWorkAssignmentDesk();
-    if (typeof trackAppEvent === "function") trackAppEvent("blocks", "workAssignmentDeck");
-}
-
-function toggleWorkAssignmentDesk() {
-    const card = getWorkAssignmentElement("workAssignmentDeck");
-    if (!card) return;
-    if (card.classList.contains("expanded")) {
-        setWorkAssignmentDeskExpanded(false);
-        return;
-    }
-    document.querySelectorAll(".dash-card.expanded").forEach(item => {
-        if (!item || item.id === "workAssignmentDeck") return;
-        item.classList.remove("expanded");
-        const content = item.querySelector?.(".dash-content");
-        if (content) content.style.display = "none";
-    });
-    setWorkAssignmentDeskExpanded(true);
-}
-
-function openWorkAssignmentDesk(scroll = true) {
-    const card = getWorkAssignmentElement("workAssignmentDeck");
-    if (!card) return;
-    setWorkAssignmentDeskExpanded(true);
-    if (scroll && typeof card.scrollIntoView === "function") {
-        setTimeout(() => card.scrollIntoView({ behavior: "smooth", block: "start" }), 80);
-    }
-    const input = getWorkAssignmentElement("workAssignmentShips");
-    if (input) setTimeout(() => input.focus(), scroll ? 320 : 0);
-}
-
-function clearWorkAssignmentDraft() {
-    const date = getWorkAssignmentElement("workAssignmentDate");
-    const terminal = getWorkAssignmentElement("workAssignmentTerminal");
-    const ships = getWorkAssignmentElement("workAssignmentShips");
-    const coworkers = getWorkAssignmentElement("workAssignmentCoworkers");
-    const memo = getWorkAssignmentElement("workAssignmentMemo");
-    if (date) date.value = getActiveWorkLogDate() || getAppLocalDateString();
-    if (terminal) terminal.value = selectedScheduleTerminal;
-    if (ships) ships.value = "";
-    if (coworkers) coworkers.value = "";
-    if (memo) memo.value = "";
-    try { localStorage.removeItem(WORK_ASSIGNMENT_DRAFT_KEY); } catch (e) { }
-    renderWorkAssignmentSummary();
-    setWorkAssignmentStatus("새 작업 배정을 입력할 수 있도록 초안을 비웠습니다.");
-}
-
-function loadWorkAssignmentFromLog() {
-    initializeWorkAssignmentDesk();
-    const date = getActiveWorkLogDate() || getAppLocalDateString();
-    const dateInput = getWorkAssignmentElement("workAssignmentDate");
-    const terminalInput = getWorkAssignmentElement("workAssignmentTerminal");
-    const shipsInput = getWorkAssignmentElement("workAssignmentShips");
-    const coworkersInput = getWorkAssignmentElement("workAssignmentCoworkers");
-    if (dateInput) dateInput.value = date;
-    if (terminalInput) terminalInput.value = selectedScheduleTerminal;
-    if (shipsInput) shipsInput.value = normalizeWorkAssignmentShips(getWorkAssignmentElement("logShipName")?.value || "").join(" / ");
-    if (coworkersInput) coworkersInput.value = normalizeWorkAssignmentCoworkers(getWorkAssignmentElement("logCoworkers")?.value || "").join(", ");
-    syncWorkAssignmentInput();
-    setWorkAssignmentStatus("현재 근무일지의 날짜·선박·동료를 불러왔습니다. 필요한 내용만 고쳐서 연결하세요.");
-}
-
-function validateWorkAssignment(form) {
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(form.date)) {
-        showToast("⚠️ 작업 날짜를 선택해 주세요.");
-        getWorkAssignmentElement("workAssignmentDate")?.focus();
-        return false;
-    }
-    if (!TERMINAL_SCHEDULE_LIST.some(item => item.id === form.terminal)) {
-        showToast("⚠️ 작업 터미널을 선택해 주세요.");
-        return false;
-    }
-    if (!form.ships.length) {
-        showToast("⚠️ 작업 선박을 한 척 이상 입력해 주세요.");
-        getWorkAssignmentElement("workAssignmentShips")?.focus();
-        return false;
-    }
-    return true;
-}
-
-function appendWorkAssignmentMemo(existingMemo, terminalLabel, memo) {
-    const cleanExisting = String(existingMemo || "")
-        .replace(/\n?📋 작업 배정 메모 · [^\n]*\n[^\n]*/g, "")
-        .trim();
-    if (!memo) return cleanExisting;
-    const next = `📋 작업 배정 메모 · ${terminalLabel}\n${memo}`;
-    return cleanExisting ? `${cleanExisting}\n\n${next}` : next;
-}
-
-function applyWorkAssignmentToLog(options = {}) {
-    const form = getWorkAssignmentForm();
-    if (!validateWorkAssignment(form)) return null;
-    const opts = options || {};
-    if (form.terminal !== selectedScheduleTerminal) selectScheduleTerminal(form.terminal);
-    jumpToLogDate(form.date);
-
-    const shipInput = getWorkAssignmentElement("logShipName");
-    const coworkerInput = getWorkAssignmentElement("logCoworkers");
-    const memoInput = getWorkAssignmentElement("logMemo");
-    const mergedShips = normalizeWorkAssignmentShips([
-        ...(typeof parseWorklogShipNames === "function" ? parseWorklogShipNames(shipInput?.value || "") : []),
-        ...form.ships
-    ].join(" / "));
-    const mergedCoworkers = normalizeWorkAssignmentCoworkers([
-        ...(normalizeWorkAssignmentCoworkers(coworkerInput?.value || "")),
-        ...form.coworkers
-    ].join(", "));
-    if (shipInput) shipInput.value = mergedShips.join(" / ");
-    if (coworkerInput) coworkerInput.value = mergedCoworkers.join(", ");
-    if (memoInput) {
-        memoInput.value = appendWorkAssignmentMemo(memoInput.value, getTerminalMeta(form.terminal).badge, form.memo);
-        if (typeof autoGrowWorkLogMemo === "function") autoGrowWorkLogMemo(memoInput);
-    }
-    if (typeof setWorklogScheduleDateInput === "function") setWorklogScheduleDateInput(form.date);
-    if (typeof onWorklogShipNameEdited === "function") onWorklogShipNameEdited();
-    if (typeof syncCoworkerSelectionUI === "function") syncCoworkerSelectionUI();
-    if (typeof renderWorkLogQuickChips === "function") renderWorkLogQuickChips(form.date);
-
-    persistWorkAssignmentDraft();
-    const message = `📅 ${getTerminalMeta(form.terminal).label} · ${mergedShips.length}척을 근무일지에 채웠습니다. 아래 저장 버튼을 눌러 기록하세요.`;
-    setWorkAssignmentStatus(message);
-    if (!opts.silent) showToast(message);
-    if (typeof trackAppEvent === "function") trackAppEvent("actions", "work_assignment_to_log");
-    return { ...form, ships: mergedShips, coworkers: mergedCoworkers };
-}
-
-async function applyWorkAssignmentToWage() {
-    const applied = applyWorkAssignmentToLog({ silent: true });
-    if (!applied) return;
-    await sendWorkLogShipToWage();
-    const message = `🧮 ${applied.ships.join(" / ")}을(를) 임금계산기로 보냈습니다. 스케줄 시간과 계산 결과를 확인하세요.`;
-    setWorkAssignmentStatus(message);
-    if (typeof trackAppEvent === "function") trackAppEvent("actions", "work_assignment_to_wage");
-}
+/* 근무배치 워크플로우는 public/js/roster-workflow.js에서 로드합니다.
+   이 파일은 임금·근무일지 공용 기능만 유지합니다. */
 
 const HANJIN_COWORKER_ROSTER = [
     // 상단 좌측 (5명)

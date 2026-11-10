@@ -19,6 +19,7 @@ const ROOT = new URL('..', import.meta.url);
 export const APP_JS_FILES = [
     'public/js/notifications.js',
     'public/js/app.js',
+    'public/js/roster-workflow.js',
     'public/js/leader-access.js',
     'public/js/ships-board.js',
     'public/js/tab-views.js',
@@ -27,7 +28,7 @@ export const APP_JS_FILES = [
 ];
 
 /** A-1 분리 버전 — index.html 의 ?v= 파라미터 · service-worker 캐시 버전을 함께 올려야 합니다. */
-export const APP_ASSET_VERSION = '2027.33';
+export const APP_ASSET_VERSION = '2027.34';
 
 export function readAppFile(relativePath) {
     return readFileSync(new URL(`./${relativePath}`, ROOT), 'utf8');
