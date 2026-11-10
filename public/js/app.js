@@ -2777,6 +2777,8 @@ function toggleDashItem(id) {
             syncBottomNavActive("nav-home");
         }
     }
+    // 📋 근무배치(오더 종이) 자동 기입 블럭이 함께 접혔을 때 상태 표시를 맞춥니다.
+    if (typeof syncRosterDeckAria === "function") syncRosterDeckAria();
     scheduleAppHistoryRecord();
 }
 function toggleSection(id){
@@ -2843,6 +2845,8 @@ function scrollToTop(){
         }
     });
     syncBottomNavActive('nav-home');
+    // 📋 근무배치(오더 종이) 자동 기입 블럭 헤더의 펼침 상태 표시도 함께 맞춥니다.
+    if (typeof syncRosterDeckAria === "function") syncRosterDeckAria();
     window.scrollTo({top:0, behavior:'smooth'});
     scheduleAppHistoryRecord();
 }
@@ -4800,6 +4804,55 @@ function unlockRosterFinder() {
         }
     });
 }
+/* ===== 📋 근무배치(오더 종이) 자동 기입 — 메인 화면 독립 펼침 블럭 =====
+   · 기존 근무일지 카드 안에 있던 "사진 명단 · 이름으로 선박 찾기" 패널을 메인 화면으로 옮겼습니다.
+   · 헤더(블럭)를 누르면 펼침/접힘. 한 번에 한 블럭만 펼치는 기존 대시보드 동작을 따릅니다.
+   · 사진은 서버로 전송되지 않고 이 기기에서만 처리됩니다. */
+function syncRosterDeckAria() {
+    const card = document.getElementById("rosterDeckCard");
+    const header = document.getElementById("rosterDeckHeader");
+    if (!header) return;
+    const expanded = Boolean(card && card.classList.contains("expanded"));
+    header.setAttribute("aria-expanded", expanded ? "true" : "false");
+}
+function setRosterDeckExpanded(expanded) {
+    const card = document.getElementById("rosterDeckCard");
+    if (!card) return;
+    const content = card.querySelector(".dash-content");
+    card.classList.toggle("expanded", Boolean(expanded));
+    if (content) content.style.display = expanded ? "block" : "none";
+    syncRosterDeckAria();
+    if (!expanded) return;
+    if (typeof syncRosterFinderLockUI === "function") syncRosterFinderLockUI();
+    if (typeof renderRosterExtraList === "function") renderRosterExtraList();
+    if (typeof trackAppEvent === "function") trackAppEvent("blocks", "rosterDeckCard");
+}
+function openRosterDeck(scroll) {
+    setRosterDeckExpanded(true);
+    if (scroll === false) return;
+    const card = document.getElementById("rosterDeckCard");
+    if (card && typeof card.scrollIntoView === "function") {
+        setTimeout(() => card.scrollIntoView({ behavior: "smooth", block: "start" }), 80);
+    }
+}
+function toggleRosterDeck() {
+    const card = document.getElementById("rosterDeckCard");
+    if (!card) return;
+    if (card.classList.contains("expanded")) {
+        setRosterDeckExpanded(false);
+        return;
+    }
+    // 다른 펼침 블럭은 접어 화면을 정리합니다(기존 대시보드와 같은 동작).
+    if (typeof document.querySelectorAll === "function") {
+        document.querySelectorAll(".dash-card.expanded").forEach(item => {
+            if (!item || item.id === "rosterDeckCard") return;
+            item.classList.remove("expanded");
+            const content = item.querySelector ? item.querySelector(".dash-content") : null;
+            if (content) content.style.display = "none";
+        });
+    }
+    setRosterDeckExpanded(true);
+}
 let rosterFinderResults = [];
 
 function normalizeRosterWorkerName(name) {
@@ -5160,10 +5213,13 @@ async function registerAllRosterResults() {
     trackAppEvent("actions", "roster_finder_register_all");
 }
 function focusRosterFinder() {
-    // 이름으로 선박 찾기는 근무일지 카드에 배치되어 있다(날짜·등록 맥락이 가까움).
-    // 임금계산기에서 진입하면 근무일지 탭으로 이동한다. 테스트 잠금 중이면 PIN 입력을 먼저 요청한다.
-    const logCard = document.getElementById("log-card");
-    if (logCard && !logCard.classList.contains("expanded")) toggleDashItem("log-card");
+    // 📋 근무배치(오더 종이) 자동 기입은 근무일지 카드 안이 아니라 메인 화면의 독립 펼침 블럭에 있다.
+    // 임금계산기·근무일지에서 진입하면 이 블럭을 펼치고, 테스트 잠금 중이면 PIN 입력을 먼저 요청한다.
+    const deckCard = document.getElementById("rosterDeckCard");
+    if (deckCard && !deckCard.classList.contains("expanded")) {
+        if (typeof openRosterDeck === "function") openRosterDeck();
+        else deckCard.classList.add("expanded");
+    }
     syncRosterFinderLockUI();
     if (!isRosterFinderUnlocked()) {
         const banner = document.getElementById("rosterFinderLockBanner");
