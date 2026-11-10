@@ -33,7 +33,7 @@ test('전역 스크립트 파일이 모두 존재하고 HTML 에 load 순서대�
     const expectedOrder = [
         'public/js/notifications.js',
         'public/js/app.js',
-        'public/js/roster-workflow.js',
+        'public/js/roster-engine.js',
         'public/js/leader-access.js',
         'public/js/ships-board.js',
         'public/js/tab-views.js',

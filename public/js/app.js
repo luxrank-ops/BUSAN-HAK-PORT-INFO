@@ -4723,7 +4723,7 @@ async function loadHjncScheduledShipsForDate(dateStr, forceRefresh = false) {
     renderHjncScheduledShipsUI(dateStr, allVessels, tid);
 }
 
-/* 근무배치 워크플로우는 public/js/roster-workflow.js에서 로드합니다.
+/* 근무배치 엔진은 public/js/roster-engine.js에서 로드합니다.
    이 파일은 임금·근무일지 공용 기능만 유지합니다. */
 
 const HANJIN_COWORKER_ROSTER = [
