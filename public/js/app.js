@@ -4717,6 +4717,333 @@ async function loadHjncScheduledShipsForDate(dateStr, forceRefresh = false) {
 
     renderHjncScheduledShipsUI(dateStr, allVessels, tid);
 }
+
+/* ===== 🔍 이름으로 선박 찾기 (명단 → 차트·스케줄 → 임금·일지 자동 등록) =====
+   BAND 명단 사진(2026-11-10/11)을 전사한 PHOTO_ROSTER_20261110 을 기본 명단으로 쓴다.
+   작업자 이름(이춘학 등) 또는 선박명을 입력하면:
+   ① 명단에서 배정 선박을 찾고 ② 전 터미널 차트·스케줄에서 선박명을 대입 조회한 뒤
+   ③ 임금계산기(최대 4척)와 근무일지에 자동 등록한다.
+   사용자가 직접 추가한 명단은 localStorage(busanPortRosterExtra)에 보관한다. */
+const PHOTO_ROSTER_20261110 = [
+    { date: "2026-11-10", vessel: "CMA CGM AUSTRAL", time: "18:00", company: "세정", support: "BNCT 지원", group: "①",
+      workers: ["김명준", "김민재2", "조훈철", "김근우1", "김경찬", "구자성", "사승동", "이재호"] },
+    { date: "2026-11-10", vessel: "YM WAYFINDER", time: "20:00", company: "KML", support: "", group: "",
+      workers: ["이성", "최준호", "신승호", "이재열", "이종림", "박세훈", "김광명", "김동근", "이준필", "양기택", "백상훈", "김치성", "김봉준", "박상준", "오경환", "곽민석", "임종호", "백승윤", "박규태", "정영중", "박창훈", "신철구", "황인기", "김영구", "김찬우1", "유동석", "김종성", "최영용", "최병섭", "김근우", "하승환", "윤동환", "김유신1", "윤승주", "설석종", "이준수", "이현재", "김찬구", "강성빈", "박성용"] },
+    { date: "2026-11-11", vessel: "PRESIDENT CARTER", time: "00:00", company: "고려", support: "BNCT 지원", group: "②",
+      workers: ["조훈철", "오규환", "신경호", "김근우1", "김경민1", "남영우", "김명준", "박상원", "이경덕", "김민재2", "이수남", "최승훈", "김경찬", "이정식", "이봉호", "구자성", "김영현", "이춘학", "사승동", "이수열", "안영준", "이재호", "박현대", "오용구"] },
+    { date: "2026-11-11", vessel: "WILLIAM", time: "11:00", company: "코엠", support: "", group: "",
+      workers: ["백상훈", "박상준", "곽민석", "박규태", "이성", "이재열", "박세훈", "이준필", "박창훈", "신철구", "유동석", "김종성", "여상규", "정철화", "김창홍", "이재원"] },
+    { date: "2026-11-11", vessel: "CMA CGM PANAMA", time: "15:00", company: "세정", support: "BNCT 지원", group: "③",
+      workers: ["이경덕", "김명준", "박상원", "최승훈", "김민재2", "이수남", "신경호", "김영수3", "오규환", "남영우", "김근우1", "김경민1", "이봉호", "김경찬", "이정식", "이춘학", "설석종", "김영현", "안영준", "구자성", "이수열", "오용구", "사승동", "박현대"] },
+    { date: "2026-11-11", vessel: "MAGNA", time: "14:00", company: "고려", support: "", group: "④",
+      workers: ["김치성", "김봉준", "임종호", "백승윤", "최준호", "신승호", "김광명", "김동근", "황인기", "김영구", "최영용", "최병섭", "김유신1", "윤승주", "김찬구", "강성빈"] },
+    { date: "2026-11-11", vessel: "ULTIMA", time: "15:00", company: "조영", support: "", group: "①",
+      workers: ["오경환", "원지현", "정영중", "강남오", "이종림", "장영근", "양기택", "강무성", "김찬우1", "여상규", "김근우", "김창홍", "설석종", "정철화", "박성용", "이재원"] }
+];
+const ROSTER_EXTRA_STORAGE_KEY = "busanPortRosterExtra";
+let rosterFinderResults = [];
+
+function normalizeRosterWorkerName(name) {
+    return String(name || "").normalize("NFKC").replace(/[\s\u200B]+/g, "").trim();
+}
+function normalizeRosterVesselKey(name) {
+    return String(name || "").normalize("NFKC").replace(/^\s*\[[^\]]+\]\s*/, "").replace(/[\s\u200B]+/g, "").toLocaleUpperCase("ko-KR");
+}
+function getRosterExtraEntries() {
+    try {
+        const raw = localStorage.getItem(ROSTER_EXTRA_STORAGE_KEY) || "[]";
+        const parsed = JSON.parse(raw);
+        if (!Array.isArray(parsed)) return [];
+        return parsed
+            .filter(e => e && e.vessel && e.date)
+            .map(e => ({
+                date: String(e.date),
+                vessel: String(e.vessel).trim(),
+                time: String(e.time || ""),
+                company: String(e.company || ""),
+                support: String(e.support || ""),
+                group: String(e.group || ""),
+                workers: Array.isArray(e.workers)
+                    ? e.workers.map(w => String(w).trim()).filter(Boolean)
+                    : (e.worker ? [String(e.worker).trim()] : [])
+            }))
+            .filter(e => e.workers.length > 0);
+    } catch (e) {
+        return [];
+    }
+}
+function getAllRosterAssignments() {
+    return [...PHOTO_ROSTER_20261110, ...getRosterExtraEntries()];
+}
+function findRosterAssignmentsByWorker(workerName) {
+    const key = normalizeRosterWorkerName(workerName);
+    if (!key) return [];
+    return getAllRosterAssignments().filter(a =>
+        (a.workers || []).some(w => normalizeRosterWorkerName(w) === key)
+    );
+}
+function findRosterAssignmentsByVessel(vesselName) {
+    const key = normalizeRosterVesselKey(vesselName);
+    if (!key) return [];
+    return getAllRosterAssignments().filter(a => {
+        const vk = normalizeRosterVesselKey(a.vessel);
+        return vk === key || vk.includes(key) || key.includes(vk);
+    });
+}
+function matchScheduleVesselByName(vessels, vesselName) {
+    const key = normalizeRosterVesselKey(vesselName);
+    if (!key || !Array.isArray(vessels)) return null;
+    let containsMatch = null;
+    for (const v of vessels) {
+        const vk = normalizeRosterVesselKey(v && v.VSL_NM);
+        if (!vk) continue;
+        if (vk === key) return v;
+        if (!containsMatch && (vk.includes(key) || key.includes(vk))) containsMatch = v;
+    }
+    return containsMatch;
+}
+function buildRosterVesselPlan(assignments, scheduleByTerminal) {
+    const terminals = Object.keys(scheduleByTerminal || {});
+    return (assignments || []).map(a => {
+        let found = null;
+        let foundTerminal = "";
+        // 1차: 전 터미널 정확 일치 우선, 2차: 포함 일치
+        for (const tid of terminals) {
+            const list = scheduleByTerminal[tid] || [];
+            const exact = list.find(v => normalizeRosterVesselKey(v && v.VSL_NM) === normalizeRosterVesselKey(a.vessel));
+            if (exact) { found = exact; foundTerminal = tid; break; }
+        }
+        if (!found) {
+            for (const tid of terminals) {
+                const v = matchScheduleVesselByName(scheduleByTerminal[tid], a.vessel);
+                if (v) { found = v; foundTerminal = tid; break; }
+            }
+        }
+        return { assignment: a, vessel: found, terminalId: foundTerminal, found: !!found };
+    });
+}
+async function searchRosterVessels() {
+    const input = document.getElementById("rosterFinderInput");
+    const resultsEl = document.getElementById("rosterFinderResults");
+    const query = String(input?.value || "").trim();
+    if (!query) return showToast("작업자 이름 또는 선박명을 입력해 주세요.");
+    if (!resultsEl) return;
+
+    let assignments = findRosterAssignmentsByWorker(query);
+    let searchMode = "worker";
+    if (assignments.length === 0) {
+        assignments = findRosterAssignmentsByVessel(query);
+        searchMode = "vessel";
+    }
+    if (assignments.length === 0) {
+        rosterFinderResults = [];
+        resultsEl.innerHTML = `<div class="roster-finder-empty">🔍 '${escapeShipCommentHtml(query)}' 명단에서 찾지 못했습니다. 이름 철자(예: 이춘학) 또는 선박명(예: PRESIDENT CARTER)으로 다시 입력하거나, 아래 '내 명단 추가'로 배정을 등록해 주세요.</div>`;
+        return;
+    }
+
+    resultsEl.innerHTML = `<div class="roster-finder-empty">⏳ ${assignments.length}척 배정 확인 · 전 터미널 차트·스케줄에서 선박을 대입 조회 중...</div>`;
+    const months = [...new Set(assignments.map(a => String(a.date).slice(0, 7)))];
+    const liveTerminals = TERMINAL_SCHEDULE_LIST.filter(t => t.live).map(t => t.id);
+    const scheduleByTerminal = {};
+    await Promise.all(months.flatMap(ym =>
+        liveTerminals.map(async tid => {
+            try {
+                const vessels = await fetchHjncScheduleForMonth(ym, false, tid);
+                if (!scheduleByTerminal[tid]) scheduleByTerminal[tid] = [];
+                scheduleByTerminal[tid] = [...scheduleByTerminal[tid], ...(Array.isArray(vessels) ? vessels : [])];
+            } catch (e) {
+                if (!scheduleByTerminal[tid]) scheduleByTerminal[tid] = [];
+            }
+        })
+    ));
+    const plan = buildRosterVesselPlan(assignments, scheduleByTerminal);
+    rosterFinderResults = plan;
+    renderRosterFinderResults(plan, query, searchMode);
+    trackAppEvent("actions", "roster_finder_search");
+}
+function renderRosterFinderResults(plan, query, searchMode) {
+    const el = document.getElementById("rosterFinderResults");
+    if (!el) return;
+    const foundCount = plan.filter(p => p.found).length;
+    const modeLabel = searchMode === "worker" ? "작업자" : "선박";
+    const cards = plan.map((p, i) => {
+        const a = p.assignment;
+        const meta = p.terminalId ? getTerminalMeta(p.terminalId) : null;
+        const cfg = p.terminalId ? (terminalQuickConfig[p.terminalId] || {}) : {};
+        let scheduleLine = "";
+        let hoursLine = "";
+        if (p.found && p.vessel) {
+            const period = getSelectedVesselPeriod(p.vessel, a.date);
+            const berth = escapeShipCommentHtml(p.vessel.BERTH_NO || "-");
+            scheduleLine = `선석 ${berth} · 입항 ${formatWageScheduleEvent(period.arrival)} · 출항 ${formatWageScheduleEvent(period.departure)}`;
+            hoursLine = period.hours > 0 ? ` · ${period.hours}시간 자동 계산 가능` : " · 입·출항 시각 확인 필요";
+        } else {
+            scheduleLine = "⚠️ 차트·스케줄에서 찾지 못함 — 명단 선박명으로만 등록됩니다";
+        }
+        const badge = meta ? `<span class="roster-finder-badge" style="background:${meta.color};">${meta.badge}</span>` : "";
+        const links = p.terminalId
+            ? `<a href="${cfg.schedule || "#"}" target="_blank" rel="noopener noreferrer" class="roster-finder-link">🗓️ 스케줄 ↗</a><a href="${cfg.chart || "#"}" target="_blank" rel="noopener noreferrer" class="roster-finder-link">📊 차트 ↗</a>`
+            : "";
+        return `<div class="roster-finder-card${p.found ? "" : " is-missing"}">
+            <div class="roster-finder-card-head">${badge}<strong>🚢 ${escapeShipCommentHtml(a.vessel)}</strong><span>${escapeShipCommentHtml(a.date)}${a.time ? " · 명단 " + escapeShipCommentHtml(a.time) : ""}${a.company ? " · " + escapeShipCommentHtml(a.company) : ""}${a.support ? " · " + escapeShipCommentHtml(a.support) : ""}${a.group ? " · " + escapeShipCommentHtml(a.group) : ""}</span></div>
+            <div class="roster-finder-card-sub">${scheduleLine}${hoursLine}</div>
+            <div class="roster-finder-card-actions">
+                <button type="button" onclick="registerRosterResultToWage(${i})">🧮 임금계산기 등록</button>
+                <button type="button" onclick="registerRosterResultToWorkLog(${i})">📅 근무일지 등록</button>
+                ${links}
+            </div>
+        </div>`;
+    }).join("");
+    const allBtn = plan.length > 1
+        ? `<button type="button" class="roster-finder-all-btn" onclick="registerAllRosterResults()">✨ 전체 자동 등록 (임금계산기 + 근무일지${foundCount > 0 ? " · 임금 자동 계산" : ""})</button>`
+        : "";
+    el.innerHTML = `<div class="roster-finder-summary">🔍 '${escapeShipCommentHtml(query)}' (${modeLabel}) · ${plan.length}척 배정 · 스케줄 매칭 ${foundCount}척</div>${cards}${allBtn}`;
+}
+function registerRosterResultToWage(index) {
+    const item = rosterFinderResults[index];
+    if (!item) return;
+    const wageCard = document.getElementById("wage-card");
+    if (wageCard && !wageCard.classList.contains("expanded")) toggleDashItem("wage-card");
+    if (item.found && item.vessel) {
+        if (item.terminalId && item.terminalId !== selectedScheduleTerminal) selectScheduleTerminal(item.terminalId);
+        applyWageScheduleShip(item.vessel, item.assignment.date, item.terminalId || selectedScheduleTerminal);
+    } else {
+        const input = document.getElementById("wageShipName");
+        if (input) { input.value = item.assignment.vessel; onWageShipNameChange(input.value); }
+        showToast(`🧮 ${item.assignment.vessel} 선박명을 임금계산기에 입력했습니다. 근무 시간은 직접 확인해 주세요.`);
+    }
+    document.getElementById("wage-card")?.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+function registerRosterResultToWorkLog(index) {
+    const item = rosterFinderResults[index];
+    if (!item) return;
+    const logCard = document.getElementById("log-card");
+    if (logCard && !logCard.classList.contains("expanded")) toggleDashItem("log-card");
+    jumpToLogDate(item.assignment.date);
+    const input = document.getElementById("logShipName");
+    if (!input) return;
+    const names = parseWorklogShipNames(input.value);
+    const key = normalizeWorklogShipKey(item.assignment.vessel);
+    if (!names.some(n => normalizeWorklogShipKey(n) === key)) names.push(item.assignment.vessel);
+    input.value = names.slice(0, MAX_WORK_VESSELS).join(" / ");
+    if (item.found && item.vessel) {
+        worklogVesselMeta.set(key, { name: item.assignment.vessel, vessel: item.vessel, date: item.assignment.date, terminalId: item.terminalId });
+    }
+    syncWorklogDoubleOrderMemo();
+    refreshWorklogVesselList();
+    updateWorklogDoubleOrderStatus();
+    showToast(`📅 ${item.assignment.date} 근무일지에 ${item.assignment.vessel}을(를) 등록했습니다. 저장을 눌러 기록하세요.`);
+    document.getElementById("dailyLogForm")?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+}
+async function registerAllRosterResults() {
+    if (!rosterFinderResults.length) return;
+    const sorted = [...rosterFinderResults].sort((a, b) => String(a.assignment.date).localeCompare(String(b.assignment.date)));
+    const wageCard = document.getElementById("wage-card");
+    if (wageCard && !wageCard.classList.contains("expanded")) toggleDashItem("wage-card");
+
+    // 임금계산기: 기존 선택을 비우고 전체를 다시 등록(재실행해도 중복·토글 오류 없음)
+    selectedWageVessels = [];
+    selectedWageScheduleShipName = "";
+    const wageInput = document.getElementById("wageShipName");
+    if (wageInput) wageInput.value = "";
+    const foundItems = sorted.filter(p => p.found && p.vessel).slice(0, MAX_WORK_VESSELS);
+    if (foundItems.length > 0) {
+        const firstTid = foundItems[0].terminalId;
+        if (firstTid && firstTid !== selectedScheduleTerminal) selectScheduleTerminal(firstTid);
+        foundItems.forEach(p => applyWageScheduleShip(p.vessel, p.assignment.date, p.terminalId || selectedScheduleTerminal));
+    } else {
+        const namesOnly = sorted.slice(0, MAX_WORK_VESSELS).map(p => p.assignment.vessel).join(" / ");
+        if (wageInput) wageInput.value = namesOnly;
+        onWageShipNameChange(namesOnly);
+    }
+
+    // 근무일지: 같은 날짜 배정은 한 번에, 날짜가 여러 개면 날짜별로 순차 등록(마지막 날짜 폼이 열림)
+    const dates = [...new Set(sorted.map(p => p.assignment.date))];
+    const logCard = document.getElementById("log-card");
+    if (logCard && !logCard.classList.contains("expanded")) toggleDashItem("log-card");
+    for (const d of dates) {
+        jumpToLogDate(d);
+        const input = document.getElementById("logShipName");
+        if (!input) continue;
+        const names = parseWorklogShipNames(input.value);
+        sorted.filter(p => p.assignment.date === d).slice(0, MAX_WORK_VESSELS).forEach(p => {
+            const key = normalizeWorklogShipKey(p.assignment.vessel);
+            if (!names.some(n => normalizeWorklogShipKey(n) === key)) names.push(p.assignment.vessel);
+            if (p.found && p.vessel) worklogVesselMeta.set(key, { name: p.assignment.vessel, vessel: p.vessel, date: p.assignment.date, terminalId: p.terminalId });
+        });
+        input.value = names.slice(0, MAX_WORK_VESSELS).join(" / ");
+        syncWorklogDoubleOrderMemo();
+        refreshWorklogVesselList();
+        updateWorklogDoubleOrderStatus();
+    }
+
+    // 스케줄 시각이 모두 있으면 임금 자동 계산 후 근무일지 임금 슬롯까지 전송
+    const allHaveHours = foundItems.length > 0 && foundItems.every(p => getSelectedVesselPeriod(p.vessel, p.assignment.date).hours > 0);
+    if (allHaveHours) {
+        try { calculateWage(); } catch (e) { console.error("이름으로 선박 찾기 자동 계산 실패:", e); }
+        if (lastCalculatedWageData) {
+            try { await sendCalculatedWageToLog(); } catch (e) { console.error("이름으로 선박 찾기 일지 전송 실패:", e); }
+        }
+    }
+    const vesselNames = sorted.map(p => p.assignment.vessel).join(" / ");
+    showToast(allHaveHours
+        ? `✨ ${vesselNames}을(를) 임금계산기·근무일지에 자동 등록하고 임금을 계산했습니다. 근무일지 저장을 눌러 기록하세요.`
+        : `✨ ${vesselNames}을(를) 임금계산기·근무일지에 등록했습니다. 입·출항 시각이 없어 임금 계산은 직접 확인해 주세요.`);
+    trackAppEvent("actions", "roster_finder_register_all");
+}
+function focusRosterFinder() {
+    const wageCard = document.getElementById("wage-card");
+    if (wageCard && !wageCard.classList.contains("expanded")) toggleDashItem("wage-card");
+    const input = document.getElementById("rosterFinderInput");
+    if (input) {
+        input.scrollIntoView({ behavior: "smooth", block: "center" });
+        setTimeout(() => input.focus(), 350);
+    }
+}
+function addRosterExtraEntry() {
+    const worker = String(document.getElementById("rosterExtraWorker")?.value || "").trim();
+    const vessel = String(document.getElementById("rosterExtraVessel")?.value || "").trim();
+    const date = String(document.getElementById("rosterExtraDate")?.value || "").trim();
+    if (!worker || !vessel || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+        return showToast("작업자 이름·선박명·날짜를 모두 입력해 주세요.");
+    }
+    try {
+        const list = getRosterExtraEntries();
+        list.push({ date, vessel, time: "", company: "", support: "", group: "", workers: [worker] });
+        localStorage.setItem(ROSTER_EXTRA_STORAGE_KEY, JSON.stringify(list));
+        document.getElementById("rosterExtraWorker").value = "";
+        document.getElementById("rosterExtraVessel").value = "";
+        document.getElementById("rosterExtraDate").value = "";
+        renderRosterExtraList();
+        showToast(`➕ ${worker} · ${vessel} (${date}) 명단을 추가했습니다. 이제 이름으로 찾을 수 있습니다.`);
+    } catch (e) {
+        showToast("⚠️ 명단 추가에 실패했습니다. 다시 시도해 주세요.");
+    }
+}
+function deleteRosterExtraEntry(index) {
+    try {
+        const list = getRosterExtraEntries();
+        if (!list[index]) return;
+        list.splice(index, 1);
+        localStorage.setItem(ROSTER_EXTRA_STORAGE_KEY, JSON.stringify(list));
+        renderRosterExtraList();
+        showToast("🗑️ 명단 항목을 삭제했습니다.");
+    } catch (e) {
+        showToast("⚠️ 명단 삭제에 실패했습니다.");
+    }
+}
+function renderRosterExtraList() {
+    const el = document.getElementById("rosterExtraList");
+    if (!el) return;
+    const list = getRosterExtraEntries();
+    if (list.length === 0) {
+        el.innerHTML = `<div class="roster-finder-empty">아직 직접 추가한 명단이 없습니다. 사진 명단(2026-11-10/11) 7척은 기본으로 들어 있습니다.</div>`;
+        return;
+    }
+    el.innerHTML = list.map((e, i) =>
+        `<div class="roster-finder-extra-item"><span>${escapeShipCommentHtml(e.date)} · ${escapeShipCommentHtml(e.vessel)} · ${escapeShipCommentHtml(e.workers.join(", "))}</span><button type="button" onclick="deleteRosterExtraEntry(${i})">삭제</button></div>`
+    ).join("");
+}
 const HANJIN_COWORKER_ROSTER = [
     // 상단 좌측 (5명)
     { code: "1509", name: "천태운", group: "top" },

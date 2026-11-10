@@ -1540,6 +1540,182 @@
         color: var(--text-sub);
         line-height: var(--lh-7);
     }
+    /* 🔍 이름으로 선박 찾기 (명단 → 차트·스케줄 → 임금·일지 자동 등록) */
+    .roster-finder-box {
+        margin-top: var(--sp-8);
+        padding: var(--sp-8) var(--sp-9);
+        border-radius: var(--radius-lg);
+        background: linear-gradient(135deg, var(--blue-50), var(--blue-100));
+        border: 1.5px solid var(--blue-300);
+    }
+    body.dark-mode .roster-finder-box {
+        background: rgba(37, 99, 235, 0.12);
+        border-color: var(--blue-600);
+    }
+    .roster-finder-title {
+        font-size: var(--fs-5);
+        font-weight: var(--fw-black);
+        color: var(--blue-700);
+        margin-bottom: var(--sp-6);
+    }
+    body.dark-mode .roster-finder-title { color: var(--blue-300); }
+    .roster-finder-title small {
+        display: block;
+        font-size: var(--fs-3);
+        font-weight: var(--fw-bold);
+        color: var(--text-sub);
+        margin-top: var(--sp-2);
+    }
+    .roster-finder-row {
+        display: flex;
+        gap: var(--sp-5);
+        margin-bottom: var(--sp-6);
+    }
+    .roster-finder-row .input-field {
+        flex: 1;
+        min-width: 0;
+        text-align: left;
+    }
+    .roster-finder-search-btn {
+        flex: 0 0 auto;
+        background: var(--blue-600);
+        color: var(--n-000);
+        border: none;
+        border-radius: var(--radius-md);
+        padding: 0 var(--sp-16);
+        font-size: var(--fs-4);
+        font-weight: var(--fw-black);
+        cursor: pointer;
+    }
+    .roster-finder-results {
+        display: flex;
+        flex-direction: column;
+        gap: var(--sp-5);
+    }
+    .roster-finder-empty {
+        font-size: var(--fs-4);
+        font-weight: var(--fw-bold);
+        color: var(--text-sub);
+        line-height: var(--lh-7);
+    }
+    .roster-finder-summary {
+        font-size: var(--fs-4);
+        font-weight: var(--fw-black);
+        color: var(--blue-700);
+    }
+    body.dark-mode .roster-finder-summary { color: var(--blue-300); }
+    .roster-finder-card {
+        background: rgba(255, 255, 255, 0.85);
+        border: 1px solid var(--blue-200);
+        border-radius: var(--radius-md);
+        padding: var(--sp-6) var(--sp-8);
+    }
+    body.dark-mode .roster-finder-card {
+        background: rgba(15, 23, 42, 0.6);
+        border-color: var(--blue-600);
+    }
+    .roster-finder-card.is-missing { border-style: dashed; }
+    .roster-finder-card-head {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: var(--sp-4);
+        font-size: var(--fs-4);
+    }
+    .roster-finder-card-head span { color: var(--text-sub); font-weight: var(--fw-bold); font-size: var(--fs-3); }
+    .roster-finder-badge {
+        color: var(--n-000);
+        font-size: var(--fs-3);
+        font-weight: var(--fw-black);
+        border-radius: var(--radius-pill);
+        padding: var(--sp-2) var(--sp-7);
+    }
+    .roster-finder-card-sub {
+        font-size: var(--fs-4);
+        font-weight: var(--fw-bold);
+        color: var(--text-sub);
+        margin-top: var(--sp-3);
+    }
+    .roster-finder-card-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: var(--sp-4);
+        margin-top: var(--sp-5);
+    }
+    .roster-finder-card-actions button,
+    .roster-finder-link {
+        background: var(--n-000);
+        color: var(--blue-700);
+        border: 1.5px solid var(--blue-600);
+        border-radius: var(--radius-md);
+        padding: var(--sp-4) var(--sp-9);
+        font-size: var(--fs-3);
+        font-weight: var(--fw-black);
+        cursor: pointer;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+    }
+    body.dark-mode .roster-finder-card-actions button,
+    body.dark-mode .roster-finder-link {
+        background: rgba(15, 23, 42, 0.7);
+        color: var(--blue-300);
+    }
+    .roster-finder-all-btn {
+        background: var(--blue-600);
+        color: var(--n-000);
+        border: none;
+        border-radius: var(--radius-md);
+        padding: var(--sp-9) var(--sp-12);
+        font-size: var(--fs-4);
+        font-weight: var(--fw-black);
+        cursor: pointer;
+        width: 100%;
+    }
+    .roster-finder-extra {
+        margin-top: var(--sp-6);
+        font-size: var(--fs-4);
+        font-weight: var(--fw-bold);
+        color: var(--text-sub);
+    }
+    .roster-finder-extra summary { cursor: pointer; font-weight: var(--fw-black); color: var(--blue-700); }
+    body.dark-mode .roster-finder-extra summary { color: var(--blue-300); }
+    .roster-finder-extra-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: var(--sp-4);
+        margin-top: var(--sp-5);
+    }
+    .roster-finder-extra-grid button {
+        background: var(--blue-600);
+        color: var(--n-000);
+        border: none;
+        border-radius: var(--radius-md);
+        font-size: var(--fs-4);
+        font-weight: var(--fw-black);
+        cursor: pointer;
+        min-height: 36px;
+    }
+    .roster-finder-extra-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: var(--sp-4);
+        font-size: var(--fs-3);
+        font-weight: var(--fw-bold);
+        padding: var(--sp-3) 0;
+    }
+    .roster-finder-extra-item button {
+        background: var(--red-100);
+        color: var(--red-600);
+        border: 1px solid var(--red-300);
+        border-radius: var(--radius-md);
+        padding: var(--sp-2) var(--sp-7);
+        font-size: var(--fs-3);
+        font-weight: var(--fw-bold);
+        cursor: pointer;
+        flex-shrink: 0;
+    }
     .wage-schedule-ship-chip {
         display: inline-flex;
         flex-wrap: wrap;
