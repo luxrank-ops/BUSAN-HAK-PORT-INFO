@@ -5522,8 +5522,10 @@ function setRosterPhotoBusy(busy, message) {
         const btn = document.getElementById(id);
         if (btn) btn.disabled = busyFlag;
     });
-    const upload = document.getElementById("rosterPhotoUploadLabel");
-    if (upload) upload.classList.toggle("is-busy", busyFlag);
+    ["rosterPhotoUploadLabel", "rosterPhotoGalleryLabel"].forEach(id => {
+        const label = document.getElementById(id);
+        if (label) label.classList.toggle("is-busy", busyFlag);
+    });
     if (message) setRosterPhotoStatus(message);
 }
 
@@ -5533,6 +5535,16 @@ function openRosterPhotoPicker() {
         return;
     }
     const input = document.getElementById("rosterPhotoInput");
+    if (input) input.click();
+}
+
+/** 갤러리(앨범)에서 사진 선택 — capture 속성이 없는 입력을 엽니다. */
+function openRosterGalleryPicker() {
+    if (!isRosterFinderUnlocked()) {
+        unlockRosterFinder();
+        return;
+    }
+    const input = document.getElementById("rosterPhotoGalleryInput");
     if (input) input.click();
 }
 

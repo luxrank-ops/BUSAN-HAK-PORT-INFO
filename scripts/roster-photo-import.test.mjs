@@ -212,7 +212,7 @@ test('프라이버시: 기기 저장은 "체크한 경우"에만 일어나고 �
 });
 
 test('화면: 사진 업로드 UI 와 안내 문구가 패널 안에 있고 id 는 하나뿐이다', () => {
-    for (const id of ['rosterPhotoInput', 'rosterPhotoOcrBtn', 'rosterPhotoClearBtn', 'rosterPhotoStatus',
+    for (const id of ['rosterPhotoInput', 'rosterPhotoGalleryInput', 'rosterPhotoOcrBtn', 'rosterPhotoClearBtn', 'rosterPhotoStatus',
         'rosterPhotoPreviewWrap', 'rosterPhotoPreview', 'rosterPhotoTextDetails', 'rosterPhotoText',
         'rosterPhotoRows', 'rosterPhotoSaved']) {
         assert.ok(html.includes(`id="${id}"`), `missing #${id}`);
@@ -223,8 +223,15 @@ test('화면: 사진 업로드 UI 와 안내 문구가 패널 안에 있고 id �
     const photoIdx = html.indexOf('id="rosterPhotoInput"');
     const searchIdx = html.indexOf('id="rosterFinderInput"');
     assert.ok(panelIdx < photoIdx && photoIdx < searchIdx, '사진 UI 는 검색창 위, 패널 안에 있어야 합니다');
-    // 사진 선택 + 촬영
+    // 촬영(카메라) 과 갤러리(앨범) 를 각각 열 수 있어야 한다
     assert.match(html, /id="rosterPhotoInput" accept="image\/\*" capture="environment"/);
+    assert.match(html, /<input type="file" id="rosterPhotoGalleryInput" accept="image\/\*"\s*\n?\s*onchange="handleRosterPhotoSelected\(event\)">/);
+    const galleryTag = html.slice(html.indexOf('id="rosterPhotoGalleryInput"') - 20, html.indexOf('id="rosterPhotoGalleryInput"') + 160);
+    assert.ok(!galleryTag.includes('capture='), '갤러리 입력에는 capture 가 없어야 앨범에서 고를 수 있습니다');
+    // 두 버튼 모두 같은 처리기를 쓴다
+    assert.equal(html.split('onchange="handleRosterPhotoSelected(event)"').length - 1, 2);
+    assert.ok(html.includes('🖼️ 갤러리에서 선택'), '갤러리 선택 버튼 문구');
+    assert.match(appJs, /function openRosterGalleryPicker\(/);
     // 프라이버시 안내
     assert.ok(html.includes('서버로 전송되지 않고'), '프라이버시 안내 문구가 필요합니다');
     assert.ok(html.includes('사진 자체는 저장하지 않습니다'));
