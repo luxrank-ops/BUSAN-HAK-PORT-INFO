@@ -7,7 +7,7 @@ import yaml from 'js-yaml';
 const appJsFiles = [
   'public/js/notifications.js',
   'public/js/app.js',
-  'public/js/roster-workflow.js',
+  'public/js/roster-engine.js',
   'public/js/leader-access.js',
   'public/js/ships-board.js',
   'public/js/tab-views.js',
