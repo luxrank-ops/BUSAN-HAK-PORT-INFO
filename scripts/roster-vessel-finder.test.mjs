@@ -35,8 +35,11 @@ function setupFinder(extraEntries = []) {
     });
     vm.runInContext(extractDeclaration('PHOTO_ROSTER_20261110') + ';', context);
     vm.runInContext(extractDeclaration('ROSTER_EXTRA_STORAGE_KEY') + ';', context);
+    // 사진으로 만든 명단(기기 내) 계층 — 기본은 비어 있음
+    vm.runInContext('let rosterPhotoEntries = [];', context);
     for (const fn of [
         'normalizeRosterWorkerName', 'normalizeRosterVesselKey', 'getRosterExtraEntries',
+        'getPhotoRosterEntries',
         'getAllRosterAssignments', 'findRosterAssignmentsByWorker', 'findRosterAssignmentsByVessel',
         'matchScheduleVesselByName', 'buildRosterVesselPlan'
     ]) {

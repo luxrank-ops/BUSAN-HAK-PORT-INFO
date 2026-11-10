@@ -34,9 +34,9 @@
     <link rel="icon" href="./favicon.ico">
     <link rel="stylesheet" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.8/dist/web/static/pretendard.css" />
     <link rel="manifest" href="./manifest.json">
-    <link rel="stylesheet" href="./css/app.css?v=2027.22">
+    <link rel="stylesheet" href="./css/app.css?v=2027.23">
     <link rel="apple-touch-icon" href="./icon-192.png">
-<script src="./js/notifications.js?v=2027.22"></script></head>
+<script src="./js/notifications.js?v=2027.23"></script></head>
 <body data-app-view="legacy">
 <header>
     <div class="today-visitor-badge-slot" aria-hidden="true"></div>
@@ -448,6 +448,31 @@
                         <span class="roster-finder-lock-btn">비밀번호 입력</span>
                     </div>
                     <div id="rosterFinderPanel" class="hidden">
+                    <div class="roster-photo-box">
+                        <div class="roster-photo-head">
+                            <strong>📷 근무 배치 사진으로 명단 만들기</strong>
+                            <small>사진은 <b>서버로 전송되지 않고</b> 이 기기에서만 읽습니다. 사진 자체는 저장하지 않습니다.</small>
+                        </div>
+                        <div class="roster-photo-actions">
+                            <label id="rosterPhotoUploadLabel" class="roster-photo-upload" for="rosterPhotoInput">📷 사진 선택 / 촬영</label>
+                            <input type="file" id="rosterPhotoInput" accept="image/*" capture="environment"
+                                   onchange="handleRosterPhotoSelected(event)">
+                            <button type="button" id="rosterPhotoOcrBtn" class="roster-photo-ocr-btn" onclick="runRosterPhotoOcr()" disabled>🔍 사진에서 명단 읽기</button>
+                            <button type="button" id="rosterPhotoClearBtn" class="roster-photo-clear-btn" onclick="clearRosterPhoto()" disabled>✖ 사진 지우기</button>
+                        </div>
+                        <div id="rosterPhotoStatus" class="roster-photo-status" aria-live="polite">사진을 고르면 이 기기에서만 글자를 읽어 명단으로 만들어 줍니다.</div>
+                        <div id="rosterPhotoPreviewWrap" class="roster-photo-preview-wrap hidden">
+                            <img id="rosterPhotoPreview" class="roster-photo-preview" alt="업로드한 근무 배치 사진 (기기에서만 표시)">
+                        </div>
+                        <details id="rosterPhotoTextDetails" class="roster-photo-text-details hidden">
+                            <summary>✍️ 읽은 글자 확인·수정 (사진 없이 직접 적어도 됩니다)</summary>
+                            <textarea id="rosterPhotoText" class="input-field roster-photo-textarea" rows="6"
+                                      placeholder="예) 2026.11.11&#10;PRESIDENT CARTER 00:00 고려 BNCT 지원 ②&#10;조훈철 오규환 신경호 이춘학 ..."></textarea>
+                            <button type="button" class="roster-photo-parse-btn" onclick="parseRosterPhotoTextFromBox()">명단으로 변환</button>
+                        </details>
+                        <div id="rosterPhotoRows" class="roster-photo-rows" aria-live="polite"></div>
+                        <div id="rosterPhotoSaved" class="roster-photo-saved"></div>
+                    </div>
                     <div class="roster-finder-row">
                         <input type="text"
                                id="rosterFinderInput"
@@ -1879,17 +1904,17 @@
     </div>
 </div>
 
-<script src="./js/app.js?v=2027.22"></script>
+<script src="./js/app.js?v=2027.23"></script>
   
     <!-- [여기서부터 복사] 조장 근무일 비밀번호 검증 스크립트 -->
 <!-- [추가할 보안 및 실행 스크립트] -->
-<script src="./js/leader-access.js?v=2027.22"></script>
+<script src="./js/leader-access.js?v=2027.23"></script>
   <!-- [프로덕션 수준] 파이어베이스 'ships' 컬렉션 전체 데이터 조회 및 검색 모듈 -->
-<script src="./js/ships-board.js?v=2027.22"></script>
+<script src="./js/ships-board.js?v=2027.23"></script>
 
-<script src="./js/tab-views.js?v=2027.22"></script>
-<script src="./js/kkung-relay.js?v=2027.22"></script>
-<script src="./js/want-board.js?v=2027.22"></script>
+<script src="./js/tab-views.js?v=2027.23"></script>
+<script src="./js/kkung-relay.js?v=2027.23"></script>
+<script src="./js/want-board.js?v=2027.23"></script>
 </body>
 </html>
 
