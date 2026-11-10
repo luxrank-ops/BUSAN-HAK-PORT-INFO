@@ -161,6 +161,7 @@ function transformHtml(html, screenLockPin, emergencyPin = screenLockPin, emerge
 const JS_LOAD_ORDER = [
   'js/notifications.js',
   'js/app.js',
+  'js/roster-workflow.js',
   'js/leader-access.js',
   'js/ships-board.js',
   'js/tab-views.js',
