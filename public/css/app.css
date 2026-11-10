@@ -1621,6 +1621,162 @@
         .roster-deck-badge { width: 38px; height: 38px; font-size: var(--fs-13); }
         .roster-deck-chevron { width: 26px; height: 26px; }
     }
+    /* ⏱️ 내 근무시간 통계 (로그인 근무자 · 총/평일/주간/야간/주말·공휴일) */
+    .work-hours-box {
+        margin-bottom: var(--sp-12);
+        padding: var(--sp-10) var(--sp-11);
+        border-radius: var(--radius-lg);
+        border: 1.5px solid var(--blue-200);
+        background: linear-gradient(135deg, var(--blue-50), var(--card-bg));
+    }
+    body.dark-mode .work-hours-box {
+        border-color: var(--blue-600);
+        background: var(--n-800);
+    }
+    .work-hours-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: var(--sp-6);
+        flex-wrap: wrap;
+    }
+    .work-hours-title {
+        font-size: var(--fs-6);
+        font-weight: var(--fw-black);
+        color: var(--blue-700);
+        letter-spacing: -0.2px;
+    }
+    body.dark-mode .work-hours-title { color: var(--blue-300); }
+    .work-hours-period {
+        display: inline-flex;
+        align-items: center;
+        gap: var(--sp-2);
+        padding: var(--sp-2);
+        border-radius: var(--radius-pill);
+        background: var(--n-150);
+    }
+    body.dark-mode .work-hours-period { background: var(--n-900); }
+    .work-hours-period-btn {
+        border: none;
+        cursor: pointer;
+        padding: var(--sp-3) var(--sp-6);
+        border-radius: var(--radius-pill);
+        background: transparent;
+        color: var(--text-sub);
+        font-size: var(--fs-2);
+        font-weight: var(--fw-extrabold);
+        line-height: var(--lh-2);
+        white-space: nowrap;
+        transition: background var(--dur-150) ease, color var(--dur-150) ease;
+    }
+    .work-hours-period-btn.is-active {
+        background: var(--n-000);
+        color: var(--blue-700);
+        box-shadow: var(--shadow-soft);
+    }
+    body.dark-mode .work-hours-period-btn.is-active {
+        background: var(--n-800);
+        color: var(--blue-300);
+    }
+    .work-hours-range {
+        margin-top: var(--sp-5);
+        font-size: var(--fs-3);
+        font-weight: var(--fw-bold);
+        color: var(--text-sub);
+        line-height: var(--lh-4);
+    }
+    .work-hours-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: var(--sp-5);
+        margin-top: var(--sp-7);
+    }
+    .work-hours-card {
+        display: flex;
+        flex-direction: column;
+        gap: var(--sp-2);
+        min-width: 0;
+        padding: var(--sp-6) var(--sp-7);
+        border-radius: var(--radius-md);
+        border: 1.5px solid var(--border);
+        background: var(--n-000);
+    }
+    body.dark-mode .work-hours-card {
+        background: var(--n-900);
+        border-color: var(--n-650);
+    }
+    .work-hours-card.is-total {
+        grid-column: 1 / -1;
+        border-color: var(--blue-300);
+        background: var(--blue-100);
+    }
+    body.dark-mode .work-hours-card.is-total {
+        background: var(--n-800);
+        border-color: var(--blue-600);
+    }
+    .work-hours-label {
+        font-size: var(--fs-2);
+        font-weight: var(--fw-extrabold);
+        color: var(--text-sub);
+        line-height: var(--lh-3);
+        word-break: keep-all;
+    }
+    .work-hours-value {
+        font-size: var(--fs-9);
+        font-weight: var(--fw-black);
+        color: var(--primary);
+        line-height: var(--lh-5);
+        letter-spacing: -0.4px;
+        font-variant-numeric: tabular-nums;
+    }
+    .work-hours-card.is-total .work-hours-value {
+        font-size: var(--fs-13);
+        color: var(--blue-700);
+    }
+    body.dark-mode .work-hours-card.is-total .work-hours-value { color: var(--blue-300); }
+    .work-hours-card.is-day .work-hours-value { color: var(--amber-700); }
+    .work-hours-card.is-night .work-hours-value { color: var(--blue-700); }
+    body.dark-mode .work-hours-card.is-night .work-hours-value { color: var(--blue-300); }
+    .work-hours-card.is-weekday .work-hours-value { color: var(--emerald-700); }
+    .work-hours-card.is-weekend .work-hours-value { color: var(--orange-700); }
+    .work-hours-sub,
+    .work-hours-pct {
+        font-size: var(--fs-2);
+        font-weight: var(--fw-bold);
+        color: var(--text-sub);
+        line-height: var(--lh-3);
+    }
+    .work-hours-bar {
+        display: flex;
+        height: var(--sp-6);
+        margin-top: var(--sp-7);
+        border-radius: var(--radius-pill);
+        overflow: hidden;
+        background: var(--n-150);
+    }
+    body.dark-mode .work-hours-bar { background: var(--n-650); }
+    .work-hours-bar-fill {
+        height: 100%;
+        width: 0;
+        transition: width var(--dur-300) ease;
+    }
+    .work-hours-bar-fill.is-day { background: var(--amber-400); }
+    .work-hours-bar-fill.is-night { background: var(--blue-500); }
+    .work-hours-note {
+        margin-top: var(--sp-5);
+        font-size: var(--fs-2);
+        font-weight: var(--fw-bold);
+        color: var(--text-sub);
+        line-height: var(--lh-4);
+        word-break: keep-all;
+    }
+    @media (max-width: 480px) {
+        .work-hours-box { padding: var(--sp-8) var(--sp-8); }
+        .work-hours-grid { gap: var(--sp-4); }
+        .work-hours-card { padding: var(--sp-5) var(--sp-5); }
+        .work-hours-value { font-size: var(--fs-8); }
+        .work-hours-card.is-total .work-hours-value { font-size: var(--fs-11); }
+    }
     /* 🔍 이름으로 선박 찾기 (명단 → 차트·스케줄 → 임금·일지 자동 등록) */
     .roster-finder-box {
         margin-top: var(--sp-8);

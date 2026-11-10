@@ -2469,8 +2469,8 @@ async function verifyScreenLockPin(pin) {
     return { ok: false, reason: rateLimited ? "rate_limited" : "no_verifier" };
 }
 function syncWorkLogExtraUnlockUI() {
-    const lockBanner = document.getElementById("logExtraLockBanner");
-    const filterContent = document.getElementById("logExtraFilterContent");
+    // 기간·키워드 검색(잠금 대상)은 2026-11-10 에 근무시간 통계 블럭으로 교체되어
+    // logExtraLockBanner / logExtraFilterContent 가 더 이상 없습니다.
     const statsSummary = document.getElementById("monthlyStatsSummary");
     const d3LockBanner = document.getElementById("d3ChartLockBanner");
     const d3ChartSection = document.getElementById("monthlyD3ChartSection");
@@ -2483,8 +2483,6 @@ function syncWorkLogExtraUnlockUI() {
     const coworkerLockBanner = document.getElementById("coworkerLockBanner");
     const coworkerUnlockedArea = document.getElementById("coworkerUnlockedArea");
     if (isWorkLogUnlocked) {
-        if (lockBanner) lockBanner.style.display = "none";
-        if (filterContent) filterContent.classList.remove("hidden");
         if (statsSummary) statsSummary.classList.remove("hidden");
         if (d3LockBanner) d3LockBanner.style.display = "none";
         if (d3ChartSection) d3ChartSection.classList.remove("hidden");
@@ -2503,8 +2501,6 @@ function syncWorkLogExtraUnlockUI() {
             loadAndSearchAllShips(document.getElementById('shipSearch')?.value || '');
         }
     } else {
-        if (lockBanner) lockBanner.style.display = "flex";
-        if (filterContent) filterContent.classList.add("hidden");
         if (statsSummary) statsSummary.classList.add("hidden");
         if (d3LockBanner) d3LockBanner.style.display = "flex";
         if (d3ChartSection) d3ChartSection.classList.add("hidden");
@@ -6700,6 +6696,244 @@ function updateMonthlyStatsUI(logsMap) {
     updateMonthlyGoalGaugeUI(total, days);
     renderWorkLogQuickChips();
 }
+/* ===== ⏱️ 내 근무시간 통계 (로그인 근무자) =====
+   근무일지 기록에서 아래 5가지를 집계합니다.
+   · 총근무시간      : 기록된 근무시간의 합
+   · 주간 / 야간     : extractWorkLogTimeAndWageMetrics 의 시간대 분리(계절 기준 주·야간 경계)
+   · 주말·공휴일     : 같은 함수가 계산한 토·일·공휴일 시간(주말에 걸친 시간)
+   · 평일           : 총 − 주말·공휴일 (그래서 평일 + 주말 = 총)
+   시간이 없고 금액만 있는 기록은 기존 월간 리포트와 똑같이 급여로 시간을 추정합니다(추정 일수 표시). */
+const WORK_HOUR_STATS_PERIODS = ["month", "prev", "year", "all"];
+const WORK_HOUR_STATS_PERIOD_LABEL = { month: "이번 달", prev: "지난 달", year: "올해", all: "전체" };
+let workHourStatsPeriod = "month";
+let workHourStatsCache = {};
+let workHourStatsRequestSeq = 0;
+
+function roundWorkHours1(value) {
+    return Math.round((Number(value) || 0) * 10) / 10;
+}
+
+/** 순수 집계 함수: 근무일지 배열(또는 date→log 맵) → 근무시간 통계 */
+function buildWorkHourStats(logs) {
+    const list = Array.isArray(logs) ? logs : Object.values(logs || {});
+    const out = {
+        days: 0, totalHours: 0, weekdayHours: 0, dayHours: 0, nightHours: 0, weekendHours: 0,
+        estimatedDays: 0, timeRecordedDays: 0, totalPay: 0
+    };
+    list.forEach(log => {
+        if (!log) return;
+        const wt = extractWorkLogTimeAndWageMetrics(log);
+        const pay = Number(wt && wt.totalPay) || 0;
+        // 금액·선박·동료·메모가 모두 비어 있는 빈 기록은 근무일수에서 제외합니다.
+        if (!pay && !log.shipName && !log.memo && !log.coworkers) return;
+        out.days += 1;
+        if (wt) {
+            out.totalHours += Number(wt.totalHours) || 0;
+            out.dayHours += Number(wt.dayHours) || 0;
+            out.nightHours += Number(wt.nightHours) || 0;
+            out.weekendHours += Number(wt.weekendHours) || 0;
+            if (wt.estimated) out.estimatedDays += 1;
+            // 시간이 실제로 적힌 기록만 "시간 기록일" 로 셉니다(급여 추정일은 제외).
+            if (wt.hasTime && !wt.estimated) out.timeRecordedDays += 1;
+        }
+        out.totalPay += pay;
+    });
+    out.totalHours = roundWorkHours1(out.totalHours);
+    out.dayHours = roundWorkHours1(out.dayHours);
+    out.nightHours = roundWorkHours1(out.nightHours);
+    out.weekendHours = Math.min(roundWorkHours1(out.weekendHours), out.totalHours);
+    out.weekdayHours = Math.max(0, roundWorkHours1(out.totalHours - out.weekendHours));
+    return out;
+}
+
+/** 시간 → 화면 표시용 문자열 (예: 128.5시간) */
+function formatWorkHourValue(hours) {
+    return `${roundWorkHours1(hours).toLocaleString("ko-KR")}시간`;
+}
+
+/** 통계 비율(%) — 총근무시간 대비, 0~100 */
+function workHourStatsPercent(value, total) {
+    const base = Number(total) || 0;
+    if (base <= 0) return 0;
+    return Math.min(100, Math.max(0, Math.round(((Number(value) || 0) / base) * 100)));
+}
+
+/** 기간 → 조회 범위(YYYY-MM-DD)·표시 이름 */
+function getWorkHourStatsRange(period, baseDate) {
+    const base = (baseDate instanceof Date && !isNaN(baseDate.getTime())) ? baseDate : new Date();
+    const pad2 = (n) => String(n).padStart(2, "0");
+    const lastDay = (yy, mm) => new Date(yy, mm + 1, 0).getDate();
+    const year = base.getFullYear();
+    const month = base.getMonth();
+    const monthRange = (yy, mm) => ({
+        start: `${yy}-${pad2(mm + 1)}-01`,
+        end: `${yy}-${pad2(mm + 1)}-${pad2(lastDay(yy, mm))}`,
+        title: `${yy}년 ${mm + 1}월`,
+        label: `${yy}.${pad2(mm + 1)}.01 ~ ${yy}.${pad2(mm + 1)}.${pad2(lastDay(yy, mm))}`
+    });
+    if (period === "prev") {
+        const py = month === 0 ? year - 1 : year;
+        const pm = month === 0 ? 11 : month - 1;
+        return monthRange(py, pm);
+    }
+    if (period === "year") {
+        return {
+            start: `${year}-01-01`,
+            end: `${year}-12-31`,
+            title: `${year}년`,
+            label: `${year}.01.01 ~ ${year}.12.31`
+        };
+    }
+    if (period === "all") {
+        return { start: "", end: "", title: "전체 기간", label: "" };
+    }
+    return monthRange(year, month);
+}
+
+/** 달력에 이미 불러온 기록(adminWorkLogs) 중 기간에 해당하는 것만 */
+function collectLoadedWorkLogsForStats(range) {
+    const list = Object.values(adminWorkLogs || {});
+    if (!range || (!range.start && !range.end)) return list;
+    return list.filter(log => {
+        const date = String((log && log.date) || "");
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return false;
+        if (range.start && date < range.start) return false;
+        if (range.end && date > range.end) return false;
+        return true;
+    });
+}
+
+/** 기간 전체 기록 조회(로그인 시). 실패하면 null → 화면에 불러온 기록으로 대체 집계 */
+async function fetchWorkLogsForStats(range) {
+    if (!currentWorkerId || typeof queryWorkLogsByDateRange !== "function") return null;
+    try {
+        const snap = await queryWorkLogsByDateRange(range.start || null, range.end || null, 1000);
+        const list = [];
+        snap.forEach(doc => {
+            const data = (doc && typeof doc.data === "function") ? (doc.data() || {}) : {};
+            if (typeof isDeletedRecord === "function" && isDeletedRecord(data)) return;
+            if (data.workerId && data.workerId !== currentWorkerId) return;
+            list.push(data);
+        });
+        return list;
+    } catch (e) {
+        try { console.warn("[근무시간 통계] 조회 실패:", e && e.message); } catch (_) {}
+        return null;
+    }
+}
+
+/** 통계 UI 그리기 */
+function renderWorkHourStats(stats, meta) {
+    const s = stats || buildWorkHourStats([]);
+    const info = meta || {};
+    const setText = (id, text) => {
+        const el = document.getElementById(id);
+        if (el) el.innerText = text;
+    };
+    setText("whStatTotal", formatWorkHourValue(s.totalHours));
+    setText("whStatTotalSub", `근무 ${s.days}일`);
+    setText("whStatWeekday", formatWorkHourValue(s.weekdayHours));
+    setText("whStatDay", formatWorkHourValue(s.dayHours));
+    setText("whStatNight", formatWorkHourValue(s.nightHours));
+    setText("whStatWeekend", formatWorkHourValue(s.weekendHours));
+    [
+        ["whStatWeekdayPct", s.weekdayHours],
+        ["whStatDayPct", s.dayHours],
+        ["whStatNightPct", s.nightHours],
+        ["whStatWeekendPct", s.weekendHours]
+    ].forEach(([id, value]) => setText(id, `${workHourStatsPercent(value, s.totalHours)}%`));
+
+    const total = Number(s.totalHours) || 0;
+    const setBar = (id, share) => {
+        const el = document.getElementById(id);
+        if (el) el.style.width = `${Math.max(0, Math.min(100, share * 100)).toFixed(1)}%`;
+    };
+    setBar("whBarDay", total > 0 ? (s.dayHours / total) : 0);
+    setBar("whBarNight", total > 0 ? (s.nightHours / total) : 0);
+
+    const rangeEl = document.getElementById("workHourStatsRange");
+    if (rangeEl) {
+        if (!currentWorkerId) {
+            rangeEl.innerText = "로그인하면 내 근무기록으로 자동 계산됩니다.";
+        } else if (info.loading) {
+            rangeEl.innerText = `${info.title || ""} 집계 중…`;
+        } else {
+            const label = info.label && info.label !== info.title ? ` (${info.label})` : "";
+            rangeEl.innerText = `${info.title || ""}${label} · 근무 ${s.days}일`;
+        }
+    }
+
+    const noteEl = document.getElementById("workHourStatsNote");
+    if (noteEl) {
+        let note = "주간·야간은 실제 근무 시간대, 평일·주말·공휴일은 근무 날짜 기준입니다.";
+        if (!currentWorkerId) note = "로그인하면 내 근무기록만 모아 자동으로 계산합니다.";
+        else if (info.offline) note += " · 화면에 불러온 기록만 집계했습니다.";
+        if (s.estimatedDays > 0) note += ` · 시간이 비어 있는 ${s.estimatedDays}일은 급여로 시간을 추정했습니다.`;
+        if (s.days > 0 && s.timeRecordedDays === 0) note += " · 시간 기록이 없어 모든 시간이 추정값입니다.";
+        noteEl.innerText = note;
+    }
+
+    const buttons = (typeof document.querySelectorAll === "function")
+        ? document.querySelectorAll("#workHourStatsPeriodBar .work-hours-period-btn")
+        : [];
+    const active = info.period || workHourStatsPeriod;
+    if (buttons && typeof buttons.forEach === "function") {
+        buttons.forEach(btn => {
+            const on = btn.getAttribute("data-period") === active;
+            btn.classList.toggle("is-active", on);
+            btn.setAttribute("aria-pressed", on ? "true" : "false");
+        });
+    }
+}
+
+/** 현재 선택한 기간의 통계를 계산해 그립니다. */
+async function refreshWorkHourStats(options) {
+    const opts = options || {};
+    const period = WORK_HOUR_STATS_PERIODS.includes(workHourStatsPeriod) ? workHourStatsPeriod : "month";
+    const range = getWorkHourStatsRange(period, currentDate);
+    const cacheKey = `${period}|${range.start}|${range.end}`;
+
+    if (!currentWorkerId) {
+        renderWorkHourStats(buildWorkHourStats([]), { period, title: range.title, label: range.label });
+        return;
+    }
+
+    if (opts.force !== true && workHourStatsCache[cacheKey]) {
+        const cached = workHourStatsCache[cacheKey];
+        renderWorkHourStats(cached.stats, { period, title: range.title, label: range.label, offline: cached.offline });
+        return;
+    }
+
+    const loaded = collectLoadedWorkLogsForStats(range);
+    const loadedStats = buildWorkHourStats(loaded);
+    // 이번 달은 달력이 이미 그 달 기록을 불러와 있어 바로 계산합니다(오프라인에서도 동작).
+    if (period === "month") {
+        workHourStatsCache[cacheKey] = { stats: loadedStats, offline: false };
+        renderWorkHourStats(loadedStats, { period, title: range.title, label: range.label });
+        return;
+    }
+
+    renderWorkHourStats(loadedStats, { period, title: range.title, label: range.label, loading: true });
+    const seq = ++workHourStatsRequestSeq;
+    const fetched = await fetchWorkLogsForStats(range);
+    if (seq !== workHourStatsRequestSeq) return; // 더 최근 요청이 있으면 무시
+    const offline = !fetched;
+    const stats = buildWorkHourStats(fetched || loaded);
+    workHourStatsCache[cacheKey] = { stats, offline };
+    renderWorkHourStats(stats, { period, title: range.title, label: range.label, offline });
+}
+
+function setWorkHourStatsPeriod(period) {
+    if (!WORK_HOUR_STATS_PERIODS.includes(period)) return;
+    workHourStatsPeriod = period;
+    refreshWorkHourStats();
+    if (typeof trackAppEvent === "function") trackAppEvent("actions", `workhour_stats_${period}`);
+}
+
+function invalidateWorkHourStatsCache() {
+    workHourStatsCache = {};
+}
+
 function renderCalendar(y, m){
     const g = document.getElementById('calendarGrid');
     document.getElementById('calMonthYear').innerText = `${y}년 ${m+1}월`;
@@ -6747,7 +6981,8 @@ function renderCalendar(y, m){
                 }
             });
             updateMonthlyStatsUI(adminWorkLogs);
-            applyWorkLogFilter();
+            invalidateWorkHourStatsCache();
+            refreshWorkHourStats();
             const selDate = document.getElementById('dailyLogForm')?.getAttribute('data-date');
             if (selDate && !document.getElementById('dailyLogForm')?.classList.contains('hidden')) {
                 loadHjncScheduledShipsForDate(getWorklogScheduleDate() || selDate);
@@ -6756,6 +6991,8 @@ function renderCalendar(y, m){
         });
     } else {
         updateMonthlyStatsUI({});
+        invalidateWorkHourStatsCache();
+        refreshWorkHourStats();
         const selDate = document.getElementById('dailyLogForm')?.getAttribute('data-date');
         if (selDate && !document.getElementById('dailyLogForm')?.classList.contains('hidden')) {
             loadHjncScheduledShipsForDate(getWorklogScheduleDate() || selDate);
@@ -7475,135 +7712,12 @@ function renderMonthlyD3BarChart(data, year) {
         .style("fill", "#047857")
         .text(d => `${d.workDays}일`);
 }
-let rangeFetchedLogs = null;
-function matchesLogFilter(log, startDate, endDate, keyword) {
-    if (!log) return false;
-    if (startDate && log.date < startDate) return false;
-    if (endDate && log.date > endDate) return false;
-    if (keyword) {
-        const hay = `${log.date || ''} ${log.shipName || ''} ${log.coworkers || ''} ${log.memo || ''} ${log.totalPay || ''}`.toLowerCase();
-        if (!hay.includes(keyword)) return false;
-    }
-    return true;
-}
-function applyWorkLogFilter(externalLogs) {
-    const startDate = (document.getElementById('logFilterStartDate')?.value || '').trim();
-    const endDate = (document.getElementById('logFilterEndDate')?.value || '').trim();
-    const keyword = (document.getElementById('logFilterKeyword')?.value || '').trim().toLowerCase();
-    const resultsBox = document.getElementById('logFilterResults');
-    const isFiltering = Boolean(startDate || endDate || keyword);
-
-    document.querySelectorAll('#calendarGrid .cal-day').forEach(cell => {
-        cell.classList.remove('filter-match', 'filter-dim');
-        if (!isFiltering) return;
-        const dStr = cell.getAttribute('data-date');
-        const log = adminWorkLogs[dStr];
-        if (matchesLogFilter(log, startDate, endDate, keyword)) {
-            cell.classList.add('filter-match');
-        } else {
-            cell.classList.add('filter-dim');
-        }
-    });
-
-    if (!resultsBox) return;
-    if (!isFiltering) {
-        resultsBox.classList.add('hidden');
-        resultsBox.innerHTML = '';
-        rangeFetchedLogs = null;
-        return;
-    }
-
-    const sourceMap = externalLogs || rangeFetchedLogs || adminWorkLogs;
-    const matched = Object.values(sourceMap)
-        .filter(log => matchesLogFilter(log, startDate, endDate, keyword))
-        .sort((a, b) => b.date.localeCompare(a.date));
-
-    resultsBox.classList.remove('hidden');
-    if (matched.length === 0) {
-        resultsBox.innerHTML = `<div style="text-align:center; padding:10px; font-size:0.82rem; color:var(--text-sub); font-weight:700;">조건에 맞는 근무 기록이 없습니다.${!externalLogs && !rangeFetchedLogs && (startDate || endDate) ? ' 다른 달 기록을 찾으시려면 [기간 조회]를 눌러 주세요.' : ''}</div>`;
-        return;
-    }
-
-    let sumPay = 0;
-    const itemsHtml = matched.map(log => {
-        const pay = Number(log.totalPay) || 0;
-        sumPay += pay;
-        const ship = escapeShipCommentHtml(log.shipName || '선박명 미입력');
-        const workers = escapeShipCommentHtml(log.coworkers || '');
-        const memo = escapeShipCommentHtml(log.memo || '');
-        return `<div class="log-filter-item" onclick="jumpToLogDate('${log.date}')">
-            <div style="flex:1; min-width:0;">
-                <div style="font-weight:900; color:var(--primary);">${log.date} · 🚢 ${ship}</div>
-                <div style="font-size:0.78rem; color:var(--text-sub); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${workers ? `👥 ${workers} ` : ''}${memo ? `📝 ${memo}` : ''}</div>
-            </div>
-            <div style="font-weight:900; color:#c2410c; white-space:nowrap;">${pay.toLocaleString()}원</div>
-        </div>`;
-    }).join('');
-
-    resultsBox.innerHTML = `<div style="display:flex; justify-content:space-between; align-items:center; font-size:0.8rem; font-weight:900; color:var(--primary); margin-bottom:6px; padding:0 4px;">
-        <span>검색 결과: ${matched.length}건</span>
-        <span>합계: ${sumPay.toLocaleString()}원</span>
-    </div>${itemsHtml}`;
-}
-async function searchWorkLogsRange() {
-    if (!currentWorkerId) {
-        document.getElementById('loginModal').style.display = 'flex';
-        return;
-    }
-    const startDate = (document.getElementById('logFilterStartDate')?.value || '').trim();
-    const endDate = (document.getElementById('logFilterEndDate')?.value || '').trim();
-    if (startDate && endDate && startDate > endDate) {
-        alert("시작일이 종료일보다 늦을 수 없습니다.");
-        return;
-    }
-    const resultsBox = document.getElementById('logFilterResults');
-    if (resultsBox) {
-        resultsBox.classList.remove('hidden');
-        resultsBox.innerHTML = `<div style="text-align:center; padding:10px; font-size:0.82rem; color:var(--text-sub); font-weight:700;">기록을 조회하는 중...</div>`;
-    }
-    try {
-        const snap = await queryWorkLogsByDateRange(startDate || null, endDate || null, 500);
-        const fetched = {};
-        snap.forEach(doc => {
-            const data = doc.data();
-            if (isDeletedRecord(data)) return;
-            if (data.workerId === currentWorkerId) {
-                fetched[data.date] = data;
-            }
-        });
-        rangeFetchedLogs = fetched;
-        if (startDate) {
-            const parts = startDate.split('-');
-            if (parts.length === 3) {
-                currentDate = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, 1);
-                renderCalendar(currentDate.getFullYear(), currentDate.getMonth());
-            }
-        }
-        applyWorkLogFilter(fetched);
-    } catch (e) {
-        console.error("기간 조회 오류:", e);
-        applyWorkLogFilter();
-    }
-}
-function resetWorkLogFilter() {
-    const s = document.getElementById('logFilterStartDate');
-    const e = document.getElementById('logFilterEndDate');
-    const k = document.getElementById('logFilterKeyword');
-    if (s) s.value = '';
-    if (e) e.value = '';
-    if (k) k.value = '';
-    rangeFetchedLogs = null;
-    applyWorkLogFilter();
-}
 function jumpToLogDate(dStr) {
     if (!dStr) return;
     const parts = dStr.split('-');
     if (parts.length !== 3) return;
     const y = parseInt(parts[0], 10);
     const m = parseInt(parts[1], 10) - 1;
-    if (rangeFetchedLogs && rangeFetchedLogs[dStr]) {
-        adminWorkLogs[dStr] = rangeFetchedLogs[dStr];
-    }
     if (currentDate.getFullYear() !== y || currentDate.getMonth() !== m) {
         currentDate = new Date(y, m, 1);
         renderCalendar(y, m);
@@ -7782,13 +7896,9 @@ function saveWorkLog(){
                 ? `근무일지가 안전하게 저장되었습니다. (중복 선박명 ${removedDuplicateCount}개 정리)`
                 : "근무일지가 안전하게 저장되었습니다."); 
             
-            // 데이터 즉시 갱신. 기간 조회 결과를 따로 캐시하고 있으므로 그 캐시도 함께 갱신해야
-            // 저장 후 검색 결과/임금 내역서로 돌아갈 때 수정 전 기록이 다시 나타나지 않습니다.
+            // 데이터 즉시 갱신 (달력·근무시간 통계가 이 맵을 그대로 다시 그립니다).
             adminWorkLogs[dStr] = logData;
-            if (rangeFetchedLogs && Object.prototype.hasOwnProperty.call(rangeFetchedLogs, dStr)) {
-                rangeFetchedLogs[dStr] = logData;
-            }
-            renderCalendar(currentDate.getFullYear(), currentDate.getMonth()); 
+            renderCalendar(currentDate.getFullYear(), currentDate.getMonth());
 
             if (shouldOfferVesselInfoFollowUp) {
                 setTimeout(() => startVesselInfoFollowUp("workLog", {

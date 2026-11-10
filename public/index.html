@@ -34,9 +34,9 @@
     <link rel="icon" href="./favicon.ico">
     <link rel="stylesheet" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.8/dist/web/static/pretendard.css" />
     <link rel="manifest" href="./manifest.json">
-    <link rel="stylesheet" href="./css/app.css?v=2027.25">
+    <link rel="stylesheet" href="./css/app.css?v=2027.26">
     <link rel="apple-touch-icon" href="./icon-192.png">
-<script src="./js/notifications.js?v=2027.25"></script></head>
+<script src="./js/notifications.js?v=2027.26"></script></head>
 <body data-app-view="legacy">
 <header>
     <div class="today-visitor-badge-slot" aria-hidden="true"></div>
@@ -400,28 +400,55 @@
                     <div class="user-info"><span id="currentUserDisplay" class="user-name"></span><span class="user-status">🔒 내 저장소</span></div>
                     <button class="action-btn bg-cancel" style="padding: 5px 10px; width:auto; font-size:0.85rem;" onclick="logoutWorker()">로그아웃</button>
                 </div>
-                <div class="log-filter-box" style="position:relative;">
-                    <div id="logExtraLockBanner" onclick="openWorkLogPinModal()" style="cursor:pointer; background:linear-gradient(135deg, #eff6ff, #dbeafe); border:1.5px solid #93c5fd; border-radius:8px; padding:10px 10px; display:flex; justify-content:space-between; align-items:center; gap:6px; flex-wrap:nowrap;">
-                        <span style="font-size:clamp(0.74rem, 2.8vw, 0.85rem); font-weight:900; color:var(--primary); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; min-width:0; letter-spacing:-0.3px;">🔒 기간·키워드 검색 및 상세 정산 통계 (잠김)</span>
-                        <span style="background:var(--primary); color:white; font-size:0.75rem; font-weight:800; padding:4px 9px; border-radius:6px; white-space:nowrap; flex-shrink:0;">비번해제</span>
+                <!-- ⏱️ 내 근무시간 통계 (기간·키워드 검색 자리에서 교체, 2026-11-10) -->
+                <section id="workHourStatsBox" class="work-hours-box" aria-labelledby="workHourStatsTitle">
+                    <div class="work-hours-head">
+                        <span id="workHourStatsTitle" class="work-hours-title">⏱️ 내 근무시간 통계</span>
+                        <div id="workHourStatsPeriodBar" class="work-hours-period" role="group" aria-label="통계 기간 선택">
+                            <button type="button" class="work-hours-period-btn is-active" data-period="month"
+                                    aria-pressed="true" onclick="setWorkHourStatsPeriod('month')">이번 달</button>
+                            <button type="button" class="work-hours-period-btn" data-period="prev"
+                                    aria-pressed="false" onclick="setWorkHourStatsPeriod('prev')">지난 달</button>
+                            <button type="button" class="work-hours-period-btn" data-period="year"
+                                    aria-pressed="false" onclick="setWorkHourStatsPeriod('year')">올해</button>
+                            <button type="button" class="work-hours-period-btn" data-period="all"
+                                    aria-pressed="false" onclick="setWorkHourStatsPeriod('all')">전체</button>
+                        </div>
                     </div>
-                    <div id="logExtraFilterContent" class="hidden">
-                        <div style="font-size:0.85rem; font-weight:900; color:var(--primary); margin-bottom:6px; display:flex; justify-content:space-between; align-items:center;">
-                            <span>🔍 근무 기록 기간·키워드 검색</span>
-                            <button type="button" onclick="resetWorkLogFilter()" style="background:transparent; border:1px solid var(--border); border-radius:6px; padding:2px 8px; font-size:0.75rem; font-weight:800; color:var(--text-sub); cursor:pointer;">초기화</button>
+                    <div id="workHourStatsRange" class="work-hours-range" aria-live="polite">로그인하면 내 근무기록으로 자동 계산됩니다.</div>
+                    <div class="work-hours-grid">
+                        <div class="work-hours-card is-total">
+                            <span class="work-hours-label">총근무시간</span>
+                            <strong id="whStatTotal" class="work-hours-value">0시간</strong>
+                            <span id="whStatTotalSub" class="work-hours-sub">근무 0일</span>
                         </div>
-                        <div style="display:flex; gap:6px; align-items:center; margin-bottom:6px;">
-                            <input type="date" id="logFilterStartDate" class="input-field" style="flex:1; height:36px; font-size:0.82rem; padding:0 6px; text-align:center;" onclick="openDatePicker('logFilterStartDate', event)" onchange="applyWorkLogFilter()">
-                            <span style="font-weight:900; color:var(--text-sub);">~</span>
-                            <input type="date" id="logFilterEndDate" class="input-field" style="flex:1; height:36px; font-size:0.82rem; padding:0 6px; text-align:center;" onclick="openDatePicker('logFilterEndDate', event)" onchange="applyWorkLogFilter()">
+                        <div class="work-hours-card is-weekday">
+                            <span class="work-hours-label">평일 근무시간</span>
+                            <strong id="whStatWeekday" class="work-hours-value">0시간</strong>
+                            <span id="whStatWeekdayPct" class="work-hours-pct">0%</span>
                         </div>
-                        <div style="display:flex; gap:6px;">
-                            <input type="text" id="logFilterKeyword" class="input-field" placeholder="배 이름, 근무자, 메모 검색..." style="flex:1; height:38px; font-size:0.88rem; text-align:left; padding:0 10px;" oninput="applyWorkLogFilter()" onkeydown="if(event.key==='Enter'){event.preventDefault();searchWorkLogsRange();}">
-                            <button type="button" class="action-btn" style="width:auto; margin:0; padding:0 14px; height:38px; font-size:0.85rem;" onclick="searchWorkLogsRange()">기간 조회</button>
+                        <div class="work-hours-card is-day">
+                            <span class="work-hours-label">☀️ 주간 근무시간</span>
+                            <strong id="whStatDay" class="work-hours-value">0시간</strong>
+                            <span id="whStatDayPct" class="work-hours-pct">0%</span>
                         </div>
-                        <div id="logFilterResults" class="log-filter-results hidden"></div>
+                        <div class="work-hours-card is-night">
+                            <span class="work-hours-label">🌙 야간 근무시간</span>
+                            <strong id="whStatNight" class="work-hours-value">0시간</strong>
+                            <span id="whStatNightPct" class="work-hours-pct">0%</span>
+                        </div>
+                        <div class="work-hours-card is-weekend">
+                            <span class="work-hours-label">🎉 주말·공휴일 근무시간</span>
+                            <strong id="whStatWeekend" class="work-hours-value">0시간</strong>
+                            <span id="whStatWeekendPct" class="work-hours-pct">0%</span>
+                        </div>
                     </div>
-                </div>
+                    <div class="work-hours-bar" role="img" aria-label="주간·야간 근무시간 비율">
+                        <span id="whBarDay" class="work-hours-bar-fill is-day"></span>
+                        <span id="whBarNight" class="work-hours-bar-fill is-night"></span>
+                    </div>
+                    <div id="workHourStatsNote" class="work-hours-note">주간·야간은 실제 근무 시간대, 평일·주말·공휴일은 근무 날짜 기준입니다.</div>
+                </section>
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
                     <button class="mini-btn-old" style="padding:6px 12px; font-size:1rem; background:var(--primary);" onclick="changeMonth(-1)">◀</button>
                     <span id="calMonthYear" style="font-weight:900; font-size:1.15rem;"></span>
@@ -1929,17 +1956,17 @@
     </div>
 </div>
 
-<script src="./js/app.js?v=2027.25"></script>
+<script src="./js/app.js?v=2027.26"></script>
   
     <!-- [여기서부터 복사] 조장 근무일 비밀번호 검증 스크립트 -->
 <!-- [추가할 보안 및 실행 스크립트] -->
-<script src="./js/leader-access.js?v=2027.25"></script>
+<script src="./js/leader-access.js?v=2027.26"></script>
   <!-- [프로덕션 수준] 파이어베이스 'ships' 컬렉션 전체 데이터 조회 및 검색 모듈 -->
-<script src="./js/ships-board.js?v=2027.25"></script>
+<script src="./js/ships-board.js?v=2027.26"></script>
 
-<script src="./js/tab-views.js?v=2027.25"></script>
-<script src="./js/kkung-relay.js?v=2027.25"></script>
-<script src="./js/want-board.js?v=2027.25"></script>
+<script src="./js/tab-views.js?v=2027.26"></script>
+<script src="./js/kkung-relay.js?v=2027.26"></script>
+<script src="./js/want-board.js?v=2027.26"></script>
 </body>
 </html>
 
