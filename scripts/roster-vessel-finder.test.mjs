@@ -296,7 +296,10 @@ test('잠금 로직: 잠금 플래그·해제 저장 키·동기화 함수가 �
     for (const fn of ['isRosterFinderUnlocked', 'syncRosterFinderLockUI', 'unlockRosterFinder']) {
         assert.ok(extractFunction(fn).length > 0, `missing function ${fn}`);
     }
-    assert.match(appJs, /const ROSTER_FINDER_BETA_LOCK = true;/);
+    // 2026-11-10 전체 공개: 잠금 플래그는 false (비밀번호 없이 사용)
+    assert.match(appJs, /const ROSTER_FINDER_BETA_LOCK = false;/);
+    // 다시 잠글 때를 대비해 PIN 흐름 자체는 남겨 둔다
+    assert.ok(appJs.includes('function unlockRosterFinder'));
     assert.match(appJs, /const ROSTER_FINDER_UNLOCK_KEY = "rosterFinderBetaUnlocked";/);
     // 잠금 중에는 검색·진입 모두 PIN 입력으로 유도
     assert.ok(extractFunction('searchRosterVessels').includes('isRosterFinderUnlocked'));
@@ -342,6 +345,39 @@ test('잠금 동작: 숨김/표시 토글이 상태에 맞게 동작한다', () 
     assert.equal(vm.runInContext('syncRosterFinderLockUI()', context), true);
     assert.equal(bannerEl.classes.has('hidden'), true);
     assert.equal(panelEl.classes.has('hidden'), false);
+});
+
+test('잠금 해제: 잠금 플래그가 꺼져 있으면 비밀번호 없이 패널이 바로 열린다', () => {
+    const makeEl = () => {
+        const el = { classes: new Set(['hidden']) };
+        el.classList = {
+            toggle(name, force) {
+                const on = force === undefined ? !el.classes.has(name) : force;
+                if (on) el.classes.add(name); else el.classes.delete(name);
+            }
+        };
+        return el;
+    };
+    const bannerEl = makeEl();
+    const panelEl = makeEl();
+    const context = vm.createContext({
+        document: { getElementById: (id) => (id === 'rosterFinderLockBanner' ? bannerEl : id === 'rosterFinderPanel' ? panelEl : null) },
+        readSessionValue: () => null,
+        isWorkLogUnlocked: false
+    });
+    // 실제 소스에 들어 있는 플래그 값(false)을 그대로 주입
+    vm.runInContext('const ROSTER_FINDER_BETA_LOCK = false;', context);
+    vm.runInContext('const ROSTER_FINDER_UNLOCK_KEY = "rosterFinderBetaUnlocked";', context);
+    vm.runInContext(extractFunction('isRosterFinderUnlocked'), context);
+    vm.runInContext(extractFunction('syncRosterFinderLockUI'), context);
+
+    assert.equal(vm.runInContext('isRosterFinderUnlocked()', context), true, '잠금 없이 사용 가능해야 합니다');
+    assert.equal(vm.runInContext('syncRosterFinderLockUI()', context), true);
+    assert.equal(bannerEl.classes.has('hidden'), true, '잠금 배너는 보이지 않아야 합니다');
+    assert.equal(panelEl.classes.has('hidden'), false, '본문 패널은 바로 보여야 합니다');
+    // 마크업에서도 잠금 배너는 기본 숨김 + 잠금 안내 문구 제거
+    assert.match(html, /id="rosterFinderLockBanner" class="roster-finder-lock-banner hidden"/);
+    assert.equal(html.includes('🔒 테스트 중'), false, '안내 문구에 잠금 표시가 남으면 안 됩니다');
 });
 
 test('비밀번호 9445 가 실제로 잠금을 해제할 수 있다', async () => {
