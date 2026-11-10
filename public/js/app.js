@@ -2517,6 +2517,8 @@ function syncWorkLogExtraUnlockUI() {
         if (coworkerLockBanner) coworkerLockBanner.style.display = "flex";
         if (coworkerUnlockedArea) coworkerUnlockedArea.classList.add("hidden");
     }
+    // 근무일지 잠금과 사진 명단(테스트) 잠금은 같은 PIN 을 쓰므로 표시도 함께 맞춥니다.
+    if (typeof syncRosterFinderLockUI === "function") syncRosterFinderLockUI();
 }
 function openWorkLogPinModal(onUnlock) {
     pendingWorkLogAction = onUnlock || null;
@@ -2547,7 +2549,9 @@ async function submitWorkLogPin() {
         writeSessionValue("workLogPinUnlocked", "1");
         writeSessionValue(SCREEN_UNLOCK_TOKEN_KEY, result.token || "server");
         writeSessionValue(SCREEN_UNLOCK_EXPIRY_KEY, String(result.expiresAt || (Date.now() + SCREEN_UNLOCK_TTL_MS)));
+        writeSessionValue(ROSTER_FINDER_UNLOCK_KEY, "1");
         syncWorkLogExtraUnlockUI();
+        if (typeof syncRosterFinderLockUI === "function") syncRosterFinderLockUI();
         const callback = pendingWorkLogAction;
         closeWorkLogPinModal();
         showToast("🔓 추가 기능(검색·상세 통계) 잠금이 해제되었습니다.");
@@ -4741,6 +4745,51 @@ const PHOTO_ROSTER_20261110 = [
       workers: ["오경환", "원지현", "정영중", "강남오", "이종림", "장영근", "양기택", "강무성", "김찬우1", "여상규", "김근우", "김창홍", "설석종", "정철화", "박성용", "이재원"] }
 ];
 const ROSTER_EXTRA_STORAGE_KEY = "busanPortRosterExtra";
+
+/* 🔒 사진 명단(이름으로 선박 찾기) 테스트 잠금
+ *   대표 계정에서 먼저 검증한 뒤 전체 공개하려고 PIN 잠금을 둡니다.
+ *   - 잠금 해제 비밀번호: 기존 화면 잠금 PIN 과 동일 체계(기본 9445, 서버 SCREEN_LOCK_PIN)
+ *   - 전체 공개 시 아래 ROSTER_FINDER_BETA_LOCK 을 false 로 바꾸기만 하면 됩니다.
+ *   - 한 번 풀면 세션(브라우저 탭) 동안 유지되고, 근무일지 잠금을 푼 경우에도 함께 열립니다.
+ */
+const ROSTER_FINDER_BETA_LOCK = true;
+const ROSTER_FINDER_UNLOCK_KEY = "rosterFinderBetaUnlocked";
+
+/** 사진 명단 기능을 지금 쓸 수 있는지 (잠금이 꺼져 있거나, 근무일지 잠금/전용 잠금을 푼 상태) */
+function isRosterFinderUnlocked() {
+    if (!ROSTER_FINDER_BETA_LOCK) return true;
+    if (typeof isWorkLogUnlocked !== "undefined" && isWorkLogUnlocked) return true;
+    return readSessionValue(ROSTER_FINDER_UNLOCK_KEY) === "1";
+}
+
+/** 잠금 배너 ↔ 패널 표시를 현재 상태에 맞춥니다. */
+function syncRosterFinderLockUI() {
+    const banner = document.getElementById("rosterFinderLockBanner");
+    const panel = document.getElementById("rosterFinderPanel");
+    const unlocked = isRosterFinderUnlocked();
+    if (banner) banner.classList.toggle("hidden", unlocked);
+    if (panel) panel.classList.toggle("hidden", !unlocked);
+    return unlocked;
+}
+
+/** 잠금 배너/진입 버튼 → PIN 입력 모달 → 성공 시 패널 열기 */
+function unlockRosterFinder() {
+    if (syncRosterFinderLockUI()) {
+        const input = document.getElementById("rosterFinderInput");
+        if (input) setTimeout(() => input.focus(), 50);
+        return;
+    }
+    openWorkLogPinModal(() => {
+        writeSessionValue(ROSTER_FINDER_UNLOCK_KEY, "1");
+        syncRosterFinderLockUI();
+        showToast("🔓 사진 명단 기능 잠금이 해제되었습니다. 이름을 입력해 보세요.");
+        const input = document.getElementById("rosterFinderInput");
+        if (input) {
+            input.scrollIntoView({ behavior: "smooth", block: "center" });
+            setTimeout(() => input.focus(), 120);
+        }
+    });
+}
 let rosterFinderResults = [];
 
 function normalizeRosterWorkerName(name) {
@@ -4870,6 +4919,10 @@ function splitNewAndDuplicateVessels(newNames, existingNames) {
     return { toAdd, skipped };
 }
 async function searchRosterVessels() {
+    if (!isRosterFinderUnlocked()) {
+        unlockRosterFinder();
+        return;
+    }
     const input = document.getElementById("rosterFinderInput");
     const resultsEl = document.getElementById("rosterFinderResults");
     const query = String(input?.value || "").trim();
@@ -5082,9 +5135,16 @@ async function registerAllRosterResults() {
 }
 function focusRosterFinder() {
     // 이름으로 선박 찾기는 근무일지 카드에 배치되어 있다(날짜·등록 맥락이 가까움).
-    // 임금계산기에서 진입하면 근무일지 탭으로 이동해 입력창에 포커스한다.
+    // 임금계산기에서 진입하면 근무일지 탭으로 이동한다. 테스트 잠금 중이면 PIN 입력을 먼저 요청한다.
     const logCard = document.getElementById("log-card");
     if (logCard && !logCard.classList.contains("expanded")) toggleDashItem("log-card");
+    syncRosterFinderLockUI();
+    if (!isRosterFinderUnlocked()) {
+        const banner = document.getElementById("rosterFinderLockBanner");
+        if (banner) banner.scrollIntoView({ behavior: "smooth", block: "center" });
+        unlockRosterFinder();
+        return;
+    }
     const input = document.getElementById("rosterFinderInput");
     if (input) {
         input.scrollIntoView({ behavior: "smooth", block: "center" });

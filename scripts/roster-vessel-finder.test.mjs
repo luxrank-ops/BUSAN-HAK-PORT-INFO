@@ -234,3 +234,86 @@ test('등록·저장 경로에 중복 방지가 연결되어 있다', () => {
     const send = extractFunction('sendCalculatedWageToLog');
     assert.ok(send.includes('dedupeVesselNameList'), 'wage-to-log transfer should merge instead of overwrite');
 });
+
+// ===== 🔒 테스트 잠금 (비밀번호 9445) =====
+test('화면: 잠금 배너가 있고 본문 패널은 기본적으로 숨겨져 있다', () => {
+    assert.ok(html.includes('id="rosterFinderLockBanner"'), 'missing lock banner');
+    assert.ok(html.includes('id="rosterFinderPanel"'), 'missing panel wrapper');
+    assert.equal(html.split('id="rosterFinderLockBanner"').length - 1, 1);
+    assert.equal(html.split('id="rosterFinderPanel"').length - 1, 1);
+    assert.ok(html.includes('unlockRosterFinder()'), 'banner should call unlockRosterFinder');
+    // 패널은 잠금 배너 뒤에 오고 hidden 상태로 시작한다
+    const bannerIdx = html.indexOf('id="rosterFinderLockBanner"');
+    const panelIdx = html.indexOf('id="rosterFinderPanel"');
+    const inputIdx = html.indexOf('id="rosterFinderInput"');
+    assert.ok(bannerIdx < panelIdx && panelIdx < inputIdx, 'panel wrapper should contain the input and follow the banner');
+    assert.match(html.slice(panelIdx, panelIdx + 80), /class="hidden"/);
+    assert.ok(!html.includes('rosterFinderBetaUnlocked'), 'unlock flag must not be hardcoded in HTML');
+});
+
+test('잠금 로직: 잠금 플래그·해제 저장 키·동기화 함수가 있다', () => {
+    for (const fn of ['isRosterFinderUnlocked', 'syncRosterFinderLockUI', 'unlockRosterFinder']) {
+        assert.ok(extractFunction(fn).length > 0, `missing function ${fn}`);
+    }
+    assert.match(appJs, /const ROSTER_FINDER_BETA_LOCK = true;/);
+    assert.match(appJs, /const ROSTER_FINDER_UNLOCK_KEY = "rosterFinderBetaUnlocked";/);
+    // 잠금 중에는 검색·진입 모두 PIN 입력으로 유도
+    assert.ok(extractFunction('searchRosterVessels').includes('isRosterFinderUnlocked'));
+    assert.ok(extractFunction('focusRosterFinder').includes('isRosterFinderUnlocked'));
+    // 잠금 화면 해제 흐름과 같은 PIN 체계를 재사용
+    const unlock = extractFunction('unlockRosterFinder');
+    assert.ok(unlock.includes('openWorkLogPinModal'), 'should reuse the existing PIN modal');
+    assert.ok(unlock.includes('ROSTER_FINDER_UNLOCK_KEY'), 'should remember unlock for the session');
+});
+
+test('잠금 동작: 숨김/표시 토글이 상태에 맞게 동작한다', () => {
+    const makeEl = () => ({
+        classes: new Set(['hidden']),
+        classList: {
+            toggle(name, force) {
+                const on = force === undefined ? !this._el.classes.has(name) : force;
+                if (on) this._el.classes.add(name); else this._el.classes.delete(name);
+            }
+        }
+    });
+    const bannerEl = makeEl();
+    const panelEl = makeEl();
+    bannerEl.classList._el = bannerEl;
+    panelEl.classList._el = panelEl;
+
+    const context = vm.createContext({
+        document: { getElementById: (id) => (id === 'rosterFinderLockBanner' ? bannerEl : id === 'rosterFinderPanel' ? panelEl : null) },
+        readSessionValue: () => null,
+        isWorkLogUnlocked: false
+    });
+    vm.runInContext('const ROSTER_FINDER_BETA_LOCK = true;', context);
+    vm.runInContext('const ROSTER_FINDER_UNLOCK_KEY = "rosterFinderBetaUnlocked";', context);
+    vm.runInContext(extractFunction('isRosterFinderUnlocked'), context);
+    vm.runInContext(extractFunction('syncRosterFinderLockUI'), context);
+
+    // 잠금 상태: 배너 보임 / 패널 숨김
+    assert.equal(vm.runInContext('syncRosterFinderLockUI()', context), false);
+    assert.equal(bannerEl.classes.has('hidden'), false, 'banner visible when locked');
+    assert.equal(panelEl.classes.has('hidden'), true, 'panel hidden when locked');
+
+    // 근무일지 잠금을 푼 상태(같은 PIN) → 배너 숨김 / 패널 표시
+    context.isWorkLogUnlocked = true;
+    assert.equal(vm.runInContext('syncRosterFinderLockUI()', context), true);
+    assert.equal(bannerEl.classes.has('hidden'), true);
+    assert.equal(panelEl.classes.has('hidden'), false);
+});
+
+test('비밀번호 9445 가 실제로 잠금을 해제할 수 있다', async () => {
+    const { createHash } = await import('node:crypto');
+    const buildSource = readFileSync(new URL('../scripts/build-obfuscate.mjs', import.meta.url), 'utf8');
+    // 빌드가 주입하는 기본 해시 = sha256('9445') → 오프라인(정적 배포)에서도 9445 로 열린다
+    assert.match(buildSource, /const DEFAULT_SCREEN_LOCK_PIN = '9445';/);
+    const injected = createHash('sha256').update('9445', 'utf8').digest('hex');
+    assert.equal(injected.length, 64);
+    // 서버도 9445 를 항상 백업으로 인정한다
+    const serverSource = readFileSync(new URL('../server.ts', import.meta.url), 'utf8');
+    assert.match(serverSource, /pins\.add\('9445'\)/, 'server must always accept 9445 as fallback');
+    // 업데이트된 PIN 이 삽입되는 HTML 지점이 존재
+    assert.match(buildSource, /__SCREEN_LOCK_SHA256__/);
+    assert.match(buildSource, /__SCREEN_LOCK_DEFAULT_SHA256__/);
+});

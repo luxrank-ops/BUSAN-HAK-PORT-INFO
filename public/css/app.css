@@ -1716,6 +1716,51 @@
         cursor: pointer;
         flex-shrink: 0;
     }
+    /* 테스트 잠금 배너 (사진 명단 기능) */
+    .roster-finder-lock-banner {
+        display: flex;
+        align-items: center;
+        gap: var(--sp-6);
+        padding: var(--sp-8) var(--sp-9);
+        border-radius: var(--radius-lg);
+        border: 1.5px dashed var(--blue-400);
+        background: var(--n-000);
+        cursor: pointer;
+        margin-bottom: var(--sp-6);
+    }
+    body.dark-mode .roster-finder-lock-banner {
+        background: rgba(37, 99, 235, 0.08);
+    }
+    .roster-finder-lock-icon {
+        font-size: var(--fs-9);
+        line-height: var(--lh-1);
+        flex-shrink: 0;
+    }
+    .roster-finder-lock-text {
+        flex: 1;
+        min-width: 0;
+        font-size: var(--fs-4);
+        font-weight: var(--fw-bold);
+        color: var(--text-main);
+        line-height: var(--lh-4);
+    }
+    .roster-finder-lock-text small {
+        display: block;
+        font-size: var(--fs-3);
+        font-weight: var(--fw-bold);
+        color: var(--text-sub);
+        margin-top: var(--sp-2);
+    }
+    .roster-finder-lock-btn {
+        flex-shrink: 0;
+        background: var(--blue-600);
+        color: var(--n-000);
+        border-radius: var(--radius-md);
+        padding: var(--sp-5) var(--sp-8);
+        font-size: var(--fs-3);
+        font-weight: var(--fw-black);
+        white-space: nowrap;
+    }
     /* 임금계산기 진입 버튼 + 이미 등록됨 표시 */
     .roster-finder-jump-btn {
         margin-top: var(--sp-8);
