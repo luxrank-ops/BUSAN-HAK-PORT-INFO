@@ -45,7 +45,7 @@ const WAGE_FUNCTIONS = [
     'onWageShipNameChange', 'autoGrowWorkLogMemo', 'sendCalculatedWageToLog',
     'sendWorkLogShipToWage', 'resetWageForm', 'selectBestCalcSegment',
     // sendCalculatedWageToLog 멀티 경로의 선박명 병합(중복 제외)이 전이적으로 호출
-    'parseWorklogShipNames', 'normalizeWorklogShipKey', 'normalizeRosterVesselKey', 'dedupeVesselNameList'
+    'parseWorklogShipNames', 'normalizeWorklogShipKey', 'dedupeVesselNameList'
 ];
 
 const appBundle = [

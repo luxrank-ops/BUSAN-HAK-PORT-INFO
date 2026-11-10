@@ -43,7 +43,6 @@
 | 환경변수 | 설명 |
 | --- | --- |
 | `SCREEN_LOCK_PIN` | 화면 잠금 비밀번호. **미설정 시 기존 기본값(`9445`)이 쓰이므로 반드시 변경하세요.** |
-| `ROSTER_FINDER_BETA_LOCK` (코드 상수) | 🔍 사진 명단(이름으로 선박 찾기) **테스트 잠금**. `public/js/app.js` 의 상수가 `true` 이면 비밀번호(화면 잠금 PIN, 기본 `9445`)를 입력해야 열립니다. 전체 공개 시 `false` 로 변경 후 재배포하세요. |
 | `UNLOCK_TOKEN_SECRET` | 잠금 해제 토큰 서명 키(32자 이상 권장). 미설정 시 `SCREEN_LOCK_PIN` 사용 |
 | `EMERGENCY_NOTICE_PIN` | 🚨 긴급 플로팅 공지 작성 비밀번호. **지정하면 그 값만** 인정됩니다(화면 잠금 PIN 과 분리 운영). **미설정 시에는 `SCREEN_LOCK_PIN` 과 기본 관리자 PIN(`9445`)을 함께 인정**합니다 — 근무일지 잠금 비밀번호를 다른 값으로 바꾼 배포에서도 안내된 기본 비밀번호로 열 수 있습니다. 검증 경로는 `POST /api/emergency-unlock`(1순위) → 빌드 주입 해시 `window.__EMERGENCY_PIN_SHA256__` · `window.__SCREEN_LOCK_SHA256__` · `window.__EMERGENCY_DEFAULT_PIN_SHA256__`(2순위)입니다. |
 
