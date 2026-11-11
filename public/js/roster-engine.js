@@ -692,6 +692,61 @@ function pickGroupFromOcrLine(line) {
     return group ? `${group[1]}조` : "";
 }
 
+function getKnownRosterWorkerNames() {
+    const names = ROSTER_SEED_ASSIGNMENTS.flatMap((assignment) => assignment.workers || []);
+    // 기존 동료 선택표가 있는 화면에서는 그 이름도 보정 후보로 함께 씁니다.
+    if (typeof HANJIN_COWORKER_ROSTER !== "undefined" && Array.isArray(HANJIN_COWORKER_ROSTER)) {
+        names.push(...HANJIN_COWORKER_ROSTER.map((worker) => worker?.name));
+    }
+    return [...new Map(names
+        .map((name) => String(name || "").trim())
+        .filter(Boolean)
+        .map((name) => [normalizeRosterWorkerName(name), name])).values()]
+        .sort((left, right) => normalizeRosterWorkerName(right).length - normalizeRosterWorkerName(left).length);
+}
+
+function escapeRosterRegex(value) {
+    return String(value || "").replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+/**
+ * OCR이 "이 수 열"처럼 이름 안에 공백을 넣은 경우만 시작용 명단의 이름으로 복구합니다.
+ * 공백을 전부 지워서 찾으면 "이 수 열차" 같은 일반 문구도 이수열로 오인할 수 있어,
+ * 한글·숫자 경계 안의 완전한 이름이고 실제로 이름 내부에 공백이 있을 때만 허용합니다.
+ */
+function recoverFragmentedRosterWorkerNames(value) {
+    const source = String(value || "").normalize("NFKC");
+    if (!source) return [];
+    const matches = [];
+    getKnownRosterWorkerNames().forEach((name) => {
+        const normalized = normalizeRosterWorkerName(name);
+        if (!/^[가-힣]{2,4}\d?$/.test(normalized)) return;
+        const spacedName = Array.from(normalized).map(escapeRosterRegex).join("\\s*");
+        const pattern = new RegExp(`(^|[^가-힣0-9])(${spacedName})(?=$|[^가-힣0-9])`, "g");
+        let match;
+        while ((match = pattern.exec(source))) {
+            const detected = match[2] || "";
+            if (!/\s/.test(detected)) continue;
+            const start = match.index + (match[1] || "").length;
+            matches.push({ name, normalized, start, end: start + detected.length });
+        }
+    });
+    const selected = matches
+        .sort((left, right) => left.start - right.start || right.normalized.length - left.normalized.length)
+        .reduce((accepted, candidate) => {
+            const overlaps = accepted.some((item) => candidate.start < item.end && candidate.end > item.start);
+            if (!overlaps) accepted.push(candidate);
+            return accepted;
+        }, []);
+    if (!selected.length) return [];
+
+    // 이름 외에 '근무', '명단' 같은 머리말만 남는 줄은 작업자 행으로 추정하지 않습니다.
+    const masked = selected.reduce((text, candidate) => `${text.slice(0, candidate.start)}${" ".repeat(candidate.end - candidate.start)}${text.slice(candidate.end)}`, source);
+    const compactRemainder = masked.replace(/[^가-힣]/g, "");
+    if ([...ROSTER_NAME_NOISE].some((noise) => compactRemainder.includes(noise))) return [];
+    return selected.map((candidate) => candidate.name);
+}
+
 function pickWorkersFromOcrLine(line) {
     const withoutMetadata = String(line)
         .replace(/(20\d{2})\s*[.\-/년]\s*\d{1,2}\s*[.\-/월]\s*\d{1,2}\s*일?/g, " ")
@@ -701,11 +756,12 @@ function pickWorkersFromOcrLine(line) {
         .replace(/[A-Za-z][A-Za-z0-9&'.-]*/g, " ")
         .replace(/\([1-9]\)|\d{1,2}\s*조(?![가-힣])|[①-⑨]/g, " ")
         .replace(/지원/g, " ");
-    return withoutMetadata.split(/[\s,/、]+/)
+    const direct = withoutMetadata.split(/[\s,/、]+/)
         .map((value) => value.trim())
         .filter((value) => /^[가-힣]{2,4}\d?$/.test(value))
         .filter((value) => !ROSTER_NAME_NOISE.has(value) && !ROSTER_NAME_NOISE.has(value.replace(/\d$/, "")))
         .filter((value) => !ROSTER_COMPANIES.includes(value) && !ROSTER_COMPANIES.includes(value.replace(/\d$/, "")));
+    return mergeWorkers(direct, recoverFragmentedRosterWorkerNames(withoutMetadata));
 }
 
 function mergeWorkers(existing, incoming) {
@@ -889,7 +945,95 @@ function openRosterGalleryPicker() {
     rosterElement("rosterPhotoGalleryInput")?.click();
 }
 
-async function prepareRosterImageForOcr() {
+function rosterOcrLuminance(red, green, blue) {
+    return Math.round(red * 0.299 + green * 0.587 + blue * 0.114);
+}
+
+function rosterOcrHistogram(data) {
+    const histogram = new Array(256).fill(0);
+    for (let index = 0; index < data.length; index += 4) {
+        histogram[rosterOcrLuminance(data[index], data[index + 1], data[index + 2])] += 1;
+    }
+    return histogram;
+}
+
+function rosterOcrPercentile(histogram, pixelCount, ratio) {
+    const target = Math.max(1, Math.ceil(pixelCount * ratio));
+    let seen = 0;
+    for (let value = 0; value < histogram.length; value += 1) {
+        seen += histogram[value];
+        if (seen >= target) return value;
+    }
+    return 255;
+}
+
+function rosterOcrValueRange(histogram) {
+    const darkest = histogram.findIndex((count) => count > 0);
+    const brightest = histogram.length - 1 - [...histogram].reverse().findIndex((count) => count > 0);
+    return [darkest < 0 ? 0 : darkest, brightest < 0 ? 255 : brightest];
+}
+
+function rosterOcrThreshold(histogram, pixelCount) {
+    let weightedTotal = 0;
+    for (let value = 0; value < histogram.length; value += 1) weightedTotal += value * histogram[value];
+    let backgroundCount = 0;
+    let backgroundTotal = 0;
+    let bestThreshold = 128;
+    let bestVariance = -1;
+    for (let value = 0; value < histogram.length; value += 1) {
+        backgroundCount += histogram[value];
+        if (!backgroundCount) continue;
+        const foregroundCount = pixelCount - backgroundCount;
+        if (!foregroundCount) break;
+        backgroundTotal += value * histogram[value];
+        const backgroundMean = backgroundTotal / backgroundCount;
+        const foregroundMean = (weightedTotal - backgroundTotal) / foregroundCount;
+        const variance = backgroundCount * foregroundCount * (backgroundMean - foregroundMean) ** 2;
+        if (variance > bestVariance) {
+            bestVariance = variance;
+            bestThreshold = value;
+        }
+    }
+    return bestThreshold;
+}
+
+/** 대비를 자동 보정하고, 필요할 때는 고대비 흑백본을 만듭니다. */
+function enhanceRosterOcrPixels(imageData, profile = "enhanced") {
+    const data = imageData?.data;
+    if (!data?.length) return false;
+    const pixelCount = Math.floor(data.length / 4);
+    const histogram = rosterOcrHistogram(data);
+    const percentileLow = rosterOcrPercentile(histogram, pixelCount, 0.02);
+    const percentileHigh = rosterOcrPercentile(histogram, pixelCount, 0.98);
+    const [darkest, brightest] = rosterOcrValueRange(histogram);
+    // 글자가 면적의 2%보다 작으면 양 끝 백분위가 모두 흰색이 될 수 있습니다.
+    // 그 경우 실제 색 범위를 써서 흰 바탕이 검게 변하는 것을 막습니다.
+    const low = percentileHigh - percentileLow >= 24 ? percentileLow : darkest;
+    const high = percentileHigh - percentileLow >= 24 ? percentileHigh : brightest;
+    const span = high - low;
+    const threshold = rosterOcrThreshold(histogram, pixelCount);
+    for (let index = 0; index < data.length; index += 4) {
+        const gray = rosterOcrLuminance(data[index], data[index + 1], data[index + 2]);
+        const normalized = span > 0 ? Math.max(0, Math.min(255, ((gray - low) * 255) / span)) : gray;
+        const contrast = Math.max(0, Math.min(255, (normalized - 128) * 1.45 + 128));
+        const value = profile === "binary" ? (gray <= threshold ? 0 : 255) : Math.round(contrast);
+        data[index] = value;
+        data[index + 1] = value;
+        data[index + 2] = value;
+        data[index + 3] = 255;
+    }
+    return true;
+}
+
+function getRosterOcrScale(width, height) {
+    const largestEdge = Math.max(Number(width) || 0, Number(height) || 0);
+    if (!largestEdge) return 1;
+    if (largestEdge > ROSTER_MAX_IMAGE_EDGE) return ROSTER_MAX_IMAGE_EDGE / largestEdge;
+    if (largestEdge < 1600) return Math.min(3, ROSTER_MAX_IMAGE_EDGE / largestEdge);
+    return 1;
+}
+
+async function prepareRosterImageForOcr(profile = "enhanced") {
     const image = rosterElement("rosterPhotoPreview");
     if (!image?.src) throw new Error("사진이 없습니다.");
     if (!image.complete || !image.naturalWidth) {
@@ -902,29 +1046,40 @@ async function prepareRosterImageForOcr() {
     const originalWidth = image.naturalWidth;
     const originalHeight = image.naturalHeight;
     if (!originalWidth || !originalHeight) throw new Error("사진을 열 수 없습니다.");
-    const scale = originalWidth < 1200
-        ? Math.min(3, 1600 / originalWidth)
-        : Math.min(1, ROSTER_MAX_IMAGE_EDGE / Math.max(originalWidth, originalHeight));
+    const scale = getRosterOcrScale(originalWidth, originalHeight);
     const canvas = document.createElement("canvas");
     canvas.width = Math.max(1, Math.round(originalWidth * scale));
     canvas.height = Math.max(1, Math.round(originalHeight * scale));
     const context = canvas.getContext("2d");
     if (!context) throw new Error("사진 보정을 지원하지 않는 브라우저입니다.");
+    context.imageSmoothingEnabled = true;
+    if ("imageSmoothingQuality" in context) context.imageSmoothingQuality = "high";
     context.drawImage(image, 0, 0, canvas.width, canvas.height);
     try {
         const pixels = context.getImageData(0, 0, canvas.width, canvas.height);
-        for (let index = 0; index < pixels.data.length; index += 4) {
-            const gray = pixels.data[index] * 0.299 + pixels.data[index + 1] * 0.587 + pixels.data[index + 2] * 0.114;
-            const contrast = gray < 128 ? Math.max(0, gray - 20) : Math.min(255, gray + 20);
-            pixels.data[index] = contrast;
-            pixels.data[index + 1] = contrast;
-            pixels.data[index + 2] = contrast;
-        }
+        enhanceRosterOcrPixels(pixels, profile);
         context.putImageData(pixels, 0, 0);
     } catch (error) {
-        // Some browsers disallow pixel access for an image. The drawn canvas is still usable.
+        // Some browsers disallow pixel access for an image. The scaled canvas is still usable.
     }
     return canvas.toDataURL("image/png");
+}
+
+function assessRosterOcrText(text, confidence = 0) {
+    const parsed = parseRosterPhotoText(text, { defaultYear: new Date().getFullYear() });
+    const workerCount = parsed.entries.reduce((total, row) => total + row.workers.length, 0);
+    const score = parsed.entries.length * 100 + workerCount * 12 - parsed.warnings.length * 15;
+    return { text: String(text || ""), confidence: Number(confidence) || 0, score, entryCount: parsed.entries.length, workerCount };
+}
+
+function shouldRetryRosterOcr(candidate) {
+    return !candidate.text.trim() || candidate.entryCount === 0 || candidate.workerCount < 4;
+}
+
+function chooseRosterOcrCandidate(primary, alternative) {
+    if (!alternative) return primary;
+    if (alternative.score !== primary.score) return alternative.score > primary.score ? alternative : primary;
+    return alternative.confidence > primary.confidence ? alternative : primary;
 }
 
 function loadRosterOcrScript(source) {
@@ -950,19 +1105,35 @@ async function getRosterOcrEngine() {
 async function runRosterPhotoOcr() {
     if (!isRosterFinderUnlocked()) return unlockRosterFinder();
     if (!rosterRuntime.activeImageUrl) return showToast("📷 먼저 근무 배치 사진을 선택해 주세요.");
-    setRosterPhotoBusy(true, "🔍 사진에서 글자를 읽는 중… (사진은 이 기기 밖으로 전송되지 않습니다)");
-    try {
-        const [engine, image] = await Promise.all([getRosterOcrEngine(), prepareRosterImageForOcr()]);
-        const result = await engine.recognize(image, "kor+eng", {
-            logger: (progress) => {
-                if (progress?.status === "recognizing text") setRosterPhotoStatus(`🔍 글자 인식 중… ${Math.round((Number(progress.progress) || 0) * 100)}%`);
+    setRosterPhotoBusy(true, "🔍 글자를 선명하게 보정한 뒤 읽는 중… (사진은 이 기기 밖으로 전송되지 않습니다)");
+    const recognize = async (engine, image, phase) => engine.recognize(image, "kor+eng", {
+        logger: (progress) => {
+            if (progress?.status === "recognizing text") {
+                setRosterPhotoStatus(`🔍 ${phase} 글자 인식 중… ${Math.round((Number(progress.progress) || 0) * 100)}%`);
             }
-        });
-        rosterRuntime.recognizedText = String(result?.data?.text || "");
+        }
+    });
+    try {
+        const [engine, enhancedImage] = await Promise.all([getRosterOcrEngine(), prepareRosterImageForOcr("enhanced")]);
+        const primaryResult = await recognize(engine, enhancedImage, "보정");
+        const primary = assessRosterOcrText(primaryResult?.data?.text, primaryResult?.data?.confidence);
+        let selected = primary;
+        let retried = false;
+        if (shouldRetryRosterOcr(primary)) {
+            retried = true;
+            setRosterPhotoStatus("🔍 이름 인식이 부족해 고대비 흑백으로 한 번 더 확인하는 중…");
+            const binaryImage = await prepareRosterImageForOcr("binary");
+            const retryResult = await recognize(engine, binaryImage, "고대비 재확인");
+            const alternate = assessRosterOcrText(retryResult?.data?.text, retryResult?.data?.confidence);
+            selected = chooseRosterOcrCandidate(primary, alternate);
+            trackAppEvent?.("actions", "roster_photo_ocr_retry");
+        }
+        rosterRuntime.recognizedText = selected.text;
         const box = rosterElement("rosterPhotoText");
         if (box) box.value = rosterRuntime.recognizedText;
         rosterElement("rosterPhotoTextDetails")?.classList.remove("hidden");
-        setRosterPhotoStatus(`✅ 글자 인식 완료 (${rosterRuntime.recognizedText.length}자). 검토 후 명단을 적용해 주세요.`);
+        const retryLabel = retried ? (selected === primary ? " · 보정본 선택" : " · 고대비 재확인본 선택") : "";
+        setRosterPhotoStatus(`✅ 글자 인식 완료 (${rosterRuntime.recognizedText.length}자${retryLabel}). 검토 후 명단을 적용해 주세요.`);
         parseRosterPhotoTextFromBox();
         trackAppEvent?.("actions", "roster_photo_ocr_done");
     } catch (error) {
