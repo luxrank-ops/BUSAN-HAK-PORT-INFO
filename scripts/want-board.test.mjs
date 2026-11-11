@@ -271,7 +271,7 @@ test('오류 분류: 권한 거부(permission-denied)를 원인별 안내 문구
     assert.match(text, /^제출 실패/);
     assert.match(text, /permission-denied/);
     assert.match(text, /보안 규칙/);
-    assert.match(text, /Firebase 운영 배포/);
+    assert.match(text, /Firestore 규칙 자동 배포/);
 
     // 코드 없이 메시지만 오는 경우(래핑된 오류)도 같은 안내로 처리합니다.
     assert.equal(core.classifyWantError(new Error('Missing or insufficient permissions.')), 'permission-denied');

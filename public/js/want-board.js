@@ -173,7 +173,7 @@
             return [
                 `${label}: 서버가 저장을 거부했습니다 (permission-denied).`,
                 '운영 Firestore 보안 규칙(firestore.rules)이 아직 배포되지 않았을 가능성이 큽니다.',
-                '운영자: GitHub → Actions → "Firebase 운영 배포" 워크플로우를 실행해 규칙을 배포해 주세요.',
+                '운영자: GitHub → Actions → "Firestore 규칙 자동 배포"를 실행해 주세요. (규칙만 배포하며, 앱 전체 배포는 필요 없습니다.)',
                 '규칙이 배포된 뒤에도 계속 실패하면 이 문구를 운영자에게 알려 주세요.'
             ].join('\n');
         }
