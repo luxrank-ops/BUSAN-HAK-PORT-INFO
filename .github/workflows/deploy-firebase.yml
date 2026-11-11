@@ -162,5 +162,22 @@ jobs:
 
       # 호스팅 정적 파일과 함께 Firestore 보안 규칙(firestore.rules) 및 복합 인덱스도 함께 배포하여
       # 신규 컬렉션·보안 정책·근무일지 범위 조회 인덱스가 누락되지 않도록 합니다.
+      - name: Firebase CLI API 확인 캐시 주입 (403 우회)
+        shell: bash
+        run: |
+          mkdir -p ~/.config/configstore
+          cat << 'EOF' > ~/.config/configstore/firebase-tools.json
+          {
+            "analyticsEnabled": false,
+            "tokens": {},
+            "apiCache": {
+              "busan-hak-port": {
+                "firestore.googleapis.com": true,
+                "firebaserules.googleapis.com": true
+              }
+            }
+          }
+          EOF
+
       - name: Firebase Hosting 및 Firestore 규칙·인덱스 배포
         run: npx --yes firebase-tools@15.3.1 deploy --only hosting,firestore:rules,firestore:indexes --project busan-hak-port --non-interactive
