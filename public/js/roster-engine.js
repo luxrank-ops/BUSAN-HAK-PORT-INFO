@@ -495,19 +495,27 @@ function rosterResultScheduleDescription(item) {
     return `선석 ${berth} · 입항 ${formatWageScheduleEvent(period.arrival)} · 출항 ${formatWageScheduleEvent(period.departure)}${duration}`;
 }
 
-/** 이름 검색 결과에는 해당 선박 명단 안에서 실제로 맞은 작업자와 인원도 함께 표시합니다. */
+/** 찾기 결과에는 해당 선박의 전체 명단이 아니라 검색어와 맞은 작업자만 표시합니다. */
 function rosterResultWorkerDescription(assignment, query) {
     const matchedWorkers = findRosterWorkerNamesInAssignment(assignment, query);
     if (!matchedWorkers.length) return "";
     const names = matchedWorkers.map((name) => escapeShipCommentHtml(name)).join(", ");
-    const workerCount = Array.isArray(assignment?.workers) ? assignment.workers.length : 0;
-    return `<div class="roster-finder-worker-match"><strong>👷 찾은 작업자: ${names}</strong><span>해당 선박 검토 명단 ${workerCount}명</span></div>`;
+    return `<div class="roster-finder-worker-match"><strong>👷 찾은 작업자: ${names}</strong></div>`;
 }
 
+/** 회사·지원·조 중 검색어와 맞은 원문 표기만 찾기 결과에 남깁니다. */
 function rosterResultRelatedDescription(assignment, query) {
     const terms = findRosterRelatedTermsInAssignment(assignment, query);
     if (!terms.length) return "";
-    return `<div class="roster-finder-worker-match"><strong>🏷️ 찾은 관련어: ${terms.map(escapeShipCommentHtml).join(", ")}</strong><span>명단 원문 표기</span></div>`;
+    return `<div class="roster-finder-worker-match"><strong>🏷️ 찾은 관련어: ${terms.map(escapeShipCommentHtml).join(", ")}</strong></div>`;
+}
+
+/** 찾기 카드의 배정 정보는 선박 식별에 필요한 날짜·시간만 표시합니다. */
+function rosterResultAssignmentSummary(assignment) {
+    return [assignment?.date, assignment?.time && `명단 ${assignment.time}`]
+        .filter(Boolean)
+        .map((value) => escapeShipCommentHtml(value))
+        .join(" · ");
 }
 
 function renderRosterFinderResults(plan, query, mode) {
@@ -522,9 +530,9 @@ function renderRosterFinderResults(plan, query, mode) {
         const links = item.terminalId
             ? `<a href="${terminal.schedule || "#"}" target="_blank" rel="noopener noreferrer" class="roster-finder-link">🗓️ 스케줄 ↗</a><a href="${terminal.chart || "#"}" target="_blank" rel="noopener noreferrer" class="roster-finder-link">📊 차트 ↗</a>`
             : "";
-        const secondary = [assignment.time && `명단 ${assignment.time}`, assignment.company, assignment.support, assignment.group].filter(Boolean).map(escapeShipCommentHtml).join(" · ");
+        const assignmentSummary = rosterResultAssignmentSummary(assignment);
         return `<div class="roster-finder-card${item.found ? "" : " is-missing"}">
-            <div class="roster-finder-card-head">${badge}<strong>🚢 ${escapeShipCommentHtml(assignment.vessel)}</strong><span>${escapeShipCommentHtml(assignment.date)}${secondary ? ` · ${secondary}` : ""}</span></div>
+            <div class="roster-finder-card-head">${badge}<strong>🚢 ${escapeShipCommentHtml(assignment.vessel)}</strong><span>${assignmentSummary}</span></div>
             ${rosterResultWorkerDescription(assignment, query)}
             ${rosterResultRelatedDescription(assignment, query)}
             <div class="roster-finder-card-sub">${rosterResultScheduleDescription(item)}</div>
@@ -1760,7 +1768,7 @@ function clearPhotoRosterEntries() {
 function renderRosterFinderHint() {
     const output = rosterElement("rosterFinderResults");
     if (!output) return;
-    output.innerHTML = `<div class="roster-finder-empty">사진에서 선박명 아래에 나열된 작업자 이름(이춘학 등)·관련 단어 또는 선박명을 입력하면, 일치한 작업자·해당 선박 명단 인원·배정·전 터미널 차트·스케줄을 표시하고 임금계산기·근무일지에 등록합니다. 같은 행도 자동으로 제외하지 않습니다.</div>`;
+    output.innerHTML = `<div class="roster-finder-empty">사진에서 선박명 아래에 나열된 작업자 이름(이춘학 등)·관련 단어 또는 선박명을 입력하면, 검색어와 일치한 작업자·관련어와 해당 선박의 날짜·시간·전 터미널 차트·스케줄만 표시하고 임금계산기·근무일지에 등록합니다. 같은 행도 자동으로 제외하지 않습니다.</div>`;
 }
 
 function clearRosterPhoto() {
