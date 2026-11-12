@@ -44,6 +44,12 @@ const rosterRuntime = {
     activeImageUrl: "",
     recognizedText: "",
     tableOcrParsed: null,
+    // 표 OCR에서 어떤 칸에도 안전하게 귀속할 수 없었던 한글 조각 수입니다. 원본 인원 대조에는 포함합니다.
+    sourceUnassignedWorkerCount: 0,
+    // 사진을 처음 읽었을 때 확정한 원본 작업자 총수입니다. 검토 행을 수정·삭제해도 기준은 바뀌지 않습니다.
+    sourceWorkerCount: null,
+    // 표의 실제 작업자 칸 수와 검토표 출력 인원을 대조한 최신 결과입니다.
+    workerCountAudit: { hasSourceCount: false, sourceCount: 0, outputCount: 0, mismatches: [], isVerified: true },
     // 현재 사진에서 막 읽은 검토 행은 저장 버튼을 누르지 않아도 즉시 찾기에만 쓸 수 있습니다.
     // 사진을 지우거나 새 사진을 고르면 이 임시 검색 명단도 함께 바뀝니다.
     searchableReviewAssignments: [],
@@ -121,11 +127,50 @@ function getPhotoRosterEntries() {
     ];
 }
 
-/** OCR 검토 행을 저장 절차와 별개로 현재 탭의 찾기에서 바로 검색할 수 있게 합니다. */
+/**
+ * 표 작업자 칸에서 읽은 최초 총인원과 현재 검토표의 출력 총인원을 비교합니다.
+ * sourceWorkerCount가 없는 일반 OCR 텍스트는 기존처럼 사용하되, 표 OCR은 일치할 때만 자동 출력합니다.
+ */
+function auditRosterPhotoWorkerCounts(rows, unassignedWorkerCount = 0, expectedSourceCount = null) {
+    const sourceRows = (rows || []).map((row, index) => ({
+        index,
+        expected: Number.isInteger(row?.sourceWorkerCount) && row.sourceWorkerCount >= 0
+            ? row.sourceWorkerCount
+            : null,
+        actual: Array.isArray(row?.workers) ? row.workers.length : 0
+    })).filter((row) => row.expected !== null);
+    const unassigned = Math.max(0, Number(unassignedWorkerCount) || 0);
+    const detectedSourceCount = sourceRows.reduce((sum, row) => sum + row.expected, 0) + unassigned;
+    const hasFixedSourceCount = Number.isInteger(expectedSourceCount) && expectedSourceCount >= 0;
+    const hasSourceCount = sourceRows.length > 0 || unassigned > 0 || hasFixedSourceCount;
+    const sourceCount = hasFixedSourceCount ? expectedSourceCount : detectedSourceCount;
+    // 검토표에 새로 보인 행까지 포함해야 실제 선박별 출력 총합과 비교할 수 있습니다.
+    const outputCount = (rows || []).reduce((sum, row) => sum + (Array.isArray(row?.workers) ? row.workers.length : 0), 0);
+    const mismatches = hasSourceCount && sourceCount !== outputCount
+        ? [{ expected: sourceCount, actual: outputCount, reason: "source-output-total" }]
+        : [];
+    return {
+        hasSourceCount,
+        sourceCount,
+        outputCount,
+        checkedRowCount: sourceRows.length,
+        unassignedWorkerCount: unassigned,
+        mismatches,
+        isVerified: mismatches.length === 0
+    };
+}
+
+/** OCR 검토 행을 저장 절차와 별개로 현재 탭의 찾기에 바로 반영하되, 표 인원 대조가 불일치하면 보류합니다. */
 function syncRosterPhotoSearchEntries() {
-    rosterRuntime.searchableReviewAssignments = rosterRuntime.reviewRows
-        .map((row) => normalizeRosterAssignment(row, "photo"))
-        .filter((row) => row && row.date && row.vessel);
+    const audit = auditRosterPhotoWorkerCounts(rosterRuntime.reviewRows, rosterRuntime.sourceUnassignedWorkerCount, rosterRuntime.sourceWorkerCount);
+    rosterRuntime.workerCountAudit = audit;
+    rosterRuntime.searchableReviewAssignments = audit.isVerified
+        ? rosterRuntime.reviewRows
+            .map((row) => normalizeRosterAssignment(row, "photo"))
+            .filter((row) => row && row.date && row.vessel)
+        : [];
+    // 이전에 그려진 자동 검색 결과가 인원 불일치 상태에서 계속 보이지 않게 즉시 걷어냅니다.
+    if (!audit.isVerified) clearRosterSearchResult();
     return getPhotoRosterEntries();
 }
 
@@ -921,6 +966,9 @@ function handleRosterPhotoSelected(event) {
     rosterRuntime.activeImageUrl = URL.createObjectURL(file);
     rosterRuntime.recognizedText = "";
     rosterRuntime.tableOcrParsed = null;
+    rosterRuntime.sourceUnassignedWorkerCount = 0;
+    rosterRuntime.sourceWorkerCount = null;
+    rosterRuntime.workerCountAudit = { hasSourceCount: false, sourceCount: 0, outputCount: 0, mismatches: [], isVerified: true };
     rosterRuntime.reviewRows = [];
     rosterRuntime.reviewWarnings = [];
     rosterRuntime.reviewVerifications = [];
@@ -1278,6 +1326,67 @@ function rosterTableWordCenter(word, axis) {
     return Number.isFinite(start) && Number.isFinite(end) ? (start + end) / 2 : NaN;
 }
 
+function rosterTableWordBox(word) {
+    const box = word?.bbox || {};
+    const x0 = Number(box.x0);
+    const x1 = Number(box.x1);
+    const y0 = Number(box.y0);
+    const y1 = Number(box.y1);
+    return Number.isFinite(x0) && Number.isFinite(x1) && Number.isFinite(y0) && Number.isFinite(y1)
+        && x1 > x0 && y1 > y0
+        ? { x0, x1, y0, y1 }
+        : null;
+}
+
+/** 글자 상자가 작업자 칸 안에 완전히 들어온 경우만 해당 선박에 귀속합니다. */
+function rosterTableWordFitsWorkerRegion(word, region, inset = 2) {
+    const box = rosterTableWordBox(word);
+    if (!box || !region) return false;
+    const left = Number(region.x) + inset;
+    const top = Number(region.y) + inset;
+    const right = Number(region.x) + Number(region.width) - inset;
+    const bottom = Number(region.y) + Number(region.height) - inset;
+    return box.x0 >= left && box.x1 <= right && box.y0 >= top && box.y1 <= bottom;
+}
+
+function rosterTableWordTouchesWorkerRegion(word, region) {
+    const box = rosterTableWordBox(word);
+    if (!box || !region) return false;
+    const left = Number(region.x);
+    const top = Number(region.y);
+    const right = left + Number(region.width);
+    const bottom = top + Number(region.height);
+    return box.x0 < right && box.x1 > left && box.y0 < bottom && box.y1 > top;
+}
+
+/**
+ * 전체 OCR 단어는 정확히 한 작업자 칸에만 배정합니다.
+ * 표 선·헤더 경계에 걸친 한글 조각은 원문 확인 대상으로 남기고 어느 선박에도 자동 귀속하지 않습니다.
+ */
+function assignRosterTableWordsToWorkerRegions(words, regions) {
+    const assigned = (regions || []).map(() => []);
+    const unassigned = [];
+    (words || []).forEach((word) => {
+        const rawText = String(word?.text || "");
+        const text = normalizeRosterTableCellText(rawText);
+        const isWorkerText = /^[가-힣]/.test(text);
+        const isDivider = !text && /[_|]/.test(rawText);
+        if (!isWorkerText && !isDivider) return;
+        const candidates = (regions || []).map((region, index) => (
+            rosterTableWordFitsWorkerRegion(word, region?.workers) ? index : -1
+        )).filter((index) => index >= 0);
+        if (candidates.length === 1) {
+            assigned[candidates[0]].push(word);
+            return;
+        }
+        // 한글 조각이 작업자 칸과 겹치지만 한 칸에 명확히 속하지 않으면 잘못된 선박 배정을 막습니다.
+        if (isWorkerText && (regions || []).some((region) => rosterTableWordTouchesWorkerRegion(word, region?.workers))) {
+            unassigned.push(word);
+        }
+    });
+    return { assigned, unassigned };
+}
+
 /** 전체 표 OCR의 단어 좌표를 한 선박 명단 영역으로 제한해, 행·칸 순서대로 이름을 복원합니다. */
 function collectRosterTableWorkers(words, region) {
     if (!region || !Array.isArray(words)) return [];
@@ -1295,6 +1404,7 @@ function collectRosterTableWorkers(words, region) {
             xEnd: Number(word?.bbox?.x1)
         };
     }).filter((item) => (item.text || item.divider) && Number.isFinite(item.x) && Number.isFinite(item.y)
+        // 실제 표 OCR 경로는 먼저 전역 단일 배정을 거치므로 여기서는 이름 조각 결합에 필요한 중심점 범위만 씁니다.
         && item.x >= region.x && item.x <= region.x + region.width
         && item.y >= region.y && item.y <= region.y + region.height)
         .sort((a, b) => a.y - b.y || a.x - b.x);
@@ -1487,23 +1597,35 @@ async function recognizeRosterTablePhoto(engine, sourceCanvas, regions, defaultY
             if (!left?.date && right?.date) left.date = right.date;
             if (!right?.date && left?.date) right.date = left.date;
         }
-        const entries = regions.map((region, index) => ({
-            ...headers[index],
-            workers: collectRosterTableWorkers(words, region.workers),
-            source: "photo-table"
-        })).filter((row) => row.vessel);
+        // 전체 OCR 단어를 선박별 작업자 칸에 한 번씩만 배정합니다. 겹치거나 경계에 걸린 이름은 자동 출력하지 않습니다.
+        const workerWordAssignments = assignRosterTableWordsToWorkerRegions(words, regions);
+        const entries = regions.map((region, index) => {
+            const workers = collectRosterTableWorkers(workerWordAssignments.assigned[index], region.workers);
+            return {
+                ...headers[index],
+                workers,
+                // 사진의 이 선박 작업자 칸에서 먼저 센 인원입니다. 검토표 변경 뒤에도 비교 기준으로 남깁니다.
+                sourceWorkerCount: workers.length,
+                source: "photo-table"
+            };
+        }).filter((row) => row.vessel);
         // 반복 표는 대부분의 헤더를 확인할 수 있을 때만 채택합니다. 일부만 읽힌 표를 임의의 선박 행으로 만들지 않고 기존 OCR 검토 흐름으로 돌립니다.
         const validHeaderCount = entries.filter((row) => row.date && row.vessel).length;
         if (validHeaderCount < Math.ceil(regions.length * 0.75)) return null;
         const missingDates = entries.filter((row) => !row.date).length;
         const missingWorkers = entries.filter((row) => !row.workers.length).length;
-        const warnings = ["표 구조를 인식해 선박별 헤더와 그 아래 작업자 칸을 따로 읽었습니다. 적용 전 검토표를 확인해 주세요."];
+        const workerCountAudit = auditRosterPhotoWorkerCounts(entries, workerWordAssignments.unassigned.length);
+        const warnings = ["표 구조를 인식해 선박별 헤더와 그 아래 작업자 칸을 따로 읽었습니다. 작업자 칸별 인원과 출력 인원이 일치할 때만 찾기에 반영합니다."];
+        if (workerWordAssignments.unassigned.length) warnings.push(`${workerWordAssignments.unassigned.length}개 한글 OCR 조각은 선박 작업자 칸 경계에 걸려 자동 배정하지 않았습니다. 원문을 보고 필요한 이름만 검토 표에 입력해 주세요.`);
         if (missingDates) warnings.push(`${missingDates}척은 날짜를 읽지 못했습니다. 검토 표에서 날짜를 채워 주세요.`);
         if (missingWorkers) warnings.push(`${missingWorkers}척은 작업자 칸을 읽지 못했습니다. 사진을 보며 직접 입력해 주세요.`);
+        warnings.push(`👥 사진 작업자 칸 ${workerCountAudit.sourceCount}명 · 출력 ${workerCountAudit.outputCount}명${workerCountAudit.isVerified ? " 일치" : " 불일치 — 출력 보류"}`);
         return {
             text: buildRosterTableOcrText(entries),
             entries,
             warnings,
+            unassignedWorkerCellCount: workerWordAssignments.unassigned.length,
+            workerCountAudit,
             confidence: Number(fullResult?.data?.confidence) || 0
         };
     } catch (error) {
@@ -1545,7 +1667,11 @@ async function runRosterPhotoOcr() {
         }
         if (tableResult) {
             rosterRuntime.recognizedText = tableResult.text;
-            rosterRuntime.tableOcrParsed = { entries: tableResult.entries, warnings: tableResult.warnings };
+            rosterRuntime.tableOcrParsed = {
+                entries: tableResult.entries,
+                warnings: tableResult.warnings,
+                unassignedWorkerCellCount: tableResult.unassignedWorkerCellCount
+            };
             const box = rosterElement("rosterPhotoText");
             if (box) box.value = rosterRuntime.recognizedText;
             rosterElement("rosterPhotoTextDetails")?.classList.remove("hidden");
@@ -1576,6 +1702,8 @@ async function runRosterPhotoOcr() {
         }
         rosterRuntime.recognizedText = selected.text;
         rosterRuntime.tableOcrParsed = null;
+        rosterRuntime.sourceUnassignedWorkerCount = 0;
+        rosterRuntime.sourceWorkerCount = null;
         const box = rosterElement("rosterPhotoText");
         if (box) box.value = rosterRuntime.recognizedText;
         rosterElement("rosterPhotoTextDetails")?.classList.remove("hidden");
@@ -1601,6 +1729,9 @@ function beginRosterPhotoReview(parsed, statusMessage) {
     const safeParsed = parsed || { entries: [], warnings: [] };
     rosterRuntime.photoModeEngaged = true;
     rosterRuntime.reviewRows = (safeParsed.entries || []).map((row) => ({ ...row, workers: [...(row.workers || [])] }));
+    rosterRuntime.sourceUnassignedWorkerCount = Math.max(0, Number(safeParsed.unassignedWorkerCellCount) || 0);
+    const initialWorkerCountAudit = auditRosterPhotoWorkerCounts(rosterRuntime.reviewRows, rosterRuntime.sourceUnassignedWorkerCount);
+    rosterRuntime.sourceWorkerCount = initialWorkerCountAudit.hasSourceCount ? initialWorkerCountAudit.sourceCount : null;
     rosterRuntime.reviewWarnings = [...(safeParsed.warnings || [])];
     rosterRuntime.reviewVerifications = rosterRuntime.reviewRows.map(() => ({ status: "pending", matches: [] }));
     rosterRuntime.reviewVerificationState = "pending";
@@ -1626,11 +1757,14 @@ function parseRosterPhotoTextFromBox(options) {
     if (rosterRuntime.tableOcrParsed && raw === rosterRuntime.recognizedText) {
         const tableParsed = {
             entries: rosterRuntime.tableOcrParsed.entries.map((row) => ({ ...row, workers: [...(row.workers || [])] })),
-            warnings: [...rosterRuntime.tableOcrParsed.warnings]
+            warnings: [...rosterRuntime.tableOcrParsed.warnings],
+            unassignedWorkerCellCount: rosterRuntime.tableOcrParsed.unassignedWorkerCellCount
         };
         return settings.skipReview ? tableParsed : beginRosterPhotoReview(tableParsed);
     }
     rosterRuntime.tableOcrParsed = null;
+    rosterRuntime.sourceUnassignedWorkerCount = 0;
+    rosterRuntime.sourceWorkerCount = null;
     const activeDate = (() => {
         try { return String(getActiveWorkLogDate() || ""); } catch (error) { return ""; }
     })();
@@ -1733,6 +1867,25 @@ async function verifyRosterPhotoVessels() {
     return verifications;
 }
 
+function rosterPhotoWorkerCountAuditHtml(audit) {
+    if (!audit?.hasSourceCount) return "";
+    const label = `👥 사진 작업자 칸 ${audit.sourceCount}명 · 출력 ${audit.outputCount}명`;
+    return audit.isVerified
+        ? `<div class="roster-photo-worker-count is-verified">${label} · 일치 확인 — 찾기에 반영됨</div>`
+        : `<div class="roster-photo-worker-count is-mismatch">⚠️ ${label} · 불일치 ${audit.mismatches.length}개 확인 항목 — 수정 전에는 찾기·저장을 보류합니다.</div>`;
+}
+
+function rosterPhotoWorkerCountLabel(row) {
+    const expected = Number.isInteger(row?.sourceWorkerCount) && row.sourceWorkerCount >= 0
+        ? row.sourceWorkerCount
+        : null;
+    const actual = Array.isArray(row?.workers) ? row.workers.length : 0;
+    if (expected === null) return `작업자 (${actual}명)`;
+    return expected === actual
+        ? `작업자 (사진 칸 ${expected}명 · 출력 ${actual}명 ✓)`
+        : `작업자 (사진 칸 ${expected}명 · 출력 ${actual}명 ⚠)`;
+}
+
 function renderRosterPhotoRows() {
     const container = rosterElement("rosterPhotoRows");
     if (!container) return;
@@ -1744,6 +1897,8 @@ function renderRosterPhotoRows() {
         return;
     }
     const warningHtml = (rosterRuntime.reviewWarnings || []).map((warning) => `<div class="roster-photo-warn">⚠️ ${escapeShipCommentHtml(warning)}</div>`).join("");
+    const workerCountAudit = rosterRuntime.workerCountAudit || auditRosterPhotoWorkerCounts(rosterRuntime.reviewRows, rosterRuntime.sourceUnassignedWorkerCount, rosterRuntime.sourceWorkerCount);
+    const workerCountHtml = rosterPhotoWorkerCountAuditHtml(workerCountAudit);
     const state = rosterRuntime.reviewVerificationState;
     const refreshLabel = state === "loading" ? "🗓️ 스케줄 확인 중…" : "🗓️ 입·출항 스케줄로 선박명 다시 확인";
     const rows = rosterRuntime.reviewRows.map((row, index) => `<div class="roster-photo-row">
@@ -1754,10 +1909,13 @@ function renderRosterPhotoRows() {
             <label>회사<input type="text" value="${escapeShipCommentHtml(row.company)}" onchange="updateRosterPhotoRow(${index}, 'company', this.value)"></label>
         </div>
         ${rosterPhotoVerificationHtml(rosterRuntime.reviewVerifications[index], index)}
-        <label class="roster-photo-row-workers">작업자 (${row.workers.length}명)<textarea rows="2" onchange="updateRosterPhotoRow(${index}, 'workers', this.value)">${escapeShipCommentHtml(row.workers.join(", "))}</textarea></label>
+        <label class="roster-photo-row-workers">${rosterPhotoWorkerCountLabel(row)}<textarea rows="2" onchange="updateRosterPhotoRow(${index}, 'workers', this.value)">${escapeShipCommentHtml(row.workers.join(", "))}</textarea></label>
         <button type="button" class="roster-photo-row-del" onclick="removeRosterPhotoRow(${index})">이 줄 삭제</button>
     </div>`).join("");
-    container.innerHTML = `${warningHtml}<div class="roster-photo-schedule-toolbar"><span>표의 선박별 작업자 칸을 따로 읽습니다. 날짜별 활성 스케줄 후보가 한 척이면 스케줄 정식명으로 자동 확정하며, 복수 후보·날짜 불일치·미발견은 검토표에 남깁니다.</span><button type="button" onclick="verifyRosterPhotoVessels()"${state === "loading" ? " disabled" : ""}>${refreshLabel}</button></div>${rows}<div class="roster-photo-search-ready">🔍 읽은 이름·관련 단어·선박명은 지금 바로 아래 찾기에서 검색할 수 있습니다. 임금·근무일지는 찾기 결과에서만 등록됩니다.</div><label class="roster-photo-persist"><input type="checkbox" id="rosterPhotoPersist"${rosterRuntime.persistPhotoText ? " checked" : ""}> 이 명단을 내 기기에 저장 (사진은 저장하지 않습니다)</label><button type="button" class="roster-photo-apply-btn" onclick="applyRosterPhotoRoster()">💾 검토한 행을 사진 명단으로 저장 (${rosterRuntime.reviewRows.length}행)</button>`;
+    const finderReadyHtml = workerCountAudit.hasSourceCount && !workerCountAudit.isVerified
+        ? `<div class="roster-photo-search-ready is-held">⚠️ 사진 작업자 인원과 출력 인원이 일치할 때까지 찾기·저장을 보류합니다. 각 선박의 작업자 칸을 원본 사진과 비교해 수정해 주세요.</div>`
+        : `<div class="roster-photo-search-ready">🔍 읽은 이름·관련 단어·선박명은 지금 바로 아래 찾기에서 검색할 수 있습니다. 임금·근무일지는 찾기 결과에서만 등록됩니다.</div>`;
+    container.innerHTML = `${warningHtml}${workerCountHtml}<div class="roster-photo-schedule-toolbar"><span>표의 선박별 작업자 칸을 따로 읽습니다. 날짜별 활성 스케줄 후보가 한 척이면 스케줄 정식명으로 자동 확정하며, 복수 후보·날짜 불일치·미발견은 검토표에 남깁니다.</span><button type="button" onclick="verifyRosterPhotoVessels()"${state === "loading" ? " disabled" : ""}>${refreshLabel}</button></div>${rows}${finderReadyHtml}<label class="roster-photo-persist"><input type="checkbox" id="rosterPhotoPersist"${rosterRuntime.persistPhotoText ? " checked" : ""}> 이 명단을 내 기기에 저장 (사진은 저장하지 않습니다)</label><button type="button" class="roster-photo-apply-btn" onclick="applyRosterPhotoRoster()">💾 검토한 행을 사진 명단으로 저장 (${rosterRuntime.reviewRows.length}행)</button>`;
 }
 
 function updateRosterPhotoRow(index, field, value) {
@@ -1792,6 +1950,13 @@ function clearRosterSearchResult() {
 }
 
 function applyRosterPhotoRoster() {
+    const workerCountAudit = auditRosterPhotoWorkerCounts(rosterRuntime.reviewRows, rosterRuntime.sourceUnassignedWorkerCount, rosterRuntime.sourceWorkerCount);
+    rosterRuntime.workerCountAudit = workerCountAudit;
+    if (workerCountAudit.hasSourceCount && !workerCountAudit.isVerified) {
+        renderRosterPhotoRows();
+        showToast(`⚠️ 사진 작업자 칸 ${workerCountAudit.sourceCount}명과 출력 ${workerCountAudit.outputCount}명이 다릅니다. 선박별 명단을 수정한 뒤 저장해 주세요.`);
+        return false;
+    }
     const usable = rosterRuntime.reviewRows
         .map((row) => normalizeRosterAssignment(row, "photo"))
         .filter((row) => row && row.date && row.vessel);
@@ -1872,6 +2037,9 @@ function clearRosterPhoto() {
     releaseRosterPhotoObjectUrl();
     rosterRuntime.recognizedText = "";
     rosterRuntime.tableOcrParsed = null;
+    rosterRuntime.sourceUnassignedWorkerCount = 0;
+    rosterRuntime.sourceWorkerCount = null;
+    rosterRuntime.workerCountAudit = { hasSourceCount: false, sourceCount: 0, outputCount: 0, mismatches: [], isVerified: true };
     rosterRuntime.reviewRows = [];
     rosterRuntime.reviewWarnings = [];
     rosterRuntime.reviewVerifications = [];
@@ -1898,11 +2066,10 @@ function clearRosterPhoto() {
     setRosterPhotoStatus("사진을 지웠습니다. 사진은 이 기기의 메모리에서만 처리되며 저장되지 않습니다.");
 }
 
-/** 사진·OCR 검토·사진 명단과 찾기 조건을 한 번에 초기화합니다. 직접 추가한 저장 명단은 보존합니다. */
+/** OCR·자동배치 검토와 찾기 조건만 초기화합니다. 저장한 사진·직접 명단은 보존합니다. */
 function resetRosterFinder() {
     // 기존 검색 또는 스케줄 조회가 초기화 후 결과를 다시 그리지 못하게 합니다.
     rosterRuntime.requestId += 1;
-    clearPhotoRosterFromDevice();
     clearRosterPhoto();
     clearRosterSearchResult();
     ["rosterFinderInput", "rosterExtraWorker", "rosterExtraVessel", "rosterExtraDate"].forEach((id) => {
@@ -1912,7 +2079,7 @@ function resetRosterFinder() {
     renderRosterPhotoSaved();
     renderRosterExtraList();
     renderRosterFinderHint();
-    setRosterPhotoStatus("초기화했습니다. 사진을 고르면 이 기기에서만 자동으로 명단을 읽어 바로 찾기에서 검색할 수 있습니다.");
-    showToast("↺ 근무배치 사진 명단과 찾기 조건을 초기화했습니다.");
+    setRosterPhotoStatus("OCR 검토와 찾기 조건을 초기화했습니다. 저장한 사진 명단은 그대로 유지됩니다.");
+    showToast("↺ OCR·자동배치 검토와 찾기 조건을 초기화했습니다. 저장한 명단은 유지됩니다.");
     trackAppEvent?.("actions", "roster_finder_reset");
 }

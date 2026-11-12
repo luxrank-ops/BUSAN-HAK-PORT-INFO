@@ -114,6 +114,83 @@ test('2열 반복 오더 표는 선박별 헤더와 그 아래 작업자 영역�
     assert.equal(photo.run(`detectRosterTableRegions({ data: new Uint8ClampedArray(100 * 180 * 4).fill(255) }, 100, 180)`), null);
 });
 
+test('겹친 선박 작업자 영역의 OCR 단어는 한 선박에만 귀속하고, 경계 단어는 자동 출력하지 않는다', () => {
+    const photo = createPhotoVm();
+    const result = JSON.parse(JSON.stringify(photo.run(`(() => {
+        const regions = [
+            { workers: { x: 0, y: 0, width: 100, height: 60 } },
+            { workers: { x: 90, y: 0, width: 100, height: 60 } }
+        ];
+        const words = [
+            { text: '김명준', bbox: { x0: 20, x1: 50, y0: 20, y1: 36 } },
+            { text: '이춘학', bbox: { x0: 92, x1: 98, y0: 20, y1: 36 } }
+        ];
+        const allocation = assignRosterTableWordsToWorkerRegions(words, regions);
+        return {
+            perVessel: allocation.assigned.map((items, index) => collectRosterTableWorkers(items, regions[index].workers)),
+            unassigned: allocation.unassigned.map((word) => word.text)
+        };
+    })()`)));
+    assert.deepEqual(result.perVessel, [['김명준'], []]);
+    assert.deepEqual(result.unassigned, ['이춘학'], '두 작업자 칸에 걸친 이름은 어느 선박에도 중복 출력하지 않는다');
+});
+
+test('원본 작업자 칸 수와 검토 출력 인원이 다르면 찾기와 저장을 보류한다', () => {
+    const photo = createPhotoVm();
+    const result = JSON.parse(JSON.stringify(photo.run(`(() => {
+        rosterRuntime.finderResults = [{ stale: true }];
+        beginRosterPhotoReview({ entries: [{
+            date: '2026-11-12', vessel: 'PRESIDENT CARTER', workers: ['이춘학', '김명준', '박상원'], sourceWorkerCount: 2, source: 'photo-table'
+        }], warnings: [] });
+        const beforeSave = getPhotoRosterEntries().length;
+        const saved = applyRosterPhotoRoster();
+        return {
+            source: rosterRuntime.workerCountAudit.sourceCount,
+            output: rosterRuntime.workerCountAudit.outputCount,
+            verified: rosterRuntime.workerCountAudit.isVerified,
+            beforeSave,
+            saved,
+            persisted: rosterRuntime.photoAssignments.length,
+            staleFinderResults: rosterRuntime.finderResults.length
+        };
+    })()`)));
+    assert.deepEqual(result, { source: 2, output: 3, verified: false, beforeSave: 0, saved: false, persisted: 0, staleFinderResults: 0 });
+});
+
+test('원본 작업자 칸 수와 출력 인원이 같으면 표 OCR 명단은 즉시 찾기에 반영한다', () => {
+    const photo = createPhotoVm();
+    const result = JSON.parse(JSON.stringify(photo.run(`(() => {
+        beginRosterPhotoReview({ entries: [{
+            date: '2026-11-12', vessel: 'PRESIDENT CARTER', workers: ['이춘학', '김명준'], sourceWorkerCount: 2, source: 'photo-table'
+        }], warnings: [] });
+        return {
+            source: rosterRuntime.workerCountAudit.sourceCount,
+            output: rosterRuntime.workerCountAudit.outputCount,
+            verified: rosterRuntime.workerCountAudit.isVerified,
+            vessels: getPhotoRosterEntries().map((row) => row.vessel)
+        };
+    })()`)));
+    assert.deepEqual(result, { source: 2, output: 2, verified: true, vessels: ['PRESIDENT CARTER'] });
+});
+
+test('검토 행을 삭제해도 사진에서 센 원본 작업자 총수는 바뀌지 않는다', () => {
+    const photo = createPhotoVm();
+    const result = JSON.parse(JSON.stringify(photo.run(`(() => {
+        beginRosterPhotoReview({ entries: [
+            { date: '2026-11-12', vessel: 'PRESIDENT CARTER', workers: ['이춘학'], sourceWorkerCount: 1, source: 'photo-table' },
+            { date: '2026-11-12', vessel: 'CMA CGM PANAMA', workers: ['김명준'], sourceWorkerCount: 1, source: 'photo-table' }
+        ], warnings: [] });
+        removeRosterPhotoRow(1);
+        return {
+            source: rosterRuntime.workerCountAudit.sourceCount,
+            output: rosterRuntime.workerCountAudit.outputCount,
+            verified: rosterRuntime.workerCountAudit.isVerified,
+            searchable: rosterRuntime.searchableReviewAssignments.length
+        };
+    })()`)));
+    assert.deepEqual(result, { source: 2, output: 1, verified: false, searchable: 0 });
+});
+
 test('표 OCR 원문을 다시 검토해도 선박별로 나눈 작업자 칸의 리터럴을 재파싱하지 않는다', () => {
     const photo = createPhotoVm();
     const parsed = JSON.parse(JSON.stringify(photo.run(`(() => {
@@ -298,7 +375,7 @@ test('사진 명단은 같은 날짜·선박·이름도 자동으로 합치거�
     assert.equal(photo.data.busanPortRosterPhoto, undefined);
 });
 
-test('근무배치 초기화는 사진 명단·OCR 검토·찾기 상태를 비우되 직접 추가 명단은 지운다고 가정하지 않는다', () => {
+test('근무배치 초기화는 OCR 검토·찾기만 비우고 저장한 사진·직접 명단은 보존한다', () => {
     const photo = createPhotoVm();
     const result = JSON.parse(JSON.stringify(photo.run(`(() => {
         rosterRuntime.photoModeEngaged = true;
@@ -322,12 +399,12 @@ test('근무배치 초기화는 사진 명단·OCR 검토·찾기 상태를 비�
     })()`)));
     assert.deepEqual(result, {
         photoModeEngaged: false,
-        photoAssignments: 0,
+        photoAssignments: 1,
         searchableReviewAssignments: 0,
         reviewRows: 0,
         manualAssignments: 1,
-        persistedPhoto: null,
-        persistedFlag: null
+        persistedPhoto: 'saved',
+        persistedFlag: '1'
     });
 });
 
