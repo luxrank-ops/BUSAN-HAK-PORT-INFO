@@ -890,8 +890,10 @@ function handleRosterPhotoSelected(event) {
     if (readButton) readButton.disabled = false;
     if (clearButton) clearButton.disabled = false;
     if (input) input.value = "";
-    setRosterPhotoStatus("📷 사진을 이 기기에서만 열었습니다. [사진에서 명단 읽기]를 눌러 글자를 읽어 주세요.");
+    setRosterPhotoStatus("📷 사진을 이 기기에서만 열었습니다. 자동으로 사진에서 명단을 읽는 중입니다…");
     trackAppEvent?.("actions", "roster_photo_selected");
+    // 사진을 고르는 즉시 OCR을 시작하되, 같은 버튼으로 필요 시 다시 읽을 수 있게 둡니다.
+    void runRosterPhotoOcr();
 }
 
 function openRosterPhotoPicker() {
