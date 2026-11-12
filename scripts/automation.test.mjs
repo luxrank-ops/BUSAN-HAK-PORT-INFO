@@ -25,6 +25,7 @@ for (const part of [
 }
 
 const notificationsCode = fs.readFileSync(new URL('../public/js/notifications.js', import.meta.url), 'utf8');
+const firestoreIndexes = JSON.parse(fs.readFileSync(new URL('../firestore.indexes.json', import.meta.url), 'utf8'));
 const serverCode = fs.readFileSync(new URL('../server.ts', import.meta.url), 'utf8');
 
 function createCommunitySandbox() {
@@ -271,6 +272,98 @@ test('새 Firestore 알림은 초기 목록과 구분해 알림 창을 자동으
   assert.match(elements.notiList.innerHTML, /출항 시간 변경/);
   assert.match(elements.notiList.innerHTML, /운항 시간 변경/);
   assert.match(toasts[0], /출항 시간 변경/);
+});
+
+test('알림 센터의 userId + createdAt 실시간 조회용 Firestore 복합 색인이 선언되어 있다', () => {
+  const notificationIndex = firestoreIndexes.indexes.find((index) => index.collectionGroup === 'notifications');
+  assert.deepEqual(notificationIndex, {
+    collectionGroup: 'notifications',
+    queryScope: 'COLLECTION',
+    fields: [
+      { fieldPath: 'userId', order: 'ASCENDING' },
+      { fieldPath: 'createdAt', order: 'DESCENDING' }
+    ]
+  });
+});
+
+test('알림 복합 색인이 아직 없으면 사용자별 대체 실시간 조회로 전환하고 최신 20건을 화면에서 정렬한다', async () => {
+  const classes = () => {
+    const values = new Set();
+    return {
+      add: (...names) => names.forEach((name) => values.add(name)),
+      remove: (...names) => names.forEach((name) => values.delete(name)),
+      contains: (name) => values.has(name),
+      toggle: (name, force) => {
+        const shouldAdd = force === undefined ? !values.has(name) : Boolean(force);
+        if (shouldAdd) values.add(name); else values.delete(name);
+        return shouldAdd;
+      }
+    };
+  };
+  const elements = {
+    notiList: { innerHTML: '' },
+    notiBadge: { classList: classes(), hidden: true, textContent: '' },
+    notiPanelUnread: { textContent: '' }
+  };
+  let primaryErrorListener = null;
+  let fallbackSnapshotListener = null;
+  let queryBuildCount = 0;
+  let authCalls = 0;
+  const primaryQuery = {
+    where: () => primaryQuery,
+    orderBy: () => primaryQuery,
+    limit: () => primaryQuery,
+    onSnapshot: (_snapshotListener, errorListener) => {
+      primaryErrorListener = errorListener;
+      return () => {};
+    }
+  };
+  const fallbackQuery = {
+    where: () => fallbackQuery,
+    onSnapshot: (snapshotListener) => {
+      fallbackSnapshotListener = snapshotListener;
+      return () => {};
+    }
+  };
+  const toasts = [];
+  const sandbox = {
+    console: { warn() {} },
+    Date,
+    String,
+    Number,
+    Set,
+    Promise,
+    document: { getElementById: (id) => elements[id] || null },
+    ensureAnonymousAuth: async () => {
+      authCalls += 1;
+      return { uid: 'anonymous-user' };
+    },
+    showToast: (message) => toasts.push(message),
+    db: {
+      collection: () => (++queryBuildCount === 1 ? primaryQuery : fallbackQuery)
+    }
+  };
+  vm.createContext(sandbox);
+  vm.runInContext(notificationsCode, sandbox, { filename: 'public/js/notifications.js' });
+
+  await sandbox.initNotifications('작업자A');
+  assert.equal(authCalls, 1, '실시간 구독은 Firebase 인증 준비 뒤에 시작해야 합니다');
+  assert.equal(typeof primaryErrorListener, 'function');
+
+  primaryErrorListener({ code: 'failed-precondition', message: 'The query requires an index.' });
+  assert.equal(typeof fallbackSnapshotListener, 'function', '색인 오류 뒤 단일 userId 조건으로 즉시 다시 구독해야 합니다');
+
+  const olderDoc = { id: 'old-noti', data: () => ({ title: '이전 알림', body: '먼저 생성됨', read: true, createdAtMs: 100 }) };
+  const newerDoc = { id: 'new-noti', data: () => ({ title: '새 알림', body: '나중 생성됨', read: false, createdAtMs: 200 }) };
+  fallbackSnapshotListener({
+    forEach: (fn) => [olderDoc, newerDoc].forEach(fn),
+    docChanges: () => [{ type: 'added', doc: olderDoc }, { type: 'added', doc: newerDoc }]
+  });
+
+  assert.ok(elements.notiList.innerHTML.indexOf('새 알림') < elements.notiList.innerHTML.indexOf('이전 알림'),
+    '대체 조회 결과도 화면에서는 최신순이어야 합니다');
+  assert.equal(elements.notiBadge.textContent, '1');
+  assert.equal(toasts.length, 0, '색인 오류 자체로 연결 실패 토스트를 보여서는 안 됩니다');
 });
 
 test('2순위: DB 자가 정리(30일 스케줄 캐시 / 14일 읽은 알림 TTL) 및 주간 정기 백업 크론이 설정되어 있다', () => {
