@@ -114,6 +114,36 @@ test('2열 반복 오더 표는 선박별 헤더와 그 아래 작업자 영역�
     assert.equal(photo.run(`detectRosterTableRegions({ data: new Uint8ClampedArray(100 * 180 * 4).fill(255) }, 100, 180)`), null);
 });
 
+test('반복 표가 4행 이상이면 마지막 선박의 명단 칸을 앞 행에 합치지 않는다', () => {
+    const photo = createPhotoVm();
+    const result = JSON.parse(JSON.stringify(photo.run(`(() => {
+        const width = 100;
+        const height = 260;
+        const pixels = new Uint8ClampedArray(width * height * 4).fill(255);
+        const paint = (x, y) => {
+            const offset = (y * width + x) * 4;
+            pixels[offset] = pixels[offset + 1] = pixels[offset + 2] = 0;
+            pixels[offset + 3] = 255;
+        };
+        [10, 20, 60, 70, 110, 120, 160, 170].forEach((y) => { for (let x = 5; x <= 95; x += 1) paint(x, y); });
+        [5, 50, 95].forEach((x) => { for (let y = 10; y <= 250; y += 1) paint(x, y); });
+        const regions = detectRosterTableRegions({ data: pixels }, width, height);
+        const words = [
+            { text: '김명준', bbox: { x0: 12, x1: 30, y0: 180, y1: 192 } },
+            { text: '이춘학', bbox: { x0: 57, x1: 75, y0: 180, y1: 192 } }
+        ];
+        const allocation = assignRosterTableWordsToWorkerRegions(words, regions);
+        return {
+            regionCount: regions?.length,
+            rows: regions?.map((region) => region.rowIndex),
+            workersPerRegion: allocation.assigned.map((items, index) => collectRosterTableWorkers(items, regions[index].workers))
+        };
+    })()`)));
+    assert.equal(result.regionCount, 8);
+    assert.deepEqual(result.rows, [0, 0, 1, 1, 2, 2, 3, 3]);
+    assert.deepEqual(result.workersPerRegion, [[], [], [], [], [], [], ['김명준'], ['이춘학']]);
+});
+
 test('겹친 선박 작업자 영역의 OCR 단어는 한 선박에만 귀속하고, 경계 단어는 자동 출력하지 않는다', () => {
     const photo = createPhotoVm();
     const result = JSON.parse(JSON.stringify(photo.run(`(() => {

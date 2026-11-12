@@ -1284,35 +1284,44 @@ function detectRosterTableRegions(imageData, width, height) {
     if (leftEnd - leftStart < width * 0.25 || rightEnd - rightStart < width * 0.25) return null;
 
     const bottom = findRosterTableVerticalBottom(imageData, width, height, centerLine);
-    for (let start = 0; start <= horizontalBands.length - 6; start += 1) {
-        const lines = horizontalBands.slice(start, start + 6).map(rosterTableLineCenter);
-        const headerHeights = [lines[1] - lines[0], lines[3] - lines[2], lines[5] - lines[4]];
-        const bodyHeights = [lines[2] - lines[1], lines[4] - lines[3], bottom - lines[5]];
-        const headerIsValid = headerHeights.every((value) => value >= height * 0.02 && value <= height * 0.13);
-        const bodyIsValid = bodyHeights.every((value, index) => value >= headerHeights[index] * 1.5);
-        if (!headerIsValid || !bodyIsValid) continue;
-        const rowBoundaries = [
-            { headerTop: lines[0], headerBottom: lines[1], bodyBottom: lines[2] },
-            { headerTop: lines[2], headerBottom: lines[3], bodyBottom: lines[4] },
-            { headerTop: lines[4], headerBottom: lines[5], bodyBottom: bottom }
-        ];
-        const regions = [];
-        rowBoundaries.forEach((row, rowIndex) => {
-            [[leftStart, leftEnd], [rightStart, rightEnd]].forEach(([x0, x1], columnIndex) => {
-                regions.push({
-                    index: regions.length,
-                    rowIndex,
-                    columnIndex,
-                    header: { x: x0, y: row.headerTop + 4, width: x1 - x0, height: row.headerBottom - row.headerTop - 8 },
-                    workers: { x: x0, y: row.headerBottom + 5, width: x1 - x0, height: row.bodyBottom - row.headerBottom - 9 }
-                });
+    const lineCenters = horizontalBands.map(rosterTableLineCenter);
+    let bestRowBoundaries = null;
+    // 사진마다 행 수가 다릅니다. 이전처럼 앞의 3행만 고정하면 마지막 작업자 칸이 다음 행까지 삼켜집니다.
+    // 유효한 헤더·명단 높이 패턴을 끝까지 따라 가장 긴 반복 표를 사용합니다.
+    for (let start = 0; start <= lineCenters.length - 6; start += 1) {
+        const rowBoundaries = [];
+        for (let lineIndex = start; lineIndex + 1 < lineCenters.length; lineIndex += 2) {
+            const headerTop = lineCenters[lineIndex];
+            const headerBottom = lineCenters[lineIndex + 1];
+            const nextBoundary = lineCenters[lineIndex + 2] || bottom;
+            const headerHeight = headerBottom - headerTop;
+            const bodyHeight = nextBoundary - headerBottom;
+            const headerIsValid = headerHeight >= height * 0.02 && headerHeight <= height * 0.13;
+            const bodyIsValid = bodyHeight >= headerHeight * 1.5;
+            if (!headerIsValid || !bodyIsValid) break;
+            rowBoundaries.push({ headerTop, headerBottom, bodyBottom: nextBoundary });
+            if (lineIndex + 2 >= lineCenters.length) break;
+        }
+        if (rowBoundaries.length >= 3 && (!bestRowBoundaries || rowBoundaries.length > bestRowBoundaries.length)) {
+            bestRowBoundaries = rowBoundaries;
+        }
+    }
+    if (!bestRowBoundaries) return null;
+    const regions = [];
+    bestRowBoundaries.forEach((row, rowIndex) => {
+        [[leftStart, leftEnd], [rightStart, rightEnd]].forEach(([x0, x1], columnIndex) => {
+            regions.push({
+                index: regions.length,
+                rowIndex,
+                columnIndex,
+                header: { x: x0, y: row.headerTop + 4, width: x1 - x0, height: row.headerBottom - row.headerTop - 8 },
+                workers: { x: x0, y: row.headerBottom + 5, width: x1 - x0, height: row.bodyBottom - row.headerBottom - 9 }
             });
         });
-        return regions.every((region) => region.header.width > 0 && region.header.height > 0 && region.workers.height > 0)
-            ? regions
-            : null;
-    }
-    return null;
+    });
+    return regions.every((region) => region.header.width > 0 && region.header.height > 0 && region.workers.height > 0)
+        ? regions
+        : null;
 }
 
 function normalizeRosterTableCellText(value) {
