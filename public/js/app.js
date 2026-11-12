@@ -5037,12 +5037,52 @@ function shiftWorklogScheduleDate(delta) {
 function parseWorklogShipNames(value) {
     return String(value || "").split(/\s*\/\s*/).map(s => s.trim()).filter(Boolean);
 }
-// 비교용 선박명: "[HJNC] " 같은 터미널 머리말을 떼고 대문자로 맞춘다.
+// 비교용 선박명: "[HJNC] " 같은 터미널 머리말·공백·대소문자를 통일합니다.
 function normalizeWorklogShipKey(name) {
-    return String(name || "").trim().replace(/^\[[^\]]+\]\s*/, "").trim().toUpperCase();
+    return String(name || "")
+        .normalize("NFKC")
+        .trim()
+        .replace(/^\[[^\]]+\]\s*/, "")
+        .replace(/[\s\u200B]+/g, "")
+        .toLocaleUpperCase("ko-KR");
+}
+
+/** 한 근무일지 안에서는 같은 선박을 한 번만 유지합니다. 원본 표/명단 데이터에는 적용하지 않습니다. */
+function dedupeWorklogShipNames(names) {
+    const known = new Set();
+    const unique = [];
+    const duplicates = [];
+    for (const rawName of names || []) {
+        const name = String(rawName || "").trim();
+        const key = normalizeWorklogShipKey(name);
+        if (!key) continue;
+        if (known.has(key)) duplicates.push(name);
+        else {
+            known.add(key);
+            unique.push(name);
+        }
+    }
+    return { unique, duplicates };
+}
+
+/** 직접 입력·붙여넣기와 자동 등록의 마지막 안전장치입니다. */
+function normalizeWorklogShipInput(options) {
+    const settings = options || {};
+    const input = document.getElementById("logShipName");
+    const result = dedupeWorklogShipNames(parseWorklogShipNames(input?.value));
+    if (input) input.value = result.unique.join(" / ");
+    if (settings.notify && result.duplicates.length) {
+        const date = getActiveWorkLogDate()
+            || String(document.getElementById("dailyLogForm")?.getAttribute("data-date") || "");
+        const dateLabel = /^\d{4}-\d{2}-\d{2}$/.test(date) ? `${date} 근무일지에는 ` : "근무일지에는 ";
+        showToast(`⚠️ ${dateLabel}같은 선박을 중복 입력할 수 없어 ${result.duplicates.length}척을 제외했습니다.`);
+    }
+    return result;
 }
 function getWorklogPickedNames() {
-    return parseWorklogShipNames(document.getElementById("logShipName")?.value).map(normalizeWorklogShipKey);
+    return dedupeWorklogShipNames(parseWorklogShipNames(document.getElementById("logShipName")?.value))
+        .unique
+        .map(normalizeWorklogShipKey);
 }
 /**
  * 근무일지 임금3·임금4 입력칸 노출 제어.
@@ -5149,7 +5189,8 @@ function toggleWorklogVesselPick(index) {
     const item = worklogRenderedVessels[index];
     const input = document.getElementById("logShipName");
     if (!item || !input) return;
-    const names = parseWorklogShipNames(input.value);
+    // 직접 붙여넣은 중복도 선택 전에 정리해 같은 날짜에 같은 배가 다시 들어가지 않게 합니다.
+    const names = normalizeWorklogShipInput({ notify: true }).unique;
     const key = normalizeWorklogShipKey(item.name);
     const pos = names.findIndex(n => normalizeWorklogShipKey(n) === key);
     if (pos >= 0) {
@@ -5176,7 +5217,7 @@ function toggleWorklogVesselPick(index) {
     }
 }
 function onWorklogShipNameEdited() {
-    const names = parseWorklogShipNames(document.getElementById("logShipName")?.value);
+    const names = normalizeWorklogShipInput({ notify: true }).unique;
     if (names.length > MAX_WORK_VESSELS) showToast(`⚠️ 선박은 최대 ${MAX_WORK_VESSELS}척까지 입력할 수 있습니다.`);
     syncWorklogDoubleOrderMemo();
     refreshWorklogVesselList();
@@ -6839,15 +6880,10 @@ function saveWorkLog(){
     btn.innerText = "저장 중... (0%)"; 
     btn.disabled = true; 
 
-    // 저장 안전장치: 폼 안의 중복 선박명(수동 입력·붙여넣기 등)을 정리한다.
-    // (의도적 삭제는 폼이 기준이므로 저장 기록과 합치지 않고 폼 내 중복만 제거)
-    const rawShipNameInfo = document.getElementById('logShipName').value.trim();
-    const dedupedShipNames = dedupeVesselNameList(parseWorklogShipNames(rawShipNameInfo));
+    // 저장 시에도 같은 날짜의 같은 선박은 하나만 남깁니다(수동 입력·붙여넣기 우회 방지).
+    const dedupedShipNames = normalizeWorklogShipInput();
     const shipNameInfo = dedupedShipNames.unique.join(" / ");
     const removedDuplicateCount = dedupedShipNames.duplicates.length;
-    if (removedDuplicateCount > 0) {
-        document.getElementById('logShipName').value = shipNameInfo;
-    }
     const previousWorkLog = adminWorkLogs[dStr] || {};
     const previousShipName = previousWorkLog.shipName || "";
     const w1 = parseFloat(document.getElementById('logWage1').value) || 0; 
@@ -6895,7 +6931,7 @@ function saveWorkLog(){
             btn.innerText = "✅ 저장 완료!"; 
             btn.style.background = "var(--success)"; 
             showToast(removedDuplicateCount > 0
-                ? `근무일지가 안전하게 저장되었습니다. (중복 선박명 ${removedDuplicateCount}개 정리)`
+                ? `근무일지가 안전하게 저장되었습니다. (동일 날짜 중복 선박 ${removedDuplicateCount}척 제외)`
                 : "근무일지가 안전하게 저장되었습니다."); 
             
             // 데이터 즉시 갱신 (달력·근무시간 통계가 이 맵을 그대로 다시 그립니다).
@@ -7481,7 +7517,7 @@ async function sendCalculatedWageToLog() {
 
             if (logShipInput) {
                 // 기존에 등록된 선박을 덮어쓰지 않고 합친다(중복 제외).
-                const mergedShips = dedupeVesselNameList([
+                const mergedShips = dedupeWorklogShipNames([
                     ...parseWorklogShipNames(logShipInput.value),
                     ...parts.map(item => item.name)
                 ]);
@@ -7511,9 +7547,11 @@ async function sendCalculatedWageToLog() {
         if (wageInput) wageInput.value = totalPay;
         if (logShipInput && shipName) {
             if (isDoubleOrder) {
-                const ships = logShipInput.value.trim().split(' / ').filter(Boolean);
-                if (!ships.includes(shipName)) ships.push(shipName);
-                logShipInput.value = ships.join(' / ');
+                const mergedShips = dedupeWorklogShipNames([
+                    ...parseWorklogShipNames(logShipInput.value),
+                    shipName
+                ]);
+                logShipInput.value = mergedShips.unique.join(" / ");
             } else {
                 logShipInput.value = shipName;
             }

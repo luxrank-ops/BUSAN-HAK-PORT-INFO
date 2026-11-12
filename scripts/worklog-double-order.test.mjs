@@ -29,7 +29,8 @@ const FUNCTIONS = [
     'formatScheduleSourceLine',
     'getWorklogScheduleDate', 'setWorklogScheduleDateInput', 'openWorklogScheduleDatePicker',
     'onWorklogScheduleDateChange', 'shiftWorklogScheduleDate', 'getActiveWorkLogDate', 'sendShipInfoToWorkLog',
-    'parseWorklogShipNames', 'normalizeWorklogShipKey', 'getWorklogPickedNames', 'refreshWorklogVesselList',
+    'parseWorklogShipNames', 'normalizeWorklogShipKey', 'dedupeWorklogShipNames', 'normalizeWorklogShipInput',
+    'getWorklogPickedNames', 'refreshWorklogVesselList',
     'resolveWorklogVesselMeta', 'buildWorklogDoubleOrderBlock', 'syncWorklogDoubleOrderMemo',
     'updateWorklogDoubleOrderStatus', 'toggleWorklogVesselPick', 'onWorklogShipNameEdited',
     'getMultiOrderLabel', 'syncWorklogWageSlotVisibility',
@@ -221,6 +222,20 @@ test('sending a vessel to an already selected work-log day preserves that day', 
     assert.equal(app.elements.logShipName.value, 'DIRECTORY SHIP');
 });
 
+test('같은 날짜의 같은 선박은 직접 입력·터미널 머리말·공백 차이에도 한 번만 남긴다', () => {
+    const app = setup({ logDate: '2026-10-25', shipName: ' [HJNC] SHIP ALPHA / ship alpha / SHIP BETA / SHIP  BETA ' });
+    const { context, elements, toasts } = app;
+
+    context.onWorklogShipNameEdited();
+
+    assert.equal(elements.logShipName.value, '[HJNC] SHIP ALPHA / SHIP BETA');
+    assert.match(toasts.at(-1), /2026-10-25 근무일지에는 같은 선박을 중복 입력할 수 없어 2척을 제외했습니다/);
+    assert.deepEqual(
+        JSON.parse(JSON.stringify(context.dedupeWorklogShipNames(['MAGNA', ' [BNCT] magna ', 'ONE APUS']))),
+        { unique: ['MAGNA', 'ONE APUS'], duplicates: ['[BNCT] magna'] }
+    );
+});
+
 test('touching a vessel selects it, a second touch makes a double order and fills the work content', () => {
     const app = setup({ memo: '오늘 메모' });
     const { context, elements, toasts } = app;
@@ -388,7 +403,7 @@ test('the work-log box renders the calendar, the double-order status and the tog
     assert.match(html, /<div id="worklogDoubleOrderStatus"/);
     // JS 템플릿에서 생성되는 마크업 문자열 — 분리 이후 app.js 에 존재
     assert.match(appJs, /onclick="toggleWorklogVesselPick\(\$\{index\}\)"/);
-    assert.match(html, /placeholder="작업 선박명 \(최대 4척 · 2척 이상 멀티오더\)" onchange="onWorklogShipNameEdited\(\)"/);
+    assert.match(html, /placeholder="작업 선박명 \(최대 4척 · 같은 날짜 중복 불가\)" onchange="onWorklogShipNameEdited\(\)"/);
 });
 
 // 사용자가 삭제를 요청한 두 블럭: "📌 근무일 날짜"(resetWorklogScheduleToLogDate) · "💰 임금계산기 선박"(importWageVesselsToWorklog)
