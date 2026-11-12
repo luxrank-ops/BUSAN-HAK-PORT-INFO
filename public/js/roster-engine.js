@@ -43,6 +43,7 @@ const rosterRuntime = {
     finderResults: [],
     activeImageUrl: "",
     recognizedText: "",
+    tableOcrParsed: null,
     requestId: 0
 };
 
@@ -841,6 +842,7 @@ function handleRosterPhotoSelected(event) {
     releaseRosterPhotoObjectUrl();
     rosterRuntime.activeImageUrl = URL.createObjectURL(file);
     rosterRuntime.recognizedText = "";
+    rosterRuntime.tableOcrParsed = null;
     rosterRuntime.reviewRows = [];
     rosterRuntime.reviewWarnings = [];
     rosterRuntime.reviewVerifications = [];
@@ -961,7 +963,7 @@ function getRosterOcrScale(width, height) {
     return 1;
 }
 
-async function prepareRosterImageForOcr(profile = "enhanced") {
+async function prepareRosterCanvasForOcr(profile = "enhanced") {
     const image = rosterElement("rosterPhotoPreview");
     if (!image?.src) throw new Error("사진이 없습니다.");
     if (!image.complete || !image.naturalWidth) {
@@ -990,7 +992,203 @@ async function prepareRosterImageForOcr(profile = "enhanced") {
     } catch (error) {
         // Some browsers disallow pixel access for an image. The scaled canvas is still usable.
     }
+    return canvas;
+}
+
+async function prepareRosterImageForOcr(profile = "enhanced") {
+    const canvas = await prepareRosterCanvasForOcr(profile);
     return canvas.toDataURL("image/png");
+}
+
+function rosterOcrPixelIsDark(data, offset, threshold = 110) {
+    return rosterOcrLuminance(data[offset], data[offset + 1], data[offset + 2]) < threshold;
+}
+
+/** 표 외곽·구획선처럼 충분히 긴 검은 선을 가로 또는 세로 방향으로 찾습니다. */
+function findRosterTableLineBands(imageData, width, height, axis) {
+    const data = imageData?.data;
+    if (!data?.length || !width || !height) return [];
+    const horizontal = axis === "horizontal";
+    const primaryLength = horizontal ? height : width;
+    const secondaryLength = horizontal ? width : height;
+    const minimumCoverage = horizontal ? 0.58 : 0.45;
+    const candidates = [];
+    for (let primary = 0; primary < primaryLength; primary += 1) {
+        let dark = 0;
+        for (let secondary = 0; secondary < secondaryLength; secondary += 1) {
+            const x = horizontal ? secondary : primary;
+            const y = horizontal ? primary : secondary;
+            if (rosterOcrPixelIsDark(data, (y * width + x) * 4)) dark += 1;
+        }
+        if (dark >= secondaryLength * minimumCoverage) candidates.push({ position: primary, coverage: dark });
+    }
+    return candidates.reduce((bands, candidate) => {
+        const previous = bands[bands.length - 1];
+        if (previous && candidate.position <= previous.end + 1) {
+            previous.end = candidate.position;
+            previous.coverage = Math.max(previous.coverage, candidate.coverage);
+        } else {
+            bands.push({ start: candidate.position, end: candidate.position, coverage: candidate.coverage });
+        }
+        return bands;
+    }, []);
+}
+
+function rosterTableLineCenter(band) {
+    return Math.round((Number(band?.start) + Number(band?.end)) / 2);
+}
+
+function findRosterTableVerticalBottom(imageData, width, height, lineBand) {
+    const data = imageData?.data;
+    if (!data?.length || !lineBand) return 0;
+    for (let y = height - 1; y >= 0; y -= 1) {
+        for (let x = lineBand.start; x <= lineBand.end; x += 1) {
+            if (rosterOcrPixelIsDark(data, (y * width + x) * 4)) return y;
+        }
+    }
+    return 0;
+}
+
+/**
+ * 2열·반복 헤더 형태의 오더 표에서 선박별 헤더/명단 영역을 분리합니다.
+ * 표가 아니거나 선이 부족하면 null을 돌려 기존 일반 OCR 흐름으로 안전하게 돌아갑니다.
+ */
+function detectRosterTableRegions(imageData, width, height) {
+    const horizontalBands = findRosterTableLineBands(imageData, width, height, "horizontal");
+    const verticalBands = findRosterTableLineBands(imageData, width, height, "vertical");
+    if (horizontalBands.length < 6 || verticalBands.length < 3) return null;
+    const leftLine = verticalBands[0];
+    const centerLine = verticalBands.reduce((closest, band) => (
+        Math.abs(rosterTableLineCenter(band) - width / 2) < Math.abs(rosterTableLineCenter(closest) - width / 2) ? band : closest
+    ), verticalBands[0]);
+    const rightLine = verticalBands[verticalBands.length - 1];
+    const leftStart = leftLine.end + 4;
+    const leftEnd = centerLine.start - 4;
+    const rightStart = centerLine.end + 4;
+    const rightEnd = rightLine.start - 4;
+    if (leftEnd - leftStart < width * 0.25 || rightEnd - rightStart < width * 0.25) return null;
+
+    const bottom = findRosterTableVerticalBottom(imageData, width, height, centerLine);
+    for (let start = 0; start <= horizontalBands.length - 6; start += 1) {
+        const lines = horizontalBands.slice(start, start + 6).map(rosterTableLineCenter);
+        const headerHeights = [lines[1] - lines[0], lines[3] - lines[2], lines[5] - lines[4]];
+        const bodyHeights = [lines[2] - lines[1], lines[4] - lines[3], bottom - lines[5]];
+        const headerIsValid = headerHeights.every((value) => value >= height * 0.02 && value <= height * 0.13);
+        const bodyIsValid = bodyHeights.every((value, index) => value >= headerHeights[index] * 1.5);
+        if (!headerIsValid || !bodyIsValid) continue;
+        const rowBoundaries = [
+            { headerTop: lines[0], headerBottom: lines[1], bodyBottom: lines[2] },
+            { headerTop: lines[2], headerBottom: lines[3], bodyBottom: lines[4] },
+            { headerTop: lines[4], headerBottom: lines[5], bodyBottom: bottom }
+        ];
+        const regions = [];
+        rowBoundaries.forEach((row, rowIndex) => {
+            [[leftStart, leftEnd], [rightStart, rightEnd]].forEach(([x0, x1], columnIndex) => {
+                regions.push({
+                    index: regions.length,
+                    rowIndex,
+                    columnIndex,
+                    header: { x: x0, y: row.headerTop + 4, width: x1 - x0, height: row.headerBottom - row.headerTop - 8 },
+                    workers: { x: x0, y: row.headerBottom + 5, width: x1 - x0, height: row.bodyBottom - row.headerBottom - 9 }
+                });
+            });
+        });
+        return regions.every((region) => region.header.width > 0 && region.header.height > 0 && region.workers.height > 0)
+            ? regions
+            : null;
+    }
+    return null;
+}
+
+function normalizeRosterTableCellText(value) {
+    return String(value || "").normalize("NFKC").replace(/[^가-힣0-9]/g, "");
+}
+
+function rosterTableWordCenter(word, axis) {
+    const box = word?.bbox || {};
+    const start = Number(box[axis === "x" ? "x0" : "y0"]);
+    const end = Number(box[axis === "x" ? "x1" : "y1"]);
+    return Number.isFinite(start) && Number.isFinite(end) ? (start + end) / 2 : NaN;
+}
+
+/** 전체 표 OCR의 단어 좌표를 한 선박 명단 영역으로 제한해, 행·칸 순서대로 이름을 복원합니다. */
+function collectRosterTableWorkers(words, region) {
+    if (!region || !Array.isArray(words)) return [];
+    const inRegion = words.map((word) => {
+        const rawText = String(word?.text || "");
+        const text = normalizeRosterTableCellText(rawText);
+        return {
+            word,
+            text,
+            divider: !text && /[_|]/.test(rawText),
+            trailingDivider: Boolean(text) && /[_|]/.test(rawText),
+            x: rosterTableWordCenter(word, "x"),
+            y: rosterTableWordCenter(word, "y"),
+            xStart: Number(word?.bbox?.x0),
+            xEnd: Number(word?.bbox?.x1)
+        };
+    }).filter((item) => (item.text || item.divider) && Number.isFinite(item.x) && Number.isFinite(item.y)
+        && item.x >= region.x && item.x <= region.x + region.width
+        && item.y >= region.y && item.y <= region.y + region.height)
+        .sort((a, b) => a.y - b.y || a.x - b.x);
+    const lineTolerance = Math.max(14, Math.min(26, region.height / 14));
+    const lines = [];
+    inRegion.forEach((item) => {
+        const line = lines.find((candidate) => Math.abs(candidate.y - item.y) <= lineTolerance);
+        if (line) {
+            line.items.push(item);
+            line.y = (line.y * (line.items.length - 1) + item.y) / line.items.length;
+        } else {
+            lines.push({ y: item.y, items: [item] });
+        }
+    });
+    // 한 이름 안의 글자 간격은 약 15px 이하이고, 표의 다음 사람 칸은 그보다 큽니다.
+    const joinGap = Math.max(14, Math.min(18, region.width * 0.021));
+    return lines.sort((a, b) => a.y - b.y).flatMap((line) => {
+        const cells = [];
+        let forceNewCell = false;
+        line.items.sort((a, b) => a.x - b.x).forEach((item) => {
+            if (item.divider) {
+                forceNewCell = true;
+                return;
+            }
+            const previous = cells[cells.length - 1];
+            if (previous && !forceNewCell && item.xStart - previous.xEnd <= joinGap) {
+                previous.text += item.text;
+                previous.xEnd = Math.max(previous.xEnd, item.xEnd);
+            } else {
+                cells.push({ text: item.text, xEnd: item.xEnd });
+            }
+            forceNewCell = item.trailingDivider;
+        });
+        // 표 칸에 든 한글 OCR 조각은 글자 수와 무관하게 보존합니다. 이름 여부를 추정해 제외하지 않습니다.
+        return cells.map((cell) => cell.text).filter((text) => /^[가-힣]/.test(text));
+    });
+}
+
+function readRosterTableHeaderTime(value) {
+    const standard = readTimeFromOcrLine(value);
+    if (standard) return standard;
+    const compact = String(value || "").match(/(?:^|[^\d])([01]\d|2[0-3])\s*([0-5]\d)(?!\d)/);
+    return compact ? `${compact[1]}:${compact[2]}` : "";
+}
+
+function pickRosterTableHeaderCompany(value) {
+    const time = String(value || "").match(/(?:[01]\d|2[0-3])\s*(?::|\.)?\s*[0-5]\d/);
+    const tail = time ? String(value).slice(time.index + time[0].length) : String(value || "");
+    return (tail.match(/[가-힣]/g) || []).join("");
+}
+
+function parseRosterTableHeader(text, options) {
+    const settings = options || {};
+    const fallbackYear = Number(settings.defaultYear) || new Date().getFullYear();
+    const raw = String(text || "");
+    return {
+        date: readDateFromOcrLine(raw, fallbackYear),
+        vessel: pickVesselFromOcrLine(raw),
+        time: readRosterTableHeaderTime(raw),
+        company: pickRosterTableHeaderCompany(raw)
+    };
 }
 
 function assessRosterOcrText(text, confidence = 0) {
@@ -1030,6 +1228,125 @@ async function getRosterOcrEngine() {
     return window.Tesseract;
 }
 
+function cropRosterOcrCanvas(source, region, padding = 14, scale = 1) {
+    const x = Math.max(0, Math.floor(region?.x || 0));
+    const y = Math.max(0, Math.floor(region?.y || 0));
+    const width = Math.min(source.width - x, Math.max(1, Math.ceil(region?.width || 0)));
+    const height = Math.min(source.height - y, Math.max(1, Math.ceil(region?.height || 0)));
+    const zoom = Math.max(1, Number(scale) || 1);
+    const crop = document.createElement("canvas");
+    crop.width = Math.round(width * zoom) + padding * 2;
+    crop.height = Math.round(height * zoom) + padding * 2;
+    const context = crop.getContext("2d");
+    if (!context) throw new Error("표 영역을 읽을 수 없습니다.");
+    context.fillStyle = "#fff";
+    context.fillRect(0, 0, crop.width, crop.height);
+    context.drawImage(source, x, y, width, height, padding, padding, Math.round(width * zoom), Math.round(height * zoom));
+    return crop.toDataURL("image/png");
+}
+
+function rosterTableHeaderFieldRegion(header, startRatio, endRatio) {
+    const start = Math.max(0, Math.min(1, startRatio));
+    const end = Math.max(start, Math.min(1, endRatio));
+    return {
+        x: header.x + header.width * start,
+        y: header.y,
+        width: header.width * (end - start),
+        height: header.height
+    };
+}
+
+async function recognizeRosterTableHeader(worker, sourceCanvas, region, fallbackYear) {
+    const recognizeCrop = async (crop, label, scale = 1) => {
+        setRosterPhotoStatus(`🔍 표의 ${label} 읽는 중…`);
+        const result = await worker.recognize(cropRosterOcrCanvas(sourceCanvas, crop, 14, scale));
+        return String(result?.data?.text || "");
+    };
+    let raw = await recognizeCrop(region.header, `${region.index + 1}번째 선박 헤더`);
+    let header = parseRosterTableHeader(raw, { defaultYear: fallbackYear });
+    // 날짜 칸은 작고 구분선이 가까워, 확대 OCR 값을 우선해 11/10 → 1/10 같은 누락을 줄입니다.
+    const dateText = await recognizeCrop(rosterTableHeaderFieldRegion(region.header, 0, 0.20), "날짜", 2);
+    const cropDate = readDateFromOcrLine(dateText, fallbackYear);
+    if (cropDate) header.date = cropDate;
+    raw += ` ${dateText}`;
+    if (!header.vessel) {
+        const vesselText = await recognizeCrop(rosterTableHeaderFieldRegion(region.header, 0.15, 0.72), "선박명");
+        header.vessel = pickVesselFromOcrLine(vesselText);
+        raw += ` ${vesselText}`;
+    }
+    if (!header.time) {
+        const timeText = await recognizeCrop(rosterTableHeaderFieldRegion(region.header, 0.70, 0.87), "시간");
+        header.time = readRosterTableHeaderTime(timeText);
+        raw += ` ${timeText}`;
+    }
+    if (!header.company) {
+        const companyText = await recognizeCrop(rosterTableHeaderFieldRegion(region.header, 0.84, 1), "회사");
+        header.company = pickRosterTableHeaderCompany(companyText);
+        raw += ` ${companyText}`;
+    }
+    return { ...header, raw: raw.trim() };
+}
+
+function buildRosterTableOcrText(entries) {
+    return (entries || []).map((row) => [
+        [row.date, row.vessel, row.time, row.company].filter(Boolean).join(" "),
+        ...(row.workers || [])
+    ].filter(Boolean).join("\n")).join("\n\n");
+}
+
+/** 표 감지에 성공했을 때, 한 번의 전체 OCR 좌표와 선박별 헤더 OCR을 결합합니다. */
+async function recognizeRosterTablePhoto(engine, sourceCanvas, regions, defaultYear) {
+    if (!engine?.createWorker || !regions?.length) return null;
+    let worker = null;
+    try {
+        worker = await engine.createWorker("kor+eng", 1, {
+            logger: (progress) => {
+                if (progress?.status === "recognizing text") {
+                    setRosterPhotoStatus(`🔍 표 명단 좌표 인식 중… ${Math.round((Number(progress.progress) || 0) * 100)}%`);
+                }
+            }
+        });
+        await worker.setParameters?.({ tessedit_pageseg_mode: "6" });
+        const fullResult = await worker.recognize(sourceCanvas.toDataURL("image/png"));
+        const words = Array.isArray(fullResult?.data?.words) ? fullResult.data.words : [];
+        if (!words.length) return null;
+        await worker.setParameters?.({ tessedit_pageseg_mode: "7" });
+        const headers = [];
+        for (const region of regions) headers.push(await recognizeRosterTableHeader(worker, sourceCanvas, region, defaultYear));
+        // 같은 가로줄의 짝 헤더가 명확한 날짜를 읽었을 때만, 완전히 비어 있는 날짜 칸의 검토 시작값으로 씁니다.
+        for (let index = 0; index < headers.length; index += 2) {
+            const left = headers[index];
+            const right = headers[index + 1];
+            if (!left?.date && right?.date) left.date = right.date;
+            if (!right?.date && left?.date) right.date = left.date;
+        }
+        const entries = regions.map((region, index) => ({
+            ...headers[index],
+            workers: collectRosterTableWorkers(words, region.workers),
+            source: "photo-table"
+        })).filter((row) => row.vessel);
+        // 반복 표는 대부분의 헤더를 확인할 수 있을 때만 채택합니다. 일부만 읽힌 표를 임의의 선박 행으로 만들지 않고 기존 OCR 검토 흐름으로 돌립니다.
+        const validHeaderCount = entries.filter((row) => row.date && row.vessel).length;
+        if (validHeaderCount < Math.ceil(regions.length * 0.75)) return null;
+        const missingDates = entries.filter((row) => !row.date).length;
+        const missingWorkers = entries.filter((row) => !row.workers.length).length;
+        const warnings = ["표 구조를 인식해 선박별 헤더와 그 아래 작업자 칸을 따로 읽었습니다. 적용 전 검토표를 확인해 주세요."];
+        if (missingDates) warnings.push(`${missingDates}척은 날짜를 읽지 못했습니다. 검토 표에서 날짜를 채워 주세요.`);
+        if (missingWorkers) warnings.push(`${missingWorkers}척은 작업자 칸을 읽지 못했습니다. 사진을 보며 직접 입력해 주세요.`);
+        return {
+            text: buildRosterTableOcrText(entries),
+            entries,
+            warnings,
+            confidence: Number(fullResult?.data?.confidence) || 0
+        };
+    } catch (error) {
+        console.warn("[roster] table photo recognition unavailable", error);
+        return null;
+    } finally {
+        await worker?.terminate?.();
+    }
+}
+
 async function runRosterPhotoOcr() {
     if (!isRosterFinderUnlocked()) return unlockRosterFinder();
     if (!rosterRuntime.activeImageUrl) return showToast("📷 먼저 근무 배치 사진을 선택해 주세요.");
@@ -1042,7 +1359,34 @@ async function runRosterPhotoOcr() {
         }
     });
     try {
-        const [engine, enhancedImage] = await Promise.all([getRosterOcrEngine(), prepareRosterImageForOcr("enhanced")]);
+        const [engine, enhancedCanvas] = await Promise.all([getRosterOcrEngine(), prepareRosterCanvasForOcr("enhanced")]);
+        let tableResult = null;
+        try {
+            const pixels = enhancedCanvas.getContext("2d")?.getImageData(0, 0, enhancedCanvas.width, enhancedCanvas.height);
+            const regions = detectRosterTableRegions(pixels, enhancedCanvas.width, enhancedCanvas.height);
+            if (regions) {
+                const activeDate = (() => {
+                    try { return String(getActiveWorkLogDate() || ""); } catch (error) { return ""; }
+                })();
+                const fallbackYear = Number(activeDate.slice(0, 4)) || new Date().getFullYear();
+                setRosterPhotoStatus(`🔍 ${regions.length}개 선박 표 칸을 분리해 읽는 중…`);
+                tableResult = await recognizeRosterTablePhoto(engine, enhancedCanvas, regions, fallbackYear);
+            }
+        } catch (error) {
+            console.warn("[roster] table layout detection unavailable", error);
+        }
+        if (tableResult) {
+            rosterRuntime.recognizedText = tableResult.text;
+            rosterRuntime.tableOcrParsed = { entries: tableResult.entries, warnings: tableResult.warnings };
+            const box = rosterElement("rosterPhotoText");
+            if (box) box.value = rosterRuntime.recognizedText;
+            rosterElement("rosterPhotoTextDetails")?.classList.remove("hidden");
+            beginRosterPhotoReview(rosterRuntime.tableOcrParsed, "✅ 표 구조로 선박별 작업자 명단을 읽었습니다. 입·출항 스케줄과 선박명을 교차 확인하는 중입니다.");
+            trackAppEvent?.("actions", "roster_photo_table_ocr_done");
+            return tableResult;
+        }
+
+        const enhancedImage = enhancedCanvas.toDataURL("image/png");
         const primaryResult = await recognize(engine, enhancedImage, "보정");
         const primary = assessRosterOcrText(primaryResult?.data?.text, primaryResult?.data?.confidence);
         let selected = primary;
@@ -1057,13 +1401,14 @@ async function runRosterPhotoOcr() {
             trackAppEvent?.("actions", "roster_photo_ocr_retry");
         }
         rosterRuntime.recognizedText = selected.text;
+        rosterRuntime.tableOcrParsed = null;
         const box = rosterElement("rosterPhotoText");
         if (box) box.value = rosterRuntime.recognizedText;
         rosterElement("rosterPhotoTextDetails")?.classList.remove("hidden");
         const retryLabel = retried ? (selected === primary ? " · 보정본 선택" : " · 고대비 재확인본 선택") : "";
-        setRosterPhotoStatus(`✅ 글자 인식 완료 (${rosterRuntime.recognizedText.length}자${retryLabel}). 검토 후 명단을 적용해 주세요.`);
-        parseRosterPhotoTextFromBox();
+        beginRosterPhotoReview(parseRosterPhotoTextFromBox({ skipReview: true }), `✅ 글자 인식 완료 (${rosterRuntime.recognizedText.length}자${retryLabel}). 전 터미널 입·출항 스케줄과 선박명을 교차 확인하는 중입니다.`);
         trackAppEvent?.("actions", "roster_photo_ocr_done");
+        return selected;
     } catch (error) {
         console.error("[roster] OCR failed", error);
         rosterElement("rosterPhotoTextDetails")?.classList.remove("hidden");
@@ -1074,26 +1419,42 @@ async function runRosterPhotoOcr() {
     }
 }
 
-function parseRosterPhotoTextFromBox() {
+function beginRosterPhotoReview(parsed, statusMessage) {
+    const safeParsed = parsed || { entries: [], warnings: [] };
+    rosterRuntime.photoModeEngaged = true;
+    rosterRuntime.reviewRows = (safeParsed.entries || []).map((row) => ({ ...row, workers: [...(row.workers || [])] }));
+    rosterRuntime.reviewWarnings = [...(safeParsed.warnings || [])];
+    rosterRuntime.reviewVerifications = rosterRuntime.reviewRows.map(() => ({ status: "pending", matches: [] }));
+    rosterRuntime.reviewVerificationState = "pending";
+    renderRosterPhotoRows();
+    setRosterPhotoStatus(statusMessage || "📝 인식한 내용을 검토표에 표시했습니다. 전 터미널 입·출항 스케줄과 선박명을 교차 확인하는 중입니다.");
+    verifyRosterPhotoVessels();
+    return safeParsed;
+}
+
+function parseRosterPhotoTextFromBox(options) {
+    const settings = options || {};
     const textBox = rosterElement("rosterPhotoText");
     const raw = String(textBox?.value || rosterRuntime.recognizedText || "");
     if (!raw.trim()) {
-        showToast("⚠️ 읽은 글자가 없습니다. 사진을 다시 고르거나 직접 입력해 주세요.");
+        if (!settings.skipReview) showToast("⚠️ 읽은 글자가 없습니다. 사진을 다시 고르거나 직접 입력해 주세요.");
         return { entries: [], warnings: [] };
     }
+    // 표 OCR 결과를 수정하지 않고 다시 검토할 때는 이미 분리한 작업자 칸 연결을 그대로 보존합니다.
+    if (rosterRuntime.tableOcrParsed && raw === rosterRuntime.recognizedText) {
+        const tableParsed = {
+            entries: rosterRuntime.tableOcrParsed.entries.map((row) => ({ ...row, workers: [...(row.workers || [])] })),
+            warnings: [...rosterRuntime.tableOcrParsed.warnings]
+        };
+        return settings.skipReview ? tableParsed : beginRosterPhotoReview(tableParsed);
+    }
+    rosterRuntime.tableOcrParsed = null;
     const activeDate = (() => {
         try { return String(getActiveWorkLogDate() || ""); } catch (error) { return ""; }
     })();
     const parsed = parseRosterPhotoText(raw, { defaultYear: new Date().getFullYear(), defaultDate: activeDate });
-    rosterRuntime.photoModeEngaged = true;
-    rosterRuntime.reviewRows = parsed.entries.map((row) => ({ ...row, workers: [...row.workers] }));
-    rosterRuntime.reviewWarnings = [...parsed.warnings];
-    rosterRuntime.reviewVerifications = parsed.entries.map(() => ({ status: "pending", matches: [] }));
-    rosterRuntime.reviewVerificationState = "pending";
-    renderRosterPhotoRows();
-    setRosterPhotoStatus("📝 인식한 내용을 그대로 검토표에 표시했습니다. 전 터미널 입·출항 스케줄과 선박명을 교차 확인하는 중입니다.");
-    verifyRosterPhotoVessels();
-    return parsed;
+    if (settings.skipReview) return parsed;
+    return beginRosterPhotoReview(parsed);
 }
 
 function rosterPhotoScheduleValue(vessel, fields) {
@@ -1213,7 +1574,7 @@ function renderRosterPhotoRows() {
         <label class="roster-photo-row-workers">작업자 (${row.workers.length}명)<textarea rows="2" onchange="updateRosterPhotoRow(${index}, 'workers', this.value)">${escapeShipCommentHtml(row.workers.join(", "))}</textarea></label>
         <button type="button" class="roster-photo-row-del" onclick="removeRosterPhotoRow(${index})">이 줄 삭제</button>
     </div>`).join("");
-    container.innerHTML = `${warningHtml}<div class="roster-photo-schedule-toolbar"><span>사진의 인식 선박명은 자동으로 바꾸지 않습니다. 날짜별 입·출항 스케줄은 검토 참고용입니다.</span><button type="button" onclick="verifyRosterPhotoVessels()"${state === "loading" ? " disabled" : ""}>${refreshLabel}</button></div>${rows}<label class="roster-photo-persist"><input type="checkbox" id="rosterPhotoPersist"${rosterRuntime.persistPhotoText ? " checked" : ""}> 이 명단을 내 기기에 저장 (사진은 저장하지 않습니다)</label><button type="button" class="roster-photo-apply-btn" onclick="applyRosterPhotoRoster()">✅ 검토한 행을 현재 검색 명단에 적용 (${rosterRuntime.reviewRows.length}행)</button>`;
+    container.innerHTML = `${warningHtml}<div class="roster-photo-schedule-toolbar"><span>표의 선박별 작업자 칸을 따로 읽습니다. 날짜별 활성 스케줄 후보가 한 척이면 스케줄 정식명으로 자동 확정하며, 복수 후보·날짜 불일치·미발견은 검토표에 남깁니다.</span><button type="button" onclick="verifyRosterPhotoVessels()"${state === "loading" ? " disabled" : ""}>${refreshLabel}</button></div>${rows}<label class="roster-photo-persist"><input type="checkbox" id="rosterPhotoPersist"${rosterRuntime.persistPhotoText ? " checked" : ""}> 이 명단을 내 기기에 저장 (사진은 저장하지 않습니다)</label><button type="button" class="roster-photo-apply-btn" onclick="applyRosterPhotoRoster()">✅ 검토한 행을 현재 검색 명단에 적용 (${rosterRuntime.reviewRows.length}행)</button>`;
 }
 
 function updateRosterPhotoRow(index, field, value) {
@@ -1315,6 +1676,7 @@ function clearPhotoRosterEntries() {
 function clearRosterPhoto() {
     releaseRosterPhotoObjectUrl();
     rosterRuntime.recognizedText = "";
+    rosterRuntime.tableOcrParsed = null;
     rosterRuntime.reviewRows = [];
     rosterRuntime.reviewWarnings = [];
     rosterRuntime.reviewVerifications = [];

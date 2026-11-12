@@ -75,6 +75,57 @@ test('제목·명단 머리말도 자동 제외하지 않고 검토표에 그대
     );
 });
 
+test('2열 반복 오더 표는 선박별 헤더와 그 아래 작업자 영역으로 나누고, 칸 안의 글자만 연결한다', () => {
+    const photo = createPhotoVm();
+    const result = JSON.parse(JSON.stringify(photo.run(`(() => {
+        const width = 100;
+        const height = 180;
+        const pixels = new Uint8ClampedArray(width * height * 4).fill(255);
+        const paint = (x, y) => {
+            const offset = (y * width + x) * 4;
+            pixels[offset] = pixels[offset + 1] = pixels[offset + 2] = 0;
+            pixels[offset + 3] = 255;
+        };
+        [10, 20, 60, 70, 110, 120].forEach((y) => { for (let x = 5; x <= 95; x += 1) paint(x, y); });
+        [5, 50, 95].forEach((x) => { for (let y = 10; y <= 170; y += 1) paint(x, y); });
+        const regions = detectRosterTableRegions({ data: pixels }, width, height);
+        const words = [
+            { text: '김', bbox: { x0: 12, x1: 16, y0: 29, y1: 35 } },
+            { text: '민', bbox: { x0: 18, x1: 22, y0: 29, y1: 35 } },
+            { text: '재', bbox: { x0: 24, x1: 28, y0: 29, y1: 35 } },
+            { text: '2_', bbox: { x0: 30, x1: 34, y0: 29, y1: 35 } },
+            { text: '강', bbox: { x0: 37, x1: 41, y0: 29, y1: 35 } },
+            { text: '무성', bbox: { x0: 42, x1: 47, y0: 29, y1: 35 } }
+        ];
+        return {
+            regionCount: regions?.length,
+            first: regions?.[0],
+            workers: collectRosterTableWorkers(words, regions?.[0]?.workers),
+            header: parseRosterTableHeader('11/8 | EA GATUN | 1600 | 웨 스턴', { defaultYear: 2026 })
+        };
+    })()`)));
+    assert.equal(result.regionCount, 6);
+    assert.equal(result.first.rowIndex, 0);
+    assert.equal(result.first.columnIndex, 0);
+    assert.deepEqual(result.workers, ['김민재2', '강무성']);
+    assert.deepEqual(result.header, { date: '2026-11-08', vessel: 'EA GATUN', time: '16:00', company: '웨스턴' });
+    assert.equal(photo.run(`detectRosterTableRegions({ data: new Uint8ClampedArray(100 * 180 * 4).fill(255) }, 100, 180)`), null);
+});
+
+test('표 OCR 원문을 다시 검토해도 선박별로 나눈 작업자 칸의 리터럴을 재파싱하지 않는다', () => {
+    const photo = createPhotoVm();
+    const parsed = JSON.parse(JSON.stringify(photo.run(`(() => {
+        rosterRuntime.recognizedText = '표 OCR 원문';
+        rosterRuntime.tableOcrParsed = {
+            entries: [{ date: '2026-11-08', vessel: 'EA GATUN', time: '16:00', company: '웨스턴', workers: ['김', '김민재2', '강무성'], source: 'photo-table' }],
+            warnings: ['검토 필요']
+        };
+        return parseRosterPhotoTextFromBox({ skipReview: true });
+    })()`)));
+    assert.deepEqual(parsed.entries[0].workers, ['김', '김민재2', '강무성']);
+    assert.deepEqual(parsed.warnings, ['검토 필요']);
+});
+
 test('OCR 이미지 보정은 최대 변 길이를 지키고 대비·흑백 보정본을 만든다', () => {
     const photo = createPhotoVm();
     assert.equal(photo.run('getRosterOcrScale(600, 3000)'), 2000 / 3000);
@@ -225,10 +276,14 @@ test('화면은 카메라·갤러리·수정·기기저장 UI와 검토 후 적�
     assert.ok(html.includes('사진 자체는 저장하지 않습니다'));
     assert.ok(html.includes('이름 보정·제목\/회사 제외·중복 제거 없이'));
     assert.ok(html.includes('인식 내용 검토표로 보기'));
+    assert.ok(html.includes('2열 반복 표는 선박별 헤더와 그 아래 작업자 칸을 따로 읽습니다'));
     assert.ok(html.includes('입·출항 스케줄로 선박명을 교차 확인'));
     assert.ok(html.includes('스케줄 정식명으로 자동 확정'));
     assert.ok(html.includes('복수 후보·날짜 불일치·미발견은 자동 변경하지 않습니다'));
     assert.match(html, /parseRosterPhotoTextFromBox\(\)/);
+    assert.match(engine, /function detectRosterTableRegions\(imageData, width, height\)/);
+    assert.match(engine, /function collectRosterTableWorkers\(words, region\)/);
+    assert.match(engine, /function recognizeRosterTablePhoto\(engine, sourceCanvas, regions, defaultYear\)/);
     assert.match(engine, /function verifyRosterPhotoVessels\(\)/);
     assert.match(engine, /function applyUniqueRosterPhotoScheduleNames\(rows, verifications\)/);
     assert.match(engine, /function applyRosterPhotoRoster\(\)/);
