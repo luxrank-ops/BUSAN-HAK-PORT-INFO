@@ -10630,6 +10630,7 @@ async function toggleNoticePriority(id, e) {
 const EMERGENCY_NOTICE_DOC = "emergency_notice";
 const EMERGENCY_UNLOCK_ENDPOINT = "/api/emergency-unlock";
 const EMERGENCY_UNLOCK_SESSION_KEY = "emergencyNoticeUnlocked";
+const EMERGENCY_UNLOCK_TOKEN_SESSION_KEY = "emergencyNoticeUnlockToken";
 const EMERGENCY_DISMISS_KEY = "emergencyNoticeDismissedRev";
 const EMERGENCY_TITLE_MAX = 60;
 const EMERGENCY_MESSAGE_MAX = 600;
@@ -10855,6 +10856,7 @@ async function submitEmergencyPin() {
     if (result.ok) {
         isEmergencyAuthorUnlocked = true;
         writeSessionValue(EMERGENCY_UNLOCK_SESSION_KEY, "1");
+        if (result.token && result.token !== "local") writeSessionValue(EMERGENCY_UNLOCK_TOKEN_SESSION_KEY, result.token);
         closeEmergencyPinModal();
         openEmergencyNoticeModal();
         return;
@@ -10983,8 +10985,26 @@ async function saveEmergencyNotice() {
     try {
         await db.collection("settings").doc(EMERGENCY_NOTICE_DOC).set(payload, { merge: true });
         setEmergencyDismissedRevision(0); // 새 내용은 모두에게 다시 펼쳐 보여 줍니다.
+        let alertsSent = false;
+        const unlockToken = readSessionValue(EMERGENCY_UNLOCK_TOKEN_SESSION_KEY);
+        if (enabled && isEmergencyNoticeActive(payload, Date.now()) && unlockToken) {
+            try {
+                const response = await fetch("/api/emergency-notifications", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json", "Authorization": `Bearer ${unlockToken}` },
+                    body: JSON.stringify({ revision: payload.revision })
+                });
+                const deliveryResult = await response.json().catch(() => null);
+                if (response.ok && deliveryResult?.ok === true) alertsSent = true;
+                else console.warn("안전·운영 공지 알림센터 전송 확인 실패:", response.status);
+            } catch (deliveryError) {
+                console.warn("안전·운영 공지 알림센터 전송 실패:", deliveryError);
+            }
+        }
         trackAppEvent("actions", "emergency_save");
-        showToast(enabled ? "🚨 긴급 공지를 게시했습니다." : "💾 긴급 공지를 저장했습니다. (게시 OFF)");
+        showToast(enabled
+            ? (alertsSent ? "🚨 공지를 게시하고 알림센터·푸시로 전달했습니다." : "🚨 공지를 게시했습니다. 알림 서버의 전달 여부를 확인하지 못했습니다.")
+            : "💾 긴급 공지를 저장했습니다. (게시 OFF)");
         closeEmergencyNoticeModal();
     } catch (err) {
         console.error("긴급 공지 저장 실패:", err);
