@@ -6803,10 +6803,8 @@ async function confirmLoginAndSave(evt) {
             });
         }
 
-        // 로그인 성공 세션 저장
-        currentWorkerId = nick;
-        localStorage.setItem('myWorkerId', nick);
-        updateUserBar();
+        // 로그인 직후에도 알림 구독을 바로 시작합니다. 새로고침 전에는 리스너가 없던 문제를 막습니다.
+        loginSuccess(nick);
         
         // 모달 닫고 저장 실행
         closeLoginModal();
@@ -6948,10 +6946,10 @@ function saveWorkLog(){
         finalizeSave(existingUrl); 
     } 
 }
-function loginSuccess(name) { currentWorkerId = name; localStorage.setItem('myWorkerId', currentWorkerId); updateUserBar(); renderCalendar(currentDate.getFullYear(), currentDate.getMonth()); if(typeof initNotifications === 'function') initNotifications(currentWorkerId); }
+function loginSuccess(name) { currentWorkerId = name; localStorage.setItem('myWorkerId', currentWorkerId); updateUserBar(); renderCalendar(currentDate.getFullYear(), currentDate.getMonth()); if(typeof initNotifications === 'function') initNotifications(currentWorkerId); if(typeof initMessagingPush === 'function' && typeof Notification !== 'undefined' && Notification.permission === 'granted') initMessagingPush(currentWorkerId); }
 function closeLoginModal(){ document.getElementById('loginModal').style.display = 'none'; }
 function updateUserBar() { document.getElementById('userProfileBar').style.display = currentWorkerId ? 'flex' : 'none'; if(currentWorkerId) document.getElementById('currentUserDisplay').innerText = `👤 ${currentWorkerId}`; }
-function logoutWorker() { if(confirm("로그아웃하시겠습니까?")) { currentWorkerId = null; localStorage.removeItem('myWorkerId'); updateUserBar(); renderCalendar(currentDate.getFullYear(), currentDate.getMonth()); document.getElementById('dailyLogForm').classList.add('hidden'); } }
+function logoutWorker() { if(confirm("로그아웃하시겠습니까?")) { if(typeof stopNotifications === 'function') stopNotifications(); currentWorkerId = null; localStorage.removeItem('myWorkerId'); updateUserBar(); renderCalendar(currentDate.getFullYear(), currentDate.getMonth()); document.getElementById('dailyLogForm').classList.add('hidden'); } }
 function deleteWorkLog(){ if(!currentWorkerId) return; if(!confirm("정말 삭제하시겠습니까?")) return; const dStr = document.getElementById('dailyLogForm').getAttribute('data-date'); db.collection('work_logs').doc(`${currentWorkerId}_${dStr}`).update(softDeletePayload()).then(()=>{ showToast("삭제되었습니다."); document.getElementById('logShipName').value=''; document.getElementById('logWage1').value=''; document.getElementById('logWage2').value=''; const delWage3 = document.getElementById('logWage3'); if (delWage3) delWage3.value=''; const delWage4 = document.getElementById('logWage4'); if (delWage4) delWage4.value=''; if (typeof syncWorklogWageSlotVisibility === 'function') syncWorklogWageSlotVisibility(0); document.getElementById('logCoworkers').value=''; document.getElementById('logMemo').value=''; autoGrowWorkLogMemo(document.getElementById('logMemo')); document.getElementById('logImageInput').value = ''; const imgPreview = document.getElementById('logImagePreview'); if(imgPreview) { imgPreview.src = ''; imgPreview.style.display = 'none'; } renderCalendar(currentDate.getFullYear(), currentDate.getMonth()); }).catch(err => alert("삭제 실패: " + err.message)); }
 /* 근무일지 입력 폼 초기화: 임금계산기 초기화(resetWageForm)와 같은 역할.
    저장된 기록은 건드리지 않고, 선택한 날짜 폼의 입력 내용(배 이름·임금·근무자·작업 내용·사진)만 비운다. */

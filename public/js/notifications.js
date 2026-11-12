@@ -5,6 +5,12 @@
 // ============================================================================
 // notifications.js - 실시간 알림 및 FCM 푸시 관리
 let notiUnsubscribe = null;
+let fcmInitPromise = null;
+let fcmServiceWorkerRegistrationPromise = null;
+let fcmMessagingInstance = null;
+let fcmForegroundListenerAttached = false;
+let fcmRegisteredUserId = "";
+let fcmTokenOptions = null;
 
 function escapeNotificationHtml(value) {
     return String(value || '')
@@ -59,55 +65,121 @@ function toggleNotificationPanel() {
     }
 }
 
+function reportNotificationFailure(scope, error, message) {
+    try { console.warn(`[알림] ${scope}:`, error); } catch (_) {}
+    if (typeof reportFailure === 'function') {
+        reportFailure(scope, error, message);
+    } else if (message && typeof showToast === 'function') {
+        showToast(message);
+    }
+}
+
+/**
+ * 앱 셸 서비스 워커와 FCM 워커가 같은 루트 범위를 서로 덮어쓰지 않도록 분리합니다.
+ * Firebase Messaging에는 명시적으로 이 등록 정보를 넘겨야 백그라운드 푸시를 안정적으로 받습니다.
+ */
+async function registerFcmServiceWorker() {
+    if (typeof navigator === 'undefined' || !navigator.serviceWorker) return null;
+    if (fcmServiceWorkerRegistrationPromise) return fcmServiceWorkerRegistrationPromise;
+    const scope = '/firebase-cloud-messaging-push-scope';
+    fcmServiceWorkerRegistrationPromise = (async () => {
+        const existing = typeof navigator.serviceWorker.getRegistration === 'function'
+            ? await navigator.serviceWorker.getRegistration(scope)
+            : null;
+        return existing || navigator.serviceWorker.register('/firebase-messaging-sw.js', { scope });
+    })().catch((error) => {
+        fcmServiceWorkerRegistrationPromise = null;
+        throw error;
+    });
+    return fcmServiceWorkerRegistrationPromise;
+}
+
+async function saveFcmToken(userId, token) {
+    if (!token || typeof db === 'undefined' || !db || !db.collection) return false;
+    await db.collection('user_profiles').doc(userId).set({
+        fcmToken: token,
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    }, { merge: true });
+    return true;
+}
+
+function attachForegroundMessageHandler(messaging) {
+    if (fcmForegroundListenerAttached || !messaging || typeof messaging.onMessage !== 'function') return;
+    fcmForegroundListenerAttached = true;
+    messaging.onMessage((payload) => {
+        console.log('Message received: ', payload);
+        const notification = payload?.notification || payload?.data || {};
+        if (typeof showToast === 'function') {
+            const title = String(notification.title || '새 알림');
+            const body = String(notification.body || '');
+            showToast(body ? `${title} - ${body}` : title);
+        }
+    });
+}
+
 async function initMessagingPush(userId) {
     const targetUser = userId || (typeof currentWorkerId !== 'undefined' ? currentWorkerId : null);
-    if (!targetUser) return;
+    if (!targetUser) return false;
+    if (fcmRegisteredUserId === targetUser && fcmMessagingInstance) return true;
+    if (fcmInitPromise) return fcmInitPromise;
 
-    // ⚡ 지연 로드(A-2): 메신저 SDK가 아직 없으면 이 시점에 내려받습니다.
-    if (typeof ensureFirebaseMessagingLoaded === 'function') {
-        const sdkReady = await ensureFirebaseMessagingLoaded();
-        if (!sdkReady) return;
-    }
-    if (typeof window === 'undefined' || !('Notification' in window) || typeof firebase === 'undefined' || !firebase.messaging) return;
+    fcmInitPromise = (async () => {
+        // ⚡ 지연 로드(A-2): 메신저 SDK가 아직 없으면 이 시점에 내려받습니다.
+        if (typeof ensureFirebaseMessagingLoaded === 'function') {
+            const sdkReady = await ensureFirebaseMessagingLoaded();
+            if (!sdkReady) throw new Error('firebase-messaging SDK를 불러오지 못했습니다.');
+        }
+        if (typeof window === 'undefined' || !('Notification' in window) || typeof firebase === 'undefined' || !firebase.messaging) {
+            throw new Error('이 브라우저는 웹 푸시 알림을 지원하지 않습니다.');
+        }
 
-    try {
+        const permission = Notification.permission === 'granted'
+            ? 'granted'
+            : await Notification.requestPermission();
+        if (permission !== 'granted') return false;
+
+        const [config, registration] = await Promise.all([
+            fetch('/api/config').then((res) => (
+                res.ok && (res.headers.get('content-type') || '').includes('application/json')
+                    ? res.json()
+                    : null
+            )),
+            registerFcmServiceWorker()
+        ]);
+        if (!config?.vapidKey) throw new Error('서버의 Web Push VAPID 키가 설정되지 않았습니다.');
+        if (!registration) throw new Error('FCM 서비스 워커를 등록하지 못했습니다.');
+
         const messaging = firebase.messaging();
-        const permissionPromise = (Notification.permission === 'granted')
-            ? Promise.resolve('granted')
-            : Notification.requestPermission();
-        permissionPromise.then((permission) => {
-                if (permission === 'granted') {
-                    fetch('/api/config')
-                        .then(res => (res.ok && (res.headers.get('content-type') || '').includes('application/json')) ? res.json() : null)
-                        .then(config => {
-                            const getTokenOptions = {};
-                            if (config && config.vapidKey) getTokenOptions.vapidKey = config.vapidKey;
+        const getTokenOptions = {
+            vapidKey: config.vapidKey,
+            serviceWorkerRegistration: registration
+        };
+        const currentToken = await messaging.getToken(getTokenOptions);
+        if (!currentToken) throw new Error('FCM 등록 토큰을 받지 못했습니다.');
+        await saveFcmToken(targetUser, currentToken);
 
-                            messaging.getToken(getTokenOptions)
-                                .then((currentToken) => {
-                                    if (currentToken && typeof db !== 'undefined' && db && db.collection) {
-                                        db.collection('user_profiles').doc(targetUser).set({
-                                            fcmToken: currentToken,
-                                            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-                                        }, { merge: true });
-                                    }
-                                }).catch((err) => {
-                                    console.log('FCM Token get error:', err);
-                                });
-                        }).catch(err => console.log('Config fetch error:', err));
-                }
-            }).catch(err => console.log('Notification permission error:', err));
-
-            messaging.onMessage((payload) => {
-                console.log('Message received: ', payload);
-                if (payload && payload.notification && typeof showToast === 'function') {
-                    const msg = (payload.notification.title || '') + (payload.notification.body ? ' - ' + payload.notification.body : '');
-                    showToast(msg);
+        fcmMessagingInstance = messaging;
+        fcmRegisteredUserId = targetUser;
+        fcmTokenOptions = getTokenOptions;
+        attachForegroundMessageHandler(messaging);
+        if (typeof messaging.onTokenRefresh === 'function') {
+            messaging.onTokenRefresh(async () => {
+                try {
+                    const refreshedToken = await messaging.getToken(fcmTokenOptions || getTokenOptions);
+                    if (refreshedToken && fcmRegisteredUserId) await saveFcmToken(fcmRegisteredUserId, refreshedToken);
+                } catch (error) {
+                    reportNotificationFailure('FCM 토큰 갱신 실패', error, '⚠️ 알림 등록을 갱신하지 못했습니다. 알림 버튼을 다시 눌러 주세요.');
                 }
             });
-    } catch (err) {
-        console.warn('FCM Push 초기화 건너뜀:', err);
-    }
+        }
+        return true;
+    })().catch((error) => {
+        reportNotificationFailure('FCM 푸시 초기화 실패', error, '⚠️ 푸시 알림을 준비하지 못했습니다. 브라우저 알림 권한과 네트워크를 확인해 주세요.');
+        return false;
+    }).finally(() => {
+        fcmInitPromise = null;
+    });
+    return fcmInitPromise;
 }
 
 function initNotifications(userId) {
@@ -165,6 +237,20 @@ function initNotifications(userId) {
     }
 }
 
+function stopNotifications() {
+    if (notiUnsubscribe) {
+        try { notiUnsubscribe(); } catch (_) {}
+        notiUnsubscribe = null;
+    }
+    // 다음 로그인은 토큰을 해당 계정에 다시 연결해야 합니다.
+    fcmRegisteredUserId = "";
+    if (typeof document === 'undefined') return;
+    const badge = document.getElementById('notiBadge');
+    if (badge) badge.style.display = 'none';
+    const list = document.getElementById('notiList');
+    if (list) list.innerHTML = '<p style="color:var(--text-secondary); text-align:center; font-size:0.9rem; padding: 10px 0;">로그인 후 알림을 확인할 수 있습니다.</p>';
+}
+
 function markAllNotisAsRead() {
     if (typeof currentWorkerId === 'undefined' || !currentWorkerId || typeof db === 'undefined' || !db || !db.collection) return;
     const readTimestamp = (typeof firebase !== 'undefined' && firebase.firestore && firebase.firestore.FieldValue)
@@ -193,4 +279,5 @@ if (typeof window !== 'undefined') {
     window.initNotifications = initNotifications;
     window.initMessagingPush = initMessagingPush;
     window.markAllNotisAsRead = markAllNotisAsRead;
+    window.stopNotifications = stopNotifications;
 }

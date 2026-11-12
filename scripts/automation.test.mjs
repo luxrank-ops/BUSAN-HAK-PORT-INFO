@@ -145,6 +145,68 @@ test('1순위 & 2순위: notifications.js가 문법 오류 없이 동작하며 �
   assert.equal(updatedDocs[0].data.readAt, 'READ_AT_TIMESTAMP');
 });
 
+test('알림 센터는 별도 FCM 워커를 등록해 토큰과 연결하고, 로그인 직후 구독을 시작한다', async () => {
+  const registrations = [];
+  const tokenOptions = [];
+  const savedProfiles = [];
+  const messaging = {
+    getToken: async (options) => {
+      tokenOptions.push(options);
+      return 'fcm-token-123';
+    },
+    onMessage() {},
+    onTokenRefresh() {}
+  };
+  const sandbox = {
+    console,
+    Date,
+    String,
+    Promise,
+    window: { Notification: true },
+    Notification: { permission: 'granted', requestPermission: async () => 'granted' },
+    navigator: {
+      serviceWorker: {
+        getRegistration: async () => null,
+        register: async (url, options) => {
+          const registration = { url, scope: options.scope };
+          registrations.push(registration);
+          return registration;
+        }
+      }
+    },
+    ensureFirebaseMessagingLoaded: async () => true,
+    fetch: async () => ({
+      ok: true,
+      headers: { get: () => 'application/json; charset=utf-8' },
+      json: async () => ({ vapidKey: 'public-vapid-key' })
+    }),
+    firebase: {
+      messaging: () => messaging,
+      firestore: { FieldValue: { serverTimestamp: () => 'SERVER_TIMESTAMP' } }
+    },
+    db: {
+      collection: () => ({
+        doc: () => ({
+          set: async (value) => { savedProfiles.push(value); }
+        })
+      })
+    },
+    showToast() {}
+  };
+  vm.createContext(sandbox);
+  vm.runInContext(notificationsCode, sandbox, { filename: 'public/js/notifications.js' });
+
+  assert.equal(await sandbox.initMessagingPush('작업자A'), true);
+  assert.deepEqual(registrations, [{ url: '/firebase-messaging-sw.js', scope: '/firebase-cloud-messaging-push-scope' }]);
+  assert.equal(tokenOptions[0].vapidKey, 'public-vapid-key');
+  assert.equal(tokenOptions[0].serviceWorkerRegistration, registrations[0]);
+  assert.deepEqual(JSON.parse(JSON.stringify(savedProfiles)), [{ fcmToken: 'fcm-token-123', updatedAt: 'SERVER_TIMESTAMP' }]);
+
+  const loginCode = extractFunction(appJs, 'confirmLoginAndSave');
+  assert.match(loginCode, /loginSuccess\(nick\)/, '새 로그인도 즉시 initNotifications 경로를 타야 합니다');
+  assert.match(appJs, /typeof stopNotifications === 'function'\) stopNotifications\(\)/, '로그아웃 시 이전 사용자 알림 구독을 해제해야 합니다');
+});
+
 test('2순위: DB 자가 정리(30일 스케줄 캐시 / 14일 읽은 알림 TTL) 및 주간 정기 백업 크론이 설정되어 있다', () => {
   assert.match(serverCode, /SCHEDULE_CACHE_TTL_DAYS\s*=\s*30/);
   assert.match(serverCode, /READ_NOTIFICATION_TTL_DAYS\s*=\s*14/);
