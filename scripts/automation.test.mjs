@@ -207,6 +207,72 @@ test('알림 센터는 별도 FCM 워커를 등록해 토큰과 연결하고, �
   assert.match(appJs, /typeof stopNotifications === 'function'\) stopNotifications\(\)/, '로그아웃 시 이전 사용자 알림 구독을 해제해야 합니다');
 });
 
+test('새 Firestore 알림은 초기 목록과 구분해 알림 창을 자동으로 띄운다', async () => {
+  const classes = () => {
+    const values = new Set();
+    return {
+      add: (...names) => names.forEach((name) => values.add(name)),
+      remove: (...names) => names.forEach((name) => values.delete(name)),
+      contains: (name) => values.has(name),
+      toggle: (name, force) => {
+        const shouldAdd = force === undefined ? !values.has(name) : Boolean(force);
+        if (shouldAdd) values.add(name); else values.delete(name);
+        return shouldAdd;
+      }
+    };
+  };
+  const elements = {
+    notiPanel: { classList: classes() },
+    notiToggle: { setAttribute() {} },
+    notiList: { innerHTML: '' },
+    notiBadge: { classList: classes(), hidden: true, textContent: '' },
+    notiPanelUnread: { textContent: '' }
+  };
+  let snapshotListener = null;
+  const query = {
+    where: () => query,
+    orderBy: () => query,
+    limit: () => query,
+    onSnapshot: (listener) => {
+      snapshotListener = listener;
+      return () => { snapshotListener = null; };
+    },
+    get: async () => ({ empty: true })
+  };
+  const toasts = [];
+  const sandbox = {
+    console,
+    Date,
+    String,
+    Set,
+    Promise,
+    currentWorkerId: '작업자A',
+    document: { getElementById: (id) => elements[id] || null },
+    showToast: (message) => toasts.push(message),
+    firebase: { firestore: { FieldValue: { serverTimestamp: () => 'READ_AT_TIMESTAMP' } } },
+    db: {
+      collection: () => query,
+      batch: () => ({ update() {}, commit: async () => {} })
+    }
+  };
+  vm.createContext(sandbox);
+  vm.runInContext(notificationsCode, sandbox, { filename: 'public/js/notifications.js' });
+  sandbox.initNotifications('작업자A');
+
+  const oldDoc = { id: 'old-noti', data: () => ({ title: '기존 알림', body: '처음 목록', read: false, type: 'SCHEDULE_CHANGE', createdAtMs: Date.now() - 5_000 }) };
+  snapshotListener({ empty: false, forEach: (fn) => fn(oldDoc), docChanges: () => [{ type: 'added', doc: oldDoc }] });
+  assert.equal(elements.notiPanel.classList.contains('is-open'), false, '로그인 직후의 기존 알림은 창을 강제로 열지 않아야 합니다');
+  assert.equal(toasts.length, 0);
+
+  const newDoc = { id: 'new-noti', data: () => ({ title: '출항 시간 변경', body: '선박 출항 시각이 변경되었습니다.', read: false, type: 'SCHEDULE_CHANGE', createdAtMs: Date.now() }) };
+  snapshotListener({ empty: false, forEach: (fn) => fn(newDoc), docChanges: () => [{ type: 'added', doc: newDoc }] });
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  assert.equal(elements.notiPanel.classList.contains('is-open'), true);
+  assert.match(elements.notiList.innerHTML, /출항 시간 변경/);
+  assert.match(elements.notiList.innerHTML, /운항 시간 변경/);
+  assert.match(toasts[0], /출항 시간 변경/);
+});
+
 test('2순위: DB 자가 정리(30일 스케줄 캐시 / 14일 읽은 알림 TTL) 및 주간 정기 백업 크론이 설정되어 있다', () => {
   assert.match(serverCode, /SCHEDULE_CACHE_TTL_DAYS\s*=\s*30/);
   assert.match(serverCode, /READ_NOTIFICATION_TTL_DAYS\s*=\s*14/);

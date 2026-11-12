@@ -34,9 +34,9 @@
     <link rel="icon" href="./favicon.ico">
     <link rel="stylesheet" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.8/dist/web/static/pretendard.css" />
     <link rel="manifest" href="./manifest.json">
-    <link rel="stylesheet" href="./css/app.css?v=2027.39">
+    <link rel="stylesheet" href="./css/app.css?v=2027.40">
     <link rel="apple-touch-icon" href="./icon-192.png">
-<script src="./js/notifications.js?v=2027.39"></script></head>
+<script src="./js/notifications.js?v=2027.40"></script></head>
 <body data-app-view="legacy">
 <header>
     <div class="today-visitor-badge-slot" aria-hidden="true"></div>
@@ -54,9 +54,11 @@
         </div>
     </div>
     <h1 role="button" tabindex="0" onclick="openVisitorStats()" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openVisitorStats();}" style="cursor:pointer;" title="관리자 방문 통계">BUSAN HAK PORT</h1>
-    <button class="noti-toggle tap-effect" data-lazy-messaging="1" onclick="if(typeof toggleNotificationPanel==='function')toggleNotificationPanel()" style="position:relative; margin-right:8px; font-size:1.2rem;">
-        🔔
-        <span id="notiBadge" style="display:none; position:absolute; top:-4px; right:-4px; background:red; color:white; border-radius:50%; padding:2px 6px; font-size:0.7rem; font-weight:bold;">0</span>
+    <button id="notiToggle" class="noti-toggle tap-effect" type="button" data-lazy-messaging="1"
+            onclick="if(typeof toggleNotificationPanel==='function')toggleNotificationPanel()"
+            aria-label="알림 센터 열기" aria-haspopup="dialog" aria-expanded="false" title="알림 센터">
+        <span class="noti-toggle-icon" aria-hidden="true">🔔</span>
+        <span id="notiBadge" class="noti-badge" hidden aria-live="polite">0</span>
     </button>
     <button class="theme-toggle tap-effect" onclick="toggleDarkMode()">🌙</button>
 </header>
@@ -1989,18 +1991,18 @@
     </div>
 </div>
 
-<script src="./js/app.js?v=2027.39"></script>
-<script src="./js/roster-engine.js?v=2027.39"></script>
+<script src="./js/app.js?v=2027.40"></script>
+<script src="./js/roster-engine.js?v=2027.40"></script>
   
     <!-- [여기서부터 복사] 조장 근무일 비밀번호 검증 스크립트 -->
 <!-- [추가할 보안 및 실행 스크립트] -->
-<script src="./js/leader-access.js?v=2027.39"></script>
+<script src="./js/leader-access.js?v=2027.40"></script>
   <!-- [프로덕션 수준] 파이어베이스 'ships' 컬렉션 전체 데이터 조회 및 검색 모듈 -->
-<script src="./js/ships-board.js?v=2027.39"></script>
+<script src="./js/ships-board.js?v=2027.40"></script>
 
-<script src="./js/tab-views.js?v=2027.39"></script>
-<script src="./js/kkung-relay.js?v=2027.39"></script>
-<script src="./js/want-board.js?v=2027.39"></script>
+<script src="./js/tab-views.js?v=2027.40"></script>
+<script src="./js/kkung-relay.js?v=2027.40"></script>
+<script src="./js/want-board.js?v=2027.40"></script>
 </body>
 </html>
 
