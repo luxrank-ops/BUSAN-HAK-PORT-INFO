@@ -135,12 +135,16 @@ function getAllRosterAssignments() {
  * 작업자 검색은 정확한 이름뿐 아니라 입력한 글자가 포함된 이름도 찾습니다.
  * 예: "김근우" → "김근우"와 "김근우1" 배정을 모두 반환합니다.
  */
-function findRosterAssignmentsByWorker(query) {
+function findRosterWorkerNamesInAssignment(row, query) {
     const key = normalizeRosterWorkerName(query);
     if (!key) return [];
-    return getAllRosterAssignments().filter((row) =>
-        row.workers.some((worker) => normalizeRosterWorkerName(worker).includes(key))
-    );
+    // 사진 검토표에서 선박명 아래에 나열한 이름은 해당 선박의 작업자입니다.
+    // 원문 명단을 수정하거나 중복을 합치지 않고, 검색어와 맞는 이름만 결과 근거로 돌려줍니다.
+    return (row?.workers || []).filter((worker) => normalizeRosterWorkerName(worker).includes(key));
+}
+
+function findRosterAssignmentsByWorker(query) {
+    return getAllRosterAssignments().filter((row) => findRosterWorkerNamesInAssignment(row, query).length);
 }
 
 function findRosterAssignmentsByVessel(query) {
@@ -414,6 +418,15 @@ function rosterResultScheduleDescription(item) {
     return `선석 ${berth} · 입항 ${formatWageScheduleEvent(period.arrival)} · 출항 ${formatWageScheduleEvent(period.departure)}${duration}`;
 }
 
+/** 이름 검색 결과에는 해당 선박 명단 안에서 실제로 맞은 작업자와 인원도 함께 표시합니다. */
+function rosterResultWorkerDescription(assignment, query) {
+    const matchedWorkers = findRosterWorkerNamesInAssignment(assignment, query);
+    if (!matchedWorkers.length) return "";
+    const names = matchedWorkers.map((name) => escapeShipCommentHtml(name)).join(", ");
+    const workerCount = Array.isArray(assignment?.workers) ? assignment.workers.length : 0;
+    return `<div class="roster-finder-worker-match"><strong>👷 찾은 작업자: ${names}</strong><span>해당 선박 검토 명단 ${workerCount}명</span></div>`;
+}
+
 function renderRosterFinderResults(plan, query, mode) {
     const output = rosterElement("rosterFinderResults");
     if (!output) return;
@@ -429,6 +442,7 @@ function renderRosterFinderResults(plan, query, mode) {
         const secondary = [assignment.time && `명단 ${assignment.time}`, assignment.company, assignment.support, assignment.group].filter(Boolean).map(escapeShipCommentHtml).join(" · ");
         return `<div class="roster-finder-card${item.found ? "" : " is-missing"}">
             <div class="roster-finder-card-head">${badge}<strong>🚢 ${escapeShipCommentHtml(assignment.vessel)}</strong><span>${escapeShipCommentHtml(assignment.date)}${secondary ? ` · ${secondary}` : ""}</span></div>
+            ${rosterResultWorkerDescription(assignment, query)}
             <div class="roster-finder-card-sub">${rosterResultScheduleDescription(item)}</div>
             <div class="roster-finder-card-actions">
                 <button type="button" onclick="registerRosterResultToWage(${index})">🧮 임금계산기 등록</button>

@@ -22,6 +22,7 @@ function createRosterVm(extra = {}) {
     const context = vm.createContext({
         console: { warn() {}, error() {} },
         localStorage,
+        escapeShipCommentHtml: (value) => String(value || ''),
         document: { getElementById: () => null, querySelector: () => null, querySelectorAll: () => [] },
         readSessionValue: () => null,
         ROSTER_FINDER_UNLOCK_KEY: 'rosterFinderBetaUnlocked',
@@ -42,6 +43,25 @@ test('시작용 명단은 작업자와 선박명으로 같은 배정을 찾는�
     assert.equal(roster.run('findRosterAssignmentsByWorker("김명준").length'), 3);
     assert.equal(roster.run('findRosterAssignmentsByVessel("president carter")[0].vessel'), 'PRESIDENT CARTER');
     assert.equal(roster.run('findRosterAssignmentsByVessel("PRESIDENTCARTER").length'), 1);
+});
+
+test('선박명 아래에 기록된 작업자 중 검색어와 맞는 이름과 해당 선박 명단 인원을 결과에 사용한다', () => {
+    const row = {
+        date: '2026-11-12',
+        vessel: 'TEST SHIP',
+        workers: ['홍길동', '홍길동2', '김철수']
+    };
+    const result = JSON.parse(JSON.stringify(roster.run(`(() => {
+        const row = ${JSON.stringify(row)};
+        const matched = findRosterWorkerNamesInAssignment(row, '홍 길 동');
+        const html = rosterResultWorkerDescription(row, '홍길동');
+        return { matched, html, workers: row.workers };
+    })()`)));
+
+    assert.deepEqual(result.matched, ['홍길동', '홍길동2']);
+    assert.match(result.html, /찾은 작업자: 홍길동, 홍길동2/);
+    assert.match(result.html, /해당 선박 검토 명단 3명/);
+    assert.deepEqual(result.workers, ['홍길동', '홍길동2', '김철수'], '검색 결과가 사진 검토 명단을 고치거나 삭제하면 안 됩니다');
 });
 
 test('이름 일부를 검색하면 그 이름이 들어간 모든 배정을 한 번에 반환한다', () => {
@@ -175,6 +195,10 @@ test('화면은 기존 근무배치 카드와 검색·직접 추가·PIN 진입�
     assert.match(html, /onclick="focusRosterFinder\(\)"/);
     assert.match(engine, /const ROSTER_FINDER_BETA_LOCK = true;/);
     assert.match(engine, /openWorkLogPinModal/);
+    assert.match(html, /선박명 아래에 나열된 작업자 이름/);
+    assert.match(engine, /function findRosterWorkerNamesInAssignment\(row, query\)/);
+    assert.match(engine, /찾은 작업자:/);
+    assert.match(engine, /해당 선박 검토 명단/);
     assert.match(engine, /const match = findAllRosterAssignments\(query\);/);
     assert.match(engine, /collectRosterSchedules/);
     assert.match(engine, /requestId !== rosterRuntime\.requestId/);
