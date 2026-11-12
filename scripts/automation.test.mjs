@@ -67,7 +67,7 @@ function createCommunitySandbox() {
   return { sandbox, addedNotifications };
 }
 
-test('출항 시각의 모든 변경은 알림 대상이고 접안 시각은 1시간 이상 변경 시 알림 대상이다', () => {
+test('출항·접안 시각의 모든 변경은 알림 대상이며 알림은 모든 사용자에게 전파된다', () => {
   assert.doesNotMatch(serverCode, /\/\/\s*@ts-nocheck/, 'server.ts에 @ts-nocheck가 없어야 합니다');
   assert.match(serverCode, /import\s+'dotenv\/config'/, '.env 자동 로드가 포함되어야 합니다');
   assert.match(serverCode, /SCHEDULE_DIFF_THRESHOLD_MINUTES\s*=\s*Number\(process\.env\.SCHEDULE_DIFF_THRESHOLD_MINUTES\)\s*\|\|\s*60/);
@@ -75,7 +75,11 @@ test('출항 시각의 모든 변경은 알림 대상이고 접안 시각은 1�
   assert.match(serverCode, /export\s+function\s+isScheduleShiftedByAtLeastOneHour/);
   assert.match(serverCode, /export\s+function\s+hasDepartureTimeChanged/);
   assert.match(serverCode, /hasDepartureTimeChanged\(oldAtd, newAtd\)/, '출항 시각은 1시간 미만 변경도 감지해야 합니다');
-  assert.match(serverCode, /isScheduleShiftedByAtLeastOneHour\(oldEtb, newEtb, berthTimeThresholdMinutes\)/, '접안 시각은 기존 임계값을 유지해야 합니다');
+  assert.match(serverCode, /hasDepartureTimeChanged\(oldEtb, newEtb\)/, '접안 시각도 임계값 없이 실제 변경을 감지해야 합니다');
+  const watcherSource = serverCode.match(/export async function runScheduleChangeDetection[\s\S]*?^\/\/ --- 2순위/m)?.[0] || '';
+  assert.match(watcherSource, /collection\('user_profiles'\)\.get\(\)/, '일정 변경 알림은 모든 등록 사용자에게 발송해야 합니다');
+  assert.doesNotMatch(watcherSource, /collection\('work_logs'\)|savedShipName|targetShipName/, '근무일지에 기반한 개인별 수신자 선별을 하지 않아야 합니다');
+  assert.match(watcherSource, /eventSignature/, '중복 알림은 변경 내용이 같은 이벤트에 한정해 억제해야 합니다');
   assert.match(serverCode, /field: 'BERTH_NO'/, '선석 변경도 스케줄 변경으로 분류해야 합니다');
   assert.match(serverCode, /classifyVesselStatus\(v\.STATUS\)/, '취소·운항중단 상태를 감지해야 합니다');
   assert.match(serverCode, /sched_\$\{dedupeId\}/, '선박별 반복 수정은 안정적인 알림 문서 ID로 억제해야 합니다');
@@ -141,7 +145,11 @@ test('선박 알림 분류기는 시각·선석 변경과 명시적인 취소·�
   assert.deepEqual(JSON.parse(JSON.stringify(f.detectVesselScheduleChanges(
     { ATD: '2026-10-13 14:00', ETB: '2026-10-13 10:00', BERTH_NO: 'A-1' },
     { ATD: '2026-10-13 14:00', ETB: '2026-10-13 10:30', BERTH_NO: 'a-1' }
-  ))), []);
+  ).map(({ field }) => field))), ['ETB'], '접안 30분 변경도 전체 사용자 알림 대상');
+  assert.deepEqual(JSON.parse(JSON.stringify(f.detectVesselScheduleChanges(
+    { ATD: '2026-10-13 14:00', ETB: '2026-10-13 10:00', BERTH_NO: 'A-1' },
+    { ATD: '2026-10-13 14:00', ETB: '2026-10-13 10:00', BERTH_NO: 'a-1' }
+  ))), [], '시간 표기와 대소문자만 다른 값은 변경으로 오인하지 않음');
   assert.equal(f.shouldInferVesselCancellation(1, 1_000, 1_000 + 30 * 60 * 1000), true);
   assert.equal(f.shouldInferVesselCancellation(1, 1_000, 1_000 + 5 * 60 * 1000), false, '한 번의 짧은 누락만으로 취소 처리하지 않음');
   assert.equal(f.shouldInferVesselCancellation(0, 1_000, 1_000 + 60 * 60 * 1000), false);

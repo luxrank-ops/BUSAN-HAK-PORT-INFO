@@ -263,7 +263,7 @@ test('긴급 공지는 인증된 revision 기반으로 사용자별 알림센터
     assert.match(serverCode, /deliverActiveEmergencyNoticeNotifications\(requestedRevision\)/);
     assert.match(serverCode, /type: 'OPERATIONAL_NOTICE'/);
     assert.match(serverCode, /transaction\.create\(notificationRef/);
-    assert.match(serverCode, /await sendPushNotification\(user\.id, title, body, 'OPERATIONAL_NOTICE'\)/);
+    assert.match(serverCode, /sendPushNotification\(user\.id, title, body, 'OPERATIONAL_NOTICE', user\.data\(\) \|\| \{\}\)/);
     assert.match(serverCode, /deliverActiveEmergencyNoticeNotifications\(\)/, '시간 지정 공지는 스케줄 감시 실행에서 게시 시각이 되면 전달되어야 합니다');
     assert.match(appJs, /const EMERGENCY_UNLOCK_TOKEN_SESSION_KEY = "emergencyNoticeUnlockToken"/);
     assert.match(appJs, /fetch\("\/api\/emergency-notifications"/);

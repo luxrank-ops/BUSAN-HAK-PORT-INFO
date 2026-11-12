@@ -80,7 +80,7 @@ function ensureNotificationPanel() {
                 <span class="noti-panel-icon" aria-hidden="true">🔔</span>
                 <div>
                     <h2 id="notiPanelTitle">알림 센터</h2>
-                    <p>내 근무와 운영 소식을 바로 알려드립니다.</p>
+                    <p>선박 일정 변경과 안전·운영 소식을 알려드립니다.</p>
                 </div>
             </div>
             <button type="button" class="noti-panel-close" onclick="closeNotificationPanel()" aria-label="알림 창 닫기">✕</button>
