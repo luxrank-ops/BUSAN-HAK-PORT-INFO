@@ -44,6 +44,9 @@ const rosterRuntime = {
     activeImageUrl: "",
     recognizedText: "",
     tableOcrParsed: null,
+    // 현재 사진에서 막 읽은 검토 행은 저장 버튼을 누르지 않아도 즉시 찾기에만 쓸 수 있습니다.
+    // 사진을 지우거나 새 사진을 고르면 이 임시 검색 명단도 함께 바뀝니다.
+    searchableReviewAssignments: [],
     requestId: 0
 };
 
@@ -112,7 +115,18 @@ function saveRosterExtraEntries(rows) {
 }
 
 function getPhotoRosterEntries() {
-    return rosterRuntime.photoAssignments.slice();
+    return [
+        ...rosterRuntime.photoAssignments,
+        ...rosterRuntime.searchableReviewAssignments
+    ];
+}
+
+/** OCR 검토 행을 저장 절차와 별개로 현재 탭의 찾기에서 바로 검색할 수 있게 합니다. */
+function syncRosterPhotoSearchEntries() {
+    rosterRuntime.searchableReviewAssignments = rosterRuntime.reviewRows
+        .map((row) => normalizeRosterAssignment(row, "photo"))
+        .filter((row) => row && row.date && row.vessel);
+    return getPhotoRosterEntries();
 }
 
 function isBuiltinPhotoRosterSuppressed() {
@@ -129,7 +143,7 @@ function getAllRosterAssignments() {
     // 같은 날짜·선박·이름이라도 자동으로 합치거나 제외하지 않습니다.
     return sources.flatMap((source) => source
         .map((raw) => normalizeRosterAssignment(raw, raw?.source))
-        .filter((row) => row && row.workers.length));
+        .filter(Boolean));
 }
 
 /**
@@ -148,6 +162,20 @@ function findRosterAssignmentsByWorker(query) {
     return getAllRosterAssignments().filter((row) => findRosterWorkerNamesInAssignment(row, query).length);
 }
 
+/** 사진·직접 명단에 적힌 회사·지원·조 표기도 원문 그대로 관련어 검색에 포함합니다. */
+function findRosterRelatedTermsInAssignment(row, query) {
+    const key = normalizeRosterWorkerName(query).toLocaleUpperCase("ko-KR");
+    if (!key) return [];
+    return [row?.company, row?.support, row?.group]
+        .map((term) => String(term || "").trim())
+        .filter(Boolean)
+        .filter((term) => normalizeRosterWorkerName(term).toLocaleUpperCase("ko-KR").includes(key));
+}
+
+function findRosterAssignmentsByRelatedTerm(query) {
+    return getAllRosterAssignments().filter((row) => findRosterRelatedTermsInAssignment(row, query).length);
+}
+
 function findRosterAssignmentsByVessel(query) {
     const key = normalizeRosterVesselKey(query);
     return key ? getAllRosterAssignments().filter((row) => {
@@ -156,13 +184,19 @@ function findRosterAssignmentsByVessel(query) {
     }) : [];
 }
 
-/** 작업자·선박명 검색 결과는 입력된 행을 그대로 보여 주며 자동으로 합치지 않습니다. */
+/** 작업자·관련어·선박명 검색 결과는 입력된 행을 그대로 보여 주며 자동으로 합치지 않습니다. */
 function findAllRosterAssignments(query) {
     const workerMatches = findRosterAssignmentsByWorker(query);
+    const relatedMatches = findRosterAssignmentsByRelatedTerm(query);
     const vesselMatches = findRosterAssignmentsByVessel(query);
+    const modes = [
+        workerMatches.length && "작업자",
+        relatedMatches.length && "관련어",
+        vesselMatches.length && "선박"
+    ].filter(Boolean);
     return {
-        assignments: [...workerMatches, ...vesselMatches],
-        mode: workerMatches.length && vesselMatches.length ? "작업자·선박" : (workerMatches.length ? "작업자" : "선박")
+        assignments: [...workerMatches, ...relatedMatches, ...vesselMatches],
+        mode: modes.join("·") || "검색"
     };
 }
 
@@ -423,7 +457,7 @@ async function collectRosterSchedules(assignments) {
 function describeNoRosterMatch(query) {
     const hint = isBuiltinPhotoRosterSuppressed()
         ? " 내 사진 명단을 쓰는 중이라 시작용 명단은 제외됩니다. 검토 표를 수정하거나 ‘내 명단 추가’로 배정을 넣어 주세요."
-        : " 이름 철자 또는 선박명을 확인하거나 ‘내 명단 추가’로 배정을 넣어 주세요.";
+        : " 이름·관련 단어 또는 선박명을 확인하거나 ‘내 명단 추가’로 배정을 넣어 주세요.";
     return `<div class="roster-finder-empty">🔍 '${escapeShipCommentHtml(query)}' 명단에서 찾지 못했습니다.${hint}</div>`;
 }
 
@@ -431,7 +465,7 @@ async function searchRosterVessels() {
     if (!isRosterFinderUnlocked()) return unlockRosterFinder();
     const query = String(rosterElement("rosterFinderInput")?.value || "").trim();
     const output = rosterElement("rosterFinderResults");
-    if (!query) return showToast("작업자 이름 또는 선박명을 입력해 주세요.");
+    if (!query) return showToast("작업자 이름·관련 단어 또는 선박명을 입력해 주세요.");
     if (!output) return;
 
     // 한 검색어가 작업자와 선박명 양쪽에 걸려도 어느 한쪽을 버리지 않습니다.
@@ -470,6 +504,12 @@ function rosterResultWorkerDescription(assignment, query) {
     return `<div class="roster-finder-worker-match"><strong>👷 찾은 작업자: ${names}</strong><span>해당 선박 검토 명단 ${workerCount}명</span></div>`;
 }
 
+function rosterResultRelatedDescription(assignment, query) {
+    const terms = findRosterRelatedTermsInAssignment(assignment, query);
+    if (!terms.length) return "";
+    return `<div class="roster-finder-worker-match"><strong>🏷️ 찾은 관련어: ${terms.map(escapeShipCommentHtml).join(", ")}</strong><span>명단 원문 표기</span></div>`;
+}
+
 function renderRosterFinderResults(plan, query, mode) {
     const output = rosterElement("rosterFinderResults");
     if (!output) return;
@@ -486,6 +526,7 @@ function renderRosterFinderResults(plan, query, mode) {
         return `<div class="roster-finder-card${item.found ? "" : " is-missing"}">
             <div class="roster-finder-card-head">${badge}<strong>🚢 ${escapeShipCommentHtml(assignment.vessel)}</strong><span>${escapeShipCommentHtml(assignment.date)}${secondary ? ` · ${secondary}` : ""}</span></div>
             ${rosterResultWorkerDescription(assignment, query)}
+            ${rosterResultRelatedDescription(assignment, query)}
             <div class="roster-finder-card-sub">${rosterResultScheduleDescription(item)}</div>
             <div class="roster-finder-card-actions">
                 <button type="button" onclick="registerRosterResultToWage(${index})">🧮 임금계산기 등록</button>
@@ -845,7 +886,7 @@ function setRosterPhotoStatus(message) {
 }
 
 function setRosterPhotoBusy(isBusy, message) {
-    ["rosterPhotoOcrBtn", "rosterPhotoClearBtn"].forEach((id) => {
+    ["rosterPhotoOcrBtn", "rosterPhotoClearBtn", "rosterFinderResetBtn"].forEach((id) => {
         const button = rosterElement(id);
         if (button) button.disabled = Boolean(isBusy);
     });
@@ -877,6 +918,7 @@ function handleRosterPhotoSelected(event) {
     rosterRuntime.reviewVerifications = [];
     rosterRuntime.reviewVerificationState = "idle";
     rosterRuntime.reviewVerificationRequestId += 1;
+    rosterRuntime.searchableReviewAssignments = [];
     const preview = rosterElement("rosterPhotoPreview");
     if (preview) preview.src = rosterRuntime.activeImageUrl;
     rosterElement("rosterPhotoPreviewWrap")?.classList.remove("hidden");
@@ -1457,8 +1499,12 @@ function beginRosterPhotoReview(parsed, statusMessage) {
     rosterRuntime.reviewWarnings = [...(safeParsed.warnings || [])];
     rosterRuntime.reviewVerifications = rosterRuntime.reviewRows.map(() => ({ status: "pending", matches: [] }));
     rosterRuntime.reviewVerificationState = "pending";
+    // 읽기 완료 즉시 이 사진의 이름·선박명으로 찾기를 쓸 수 있습니다. 임금·근무일지 등록은 찾기 결과에서만 별도로 실행됩니다.
+    syncRosterPhotoSearchEntries();
     renderRosterPhotoRows();
-    setRosterPhotoStatus(statusMessage || "📝 인식한 내용을 검토표에 표시했습니다. 전 터미널 입·출항 스케줄과 선박명을 교차 확인하는 중입니다.");
+    setRosterPhotoStatus(statusMessage || "📝 인식한 내용을 검토표와 찾기에 바로 표시했습니다. 전 터미널 입·출항 스케줄과 선박명을 교차 확인하는 중입니다.");
+    // 기존에 찾기어를 입력해 둔 경우에는 사진을 읽는 즉시 새 명단으로 결과도 갱신합니다.
+    if (rosterElement("rosterFinderInput")?.value.trim()) void searchRosterVessels();
     verifyRosterPhotoVessels();
     return safeParsed;
 }
@@ -1570,6 +1616,7 @@ async function verifyRosterPhotoVessels() {
     if (requestId !== rosterRuntime.reviewVerificationRequestId) return [];
     const verifications = buildRosterPhotoVesselVerifications(rows, schedules);
     const autoApplied = applyUniqueRosterPhotoScheduleNames(rosterRuntime.reviewRows, verifications);
+    syncRosterPhotoSearchEntries();
     rosterRuntime.reviewVerifications = verifications;
     rosterRuntime.reviewVerificationState = "ready";
     renderRosterPhotoRows();
@@ -1605,7 +1652,7 @@ function renderRosterPhotoRows() {
         <label class="roster-photo-row-workers">작업자 (${row.workers.length}명)<textarea rows="2" onchange="updateRosterPhotoRow(${index}, 'workers', this.value)">${escapeShipCommentHtml(row.workers.join(", "))}</textarea></label>
         <button type="button" class="roster-photo-row-del" onclick="removeRosterPhotoRow(${index})">이 줄 삭제</button>
     </div>`).join("");
-    container.innerHTML = `${warningHtml}<div class="roster-photo-schedule-toolbar"><span>표의 선박별 작업자 칸을 따로 읽습니다. 날짜별 활성 스케줄 후보가 한 척이면 스케줄 정식명으로 자동 확정하며, 복수 후보·날짜 불일치·미발견은 검토표에 남깁니다.</span><button type="button" onclick="verifyRosterPhotoVessels()"${state === "loading" ? " disabled" : ""}>${refreshLabel}</button></div>${rows}<label class="roster-photo-persist"><input type="checkbox" id="rosterPhotoPersist"${rosterRuntime.persistPhotoText ? " checked" : ""}> 이 명단을 내 기기에 저장 (사진은 저장하지 않습니다)</label><button type="button" class="roster-photo-apply-btn" onclick="applyRosterPhotoRoster()">✅ 검토한 행을 현재 검색 명단에 적용 (${rosterRuntime.reviewRows.length}행)</button>`;
+    container.innerHTML = `${warningHtml}<div class="roster-photo-schedule-toolbar"><span>표의 선박별 작업자 칸을 따로 읽습니다. 날짜별 활성 스케줄 후보가 한 척이면 스케줄 정식명으로 자동 확정하며, 복수 후보·날짜 불일치·미발견은 검토표에 남깁니다.</span><button type="button" onclick="verifyRosterPhotoVessels()"${state === "loading" ? " disabled" : ""}>${refreshLabel}</button></div>${rows}<div class="roster-photo-search-ready">🔍 읽은 이름·관련 단어·선박명은 지금 바로 아래 찾기에서 검색할 수 있습니다. 임금·근무일지는 찾기 결과에서만 등록됩니다.</div><label class="roster-photo-persist"><input type="checkbox" id="rosterPhotoPersist"${rosterRuntime.persistPhotoText ? " checked" : ""}> 이 명단을 내 기기에 저장 (사진은 저장하지 않습니다)</label><button type="button" class="roster-photo-apply-btn" onclick="applyRosterPhotoRoster()">💾 검토한 행을 사진 명단으로 저장 (${rosterRuntime.reviewRows.length}행)</button>`;
 }
 
 function updateRosterPhotoRow(index, field, value) {
@@ -1620,14 +1667,16 @@ function updateRosterPhotoRow(index, field, value) {
         rosterRuntime.reviewVerificationRequestId += 1;
         rosterRuntime.reviewVerifications[index] = { status: "stale", matches: [] };
         rosterRuntime.reviewVerificationState = "stale";
-        renderRosterPhotoRows();
     }
+    syncRosterPhotoSearchEntries();
+    renderRosterPhotoRows();
 }
 
 function removeRosterPhotoRow(index) {
     rosterRuntime.reviewVerificationRequestId += 1;
     rosterRuntime.reviewRows.splice(index, 1);
     rosterRuntime.reviewVerifications.splice(index, 1);
+    syncRosterPhotoSearchEntries();
     renderRosterPhotoRows();
 }
 
@@ -1647,8 +1696,10 @@ function applyRosterPhotoRoster() {
     }
     const before = rosterRuntime.photoAssignments.length;
     rosterRuntime.photoModeEngaged = true;
-    // 검토자가 적용한 행은 같은 날짜·선박·작업자와 비교하지 않고 입력 순서 그대로 누적합니다.
+    // 저장한 행은 같은 날짜·선박·작업자와 비교하지 않고 입력 순서 그대로 누적합니다.
     appendRosterPhotoEntries(usable);
+    // 현재 검토 행은 이미 찾기에 임시 반영되어 있으므로, 저장본과 이중으로 검색되지 않게 합니다.
+    rosterRuntime.searchableReviewAssignments = [];
     const persistCheck = rosterElement("rosterPhotoPersist");
     const persist = Boolean(persistCheck?.checked);
     if (persist) savePhotoRosterToDevice();
@@ -1663,9 +1714,9 @@ function applyRosterPhotoRoster() {
     renderRosterPhotoSaved();
     const total = rosterRuntime.photoAssignments.length;
     showToast(before
-        ? `✅ 검토한 사진 명단 ${usable.length}행을 추가했습니다. 현재 ${total}행을 검색합니다.${persist ? " (이 기기에 저장됨)" : ""}`
-        : `✅ 검토한 사진 명단 ${total}행을 적용했습니다.${persist ? " (이 기기에 저장됨)" : ""}`);
-    trackAppEvent?.("actions", "roster_photo_applied");
+        ? `✅ 검토한 사진 명단 ${usable.length}행을 추가 저장했습니다. 현재 ${total}행을 검색합니다.${persist ? " (이 기기에 저장됨)" : ""}`
+        : `✅ 검토한 사진 명단 ${total}행을 저장했습니다.${persist ? " (이 기기에 저장됨)" : ""}`);
+    trackAppEvent?.("actions", "roster_photo_saved");
     if (rosterElement("rosterFinderInput")?.value.trim()) searchRosterVessels();
     return true;
 }
@@ -1698,10 +1749,18 @@ function clearPhotoRosterEntries() {
     rosterRuntime.reviewVerifications = [];
     rosterRuntime.reviewVerificationState = "idle";
     rosterRuntime.reviewVerificationRequestId += 1;
+    rosterRuntime.searchableReviewAssignments = [];
+    rosterRuntime.photoModeEngaged = false;
     clearRosterSearchResult();
     renderRosterPhotoSaved();
     renderRosterPhotoRows([]);
     showToast("🗑️ 사진 명단을 모두 지웠습니다.");
+}
+
+function renderRosterFinderHint() {
+    const output = rosterElement("rosterFinderResults");
+    if (!output) return;
+    output.innerHTML = `<div class="roster-finder-empty">사진에서 선박명 아래에 나열된 작업자 이름(이춘학 등)·관련 단어 또는 선박명을 입력하면, 일치한 작업자·해당 선박 명단 인원·배정·전 터미널 차트·스케줄을 표시하고 임금계산기·근무일지에 등록합니다. 같은 행도 자동으로 제외하지 않습니다.</div>`;
 }
 
 function clearRosterPhoto() {
@@ -1713,6 +1772,7 @@ function clearRosterPhoto() {
     rosterRuntime.reviewVerifications = [];
     rosterRuntime.reviewVerificationState = "idle";
     rosterRuntime.reviewVerificationRequestId += 1;
+    rosterRuntime.searchableReviewAssignments = [];
     rosterRuntime.photoModeEngaged = false;
     const preview = rosterElement("rosterPhotoPreview");
     if (preview) preview.removeAttribute("src");
@@ -1720,6 +1780,10 @@ function clearRosterPhoto() {
     rosterElement("rosterPhotoTextDetails")?.classList.add("hidden");
     const text = rosterElement("rosterPhotoText");
     if (text) text.value = "";
+    ["rosterPhotoInput", "rosterPhotoGalleryInput"].forEach((id) => {
+        const input = rosterElement(id);
+        if (input) input.value = "";
+    });
     const rows = rosterElement("rosterPhotoRows");
     if (rows) rows.innerHTML = "";
     const readButton = rosterElement("rosterPhotoOcrBtn");
@@ -1727,4 +1791,23 @@ function clearRosterPhoto() {
     if (readButton) readButton.disabled = true;
     if (clearButton) clearButton.disabled = true;
     setRosterPhotoStatus("사진을 지웠습니다. 사진은 이 기기의 메모리에서만 처리되며 저장되지 않습니다.");
+}
+
+/** 사진·OCR 검토·사진 명단과 찾기 조건을 한 번에 초기화합니다. 직접 추가한 저장 명단은 보존합니다. */
+function resetRosterFinder() {
+    // 기존 검색 또는 스케줄 조회가 초기화 후 결과를 다시 그리지 못하게 합니다.
+    rosterRuntime.requestId += 1;
+    clearPhotoRosterFromDevice();
+    clearRosterPhoto();
+    clearRosterSearchResult();
+    ["rosterFinderInput", "rosterExtraWorker", "rosterExtraVessel", "rosterExtraDate"].forEach((id) => {
+        const input = rosterElement(id);
+        if (input) input.value = "";
+    });
+    renderRosterPhotoSaved();
+    renderRosterExtraList();
+    renderRosterFinderHint();
+    setRosterPhotoStatus("초기화했습니다. 사진을 고르면 이 기기에서만 자동으로 명단을 읽어 바로 찾기에서 검색할 수 있습니다.");
+    showToast("↺ 근무배치 사진 명단과 찾기 조건을 초기화했습니다.");
+    trackAppEvent?.("actions", "roster_finder_reset");
 }
