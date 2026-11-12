@@ -165,7 +165,7 @@ test('겹친 선박 작업자 영역의 OCR 단어는 한 선박에만 귀속하
     assert.deepEqual(result.unassigned, ['이춘학'], '두 작업자 칸에 걸친 이름은 어느 선박에도 중복 출력하지 않는다');
 });
 
-test('원본 작업자 칸 수와 검토 출력 인원이 다르면 찾기와 저장을 보류한다', () => {
+test('원본 작업자 칸 수와 검토 출력 인원이 달라도 경고를 남기고 찾기·저장을 진행한다', () => {
     const photo = createPhotoVm();
     const result = JSON.parse(JSON.stringify(photo.run(`(() => {
         rosterRuntime.finderResults = [{ stale: true }];
@@ -184,7 +184,7 @@ test('원본 작업자 칸 수와 검토 출력 인원이 다르면 찾기와 �
             staleFinderResults: rosterRuntime.finderResults.length
         };
     })()`)));
-    assert.deepEqual(result, { source: 2, output: 3, verified: false, beforeSave: 0, saved: false, persisted: 0, staleFinderResults: 0 });
+    assert.deepEqual(result, { source: 2, output: 3, verified: false, beforeSave: 1, saved: true, persisted: 1, staleFinderResults: 0 });
 });
 
 test('원본 작업자 칸 수와 출력 인원이 같으면 표 OCR 명단은 즉시 찾기에 반영한다', () => {
@@ -218,7 +218,7 @@ test('검토 행을 삭제해도 사진에서 센 원본 작업자 총수는 바
             searchable: rosterRuntime.searchableReviewAssignments.length
         };
     })()`)));
-    assert.deepEqual(result, { source: 2, output: 1, verified: false, searchable: 0 });
+    assert.deepEqual(result, { source: 2, output: 1, verified: false, searchable: 1 });
 });
 
 test('표 OCR 원문을 다시 검토해도 선박별로 나눈 작업자 칸의 리터럴을 재파싱하지 않는다', () => {
