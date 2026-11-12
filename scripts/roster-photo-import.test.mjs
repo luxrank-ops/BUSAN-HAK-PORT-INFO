@@ -266,6 +266,16 @@ test('사진 처리 경로는 이미지 업로드 API 없이 Object URL·캔버�
     assert.match(engine, /"kor\+eng"/);
 });
 
+test('사진을 고르면 명단 읽기를 자동으로 시작하고 필요하면 다시 읽을 수 있다', () => {
+    const photoSelected = engine.slice(engine.indexOf('function handleRosterPhotoSelected'), engine.indexOf('function openRosterPhotoPicker'));
+    assert.match(photoSelected, /자동으로 사진에서 명단을 읽는 중입니다/);
+    const ocrStart = photoSelected.indexOf('void runRosterPhotoOcr()');
+    assert.ok(ocrStart >= 0, 'selecting a photo starts OCR without an extra button press');
+    assert.ok(ocrStart > photoSelected.indexOf('URL.createObjectURL'), 'OCR begins only after the selected image is available to the preview');
+    assert.match(html, /id="rosterPhotoOcrBtn"[^>]*>🔄 사진에서 명단 다시 읽기<\/button>/);
+    assert.ok(html.includes('사진을 고르면 이 기기에서만 자동으로 글자를 읽어 명단으로 만들어 줍니다.'));
+});
+
 test('화면은 카메라·갤러리·수정·기기저장 UI와 검토 후 적용 흐름을 제공한다', () => {
     for (const id of ['rosterPhotoInput', 'rosterPhotoGalleryInput', 'rosterPhotoOcrBtn', 'rosterPhotoClearBtn', 'rosterPhotoStatus', 'rosterPhotoPreviewWrap', 'rosterPhotoPreview', 'rosterPhotoTextDetails', 'rosterPhotoText', 'rosterPhotoRows', 'rosterPhotoSaved']) {
         assert.equal(html.split(`id="${id}"`).length - 1, 1, `missing or duplicate #${id}`);
