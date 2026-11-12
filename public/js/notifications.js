@@ -27,7 +27,8 @@ function escapeNotificationHtml(value) {
 
 function notificationTypeLabel(type) {
     const labels = {
-        SCHEDULE_CHANGE: "운항 시간 변경",
+        SCHEDULE_CHANGE: "선박 일정 변경",
+        OPERATIONAL_NOTICE: "안전·운영 공지",
         AUTO_BLIND: "운영 알림"
     };
     return labels[String(type || "")] || "새 알림";

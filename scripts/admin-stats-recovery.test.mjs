@@ -164,11 +164,12 @@ after(async () => {
     }
 });
 
-test('Vercel 2세그먼트 서버리스 진입점 3종이 모두 존재하며 Hobby 플랜 함수 한도(12개) 이하를 유지한다', () => {
+test('Vercel 서버리스 진입점이 존재하며 Hobby 플랜 함수 한도(12개) 이하를 유지한다', () => {
     const apiFiles = readdirSync(new URL('../api', import.meta.url)).filter((f) => f.endsWith('.ts'));
     assert.ok(apiFiles.includes('analytics-summary.ts'));
     assert.ok(apiFiles.includes('auth-session.ts'));
     assert.ok(apiFiles.includes('admin-stats.ts'));
+    assert.ok(apiFiles.includes('emergency-notifications.ts'));
     assert.ok(
         apiFiles.length <= 12,
         `Vercel Hobby 플랜 함수 개수 한도(12개) 초과: 현재 ${apiFiles.length}개 (${apiFiles.join(', ')})`

@@ -190,11 +190,25 @@ export function verifyEmergencyNoticePin(pin: string): boolean {
 
 export function issueEmergencyUnlockToken(): { token: string; expiresAt: number } {
   const expiresAt = Date.now() + SCREEN_UNLOCK_TOKEN_TTL_MS;
-  const token = crypto
+  const sig = crypto
     .createHmac('sha256', SCREEN_UNLOCK_TOKEN_SECRET)
     .update(`emergency-unlock:${expiresAt}`)
     .digest('hex');
-  return { token, expiresAt };
+  return { token: `${expiresAt}.${sig}`, expiresAt };
+}
+
+export function verifyEmergencyUnlockToken(rawToken: string, nowMs: number = Date.now()): boolean {
+  const cleaned = String(rawToken || '').trim().replace(/^Bearer\s+/i, '').trim();
+  const dotIdx = cleaned.indexOf('.');
+  if (dotIdx <= 0) return false;
+  const expiresStr = cleaned.slice(0, dotIdx);
+  const sigHex = cleaned.slice(dotIdx + 1);
+  if (!/^\d{10,16}$/.test(expiresStr) || !/^[a-fA-F0-9]{64}$/.test(sigHex)) return false;
+  const expiresAt = Number(expiresStr);
+  if (!Number.isFinite(expiresAt) || expiresAt <= nowMs || expiresAt > nowMs + SCREEN_UNLOCK_TOKEN_TTL_MS + 60_000) return false;
+  const expected = crypto.createHmac('sha256', SCREEN_UNLOCK_TOKEN_SECRET)
+    .update(`emergency-unlock:${expiresAt}`).digest();
+  return crypto.timingSafeEqual(expected, Buffer.from(sigHex, 'hex'));
 }
 
 export function issueScreenUnlockToken(): { token: string; expiresAt: number } {
@@ -455,6 +469,7 @@ export interface VesselScheduleItem {
   ATW: string;
   ATC: string;
   ATD: string;
+  STATUS?: string;
 }
 
 export interface TerminalHealthState {
@@ -639,6 +654,46 @@ export function hasDepartureTimeChanged(oldTime: any, newTime: any): boolean {
   return Boolean(oldNormalized && newNormalized && oldNormalized !== newNormalized);
 }
 
+export function shouldInferVesselCancellation(missingCount: any, missingSinceMs: any, nowMs: number): boolean {
+  const missingSince = Number(missingSinceMs);
+  return Number(missingCount) >= 1 && Number.isFinite(missingSince) && nowMs - missingSince >= 30 * 60 * 1000;
+}
+
+export function classifyVesselStatus(rawStatus: any): 'CANCELLED' | 'SUSPENDED' | '' {
+  const status = String(rawStatus || '').normalize('NFKC').trim().toUpperCase();
+  if (!status) return '';
+  if (/^(Y|YES|TRUE|1|CANCEL(?:LED)?|CXL|CAN|취소|운항취소|결항)$/.test(status) || /취소|결항|CANCEL|停航/.test(status)) return 'CANCELLED';
+  if (/중단|운항정지|운항중지|SUSPEND|SUSPENDED|STOPPED|서비스중단/.test(status)) return 'SUSPENDED';
+  return '';
+}
+
+export function detectVesselScheduleChanges(
+  previous: any,
+  current: any,
+  berthTimeThresholdMinutes: number = SCHEDULE_DIFF_THRESHOLD_MINUTES
+): any[] {
+  const changes: any[] = [];
+  const oldAtd = normalizeDateTimeStr(previous?.ATD);
+  const newAtd = normalizeDateTimeStr(current?.ATD);
+  if (hasDepartureTimeChanged(oldAtd, newAtd)) {
+    changes.push({ field: 'ATD', oldValue: oldAtd, newValue: newAtd, diffMinutes: calculateScheduleDiffMinutes(oldAtd, newAtd) });
+  }
+
+  const oldEtb = normalizeDateTimeStr(previous?.ETB);
+  const newEtb = normalizeDateTimeStr(current?.ETB);
+  if (oldEtb && newEtb && isScheduleShiftedByAtLeastOneHour(oldEtb, newEtb, berthTimeThresholdMinutes)) {
+    changes.push({ field: 'ETB', oldValue: oldEtb, newValue: newEtb, diffMinutes: calculateScheduleDiffMinutes(oldEtb, newEtb) });
+  }
+
+  const oldBerth = String(previous?.BERTH_NO || '').trim();
+  const newBerth = String(current?.BERTH_NO || '').trim();
+  const normalizeBerth = (value: string) => value.normalize('NFKC').replace(/\s+/g, '').toUpperCase();
+  if (oldBerth && newBerth && normalizeBerth(oldBerth) !== normalizeBerth(newBerth)) {
+    changes.push({ field: 'BERTH_NO', oldValue: oldBerth, newValue: newBerth, diffMinutes: null });
+  }
+  return changes;
+}
+
 function stripTags(html: string): string {
   return String(html || '')
     .replace(/<[^>]+>/g, ' ')
@@ -747,7 +802,8 @@ async function loadTerminalFallbackFromFirestore(tid: string): Promise<VesselSch
           ATA: normalizeDateTimeStr(d.ATA || d.ETB),
           ATW: normalizeDateTimeStr(d.ATW),
           ATC: normalizeDateTimeStr(d.ATC || d.ATD),
-          ATD: normalizeDateTimeStr(d.ATD)
+          ATD: normalizeDateTimeStr(d.ATD),
+          STATUS: String(d.STATUS || '')
         });
       }
     });
@@ -1128,6 +1184,7 @@ export function mergePncScheduleAndWorkStatus(
         }
         if (st.BERTH_NO && !existing.BERTH_NO) existing.BERTH_NO = st.BERTH_NO;
         if (st.PTNR_CODE && !existing.PTNR_CODE) existing.PTNR_CODE = st.PTNR_CODE;
+        if (st.STATUS && !existing.STATUS) existing.STATUS = st.STATUS;
         matched = true;
       }
     }
@@ -1183,7 +1240,8 @@ async function fetchTerminalScheduleVesselsUncached(tid: string, startDate: stri
       ATA: normalizeDateTimeStr(v.ATA || v.ETB),
       ATW: normalizeDateTimeStr(v.ATW),
       ATC: normalizeDateTimeStr(v.ATC),
-      ATD: normalizeDateTimeStr(v.ATD)
+      ATD: normalizeDateTimeStr(v.ATD),
+      STATUS: String(v.STATUS || v.VOY_STATUS || v.VSL_STATUS || v.OPER_STATUS || v.VOYAGE_STATUS || v.STATUS_NM || v.STAT || v.CANCEL_YN || v.CANCEL_FLAG || v.CANCELLED_YN || v.CXL_YN || '')
     })).filter((v: VesselScheduleItem) => Boolean(v.VSL_NM));
   }
 
@@ -1220,7 +1278,8 @@ async function fetchTerminalScheduleVesselsUncached(tid: string, startDate: stri
       ATA: normalizeDateTimeStr(v.ATBDATE || v.ETBDATE),
       ATW: normalizeDateTimeStr(v.ATBDATE),
       ATC: normalizeDateTimeStr(v.ATDDATE || v.ETDDATE),
-      ATD: normalizeDateTimeStr(v.ATDDATE || v.ETDDATE)
+      ATD: normalizeDateTimeStr(v.ATDDATE || v.ETDDATE),
+      STATUS: String(v.STATUS || v.VOY_STATUS || v.VSL_STATUS || v.OPER_STATUS || v.VOYAGE_STATUS || v.STATUS_NM || v.STAT || v.CANCEL_YN || v.CANCEL_FLAG || v.CANCELLED_YN || v.CXL_YN || '')
     })).filter((v: VesselScheduleItem) => Boolean(v.VSL_NM));
   }
 
@@ -1267,7 +1326,8 @@ async function fetchTerminalScheduleVesselsUncached(tid: string, startDate: stri
       ATA: normalizeDateTimeStr(v.atb || v.ata || v.etb),
       ATW: normalizeDateTimeStr(v.workStartDate),
       ATC: normalizeDateTimeStr(v.workEndDate),
-      ATD: normalizeDateTimeStr(v.atd || v.etd)
+      ATD: normalizeDateTimeStr(v.atd || v.etd),
+      STATUS: String(v.status || v.voyStatus || v.vslStatus || v.operStatus || v.voyageStatus || v.statusNm || v.stat || v.cancelYn || v.cancelFlag || v.cancelledYn || v.cxlYn || '')
     })).filter((v: VesselScheduleItem) => Boolean(v.VSL_NM));
   }
 
@@ -1528,7 +1588,7 @@ async function fetchTerminalScheduleVesselsUncached(tid: string, startDate: stri
 }
 
 // --- 선박 출항 시각 변경·접안 시각 1시간 이상 변경 감지 및 알림 파이프라인 ---
-async function sendPushNotification(userId: string, title: string, body: string): Promise<boolean> {
+async function sendPushNotification(userId: string, title: string, body: string, type: string = 'SCHEDULE_CHANGE'): Promise<boolean> {
   try {
     if (getApps().length === 0) return false;
     const userDoc = await getFirestore().collection('user_profiles').doc(userId).get();
@@ -1541,7 +1601,7 @@ async function sendPushNotification(userId: string, title: string, body: string)
     await getMessaging().send({
       token,
       notification: { title, body },
-      data: { type: 'SCHEDULE_CHANGE', click_action: 'FLUTTER_NOTIFICATION_CLICK' }
+      data: { type, click_action: 'FLUTTER_NOTIFICATION_CLICK' }
     });
     console.log(`[FCM] ${userId}에게 푸시 발송 완료`);
     return true;
@@ -1549,6 +1609,44 @@ async function sendPushNotification(userId: string, title: string, body: string)
     console.error(`[FCM] ${userId} 발송 실패:`, err?.message || err);
     return false;
   }
+}
+
+
+/** 활성 긴급·운영 공지를 전체 사용자에게 한 revision당 한 번만 전파합니다. */
+export async function deliverActiveEmergencyNoticeNotifications(expectedRevision?: string): Promise<number | null> {
+  if (getApps().length === 0) return null;
+  const firestore = getFirestore();
+  const noticeSnap = await firestore.collection('settings').doc('emergency_notice').get();
+  const notice = noticeSnap.exists ? (noticeSnap.data() || {}) : {};
+  const revision = String(notice.revision || '');
+  const now = Date.now();
+  const startAt = Number(notice.startAt) || 0;
+  const endAt = Number(notice.endAt) || 0;
+  if (!notice.enabled || !revision || (expectedRevision && revision !== expectedRevision) ||
+      (startAt && startAt > now) || (endAt && endAt < now) || !String(notice.message || '').trim()) return null;
+
+  const users = await firestore.collection('user_profiles').get();
+  let created = 0;
+  for (const user of users.docs) {
+    const digest = crypto.createHash('sha256').update(`${revision}|${user.id}`).digest('hex').slice(0, 32);
+    const notificationRef = firestore.collection('notifications').doc(`notice_${digest}`);
+    const title = String(notice.title || '').trim().slice(0, 180) || '안전·운영 공지';
+    const body = String(notice.message || '').trim().slice(0, 1900);
+    const wasCreated = await firestore.runTransaction(async (transaction) => {
+      const existing = await transaction.get(notificationRef);
+      if (existing.exists) return false;
+      transaction.create(notificationRef, {
+        userId: user.id, title, body, type: 'OPERATIONAL_NOTICE',
+        noticeRevision: revision, level: String(notice.level || 'danger'),
+        read: false, createdAt: FieldValue.serverTimestamp(), createdAtMs: Date.now()
+      });
+      return true;
+    });
+    if (!wasCreated) continue;
+    await sendPushNotification(user.id, title, body, 'OPERATIONAL_NOTICE');
+    created += 1;
+  }
+  return created;
 }
 
 export async function runScheduleChangeDetection(): Promise<{ changedVessels: number; notificationsSent: number }> {
@@ -1571,11 +1669,13 @@ export async function runScheduleChangeDetection(): Promise<{ changedVessels: nu
     const endDate = fmt(e);
 
     const allVessels: VesselScheduleItem[] = [];
+    const freshTerminals = new Set<string>();
 
     for (const term of SUPPORTED_TERMINALS) {
       try {
-        const vessels = await fetchTerminalScheduleVessels(term, startDate, endDate);
-        allVessels.push(...vessels);
+        const meta = await fetchTerminalScheduleVesselsWithMeta(term, startDate, endDate);
+        allVessels.push(...meta.vessels);
+        if (!meta.stale && meta.vessels.length > 0) freshTerminals.add(term.toUpperCase());
       } catch (err: any) {
         console.error(`[CRON] ${term} 스케줄 조회 실패:`, err?.message || err);
       }
@@ -1584,34 +1684,45 @@ export async function runScheduleChangeDetection(): Promise<{ changedVessels: nu
     const cacheRef = firestore.collection('vessel_schedules_cache');
     const logsRef = firestore.collection('work_logs');
 
+    // 취소 선박은 터미널 일정에서 사라지는 경우도 있어, 정상 수집된 연속 두 회차의 부재만 신호로 봅니다.
+    // stale/실패 응답은 절대 취소로 추정하지 않습니다.
+    const seenVesselIds = new Set(allVessels.map((v) => `${v.TERMINAL}_${v.VOY_NO || 'NOVOY'}_${String(v.VSL_NM || '').replace(/[\s/]+/g, '_')}`));
+    const nowMs = Date.now();
+    for (const terminal of freshTerminals) {
+      const cachedRows = await cacheRef.where('TERMINAL', '==', terminal).get();
+      for (const cachedDoc of cachedRows.docs) {
+        const cachedData = cachedDoc.data() || {};
+        if (seenVesselIds.has(cachedDoc.id) || classifyVesselStatus(cachedData.STATUS)) continue;
+        const scheduleTimes = [parseScheduleTimeMs(cachedData.ETB), parseScheduleTimeMs(cachedData.ATD)]
+          .filter((time): time is number => time !== null && time >= nowMs - 24 * 60 * 60 * 1000 && time <= nowMs + 5 * 24 * 60 * 60 * 1000);
+        if (!scheduleTimes.length) continue;
+        const missingCount = Number(cachedData.missingFromScheduleCount) || 0;
+        if (shouldInferVesselCancellation(missingCount, cachedData.missingFromScheduleAtMs, nowMs)) {
+          allVessels.push({
+            TERMINAL: terminal, VSL_NM: String(cachedData.VSL_NM || ''),
+            BERTH_NO: String(cachedData.BERTH_NO || ''), PTNR_CODE: String(cachedData.PTNR_CODE || ''),
+            VOY_NO: String(cachedData.VOY_NO || ''), ETB: String(cachedData.ETB || ''),
+            ATA: String(cachedData.ATA || ''), ATW: String(cachedData.ATW || ''),
+            ATC: String(cachedData.ATC || ''), ATD: String(cachedData.ATD || ''), STATUS: 'CANCELLED'
+          });
+        } else if (missingCount < 1) {
+          await cachedDoc.ref.set({ missingFromScheduleCount: 1, missingFromScheduleAtMs: nowMs }, { merge: true });
+        }
+      }
+    }
+
     for (const v of allVessels) {
       if (!v.VSL_NM) continue;
       const safeName = v.VSL_NM.replace(/[\s/]+/g, '_');
       const vslId = `${v.TERMINAL}_${v.VOY_NO || 'NOVOY'}_${safeName}`;
       const doc = await cacheRef.doc(vslId).get();
 
-      let changedField: 'ATD' | 'ETB' | null = null;
-      let oldTime: string | null = null;
-      let newTime: string | null = null;
-      let diffMinutes = 0;
-
-      if (doc.exists) {
-        const data = doc.data() || {};
-        const oldAtd = data.ATD || null;
-        const oldEtb = data.ETB || null;
-
-        if (oldAtd && v.ATD && hasDepartureTimeChanged(oldAtd, v.ATD)) {
-          changedField = 'ATD';
-          oldTime = oldAtd;
-          newTime = v.ATD;
-          diffMinutes = calculateScheduleDiffMinutes(oldAtd, v.ATD) || 0;
-        } else if (oldEtb && v.ETB && isScheduleShiftedByAtLeastOneHour(oldEtb, v.ETB)) {
-          changedField = 'ETB';
-          oldTime = oldEtb;
-          newTime = v.ETB;
-          diffMinutes = calculateScheduleDiffMinutes(oldEtb, v.ETB) || 0;
-        }
-      }
+      const previous = doc.exists ? (doc.data() || {}) : {};
+      const scheduleChanges = doc.exists ? detectVesselScheduleChanges(previous, v) : [];
+      const currentStatus = classifyVesselStatus(v.STATUS);
+      const previousStatus = classifyVesselStatus(previous.STATUS);
+      const statusChanged = Boolean(currentStatus && currentStatus !== previousStatus);
+      if (statusChanged) scheduleChanges.push({ field: currentStatus, oldValue: previous.STATUS || '', newValue: v.STATUS, diffMinutes: null });
 
       await cacheRef.doc(vslId).set({
         TERMINAL: v.TERMINAL,
@@ -1621,23 +1732,28 @@ export async function runScheduleChangeDetection(): Promise<{ changedVessels: nu
         VOY_NO: v.VOY_NO || '',
         ETB: v.ETB || null,
         ATD: v.ATD || null,
+        STATUS: v.STATUS || '',
+        missingFromScheduleCount: 0,
         updatedAt: FieldValue.serverTimestamp(),
         updatedAtMs: Date.now()
       }, { merge: true });
 
-      if (changedField && oldTime && newTime) {
+      if (scheduleChanges.length) {
         changedVessels += 1;
-        const label = changedField === 'ATD' ? '출항' : '접안';
-        const absoluteDiffMinutes = Math.abs(diffMinutes);
-        const diffLabel = absoluteDiffMinutes < 60
-          ? `${absoluteDiffMinutes}분`
-          : `${(absoluteDiffMinutes / 60).toFixed(1).replace(/\.0$/, '')}시간`;
-        const direction = diffMinutes > 0
-          ? `${diffLabel} 지연`
-          : diffMinutes < 0
-            ? `${diffLabel} 조기`
-            : '표기 변경';
-        console.log(`[CRON] ${label}시간 변경 감지: ${v.VSL_NM} (${oldTime} -> ${newTime}, ${direction})`);
+        const changeDescriptions = scheduleChanges.map((change) => {
+          if (change.field === 'CANCELLED' || change.field === 'SUSPENDED') {
+            return change.field === 'CANCELLED' ? '운항 취소' : '운항 중단';
+          }
+          if (change.field === 'BERTH_NO') return `선석 변경 (${change.oldValue} → ${change.newValue})`;
+          const label = change.field === 'ATD' ? '출항' : '접안';
+          const diff = Number(change.diffMinutes) || 0;
+          const absoluteDiff = Math.abs(diff);
+          const diffLabel = absoluteDiff < 60 ? `${absoluteDiff}분` : `${(absoluteDiff / 60).toFixed(1).replace(/\.0$/, '')}시간`;
+          const direction = diff > 0 ? `${diffLabel} 지연` : diff < 0 ? `${diffLabel} 조기` : '표기 변경';
+          return `${label} 시각 변경 (${change.oldValue} → ${change.newValue}, ${direction})`;
+        });
+        const changeLabel = changeDescriptions.join(' · ');
+        console.log(`[CRON] 선박 변경 감지: ${v.VSL_NM} (${changeLabel})`);
 
         const snapshot = await logsRef.where('date', '>=', startDate).where('date', '<=', endDate).get();
         const notifiedUsers = new Set<string>();
@@ -1647,35 +1763,38 @@ export async function runScheduleChangeDetection(): Promise<{ changedVessels: nu
           const logData = logDoc.data() || {};
           const savedShipName = String(logData.shipName || '').replace(/\s+/g, '').toUpperCase();
           const workerId = String(logData.workerId || '').trim();
+          // 해당 선박 근무일지가 있는 작업자에게만 발송해 무관한 일정 알림을 배제합니다.
+          if (!workerId || !savedShipName.includes(targetShipName) || notifiedUsers.has(workerId)) continue;
+          notifiedUsers.add(workerId);
 
-          if (workerId && savedShipName.includes(targetShipName) && !notifiedUsers.has(workerId)) {
-            notifiedUsers.add(workerId);
+          const localDate = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Seoul' });
+          const dedupeId = crypto.createHash('sha256').update(`${workerId}|${vslId}|${localDate}`).digest('hex').slice(0, 40);
+          const notiRef = firestore.collection('notifications').doc(`sched_${dedupeId}`);
+          // 동일 선박 반복 수정은 하루 한 건으로 제한하며 두 번째 이후에는 푸시도 보내지 않습니다.
+          if ((await notiRef.get()).exists) continue;
 
-            const notiRef = firestore.collection('notifications').doc();
-            const title = `${label} 시간 변경 안내 (${direction}) 🚢`;
-            const message = `[${v.TERMINAL}] ${v.VSL_NM}호의 ${label} 시간이 변경되었습니다. (${oldTime} → ${newTime})`;
+          const title = `${v.VSL_NM} 운항 정보 변경 안내 🚢`;
+          const message = `[${v.TERMINAL}] ${v.VSL_NM}호: ${changeLabel}`;
+          await notiRef.set({
+            userId: workerId,
+            title,
+            body: message,
+            type: 'SCHEDULE_CHANGE',
+            terminal: v.TERMINAL,
+            vesselName: v.VSL_NM,
+            changes: scheduleChanges,
+            read: false,
+            createdAt: FieldValue.serverTimestamp(),
+            createdAtMs: Date.now()
+          });
 
-            await notiRef.set({
-              userId: workerId,
-              title,
-              body: message,
-              type: 'SCHEDULE_CHANGE',
-              terminal: v.TERMINAL,
-              vesselName: v.VSL_NM,
-              oldTime,
-              newTime,
-              diffMinutes,
-              read: false,
-              createdAt: FieldValue.serverTimestamp(),
-              createdAtMs: Date.now()
-            });
-
-            await sendPushNotification(workerId, title, message);
-            notificationsSent += 1;
-          }
+          await sendPushNotification(workerId, title, message, 'SCHEDULE_CHANGE');
+          notificationsSent += 1;
         }
       }
     }
+
+    try { await deliverActiveEmergencyNoticeNotifications(); } catch (noticeErr: any) { console.warn('[NOTICE] 예약 공지 알림 전달 실패:', noticeErr?.message || noticeErr); }
 
     automationRuntimeStatus.scheduleWatcher.lastSuccessAt = new Date().toISOString();
     automationRuntimeStatus.scheduleWatcher.lastError = null;
@@ -2972,6 +3091,35 @@ app.post('/api/emergency-unlock', (req, res) => {
   }
   const { token, expiresAt } = issueEmergencyUnlockToken();
   res.json({ ok: true, token, expiresAt });
+});
+
+// 긴급·운영 공지를 인증된 관리자가 게시하면 사용자별 알림센터와 FCM으로 전달합니다.
+app.post('/api/emergency-notifications', async (req, res) => {
+  const token = String(req.headers.authorization || '');
+  if (!verifyEmergencyUnlockToken(token)) {
+    res.status(401).json({ ok: false, error: 'unauthorized' });
+    return;
+  }
+  try {
+    if (getApps().length === 0) {
+      res.status(503).json({ ok: false, error: 'firebase_unavailable' });
+      return;
+    }
+    const requestedRevision = String((req.body as any)?.revision || '');
+    if (!requestedRevision) {
+      res.status(400).json({ ok: false, error: 'missing_revision' });
+      return;
+    }
+    const created = await deliverActiveEmergencyNoticeNotifications(requestedRevision);
+    if (created === null) {
+      res.status(409).json({ ok: false, error: 'notice_not_active' });
+      return;
+    }
+    res.json({ ok: true, notificationsCreated: created });
+  } catch (err: any) {
+    console.error('[NOTICE] 알림센터 발송 실패:', err?.message || err);
+    res.status(500).json({ ok: false, error: 'notification_delivery_failed' });
+  }
 });
 
 // 허용되지 않은 메소드 안내 — 브라우저가 GET 으로 호출하면 405 와 함께 힌트를 줍니다.

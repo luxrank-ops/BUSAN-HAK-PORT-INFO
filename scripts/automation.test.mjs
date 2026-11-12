@@ -74,8 +74,11 @@ test('출항 시각의 모든 변경은 알림 대상이고 접안 시각은 1�
   assert.match(serverCode, /export\s+function\s+calculateScheduleDiffMinutes/);
   assert.match(serverCode, /export\s+function\s+isScheduleShiftedByAtLeastOneHour/);
   assert.match(serverCode, /export\s+function\s+hasDepartureTimeChanged/);
-  assert.match(serverCode, /oldAtd && v\.ATD && hasDepartureTimeChanged\(oldAtd, v\.ATD\)/, '출항 시각은 1시간 미만 변경도 감지해야 합니다');
-  assert.match(serverCode, /oldEtb && v\.ETB && isScheduleShiftedByAtLeastOneHour\(oldEtb, v\.ETB\)/, '접안 시각은 기존 임계값을 유지해야 합니다');
+  assert.match(serverCode, /hasDepartureTimeChanged\(oldAtd, newAtd\)/, '출항 시각은 1시간 미만 변경도 감지해야 합니다');
+  assert.match(serverCode, /isScheduleShiftedByAtLeastOneHour\(oldEtb, newEtb, berthTimeThresholdMinutes\)/, '접안 시각은 기존 임계값을 유지해야 합니다');
+  assert.match(serverCode, /field: 'BERTH_NO'/, '선석 변경도 스케줄 변경으로 분류해야 합니다');
+  assert.match(serverCode, /classifyVesselStatus\(v\.STATUS\)/, '취소·운항중단 상태를 감지해야 합니다');
+  assert.match(serverCode, /sched_\$\{dedupeId\}/, '선박별 반복 수정은 안정적인 알림 문서 ID로 억제해야 합니다');
   assert.match(serverCode, /app\.get\('\/api\/config'/);
 
   // 스케줄 시간 차이 계산 검증을 위해 순수 함수 추출 실행
@@ -113,6 +116,38 @@ test('출항 시각의 모든 변경은 알림 대상이고 접안 시각은 1�
   assert.equal(fnSandbox.isScheduleShiftedByAtLeastOneHour('2026-10-13 14:00', '2026-10-13 15:00'), true);
   assert.equal(fnSandbox.calculateScheduleDiffMinutes('2026-10-13 14:00', '2026-10-13 12:30'), -90);
   assert.equal(fnSandbox.isScheduleShiftedByAtLeastOneHour('2026-10-13 14:00', '2026-10-13 12:30'), true);
+});
+
+test('선박 알림 분류기는 시각·선석 변경과 명시적인 취소·중단 상태를 구분한다', async () => {
+  const names = [
+    'normalizeDateTimeStr', 'parseScheduleTimeMs', 'calculateScheduleDiffMinutes',
+    'isScheduleShiftedByAtLeastOneHour', 'hasDepartureTimeChanged', 'shouldInferVesselCancellation',
+    'classifyVesselStatus', 'detectVesselScheduleChanges'
+  ];
+  const chunks = names.map((name) => {
+    const match = serverCode.match(new RegExp(`export function ${name}[\\s\\S]*?^}`, 'm'));
+    assert.ok(match, `${name} 함수가 존재해야 합니다`);
+    return match[0];
+  });
+  const transformed = await esbuild.transform(`const SCHEDULE_DIFF_THRESHOLD_MINUTES = 60;\n${chunks.join('\n')}`, { loader: 'ts', format: 'cjs' });
+  const sandbox = { exports: {}, module: { exports: {} }, Date, Math, Number, String };
+  vm.createContext(sandbox);
+  vm.runInContext(transformed.code, sandbox);
+  const f = sandbox.module.exports;
+  assert.deepEqual(JSON.parse(JSON.stringify(f.detectVesselScheduleChanges(
+    { ATD: '2026-10-13 14:00', ETB: '2026-10-13 10:00', BERTH_NO: 'A-1' },
+    { ATD: '2026-10-13 14:01', ETB: '2026-10-13 11:00', BERTH_NO: 'B-2' }
+  ).map(({ field }) => field))), ['ATD', 'ETB', 'BERTH_NO']);
+  assert.deepEqual(JSON.parse(JSON.stringify(f.detectVesselScheduleChanges(
+    { ATD: '2026-10-13 14:00', ETB: '2026-10-13 10:00', BERTH_NO: 'A-1' },
+    { ATD: '2026-10-13 14:00', ETB: '2026-10-13 10:30', BERTH_NO: 'a-1' }
+  ))), []);
+  assert.equal(f.shouldInferVesselCancellation(1, 1_000, 1_000 + 30 * 60 * 1000), true);
+  assert.equal(f.shouldInferVesselCancellation(1, 1_000, 1_000 + 5 * 60 * 1000), false, '한 번의 짧은 누락만으로 취소 처리하지 않음');
+  assert.equal(f.shouldInferVesselCancellation(0, 1_000, 1_000 + 60 * 60 * 1000), false);
+  assert.equal(f.classifyVesselStatus('CANCELLED'), 'CANCELLED');
+  assert.equal(f.classifyVesselStatus('운항 중단'), 'SUSPENDED');
+  assert.equal(f.classifyVesselStatus('정상'), '');
 });
 
 test('1순위 & 2순위: notifications.js가 문법 오류 없이 동작하며 읽음 처리 시 readAt 타임스탬프를 기록한다', async () => {
@@ -281,7 +316,7 @@ test('새 Firestore 알림은 초기 목록과 구분해 알림 창을 자동으
   await new Promise((resolve) => setTimeout(resolve, 0));
   assert.equal(elements.notiPanel.classList.contains('is-open'), true);
   assert.match(elements.notiList.innerHTML, /출항 시간 변경/);
-  assert.match(elements.notiList.innerHTML, /운항 시간 변경/);
+  assert.match(elements.notiList.innerHTML, /선박 일정 변경/);
   assert.match(toasts[0], /출항 시간 변경/);
 });
 

@@ -12,6 +12,7 @@ import assert from 'node:assert/strict';
 import { readFileSync, existsSync } from 'node:fs';
 import vm from 'node:vm';
 import nodeCrypto from 'node:crypto';
+import * as esbuild from 'esbuild';
 import { readAppJs, readAppCssRaw, extractFunction as extractFunctionShared } from './app-source.mjs';
 
 const html = readFileSync(new URL('../public/index.html', import.meta.url), 'utf8');
@@ -148,10 +149,11 @@ test('빌드 산출물이 있으면 긴급 공지 해시가 주입되고 평문�
      기본 관리자 PIN(9445) 을 함께 인정해야 합니다(운영자 잠금 사고 방지).
    ══════════════════════════════════════════════════════════════════════ */
 
-test('Vercel 2세그먼트 잠금 해제 경로는 개별 함수 파일로 노출된다', () => {
+test('Vercel 2세그먼트 잠금·공지 알림 경로는 개별 함수 파일로 노출된다', () => {
     const entries = [
         ['/api/emergency-unlock', 'api/emergency-unlock.ts'],
-        ['/api/screen-unlock', 'api/screen-unlock.ts']
+        ['/api/screen-unlock', 'api/screen-unlock.ts'],
+        ['/api/emergency-notifications', 'api/emergency-notifications.ts']
     ];
     for (const [route, relPath] of entries) {
         const fileUrl = new URL(`../${relPath}`, import.meta.url);
@@ -237,6 +239,36 @@ test('빌드 스크립트가 기본 PIN 해시를 주입하되, 명시 지정 �
     if (!existsSync(built)) return; // 빌드 전에는 건너뜀
     const builtHtml = readFileSync(built, 'utf8');
     assert.match(builtHtml, /window\.__EMERGENCY_DEFAULT_PIN_SHA256__="[a-f0-9]{64}"/);
+});
+
+test('긴급 공지용 HMAC 토큰은 유효기간·서명을 검증한다', async () => {
+    const functions = ['issueEmergencyUnlockToken', 'verifyEmergencyUnlockToken'].map((name) => {
+        const match = serverCode.match(new RegExp(`export function ${name}[\\s\\S]*?^}`, 'm'));
+        assert.ok(match, `${name} 함수가 있어야 합니다`);
+        return match[0];
+    });
+    const compiled = await esbuild.transform(`const SCREEN_UNLOCK_TOKEN_TTL_MS = 12 * 60 * 60 * 1000;\nconst SCREEN_UNLOCK_TOKEN_SECRET = 'unit-test-secret';\n${functions.join('\n')}`, { loader: 'ts', format: 'cjs' });
+    const sandbox = { module: { exports: {} }, exports: {}, Date, Buffer, crypto: nodeCrypto, Number, String };
+    vm.createContext(sandbox);
+    vm.runInContext(compiled.code, sandbox);
+    const { token, expiresAt } = sandbox.module.exports.issueEmergencyUnlockToken();
+    assert.equal(sandbox.module.exports.verifyEmergencyUnlockToken(`Bearer ${token}`), true);
+    assert.equal(sandbox.module.exports.verifyEmergencyUnlockToken(token, expiresAt), false, '만료 시각부터는 거부해야 합니다');
+    assert.equal(sandbox.module.exports.verifyEmergencyUnlockToken(`${token.slice(0, -1)}0`), false, '서명 변조를 거부해야 합니다');
+});
+
+test('긴급 공지는 인증된 revision 기반으로 사용자별 알림센터·FCM에 중복 없이 전달된다', () => {
+    assert.match(serverCode, /app\.post\(\s*'\/api\/emergency-notifications'/);
+    assert.match(serverCode, /verifyEmergencyUnlockToken\(token\)/);
+    assert.match(serverCode, /deliverActiveEmergencyNoticeNotifications\(requestedRevision\)/);
+    assert.match(serverCode, /type: 'OPERATIONAL_NOTICE'/);
+    assert.match(serverCode, /transaction\.create\(notificationRef/);
+    assert.match(serverCode, /await sendPushNotification\(user\.id, title, body, 'OPERATIONAL_NOTICE'\)/);
+    assert.match(serverCode, /deliverActiveEmergencyNoticeNotifications\(\)/, '시간 지정 공지는 스케줄 감시 실행에서 게시 시각이 되면 전달되어야 합니다');
+    assert.match(appJs, /const EMERGENCY_UNLOCK_TOKEN_SESSION_KEY = "emergencyNoticeUnlockToken"/);
+    assert.match(appJs, /fetch\("\/api\/emergency-notifications"/);
+    assert.ok(appJs.includes('\"Authorization\": `Bearer ${unlockToken}`'));
+    assert.match(readFileSync(new URL('../public/js/notifications.js', import.meta.url), 'utf8'), /OPERATIONAL_NOTICE: "안전·운영 공지"/);
 });
 
 test('시도 초과(429)에도 올바른 비밀번호면 로컬 해시로 한 번 더 확인한다', () => {
