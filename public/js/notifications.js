@@ -8,6 +8,7 @@ let notiUnsubscribe = null;
 let notiActiveUserId = "";
 let notiInitialSnapshotLoaded = false;
 let notiAnnouncedIds = new Set();
+let notiSubscriptionVersion = 0;
 let fcmInitPromise = null;
 let fcmServiceWorkerRegistrationPromise = null;
 let fcmMessagingInstance = null;
@@ -118,13 +119,34 @@ function toggleNotificationPanel() {
     openNotificationPanel({ markRead: true, prepareMessaging: true });
 }
 
+function notificationCreatedAtMs(data) {
+    const value = data?.createdAt || data?.createdAtMs;
+    if (value?.toMillis) return Number(value.toMillis()) || 0;
+    if (value?.toDate) return value.toDate().getTime() || 0;
+    if (value instanceof Date) return value.getTime() || 0;
+    if (typeof value === 'number') return value;
+    const parsed = typeof value === 'string' ? Date.parse(value) : NaN;
+    return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function visibleNotificationDocs(snapshot) {
+    const docs = [];
+    snapshot?.forEach?.((doc) => docs.push(doc));
+    // 복합 인덱스가 아직 만들어지는 동안의 대체 조회도 화면에서는 최신 20건처럼 보입니다.
+    return docs.sort((left, right) => {
+        const diff = notificationCreatedAtMs(right?.data?.()) - notificationCreatedAtMs(left?.data?.());
+        return diff || String(right?.id || '').localeCompare(String(left?.id || ''));
+    }).slice(0, 20);
+}
+
 function renderNotificationRows(snapshot) {
     let unreadCount = 0;
     let html = '';
-    if (snapshot.empty) {
+    const docs = visibleNotificationDocs(snapshot);
+    if (!docs.length) {
         html = '<div class="noti-empty-state"><span aria-hidden="true">✨</span><strong>도착한 알림이 없습니다.</strong><p>새 소식이 생기면 이 창으로 바로 알려드릴게요.</p></div>';
     } else {
-        snapshot.forEach((doc) => {
+        docs.forEach((doc) => {
             const data = doc.data() || {};
             const isUnread = !data.read;
             if (isUnread) unreadCount += 1;
@@ -277,44 +299,85 @@ async function initMessagingPush(userId) {
     return fcmInitPromise;
 }
 
-function initNotifications(userId) {
+function notificationNeedsIndexFallback(error) {
+    const code = String(error?.code || '').toLowerCase();
+    const message = String(error?.message || '').toLowerCase();
+    return code === 'failed-precondition' || /index/.test(message);
+}
+
+function subscribeToNotifications(userId, version, useFallbackQuery) {
+    if (version !== notiSubscriptionVersion || String(userId) !== notiActiveUserId) return;
+    try {
+        let query = db.collection('notifications').where('userId', '==', userId);
+        // userId + createdAt 복합 인덱스가 배포되기 전에도 알림 창이 끊기지 않도록,
+        // 실패 시에는 userId 단일 조건으로 실시간 구독 후 브라우저에서 최신 순으로 정렬합니다.
+        if (!useFallbackQuery) query = query.orderBy('createdAt', 'desc').limit(20);
+        const unsubscribe = query.onSnapshot((snapshot) => {
+            if (version !== notiSubscriptionVersion || String(userId) !== notiActiveUserId) return;
+            const isInitialSnapshot = !notiInitialSnapshotLoaded;
+            const additions = !isInitialSnapshot && typeof snapshot.docChanges === 'function'
+                ? snapshot.docChanges().filter((change) => change.type === 'added')
+                : [];
+            renderNotificationRows(snapshot);
+            notiInitialSnapshotLoaded = true;
+
+            additions.forEach((change) => {
+                const id = String(change.doc?.id || '');
+                if (id && notiAnnouncedIds.has(id)) return;
+                if (id) notiAnnouncedIds.add(id);
+                showIncomingNotification(change.doc?.data?.() || {});
+            });
+        }, (error) => {
+            if (version !== notiSubscriptionVersion || String(userId) !== notiActiveUserId) return;
+            if (!useFallbackQuery && notificationNeedsIndexFallback(error)) {
+                try { console.warn('[알림] 복합 인덱스가 준비될 때까지 대체 실시간 조회를 사용합니다.', error); } catch (_) {}
+                try { notiUnsubscribe?.(); } catch (_) {}
+                notiUnsubscribe = null;
+                notiInitialSnapshotLoaded = false;
+                notiAnnouncedIds = new Set();
+                subscribeToNotifications(userId, version, true);
+                return;
+            }
+            reportNotificationFailure('알림 센터 연결 실패', error, '⚠️ 알림 센터를 실시간으로 연결하지 못했습니다.');
+        });
+        if (version === notiSubscriptionVersion) notiUnsubscribe = unsubscribe;
+        else {
+            try { unsubscribe?.(); } catch (_) {}
+        }
+    } catch (error) {
+        if (!useFallbackQuery && notificationNeedsIndexFallback(error)) {
+            subscribeToNotifications(userId, version, true);
+            return;
+        }
+        reportNotificationFailure('알림 구독 설정 실패', error, '⚠️ 알림 센터를 준비하지 못했습니다.');
+    }
+}
+
+async function initNotifications(userId) {
     if (!userId) return;
     if (typeof db === 'undefined' || !db || !db.collection) return;
+    const version = ++notiSubscriptionVersion;
     if (notiUnsubscribe) {
         try { notiUnsubscribe(); } catch (_) {}
+        notiUnsubscribe = null;
     }
     notiActiveUserId = String(userId);
     notiInitialSnapshotLoaded = false;
     notiAnnouncedIds = new Set();
 
+    // 기존 로그인 정보(localStorage)가 먼저 복원되어도 Firestore 구독은 인증 완료 뒤에 시작합니다.
     try {
-        notiUnsubscribe = db.collection('notifications')
-            .where('userId', '==', userId)
-            .orderBy('createdAt', 'desc')
-            .limit(20)
-            .onSnapshot((snapshot) => {
-                const isInitialSnapshot = !notiInitialSnapshotLoaded;
-                const additions = !isInitialSnapshot && typeof snapshot.docChanges === 'function'
-                    ? snapshot.docChanges().filter((change) => change.type === 'added')
-                    : [];
-                renderNotificationRows(snapshot);
-                notiInitialSnapshotLoaded = true;
-
-                additions.forEach((change) => {
-                    const id = String(change.doc?.id || '');
-                    if (id && notiAnnouncedIds.has(id)) return;
-                    if (id) notiAnnouncedIds.add(id);
-                    showIncomingNotification(change.doc?.data?.() || {});
-                });
-            }, (error) => {
-                reportNotificationFailure('알림 센터 연결 실패', error, '⚠️ 알림 센터를 실시간으로 연결하지 못했습니다.');
-            });
+        if (typeof ensureAnonymousAuth === 'function') await ensureAnonymousAuth();
     } catch (error) {
-        reportNotificationFailure('알림 구독 설정 실패', error, '⚠️ 알림 센터를 준비하지 못했습니다.');
+        try { console.warn('[알림] Firebase 인증 준비 실패:', error); } catch (_) {}
     }
+    if (version !== notiSubscriptionVersion || notiActiveUserId !== String(userId)) return;
+    subscribeToNotifications(userId, version, false);
 }
 
 function stopNotifications() {
+    // 인증 대기 중이던 이전 구독이 로그아웃 뒤 다시 붙지 않도록 무효화합니다.
+    notiSubscriptionVersion += 1;
     if (notiUnsubscribe) {
         try { notiUnsubscribe(); } catch (_) {}
         notiUnsubscribe = null;
