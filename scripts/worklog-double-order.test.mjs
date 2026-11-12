@@ -236,6 +236,11 @@ test('같은 날짜의 같은 선박은 직접 입력·터미널 머리말·공�
     );
 });
 
+test('근무일지가 실제 저장된 뒤에는 날짜를 포함한 저장 완료 메시지를 띄운다', () => {
+    assert.match(appJs, /showToast\(`✅ \$\{dStr\} 근무일지가 저장되었습니다/);
+    assert.match(appJs, /memoCleanup\.removedCount > 0 && `중복 작업내역 \$\{memoCleanup\.removedCount\}건 정리`/);
+});
+
 test('touching a vessel selects it, a second touch makes a double order and fills the work content', () => {
     const app = setup({ memo: '오늘 메모' });
     const { context, elements, toasts } = app;

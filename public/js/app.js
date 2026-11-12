@@ -5065,6 +5065,94 @@ function dedupeWorklogShipNames(names) {
     return { unique, duplicates };
 }
 
+/** 자동 전송한 임금 요약 한 줄만 식별합니다. 사용자가 쓴 일반 메모는 건드리지 않습니다. */
+function parseWorklogCalculatedWageLine(line) {
+    const match = String(line || "").match(/^\s*\[(?:더블|트리플|쿼드|멀티)오더\s*·\s*임금\s*([1-4])\s*·\s*([^\]]+?)\]\s*(.*)$/);
+    return match
+        ? { slot: Number(match[1]), vesselName: String(match[2] || "").trim(), summary: String(match[3] || "") }
+        : null;
+}
+
+/**
+ * 이미 열린 근무일지의 선박 순서를 기준으로 계산 결과를 어느 임금 칸에 넣을지 결정합니다.
+ * 다시 검색하면서 계산기 쪽 선박 순서가 바뀌어도, 같은 선박은 기존 자리·한 번의 기록만 유지합니다.
+ */
+function planWorklogCalculatedVesselSlots(currentNames, calculatedParts) {
+    const names = dedupeWorklogShipNames(currentNames).unique;
+    const slotByKey = new Map(names.map((name, index) => [normalizeWorklogShipKey(name), index]));
+    const assignments = [];
+    const assignedKeys = new Set();
+    let skippedCount = 0;
+
+    for (const part of calculatedParts || []) {
+        const key = normalizeWorklogShipKey(part?.name);
+        if (!key || assignedKeys.has(key)) {
+            if (key) skippedCount += 1;
+            continue;
+        }
+        let slot = slotByKey.get(key);
+        if (slot === undefined) {
+            if (names.length >= MAX_WORK_VESSELS) {
+                skippedCount += 1;
+                continue;
+            }
+            slot = names.length;
+            const name = String(part?.name || "").trim();
+            names.push(name);
+            slotByKey.set(key, slot);
+        }
+        assignedKeys.add(key);
+        assignments.push({ part, slot, vesselName: names[slot], key });
+    }
+    return { names, assignments, skippedCount };
+}
+
+/** 계산기로 자동 생성한 선박별 요약은 같은 선박이면 교체해, 재검색·재전송에도 한 줄만 남깁니다. */
+function replaceWorklogCalculatedWageMemo(memo, assignments, orderLabel) {
+    const assignmentByKey = new Map((assignments || []).map((item) => [item.key || normalizeWorklogShipKey(item?.vesselName || item?.part?.name), item]));
+    const retained = [];
+    let removedCount = 0;
+    for (const line of String(memo || "").split("\n")) {
+        const generated = parseWorklogCalculatedWageLine(line);
+        const key = generated ? normalizeWorklogShipKey(generated.vesselName) : "";
+        if (key && assignmentByKey.has(key)) {
+            removedCount += 1;
+            continue;
+        }
+        retained.push(line);
+    }
+    const freshLines = [...(assignments || [])]
+        .sort((a, b) => a.slot - b.slot)
+        .map((item) => `[${orderLabel} · 임금 ${item.slot + 1} · ${item.vesselName}] ${item.part.summary}`);
+    const existing = retained.join("\n").replace(/^\n+|\n+$/g, "").replace(/\n{3,}/g, "\n\n");
+    return {
+        memo: [existing, ...freshLines].filter(Boolean).join("\n"),
+        removedCount
+    };
+}
+
+/** 저장 직전에도 기존에 쌓인 동일 선박의 자동 임금 요약을 하나로 정리합니다. */
+function dedupeWorklogCalculatedWageMemo(memo, vesselNames) {
+    const knownVessels = new Set((vesselNames || []).map(normalizeWorklogShipKey).filter(Boolean));
+    const seen = new Set();
+    let removedCount = 0;
+    const lines = String(memo || "").split("\n").filter((line) => {
+        const generated = parseWorklogCalculatedWageLine(line);
+        const key = generated ? normalizeWorklogShipKey(generated.vesselName) : "";
+        if (!key || !knownVessels.has(key)) return true;
+        if (seen.has(key)) {
+            removedCount += 1;
+            return false;
+        }
+        seen.add(key);
+        return true;
+    });
+    return {
+        memo: lines.join("\n").replace(/^\n+|\n+$/g, "").replace(/\n{3,}/g, "\n\n"),
+        removedCount
+    };
+}
+
 /** 직접 입력·붙여넣기와 자동 등록의 마지막 안전장치입니다. */
 function normalizeWorklogShipInput(options) {
     const settings = options || {};
@@ -6892,7 +6980,11 @@ function saveWorkLog(){
     const w3 = parseFloat(document.getElementById('logWage3')?.value) || 0; 
     const w4 = parseFloat(document.getElementById('logWage4')?.value) || 0; 
     const coworkersInfo = document.getElementById('logCoworkers').value.trim(); 
-    const memo = document.getElementById('logMemo').value; 
+    // 과거에 같은 선박을 다시 전송해 쌓인 자동 임금 요약도 저장 시 한 번 더 정리합니다.
+    const memoInput = document.getElementById('logMemo');
+    const memoCleanup = dedupeWorklogCalculatedWageMemo(memoInput?.value, dedupedShipNames.unique);
+    if (memoInput) memoInput.value = memoCleanup.memo;
+    const memo = memoCleanup.memo;
     const file = document.getElementById('logImageInput').files[0]; 
     const pay = w1 + w2 + w3 + w4; 
 
@@ -6930,19 +7022,23 @@ function saveWorkLog(){
             trackAppEvent('actions', 'log_save');
             btn.innerText = "✅ 저장 완료!"; 
             btn.style.background = "var(--success)"; 
-            showToast(removedDuplicateCount > 0
-                ? `근무일지가 안전하게 저장되었습니다. (동일 날짜 중복 선박 ${removedDuplicateCount}척 제외)`
-                : "근무일지가 안전하게 저장되었습니다."); 
+            const cleanupNotices = [
+                removedDuplicateCount > 0 && `중복 선박 ${removedDuplicateCount}척 제외`,
+                memoCleanup.removedCount > 0 && `중복 작업내역 ${memoCleanup.removedCount}건 정리`
+            ].filter(Boolean);
+            // Firestore 기록 성공 뒤에만 날짜를 포함한 완료 알림을 띄워, 최초 저장 여부를 분명히 알립니다.
+            showToast(`✅ ${dStr} 근무일지가 저장되었습니다.${cleanupNotices.length ? ` (${cleanupNotices.join(' · ')})` : ''}`);
             
             // 데이터 즉시 갱신 (달력·근무시간 통계가 이 맵을 그대로 다시 그립니다).
             adminWorkLogs[dStr] = logData;
             renderCalendar(currentDate.getFullYear(), currentDate.getMonth());
 
             if (shouldOfferVesselInfoFollowUp) {
+                // 저장 완료 알림을 먼저 읽을 수 있도록 안내 모달은 약간 뒤에 엽니다.
                 setTimeout(() => startVesselInfoFollowUp("workLog", {
                     vesselName: shipNameInfo,
                     date: dStr
-                }), 350);
+                }), 3200);
             } 
 
             setTimeout(() => { 
@@ -7505,41 +7601,32 @@ async function sendCalculatedWageToLog() {
 
         if (calculatedData.isMultiVessel && Array.isArray(calculatedData.segments) && calculatedData.segments.length >= 2) {
             const parts = calculatedData.segments.slice(0, MAX_WORK_VESSELS);
-            const orderLabel = getMultiOrderLabel(parts.length);
-            for (let slot = 1; slot <= MAX_WORK_VESSELS; slot++) {
-                const wageEl = document.getElementById(`logWage${slot}`);
-                if (!wageEl) continue;
-                const part = parts[slot - 1];
-                if (part) wageEl.value = part.totalPay;
-                else if (slot > 2) wageEl.value = "";
-            }
-            syncWorklogWageSlotVisibility(parts.length);
-
-            if (logShipInput) {
-                // 기존에 등록된 선박을 덮어쓰지 않고 합친다(중복 제외).
-                const mergedShips = dedupeWorklogShipNames([
-                    ...parseWorklogShipNames(logShipInput.value),
-                    ...parts.map(item => item.name)
-                ]);
-                logShipInput.value = mergedShips.unique.slice(0, MAX_WORK_VESSELS).join(" / ");
-            }
-
-            const lines = parts.map((part, index) =>
-                `[${orderLabel} · 임금 ${index + 1} · ${part.name}] ${part.summary}`
+            // 계산기에서 다시 검색해 선박 순서가 바뀌어도, 열린 근무일지의 기존 선박·임금 칸 순서를 우선합니다.
+            const slotPlan = planWorklogCalculatedVesselSlots(
+                parseWorklogShipNames(logShipInput?.value),
+                parts
             );
+            const orderLabel = getMultiOrderLabel(slotPlan.names.length);
+            if (logShipInput) logShipInput.value = slotPlan.names.join(" / ");
+            slotPlan.assignments.forEach(({ part, slot }) => {
+                const wageEl = document.getElementById(`logWage${slot + 1}`);
+                if (wageEl) wageEl.value = part.totalPay;
+            });
+            syncWorklogWageSlotVisibility(slotPlan.names.length);
+
             if (memoInput) {
-                lines.forEach(line => {
-                    if (!memoInput.value.includes(line)) {
-                        memoInput.value = memoInput.value
-                            ? `${memoInput.value}\n${line}`
-                            : line;
-                    }
-                });
+                const memoResult = replaceWorklogCalculatedWageMemo(
+                    memoInput.value,
+                    slotPlan.assignments,
+                    orderLabel
+                );
+                memoInput.value = memoResult.memo;
                 if (typeof autoGrowWorkLogMemo === 'function') autoGrowWorkLogMemo(memoInput);
             }
 
             if (typeof refreshWorklogVesselList === "function") refreshWorklogVesselList(); trackAppEvent("actions", "wage_to_log");
-            showToast(`📅 ${orderLabel} 선박 ${parts.length}척의 금액을 ${parts.map((_, idx) => `임금 ${idx + 1}`).join("·")}에 각각 입력했습니다. 저장을 눌러 기록하세요.`);
+            const skippedNotice = slotPlan.skippedCount ? ` (중복·최대 초과 ${slotPlan.skippedCount}척 제외)` : "";
+            showToast(`📅 ${orderLabel} 선박 ${slotPlan.assignments.length}척의 금액을 기존 선박 순서에 맞춰 입력했습니다. 저장을 눌러 기록하세요.${skippedNotice}`);
             return;
         }
 
@@ -7560,7 +7647,21 @@ async function sendCalculatedWageToLog() {
         const logSummary = isDoubleOrder
             ? `[더블오더 · 임금 2${shipName ? ` · ${shipName}` : ''}] ${summary}`
             : summary;
-        if (memoInput && !memoInput.value.includes(logSummary)) {
+        if (memoInput && isDoubleOrder && shipName) {
+            // 두 번째 오더를 다시 계산·전송해도 같은 선박의 예전 자동 요약은 교체합니다.
+            const memoResult = replaceWorklogCalculatedWageMemo(
+                memoInput.value,
+                [{
+                    part: { name: shipName, summary },
+                    slot: 1,
+                    vesselName: shipName,
+                    key: normalizeWorklogShipKey(shipName)
+                }],
+                "더블오더"
+            );
+            memoInput.value = memoResult.memo;
+            if (typeof autoGrowWorkLogMemo === 'function') autoGrowWorkLogMemo(memoInput);
+        } else if (memoInput && !memoInput.value.includes(logSummary)) {
             memoInput.value = memoInput.value
                 ? `${memoInput.value}\n${logSummary}`
                 : logSummary;
