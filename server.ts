@@ -620,7 +620,7 @@ export function calculateScheduleDiffMinutes(oldTime: any, newTime: any): number
 }
 
 /**
- * 출항/접안 시간이 기준 시간(기본 60분 = 1시간) 이상 변동되었는지 판정합니다.
+ * 접안 예정 시각이 기준 시간(기본 60분 = 1시간) 이상 변동되었는지 판정합니다.
  */
 export function isScheduleShiftedByAtLeastOneHour(
   oldTime: any,
@@ -630,6 +630,13 @@ export function isScheduleShiftedByAtLeastOneHour(
   const diff = calculateScheduleDiffMinutes(oldTime, newTime);
   if (diff === null) return false;
   return Math.abs(diff) >= thresholdMinutes;
+}
+
+/** 이전·현재 출항 예정 시각이 실제로 달라졌는지 분 단위까지 확인합니다. */
+export function hasDepartureTimeChanged(oldTime: any, newTime: any): boolean {
+  const oldNormalized = normalizeDateTimeStr(oldTime);
+  const newNormalized = normalizeDateTimeStr(newTime);
+  return Boolean(oldNormalized && newNormalized && oldNormalized !== newNormalized);
 }
 
 function stripTags(html: string): string {
@@ -1520,7 +1527,7 @@ async function fetchTerminalScheduleVesselsUncached(tid: string, startDate: stri
   return [];
 }
 
-// --- 1순위: 선박 출항/접안 스케줄 변경(1시간 이상) 감지 및 투트랙 알림 파이프라인 ---
+// --- 선박 출항 시각 변경·접안 시각 1시간 이상 변경 감지 및 알림 파이프라인 ---
 async function sendPushNotification(userId: string, title: string, body: string): Promise<boolean> {
   try {
     if (getApps().length === 0) return false;
@@ -1593,7 +1600,7 @@ export async function runScheduleChangeDetection(): Promise<{ changedVessels: nu
         const oldAtd = data.ATD || null;
         const oldEtb = data.ETB || null;
 
-        if (oldAtd && v.ATD && isScheduleShiftedByAtLeastOneHour(oldAtd, v.ATD)) {
+        if (oldAtd && v.ATD && hasDepartureTimeChanged(oldAtd, v.ATD)) {
           changedField = 'ATD';
           oldTime = oldAtd;
           newTime = v.ATD;
@@ -1621,9 +1628,16 @@ export async function runScheduleChangeDetection(): Promise<{ changedVessels: nu
       if (changedField && oldTime && newTime) {
         changedVessels += 1;
         const label = changedField === 'ATD' ? '출항' : '접안';
-        const diffHours = (Math.abs(diffMinutes) / 60).toFixed(1).replace(/\.0$/, '');
-        const direction = diffMinutes > 0 ? `${diffHours}시간 지연` : `${diffHours}시간 조기`;
-        console.log(`[CRON] ${label}시간 1시간 이상 변경 감지: ${v.VSL_NM} (${oldTime} -> ${newTime}, ${direction})`);
+        const absoluteDiffMinutes = Math.abs(diffMinutes);
+        const diffLabel = absoluteDiffMinutes < 60
+          ? `${absoluteDiffMinutes}분`
+          : `${(absoluteDiffMinutes / 60).toFixed(1).replace(/\.0$/, '')}시간`;
+        const direction = diffMinutes > 0
+          ? `${diffLabel} 지연`
+          : diffMinutes < 0
+            ? `${diffLabel} 조기`
+            : '표기 변경';
+        console.log(`[CRON] ${label}시간 변경 감지: ${v.VSL_NM} (${oldTime} -> ${newTime}, ${direction})`);
 
         const snapshot = await logsRef.where('date', '>=', startDate).where('date', '<=', endDate).get();
         const notifiedUsers = new Set<string>();
@@ -2829,7 +2843,7 @@ export async function runServerWeeklySelfCheck(
 // (매시간 스케줄 감시 — .github/workflows/cron-schedule-watch.yml)가
 // 아래의 /api/cron/* 엔드포인트를 호출해 동일한 작업을 실행합니다.
 if (process.env.NODE_ENV !== 'test' && !IS_VERCEL) {
-  // 1) 매 정각(0 * * * *) 터미널 스케줄 수집 및 1시간 이상 출항/접안 변동 푸시 알림
+  // 1) 매 정각 터미널 스케줄 수집 및 출항 시각 변경·접안 시각 1시간 이상 변동 알림
   cron.schedule('0 * * * *', () => {
     console.log('[CRON] 선박 출항/접안 스케줄 변경 감지 시작...', new Date().toISOString());
     void runScheduleChangeDetection();

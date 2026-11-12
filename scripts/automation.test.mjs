@@ -67,26 +67,34 @@ function createCommunitySandbox() {
   return { sandbox, addedNotifications };
 }
 
-test('1순위: server.ts에 1시간(60분) 이상 출항/접안 변동 감지 및 FCM 알림 파이프라인이 구현되어 있다', () => {
+test('출항 시각의 모든 변경은 알림 대상이고 접안 시각은 1시간 이상 변경 시 알림 대상이다', () => {
   assert.doesNotMatch(serverCode, /\/\/\s*@ts-nocheck/, 'server.ts에 @ts-nocheck가 없어야 합니다');
   assert.match(serverCode, /import\s+'dotenv\/config'/, '.env 자동 로드가 포함되어야 합니다');
   assert.match(serverCode, /SCHEDULE_DIFF_THRESHOLD_MINUTES\s*=\s*Number\(process\.env\.SCHEDULE_DIFF_THRESHOLD_MINUTES\)\s*\|\|\s*60/);
   assert.match(serverCode, /export\s+function\s+calculateScheduleDiffMinutes/);
   assert.match(serverCode, /export\s+function\s+isScheduleShiftedByAtLeastOneHour/);
+  assert.match(serverCode, /export\s+function\s+hasDepartureTimeChanged/);
+  assert.match(serverCode, /oldAtd && v\.ATD && hasDepartureTimeChanged\(oldAtd, v\.ATD\)/, '출항 시각은 1시간 미만 변경도 감지해야 합니다');
+  assert.match(serverCode, /oldEtb && v\.ETB && isScheduleShiftedByAtLeastOneHour\(oldEtb, v\.ETB\)/, '접안 시각은 기존 임계값을 유지해야 합니다');
   assert.match(serverCode, /app\.get\('\/api\/config'/);
 
   // 스케줄 시간 차이 계산 검증을 위해 순수 함수 추출 실행
   const fnSandbox = { Date, Math, Number, String };
   vm.createContext(fnSandbox);
   const normalizeMatch = serverCode.match(/export function normalizeDateTimeStr[\s\S]*?^}/m);
+  const departureChangedMatch = serverCode.match(/export function hasDepartureTimeChanged[\s\S]*?^}/m);
   const parseMatch = serverCode.match(/export function parseScheduleTimeMs[\s\S]*?^}/m);
   const diffMatch = serverCode.match(/export function calculateScheduleDiffMinutes[\s\S]*?^}/m);
   const shiftMatch = serverCode.match(/export function isScheduleShiftedByAtLeastOneHour[\s\S]*?^}/m);
-  assert.ok(normalizeMatch && parseMatch && diffMatch && shiftMatch, '스케줄 비교 함수가 모두 존재해야 합니다');
+  assert.ok(normalizeMatch && departureChangedMatch && parseMatch && diffMatch && shiftMatch, '스케줄 비교 함수가 모두 존재해야 합니다');
 
   const runnable = [
     'const SCHEDULE_DIFF_THRESHOLD_MINUTES = 60;',
     normalizeMatch[0].replace(/^export\s+/, '').replace(/:\s*any/g, '').replace(/:\s*string/g, ''),
+    departureChangedMatch[0]
+      .replace(/^export\s+/, '')
+      .replace(/oldTime:\s*any,\s*newTime:\s*any/, 'oldTime, newTime')
+      .replace(/:\s*boolean/g, ''),
     parseMatch[0].replace(/^export\s+/, '').replace(/:\s*any/g, '').replace(/:\s*number\s*\|\s*null/g, ''),
     diffMatch[0].replace(/^export\s+/, '').replace(/:\s*any/g, '').replace(/:\s*number\s*\|\s*null/g, ''),
     shiftMatch[0]
@@ -97,6 +105,9 @@ test('1순위: server.ts에 1시간(60분) 이상 출항/접안 변동 감지 �
   vm.runInContext(runnable, fnSandbox);
 
   assert.equal(fnSandbox.calculateScheduleDiffMinutes('2026-10-13 14:00', '2026-10-13 14:30'), 30);
+  assert.equal(fnSandbox.hasDepartureTimeChanged('2026-10-13 14:00', '2026-10-13 14:01'), true, '1분 변경도 출항 알림 대상');
+  assert.equal(fnSandbox.hasDepartureTimeChanged('2026-10-13 14:00', '2026-10-13 14:00'), false, '시각이 같으면 중복 알림하지 않음');
+  assert.equal(fnSandbox.hasDepartureTimeChanged('', '2026-10-13 14:01'), false, '이전 기준이 없으면 신규 스케줄 알림하지 않음');
   assert.equal(fnSandbox.isScheduleShiftedByAtLeastOneHour('2026-10-13 14:00', '2026-10-13 14:30'), false);
   assert.equal(fnSandbox.calculateScheduleDiffMinutes('2026-10-13 14:00', '2026-10-13 15:00'), 60);
   assert.equal(fnSandbox.isScheduleShiftedByAtLeastOneHour('2026-10-13 14:00', '2026-10-13 15:00'), true);
