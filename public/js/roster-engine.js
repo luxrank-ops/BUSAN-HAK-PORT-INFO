@@ -241,8 +241,8 @@ function collectRosterScheduleEntries(schedules) {
 }
 
 /**
- * OCR 선박명은 고치지 않고, 해당 날짜의 전 터미널 입·출항 스케줄과 비교한 결과만 돌려줍니다.
- * `candidate`는 OCR 원문을 대체하지 않으며, 검토자가 명시적으로 선택할 때만 스케줄명을 쓸 수 있습니다.
+ * OCR 선박명을 해당 날짜의 전 터미널 입·출항 스케줄과 비교합니다.
+ * 후보 판정 자체는 원문을 바꾸지 않으며, 단일 활성 후보는 이후 검토 흐름에서 스케줄명으로 확정합니다.
  */
 function verifyRosterPhotoVesselName(row, schedules) {
     const literalName = String(row?.vessel || "").trim();
@@ -271,6 +271,48 @@ function verifyRosterPhotoVesselName(row, schedules) {
 
 function buildRosterPhotoVesselVerifications(rows, schedules) {
     return (rows || []).map((row) => verifyRosterPhotoVesselName(row, schedules));
+}
+
+/**
+ * 사용자가 선택한 규칙: 사진 선박명이 불명확해도 해당 날짜에 활성인 부분 일치 스케줄 후보가
+ * 정확히 한 척이면 스케줄의 정식 선박명을 검토 행에 자동 반영합니다. 복수 후보·날짜 불일치·
+ * 미발견은 절대 자동 반영하지 않습니다.
+ */
+function applyUniqueRosterPhotoScheduleNames(rows, verifications) {
+    let applied = 0;
+    (rows || []).forEach((row, index) => {
+        const check = verifications?.[index];
+        const currentName = String(row?.vessel || "").trim();
+        const priorOcrName = String(row?.scheduleNameSource || "").trim();
+        const matchedScheduleName = String(check?.matches?.[0]?.vessel?.VSL_NM || "").trim();
+        // 재확인해도 이전 OCR 원문과 확정 근거를 검토 화면에 계속 남깁니다.
+        if (check?.status === "verified" && priorOcrName && matchedScheduleName
+            && normalizeRosterVesselKey(currentName) === normalizeRosterVesselKey(matchedScheduleName)) {
+            verifications[index] = {
+                ...check,
+                status: "auto-corrected",
+                literalName: priorOcrName,
+                officialName: matchedScheduleName,
+                automaticallyApplied: true
+            };
+            return;
+        }
+        const candidate = check?.status === "candidate" ? check.matches?.[0]?.vessel : null;
+        const vesselName = String(candidate?.VSL_NM || "").trim();
+        if (!row || !candidate || !vesselName || !currentName) return;
+        if (normalizeRosterVesselKey(currentName) === normalizeRosterVesselKey(vesselName)) return;
+        row.vessel = vesselName;
+        row.scheduleNameSource = currentName;
+        verifications[index] = {
+            ...check,
+            status: "auto-corrected",
+            literalName: currentName,
+            officialName: vesselName,
+            automaticallyApplied: true
+        };
+        applied += 1;
+    });
+    return applied;
 }
 
 function isRosterFinderUnlocked() {
@@ -1062,7 +1104,7 @@ function rosterPhotoScheduleValue(vessel, fields) {
     return "-";
 }
 
-function rosterPhotoVerificationHtml(verification, index) {
+function rosterPhotoVerificationHtml(verification) {
     const check = verification || { status: "pending", matches: [] };
     const first = check.matches?.[0];
     const terminal = first && typeof getTerminalMeta === "function"
@@ -1070,19 +1112,20 @@ function rosterPhotoVerificationHtml(verification, index) {
         : null;
     const terminalLabel = terminal?.badge || String(first?.terminalId || "").toUpperCase();
     const vesselName = String(first?.vessel?.VSL_NM || "").trim();
+    const correctionInfo = check.status === "auto-corrected"
+        ? ` · OCR ${escapeShipCommentHtml(check.literalName)} → 스케줄 정식명 ${escapeShipCommentHtml(check.officialName || vesselName)}`
+        : "";
     const scheduleInfo = first
-        ? ` · ${escapeShipCommentHtml(terminalLabel)} · ${escapeShipCommentHtml(vesselName)} · 입항 ${escapeShipCommentHtml(rosterPhotoScheduleValue(first.vessel, ["ATA", "ETB", "ATW"]))} · 출항 ${escapeShipCommentHtml(rosterPhotoScheduleValue(first.vessel, ["ATD", "ATC"]))}`
+        ? ` · ${escapeShipCommentHtml(terminalLabel)}${correctionInfo || ` · ${escapeShipCommentHtml(vesselName)}`} · 입항 ${escapeShipCommentHtml(rosterPhotoScheduleValue(first.vessel, ["ATA", "ETB", "ATW"]))} · 출항 ${escapeShipCommentHtml(rosterPhotoScheduleValue(first.vessel, ["ATD", "ATC"]))}`
         : "";
     const more = check.matches?.length > 1 ? ` 외 ${check.matches.length - 1}척` : "";
-    const candidateButton = check.status === "candidate" && vesselName
-        ? `<button type="button" class="roster-photo-schedule-name-btn" onclick="applyRosterPhotoScheduleCandidate(${index})">스케줄명으로 바꾸기</button>`
-        : "";
     const labels = {
         pending: "⏳ 스케줄 교차 확인 대기",
         loading: "⏳ 전 터미널 입·출항 스케줄 확인 중",
         verified: "✅ 입·출항 스케줄과 선박명 일치",
-        candidate: "🔎 비슷한 스케줄 선박 후보 — 사진 원문은 유지됨",
-        ambiguous: "⚠️ 비슷한 스케줄 선박이 여러 척 — 사진을 보고 선택",
+        "auto-corrected": "✅ 단일 활성 스케줄 후보로 정식 선박명 자동 확정",
+        candidate: "🔎 비슷한 스케줄 선박 후보 확인 중",
+        ambiguous: "⚠️ 비슷한 스케줄 선박이 여러 척 — 자동 확정하지 않음",
         "date-mismatch": "⚠️ 같은 선박명이지만 입력 날짜의 입·출항 일정과 다름",
         "not-found": "⚠️ 해당 날짜 전 터미널 스케줄에서 선박명을 찾지 못함",
         "schedule-unavailable": "ℹ️ 스케줄 데이터가 없어 교차 확인 보류",
@@ -1090,7 +1133,7 @@ function rosterPhotoVerificationHtml(verification, index) {
         "missing-name": "ℹ️ 선박명을 입력하면 입·출항 스케줄과 교차 확인",
         stale: "✏️ 선박명 또는 날짜를 수정함 — 스케줄 재확인 필요"
     };
-    return `<div class="roster-photo-schedule-check is-${escapeShipCommentHtml(check.status || "pending")}"><span>${labels[check.status] || labels.pending}${scheduleInfo}${more}</span>${candidateButton}</div>`;
+    return `<div class="roster-photo-schedule-check is-${escapeShipCommentHtml(check.status || "pending")}"><span>${labels[check.status] || labels.pending}${scheduleInfo}${more}</span></div>`;
 }
 
 function summarizeRosterPhotoVerification(verifications) {
@@ -1100,6 +1143,7 @@ function summarizeRosterPhotoVerification(verifications) {
     }, {});
     const parts = [];
     if (counts.verified) parts.push(`일치 ${counts.verified}척`);
+    if (counts["auto-corrected"]) parts.push(`스케줄 정식명 확정 ${counts["auto-corrected"]}척`);
     if (counts.candidate) parts.push(`후보 ${counts.candidate}척`);
     if (counts.ambiguous || counts["date-mismatch"] || counts["not-found"]) parts.push(`확인 필요 ${(counts.ambiguous || 0) + (counts["date-mismatch"] || 0) + (counts["not-found"] || 0)}척`);
     if (counts["schedule-unavailable"]) parts.push(`스케줄 보류 ${counts["schedule-unavailable"]}척`);
@@ -1133,25 +1177,16 @@ async function verifyRosterPhotoVessels() {
     }
     if (requestId !== rosterRuntime.reviewVerificationRequestId) return [];
     const verifications = buildRosterPhotoVesselVerifications(rows, schedules);
+    const autoApplied = applyUniqueRosterPhotoScheduleNames(rosterRuntime.reviewRows, verifications);
     rosterRuntime.reviewVerifications = verifications;
     rosterRuntime.reviewVerificationState = "ready";
     renderRosterPhotoRows();
-    setRosterPhotoStatus(`🗓️ 사진의 선박명은 바꾸지 않고 입·출항 스케줄과 교차 확인했습니다. ${summarizeRosterPhotoVerification(verifications)}`);
+    const automaticMessage = autoApplied
+        ? ` 단일 활성 후보 ${autoApplied}척은 스케줄 정식명으로 자동 확정했습니다.`
+        : "";
+    setRosterPhotoStatus(`🗓️ 입·출항 스케줄과 교차 확인했습니다.${automaticMessage} ${summarizeRosterPhotoVerification(verifications)}`);
     trackAppEvent?.("actions", "roster_photo_schedule_verify");
     return verifications;
-}
-
-function applyRosterPhotoScheduleCandidate(index) {
-    const row = rosterRuntime.reviewRows[index];
-    const candidate = rosterRuntime.reviewVerifications[index]?.matches?.[0]?.vessel;
-    const vesselName = String(candidate?.VSL_NM || "").trim();
-    if (!row || !vesselName) return;
-    row.vessel = vesselName;
-    rosterRuntime.reviewVerifications[index] = { status: "stale", matches: [] };
-    rosterRuntime.reviewVerificationState = "stale";
-    renderRosterPhotoRows();
-    setRosterPhotoStatus(`✍️ ${vesselName} 스케줄명을 검토 행에 반영했습니다. 다시 교차 확인합니다.`);
-    verifyRosterPhotoVessels();
 }
 
 function renderRosterPhotoRows() {
@@ -1188,6 +1223,7 @@ function updateRosterPhotoRow(index, field, value) {
     else if (field === "date") row.date = /^\d{4}-\d{2}-\d{2}$/.test(String(value || "")) ? String(value) : "";
     else row[field] = String(value || "").trim();
     if (field === "date" || field === "vessel") {
+        delete row.scheduleNameSource;
         // 이전 값으로 진행 중이던 비동기 스케줄 조회 결과가 새 입력을 덮어쓰지 않게 합니다.
         rosterRuntime.reviewVerificationRequestId += 1;
         rosterRuntime.reviewVerifications[index] = { status: "stale", matches: [] };
