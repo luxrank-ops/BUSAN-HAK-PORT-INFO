@@ -58,6 +58,52 @@ test('OCR 텍스트는 날짜 상속·선박·시간·회사·지원·조·작�
     assert.ok(byVessel['CMA CGM AUSTRAL'].workers.includes('김민재2'));
 });
 
+test('OCR이 한 글자씩 띄운 작업자 이름도 명단 이름으로 복구한다', () => {
+    const photo = createPhotoVm();
+    const result = JSON.parse(JSON.stringify(photo.run(`parseRosterPhotoText(${JSON.stringify(`2026. 11. 12
+SM LONG BEACH 08:00
+이 수 열 김 명 준 김 근 우 1`)}, { defaultYear: 2026 })`)));
+    assert.deepEqual(result.entries[0].workers, ['이수열', '김명준', '김근우1']);
+});
+
+test('공백 복구는 일반 한글 문구와 명단 머리말을 작업자로 오인하지 않는다', () => {
+    const photo = createPhotoVm();
+    assert.deepEqual(
+        JSON.parse(JSON.stringify(photo.run(`recoverFragmentedRosterWorkerNames(${JSON.stringify('이 수 열차 운행 안내')})`))),
+        []
+    );
+    assert.deepEqual(
+        JSON.parse(JSON.stringify(photo.run(`pickWorkersFromOcrLine(${JSON.stringify('근무 명단: 이 수 열')})`))),
+        []
+    );
+});
+
+test('OCR 이미지 보정은 최대 변 길이를 지키고 대비·흑백 보정본을 만든다', () => {
+    const photo = createPhotoVm();
+    assert.equal(photo.run('getRosterOcrScale(600, 3000)'), 2000 / 3000);
+    assert.equal(photo.run('getRosterOcrScale(600, 1200)'), 2000 / 1200);
+    const enhanced = JSON.parse(JSON.stringify(photo.run(`(() => {
+        const pixels = { data: new Uint8ClampedArray([20, 40, 60, 255, 220, 230, 240, 255]) };
+        enhanceRosterOcrPixels(pixels, 'enhanced');
+        return [...pixels.data];
+    })()`)));
+    assert.equal(enhanced[0], enhanced[1]);
+    assert.equal(enhanced[1], enhanced[2]);
+    const binary = JSON.parse(JSON.stringify(photo.run(`(() => {
+        const pixels = { data: new Uint8ClampedArray([10, 10, 10, 255, 245, 245, 245, 255]) };
+        enhanceRosterOcrPixels(pixels, 'binary');
+        return [...pixels.data];
+    })()`)));
+    assert.ok(binary.slice(0, 3).every((value) => value === 0 || value === 255));
+    assert.ok(binary.slice(4, 7).every((value) => value === 0 || value === 255));
+    const whitePage = JSON.parse(JSON.stringify(photo.run(`(() => {
+        const pixels = { data: new Uint8ClampedArray([255, 255, 255, 255, 255, 255, 255, 255]) };
+        enhanceRosterOcrPixels(pixels, 'enhanced');
+        return [...pixels.data];
+    })()`)));
+    assert.ok(whitePage.every((value, index) => index % 4 === 3 || value === 255));
+});
+
 test('OCR 결과가 날짜 또는 선박을 찾지 못하면 검토용 경고를 제공한다', () => {
     const photo = createPhotoVm();
     const noDate = photo.run(`parseRosterPhotoText('PRESIDENT CARTER 00:00 고려\\n이춘학 안영준', { defaultYear: 2026 })`);
