@@ -49,7 +49,7 @@ test('이름 일부를 검색하면 그 이름이 들어간 모든 배정을 한
     assert.equal(matches.length, 5, '김근우와 김근우1이 들어간 5척을 모두 보여야 합니다');
     assert.deepEqual(matches.map((row) => row.vessel).sort(), ['CMA CGM AUSTRAL', 'CMA CGM PANAMA', 'PRESIDENT CARTER', 'ULTIMA', 'YM WAYFINDER']);
 
-    // 작업자·선박명 양쪽에서 나온 결과는 모두 합치되, 같은 배정은 한 번만 보입니다.
+    // 작업자·선박명 양쪽에서 발견한 행은 합치지 않아, 같은 원문 행도 발견 경로별로 그대로 보입니다.
     const unionRoster = createRosterVm();
     unionRoster.run(`rosterRuntime.photoAssignments = mergeRosterPhotoEntries([
         { date: '2026-11-12', vessel: '김성원호', workers: ['김성원'] },
@@ -57,8 +57,8 @@ test('이름 일부를 검색하면 그 이름이 들어간 모든 배정을 한
         { date: '2026-11-13', vessel: '김성원2호', workers: ['다른 작업자'] }
     ]);`);
     const combined = JSON.parse(JSON.stringify(unionRoster.run('findAllRosterAssignments("김성원")')));
-    assert.equal(combined.assignments.length, 3, '작업자 2척과 선박명 2척의 합집합에서 겹친 1척은 한 번만 보여야 합니다');
-    assert.deepEqual(combined.assignments.map((row) => row.vessel).sort(), ['김성원2호', '김성원호', '다른 선박']);
+    assert.equal(combined.assignments.length, 4, '작업자 2행과 선박명 2행을 자동으로 합치지 않아야 합니다');
+    assert.deepEqual(combined.assignments.map((row) => row.vessel).sort(), ['김성원2호', '김성원호', '김성원호', '다른 선박']);
     assert.equal(combined.mode, '작업자·선박');
 });
 
@@ -101,7 +101,7 @@ test('직접 추가 명단은 로컬 저장소에서 복원되며 유효하지 �
     assert.equal(vmRoster.run('findRosterAssignmentsByWorker("홍 길 동")[0].vessel'), 'TEST SHIP');
 });
 
-test('작업자 중복은 같은 날짜·선박·이름 조합에서만 막고 다른 선박 배정은 유지한다', () => {
+test('직접 추가한 근무배치 행은 같은 날짜·선박·이름이라도 자동으로 제외하거나 합치지 않는다', () => {
     const fields = {
         rosterExtraWorker: { value: '' },
         rosterExtraVessel: { value: '' },
@@ -125,18 +125,18 @@ test('작업자 중복은 같은 날짜·선박·이름 조합에서만 막고 �
     };
 
     add('홍길동', 'SHIP ALPHA');
-    add('홍 길 동', '[BNCT] ship alpha'); // 동일 선박·동일 이름: 중복
-    add('홍길동', 'SHIP BRAVO'); // 이름이 같아도 다른 선박: 별도 배정
-    add('김철수', 'SHIP ALPHA'); // 선박이 같아도 다른 이름: 별도 배정
+    add('홍 길 동', '[BNCT] ship alpha');
+    add('홍길동', 'SHIP BRAVO');
+    add('김철수', 'SHIP ALPHA');
 
-    assert.equal(vmRoster.localStorage.data.busanPortRosterExtra ? JSON.parse(vmRoster.localStorage.data.busanPortRosterExtra).length : 0, 3);
-    assert.ok(toasts.some((message) => message.includes('이미 있습니다')));
+    assert.equal(vmRoster.localStorage.data.busanPortRosterExtra ? JSON.parse(vmRoster.localStorage.data.busanPortRosterExtra).length : 0, 4);
+    assert.equal(toasts.some((message) => message.includes('이미 있습니다')), false);
     const assignments = JSON.parse(JSON.stringify(vmRoster.run('getAllRosterAssignments()')));
-    assert.equal(assignments.length, 2);
-    assert.deepEqual(assignments.find((row) => row.vessel === 'SHIP ALPHA').workers, ['홍길동', '김철수']);
+    assert.equal(assignments.length, 4);
+    assert.deepEqual(assignments.map((row) => row.vessel), ['SHIP ALPHA', '[BNCT] ship alpha', 'SHIP BRAVO', 'SHIP ALPHA']);
     assert.deepEqual(
         JSON.parse(JSON.stringify(vmRoster.run('findRosterAssignmentsByWorker("홍길동").map((row) => row.vessel).sort()'))),
-        ['SHIP ALPHA', 'SHIP BRAVO']
+        ['SHIP ALPHA', 'SHIP BRAVO', '[BNCT] ship alpha']
     );
 });
 
@@ -153,7 +153,7 @@ test('전 터미널 대입은 정확 일치를 먼저 찾고 부분 일치는 �
     assert.equal(roster.run('matchScheduleVesselByName(null, "MAGNA")'), null);
 });
 
-test('선박 중복 판정은 공백·대소문자·터미널 머리말을 제거하며 순서를 보존한다', () => {
+test('임금·근무일지 공용 선박 목록 정리기는 공백·대소문자·터미널 머리말을 제거하며 순서를 보존한다', () => {
     const value = JSON.parse(JSON.stringify(roster.run(`dedupeVesselNameList([
         ' [HJNC] CMA CGM PANAMA ', 'cma cgm panama', 'MAGNA', ' MAGNA '
     ])`)));
@@ -161,23 +161,10 @@ test('선박 중복 판정은 공백·대소문자·터미널 머리말을 제�
     assert.deepEqual(value.duplicates, ['cma cgm panama', 'MAGNA']);
 });
 
-test('근무일지 저장 기록과 열린 폼 모두를 중복 방지 기준으로 사용한다', () => {
-    const vmRoster = createRosterVm({
-        adminWorkLogs: { '2026-11-11': { shipName: 'MAGNA / [BNCT] ONE APUS' } },
-        getActiveWorkLogDate: () => '2026-11-11',
-        parseWorklogShipNames: (value) => String(value || '').split('/').map((name) => name.trim()).filter(Boolean),
-        document: {
-            getElementById: (id) => id === 'logShipName' ? { value: 'CMA CGM PANAMA' } : null,
-            querySelector: () => null,
-            querySelectorAll: () => []
-        }
-    });
-    assert.equal(vmRoster.run('isVesselRegisteredOnDate("one apus", "2026-11-11")'), true);
-    assert.equal(vmRoster.run('isVesselRegisteredOnDate("cma cgm panama", "2026-11-11")'), true);
-    assert.deepEqual(
-        JSON.parse(JSON.stringify(vmRoster.run('splitNewAndDuplicateVessels(["MAGNA", "NEW SHIP"], ["magna"])'))),
-        { toAdd: ['NEW SHIP'], skipped: ['MAGNA'] }
-    );
+test('근무배치 엔진은 근무일지에 이미 있는 선박을 찾아 자동으로 건너뛰지 않는다', () => {
+    assert.equal(engine.includes('function isVesselRegisteredOnDate'), false);
+    assert.equal(engine.includes('function splitNewAndDuplicateVessels'), false);
+    assert.equal(engine.includes('이미 등록되어 제외했습니다'), false);
 });
 
 test('화면은 기존 근무배치 카드와 검색·직접 추가·PIN 진입점을 유지한다', () => {

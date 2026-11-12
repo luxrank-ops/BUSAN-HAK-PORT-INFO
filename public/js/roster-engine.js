@@ -27,8 +27,8 @@ const ROSTER_MAX_IMAGE_BYTES = 15 * 1024 * 1024;
 const ROSTER_MAX_IMAGE_EDGE = 2000;
 const ROSTER_FINDER_BETA_LOCK = true;
 const ROSTER_COMPANIES = ["고려", "세정", "코엠", "조영", "한진", "동원", "국제", "북항", "허치슨", "KML", "KMT", "PNC", "HMM", "PNIT", "BPTC", "BNCT", "HJNC", "DGT", "HPNT", "HBCT", "BCT"];
-const ROSTER_VESSEL_PREFIXES = new Set(["CMA", "COSCO", "EVER", "EVERGREEN", "HAPAG", "HMM", "KMTC", "MAERSK", "MSC", "ONE", "OOCL", "PIL", "SITC", "SM", "WAN", "YANG", "ZIM"]);
-const ROSTER_NAME_NOISE = new Set(["지원", "명단", "작업", "선박", "배치", "입항", "출항", "접안", "선석", "부산", "신항", "터미널", "근무", "당일", "전체", "이름", "비고", "합계", "시간", "회사", "야간", "주간", "조출", "잔업", "휴무", "연장", "정상", "확정", "예정", "변경", "공지", "안내", "첨부", "사진", "명령", "작성", "확인", "담당", "기사", "본부", "센터", "지점", "계획", "실시"]);
+// OCR 검토표는 보정·제외·안전 차단 없이 인식한 내용을 그대로 보여 줍니다.
+// 날짜와 영문 선박명은 검토 행을 만들기 위한 최소 구조 정보로만 사용합니다.
 
 const rosterRuntime = {
     hydrated: false,
@@ -59,23 +59,12 @@ function normalizeRosterVesselKey(value) {
         .toLocaleUpperCase("ko-KR");
 }
 
-function rosterAssignmentKey(row) {
-    return `${String(row?.date || "")}|${normalizeRosterVesselKey(row?.vessel)}`;
-}
-
-/** 같은 날짜·선박 안에서 같은 작업자일 때만 같은 배정으로 봅니다. */
-function rosterWorkerAssignmentKey(row, worker) {
-    return `${rosterAssignmentKey(row)}|${normalizeRosterWorkerName(worker)}`;
-}
-
 function normalizeRosterAssignment(row, source) {
     const vessel = String(row?.vessel || "").trim();
     if (!vessel) return null;
-    const workers = Array.isArray(row?.workers) ? row.workers : [row?.worker];
-    const dedupedWorkers = [...new Map(workers
+    const workers = (Array.isArray(row?.workers) ? row.workers : [row?.worker])
         .map((name) => String(name || "").trim())
-        .filter(Boolean)
-        .map((name) => [normalizeRosterWorkerName(name), name])).values()];
+        .filter(Boolean);
     return {
         date: /^\d{4}-\d{2}-\d{2}$/.test(String(row?.date || "")) ? String(row.date) : "",
         vessel,
@@ -83,7 +72,7 @@ function normalizeRosterAssignment(row, source) {
         company: String(row?.company || "").trim(),
         support: String(row?.support || "").trim(),
         group: String(row?.group || "").trim(),
-        workers: dedupedWorkers,
+        workers,
         source: source || String(row?.source || "manual")
     };
 }
@@ -131,23 +120,11 @@ function getAllRosterAssignments() {
         getRosterExtraEntries(),
         ...(isBuiltinPhotoRosterSuppressed() ? [] : [ROSTER_SEED_ASSIGNMENTS])
     ];
-    const assignments = new Map();
-    for (const source of sources) {
-        for (const raw of source) {
-            const row = normalizeRosterAssignment(raw, raw?.source);
-            if (!row || !row.workers.length) continue;
-            const key = rosterAssignmentKey(row);
-            const existing = assignments.get(key);
-            if (!existing) {
-                assignments.set(key, row);
-                continue;
-            }
-            // 같은 선박의 다른 작업자는 별도 배정입니다. 한 선박 카드에 모두 보존하되,
-            // 같은 이름만 정규화해 한 번으로 합칩니다.
-            assignments.set(key, { ...existing, workers: mergeWorkers(existing.workers, row.workers) });
-        }
-    }
-    return [...assignments.values()];
+    // 사진·직접 입력·시작용 명단에서 읽은 행을 원문 순서 그대로 사용합니다.
+    // 같은 날짜·선박·이름이라도 자동으로 합치거나 제외하지 않습니다.
+    return sources.flatMap((source) => source
+        .map((raw) => normalizeRosterAssignment(raw, raw?.source))
+        .filter((row) => row && row.workers.length));
 }
 
 /**
@@ -170,20 +147,18 @@ function findRosterAssignmentsByVessel(query) {
     }) : [];
 }
 
-/** 작업자·선박명 두 검색 결과를 합쳐 날짜·선박 단위로 한 번만 표시합니다. */
+/** 작업자·선박명 검색 결과는 입력된 행을 그대로 보여 주며 자동으로 합치지 않습니다. */
 function findAllRosterAssignments(query) {
     const workerMatches = findRosterAssignmentsByWorker(query);
     const vesselMatches = findRosterAssignmentsByVessel(query);
-    const unique = new Map();
-    [...workerMatches, ...vesselMatches].forEach((assignment) => {
-        unique.set(rosterAssignmentKey(assignment), assignment);
-    });
     return {
-        assignments: [...unique.values()],
+        assignments: [...workerMatches, ...vesselMatches],
         mode: workerMatches.length && vesselMatches.length ? "작업자·선박" : (workerMatches.length ? "작업자" : "선박")
     };
 }
 
+// 임금·근무일지의 다중 선박 입력에서 쓰는 공용 정리 도구입니다.
+// 사진 OCR 검토·배치 행에는 적용하지 않습니다.
 function dedupeVesselNameList(names) {
     const known = new Set();
     const unique = [];
@@ -325,34 +300,6 @@ function focusRosterFinder() {
     setTimeout(() => input?.focus(), 280);
 }
 
-function worklogVesselNamesFor(date) {
-    const saved = adminWorkLogs?.[date]?.shipName ? parseWorklogShipNames(adminWorkLogs[date].shipName) : [];
-    const current = getActiveWorkLogDate() === date ? parseWorklogShipNames(rosterElement("logShipName")?.value) : [];
-    return dedupeVesselNameList([...saved, ...current]).unique;
-}
-
-function isVesselRegisteredOnDate(vessel, date) {
-    const key = normalizeRosterVesselKey(vessel);
-    return Boolean(key && date && worklogVesselNamesFor(date).some((name) => normalizeRosterVesselKey(name) === key));
-}
-
-function splitNewAndDuplicateVessels(candidateNames, currentNames) {
-    const existing = new Set((currentNames || []).map(normalizeRosterVesselKey));
-    const toAdd = [];
-    const skipped = [];
-    for (const name of candidateNames || []) {
-        const clean = String(name || "").trim();
-        if (!clean) continue;
-        const key = normalizeRosterVesselKey(clean);
-        if (existing.has(key)) skipped.push(clean);
-        else {
-            existing.add(key);
-            toAdd.push(clean);
-        }
-    }
-    return { toAdd, skipped };
-}
-
 async function collectRosterSchedules(assignments) {
     const months = [...new Set(assignments.map((assignment) => assignment.date.slice(0, 7)).filter(Boolean))];
     const terminalIds = TERMINAL_SCHEDULE_LIST.filter((terminal) => terminal.live).map((terminal) => terminal.id);
@@ -413,36 +360,29 @@ function renderRosterFinderResults(plan, query, mode) {
     const output = rosterElement("rosterFinderResults");
     if (!output) return;
     const foundCount = plan.filter((item) => item.found).length;
-    const registered = plan.filter((item) => isVesselRegisteredOnDate(item.assignment.vessel, item.assignment.date)).length;
     const cards = plan.map((item, index) => {
         const assignment = item.assignment;
         const meta = item.terminalId ? getTerminalMeta(item.terminalId) : null;
         const terminal = item.terminalId ? terminalQuickConfig[item.terminalId] || {} : {};
-        const done = isVesselRegisteredOnDate(assignment.vessel, assignment.date);
         const badge = meta ? `<span class="roster-finder-badge" style="background:${meta.color};">${meta.badge}</span>` : "";
-        const doneBadge = done ? `<span class="roster-finder-registered-badge">✅ 등록됨</span>` : "";
         const links = item.terminalId
             ? `<a href="${terminal.schedule || "#"}" target="_blank" rel="noopener noreferrer" class="roster-finder-link">🗓️ 스케줄 ↗</a><a href="${terminal.chart || "#"}" target="_blank" rel="noopener noreferrer" class="roster-finder-link">📊 차트 ↗</a>`
             : "";
         const secondary = [assignment.time && `명단 ${assignment.time}`, assignment.company, assignment.support, assignment.group].filter(Boolean).map(escapeShipCommentHtml).join(" · ");
-        const status = `${rosterResultScheduleDescription(item)}${done ? " · ✅ 이미 근무일지에 등록됨 (중복 등록 안 함)" : ""}`;
-        return `<div class="roster-finder-card${item.found ? "" : " is-missing"}${done ? " is-registered" : ""}">
-            <div class="roster-finder-card-head">${badge}${doneBadge}<strong>🚢 ${escapeShipCommentHtml(assignment.vessel)}</strong><span>${escapeShipCommentHtml(assignment.date)}${secondary ? ` · ${secondary}` : ""}</span></div>
-            <div class="roster-finder-card-sub">${status}</div>
+        return `<div class="roster-finder-card${item.found ? "" : " is-missing"}">
+            <div class="roster-finder-card-head">${badge}<strong>🚢 ${escapeShipCommentHtml(assignment.vessel)}</strong><span>${escapeShipCommentHtml(assignment.date)}${secondary ? ` · ${secondary}` : ""}</span></div>
+            <div class="roster-finder-card-sub">${rosterResultScheduleDescription(item)}</div>
             <div class="roster-finder-card-actions">
-                <button type="button" onclick="registerRosterResultToWage(${index})"${done ? " disabled" : ""}>🧮 임금계산기 등록</button>
-                <button type="button" onclick="registerRosterResultToWorkLog(${index})"${done ? " disabled" : ""}>📅 근무일지 등록</button>
+                <button type="button" onclick="registerRosterResultToWage(${index})">🧮 임금계산기 등록</button>
+                <button type="button" onclick="registerRosterResultToWorkLog(${index})">📅 근무일지 등록</button>
                 ${links}
             </div>
         </div>`;
     }).join("");
-    const allDone = plan.length > 0 && registered === plan.length;
     const action = plan.length > 1
-        ? (allDone
-            ? `<button type="button" class="roster-finder-all-btn is-done" disabled>✅ 모두 이미 근무일지에 등록됨</button>`
-            : `<button type="button" class="roster-finder-all-btn" onclick="registerAllRosterResults()">✨ 전체 자동 등록 (임금계산기 + 근무일지${foundCount ? " · 임금 자동 계산" : ""}${registered ? " · 중복 제외" : ""})</button>`)
+        ? `<button type="button" class="roster-finder-all-btn" onclick="registerAllRosterResults()">✨ 전체 자동 등록 (임금계산기 + 근무일지${foundCount ? " · 임금 자동 계산" : ""})</button>`
         : "";
-    output.innerHTML = `<div class="roster-finder-summary">🔍 '${escapeShipCommentHtml(query)}' (${mode}) · ${plan.length}척 배정 · 스케줄 매칭 ${foundCount}척${registered && !allDone ? ` · 이미 등록 ${registered}척 제외` : ""}</div>${cards}${action}`;
+    output.innerHTML = `<div class="roster-finder-summary">🔍 '${escapeShipCommentHtml(query)}' (${mode}) · ${plan.length}행 · 스케줄 매칭 ${foundCount}행</div>${cards}${action}`;
 }
 
 function ensureDashboardCardOpen(id) {
@@ -456,19 +396,16 @@ function registerRosterResultToWage(index) {
     if (!item) return;
     ensureDashboardCardOpen("wage-card");
     const vesselName = item.assignment.vessel;
-    const alreadySelected = selectedWageVessels.some((selected) => normalizeWorklogShipKey(selected.name) === normalizeWorklogShipKey(vesselName));
-    if (alreadySelected) {
-        showToast(`🧮 ${vesselName}은(는) 이미 임금계산기에 있습니다.`);
-        rosterElement("wage-card")?.scrollIntoView({ behavior: "smooth", block: "start" });
-        return;
-    }
     if (item.found) {
         if (item.terminalId && item.terminalId !== selectedScheduleTerminal) selectScheduleTerminal(item.terminalId);
-        applyWageScheduleShip(item.vessel, item.assignment.date, item.terminalId || selectedScheduleTerminal);
+        // 임금계산기 선택 함수는 같은 선박을 두 번 받으면 선택 해제로 동작합니다.
+        // OCR 행은 그대로 남기되, 이 화면의 선택 상태만 반전되지 않도록 한 번만 전달합니다.
+        const alreadySelected = selectedWageVessels.some((selected) => normalizeWorklogShipKey(selected.name) === normalizeWorklogShipKey(vesselName));
+        if (!alreadySelected) applyWageScheduleShip(item.vessel, item.assignment.date, item.terminalId || selectedScheduleTerminal);
     } else {
         const input = rosterElement("wageShipName");
         if (input) {
-            input.value = dedupeVesselNameList([...parseWorklogShipNames(input.value), vesselName]).unique.slice(0, MAX_WORK_VESSELS).join(" / ");
+            input.value = [...parseWorklogShipNames(input.value), vesselName].slice(0, MAX_WORK_VESSELS).join(" / ");
             onWageShipNameChange(input.value);
         }
         showToast(`🧮 ${vesselName}을(를) 임금계산기에 입력했습니다. 시간은 직접 확인해 주세요.`);
@@ -480,9 +417,7 @@ function attachRosterResultToOpenLog(item) {
     const input = rosterElement("logShipName");
     if (!input) return false;
     const vesselName = item.assignment.vessel;
-    if (isVesselRegisteredOnDate(vesselName, item.assignment.date)) return false;
-
-    const merged = dedupeVesselNameList([...parseWorklogShipNames(input.value), vesselName]).unique;
+    const merged = [...parseWorklogShipNames(input.value), vesselName];
     input.value = merged.slice(0, MAX_WORK_VESSELS).join(" / ");
     if (item.found) {
         worklogVesselMeta.set(normalizeWorklogShipKey(vesselName), {
@@ -505,8 +440,6 @@ function registerRosterResultToWorkLog(index) {
     jumpToLogDate(item.assignment.date);
     if (attachRosterResultToOpenLog(item)) {
         showToast(`📅 ${item.assignment.date} 근무일지에 ${item.assignment.vessel}을(를) 넣었습니다. 저장을 눌러 기록하세요.`);
-    } else {
-        showToast(`📅 ${item.assignment.vessel}은(는) 이미 ${item.assignment.date} 근무일지에 있어 건너뛰었습니다.`);
     }
     rosterElement("dailyLogForm")?.scrollIntoView({ behavior: "smooth", block: "nearest" });
 }
@@ -516,25 +449,28 @@ async function registerAllRosterResults() {
     if (!plan.length) return;
 
     ensureDashboardCardOpen("wage-card");
-    const selectedNames = new Set(selectedWageVessels.map((selected) => normalizeWorklogShipKey(selected.name)));
-    const scheduleMatches = plan.filter((item) => item.found).slice(0, MAX_WORK_VESSELS);
-    const wageSkipped = scheduleMatches.filter((item) => selectedNames.has(normalizeWorklogShipKey(item.assignment.vessel))).map((item) => item.assignment.vessel);
-    const wageNew = scheduleMatches.filter((item) => !selectedNames.has(normalizeWorklogShipKey(item.assignment.vessel)));
-    if (wageNew.length) {
-        const terminalId = wageNew[0].terminalId;
+    const existingWageNames = new Set(selectedWageVessels.map((selected) => normalizeWorklogShipKey(selected.name)));
+    const scheduleMatches = plan.filter((item) => {
+        if (!item.found) return false;
+        const key = normalizeWorklogShipKey(item.assignment.vessel);
+        if (existingWageNames.has(key)) return false;
+        existingWageNames.add(key);
+        return true;
+    }).slice(0, Math.max(0, MAX_WORK_VESSELS - selectedWageVessels.length));
+    if (scheduleMatches.length) {
+        const terminalId = scheduleMatches[0].terminalId;
         if (terminalId && terminalId !== selectedScheduleTerminal) selectScheduleTerminal(terminalId);
-        wageNew.forEach((item) => applyWageScheduleShip(item.vessel, item.assignment.date, item.terminalId || selectedScheduleTerminal));
-    } else if (!scheduleMatches.length) {
+        scheduleMatches.forEach((item) => applyWageScheduleShip(item.vessel, item.assignment.date, item.terminalId || selectedScheduleTerminal));
+    } else {
         const input = rosterElement("wageShipName");
         if (input) {
-            input.value = dedupeVesselNameList([...parseWorklogShipNames(input.value), ...plan.map((item) => item.assignment.vessel)]).unique.slice(0, MAX_WORK_VESSELS).join(" / ");
+            input.value = [...parseWorklogShipNames(input.value), ...plan.map((item) => item.assignment.vessel)].slice(0, MAX_WORK_VESSELS).join(" / ");
             onWageShipNameChange(input.value);
         }
     }
 
     ensureDashboardCardOpen("log-card");
     const added = [];
-    const logSkipped = [];
     const byDate = new Map();
     plan.forEach((item) => {
         const rows = byDate.get(item.assignment.date) || [];
@@ -545,12 +481,9 @@ async function registerAllRosterResults() {
         jumpToLogDate(date);
         const input = rosterElement("logShipName");
         if (!input) continue;
-        const existing = parseWorklogShipNames(input.value);
-        const split = splitNewAndDuplicateVessels(rows.map((item) => item.assignment.vessel), existing);
-        logSkipped.push(...split.skipped);
-        for (const vesselName of split.toAdd.slice(0, Math.max(0, MAX_WORK_VESSELS - existing.length))) {
-            const item = rows.find((row) => normalizeWorklogShipKey(row.assignment.vessel) === normalizeWorklogShipKey(vesselName));
-            if (item && attachRosterResultToOpenLog(item)) added.push(vesselName);
+        const availableSlots = Math.max(0, MAX_WORK_VESSELS - parseWorklogShipNames(input.value).length);
+        for (const item of rows.slice(0, availableSlots)) {
+            if (attachRosterResultToOpenLog(item)) added.push(item.assignment.vessel);
         }
     }
 
@@ -563,12 +496,10 @@ async function registerAllRosterResults() {
             console.error("[roster] automatic wage transfer failed", error);
         }
     }
-    const skipped = [...new Set([...wageSkipped, ...logSkipped])];
     const names = added.length ? added.join(" / ") : plan.map((item) => item.assignment.vessel).join(" / ");
-    const suffix = skipped.length ? ` · ${skipped.join(", ")}은(는) 이미 등록되어 제외했습니다` : "";
     showToast(selectedHaveHours
-        ? `✨ ${names}을(를) 임금계산기·근무일지에 등록하고 임금을 계산했습니다${suffix}. 근무일지를 저장해 주세요.`
-        : `✨ ${names}을(를) 임금계산기·근무일지에 등록했습니다${suffix}. 시간은 확인 후 계산해 주세요.`);
+        ? `✨ ${names}을(를) 임금계산기·근무일지에 등록하고 임금을 계산했습니다. 근무일지를 저장해 주세요.`
+        : `✨ ${names}을(를) 임금계산기·근무일지에 등록했습니다. 시간은 확인 후 계산해 주세요.`);
     trackAppEvent?.("actions", "roster_finder_register_all");
 }
 
@@ -582,15 +513,8 @@ function addRosterExtraEntry() {
     }
     const entry = normalizeRosterAssignment({ date, vessel, workers: [worker] }, "manual");
     if (!entry) return showToast("⚠️ 유효한 작업자 이름과 선박명을 입력해 주세요.");
-    const workerAssignmentKey = rosterWorkerAssignmentKey(entry, entry.workers[0]);
     const entries = getRosterExtraEntries();
-    const duplicate = entries.some((saved) => saved.workers.some((savedWorker) =>
-        rosterWorkerAssignmentKey(saved, savedWorker) === workerAssignmentKey
-    ));
-    if (duplicate) {
-        showToast(`⚠️ ${worker}은(는) ${vessel} ${date} 배정에 이미 있습니다.`);
-        return;
-    }
+    // 검토자가 입력한 행은 같은 날짜·선박·이름이어도 그대로 남깁니다.
     entries.push(entry);
     if (!saveRosterExtraEntries(entries)) return showToast("⚠️ 이 기기에 명단을 저장하지 못했습니다.");
     ["rosterExtraWorker", "rosterExtraVessel", "rosterExtraDate"].forEach((id) => { const input = rosterElement(id); if (input) input.value = ""; });
@@ -649,29 +573,11 @@ function readTimeFromOcrLine(line) {
     return hour >= 0 && hour < 24 && minute >= 0 && minute < 60 ? `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}` : "";
 }
 
-function rosterLatinWords(value) {
-    return String(value || "").match(/[A-Za-z][A-Za-z0-9&'.-]*/g) || [];
-}
-
-function isLikelyUnrecognizedVesselHeading(line) {
-    const words = rosterLatinWords(line);
-    if (words.length < 2) return false;
-    const hasTime = Boolean(readTimeFromOcrLine(line));
-    const uppercaseLabel = words.every((word) => word === word.toUpperCase());
-    return hasTime || uppercaseLabel || ROSTER_VESSEL_PREFIXES.has(words[0].toUpperCase());
-}
-
 function pickVesselFromOcrLine(line) {
-    const candidates = String(line).match(/[A-Za-z][A-Za-z0-9&'.-]*(?:\s+[A-Za-z0-9&'.-]{2,})*/g) || [];
+    const candidates = String(line).match(/[A-Za-z][A-Za-z0-9&'.-]*(?:\s+[A-Za-z][A-Za-z0-9&'.-]*)*/g) || [];
     return candidates.reduce((winner, candidate) => {
-        const words = candidate.split(/\s+/).map((word) => word.replace(/[.'-]+$/, "")).filter((word) => /^[A-Za-z][A-Za-z0-9&'.-]*$/.test(word) && word.length > 1);
-        const name = words.join(" ").trim().toUpperCase();
-        const isTerminal = /^(BNCT|HJNC|DGT|PNC|HMM|PNIT|BPTC|HBCT|BCT|KML|KMT)$/.test(name);
-        const isCompany = ROSTER_COMPANIES.some((company) => company.toUpperCase() === name);
-        const hasKnownPrefix = ROSTER_VESSEL_PREFIXES.has(words[0]?.toUpperCase());
-        const enoughLetters = words.some((word) => word.length >= 4);
-        const vesselLikeShortName = words.length >= 2 && (hasKnownPrefix || Boolean(readTimeFromOcrLine(line)));
-        return !name || isTerminal || isCompany || (!enoughLetters && !vesselLikeShortName) || name.length <= winner.length ? winner : name;
+        const name = candidate.trim().toUpperCase();
+        return name.length > winner.length ? name : winner;
     }, "");
 }
 
@@ -692,85 +598,18 @@ function pickGroupFromOcrLine(line) {
     return group ? `${group[1]}조` : "";
 }
 
-function getKnownRosterWorkerNames() {
-    const names = ROSTER_SEED_ASSIGNMENTS.flatMap((assignment) => assignment.workers || []);
-    // 기존 동료 선택표가 있는 화면에서는 그 이름도 보정 후보로 함께 씁니다.
-    if (typeof HANJIN_COWORKER_ROSTER !== "undefined" && Array.isArray(HANJIN_COWORKER_ROSTER)) {
-        names.push(...HANJIN_COWORKER_ROSTER.map((worker) => worker?.name));
-    }
-    return [...new Map(names
-        .map((name) => String(name || "").trim())
-        .filter(Boolean)
-        .map((name) => [normalizeRosterWorkerName(name), name])).values()]
-        .sort((left, right) => normalizeRosterWorkerName(right).length - normalizeRosterWorkerName(left).length);
-}
-
-function escapeRosterRegex(value) {
-    return String(value || "").replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-}
-
 /**
- * OCR이 "이 수 열"처럼 이름 안에 공백을 넣은 경우만 시작용 명단의 이름으로 복구합니다.
- * 공백을 전부 지워서 찾으면 "이 수 열차" 같은 일반 문구도 이수열로 오인할 수 있어,
- * 한글·숫자 경계 안의 완전한 이름이고 실제로 이름 내부에 공백이 있을 때만 허용합니다.
+ * 자동 보정·제외 규칙을 비운 기본 OCR 모드입니다.
+ * 한글 덩어리는 이름인지 제목·회사·메타데이터인지 판단하지 않고, 인식한 순서 그대로 검토표에 넣습니다.
  */
-function recoverFragmentedRosterWorkerNames(value) {
-    const source = String(value || "").normalize("NFKC");
-    if (!source) return [];
-    const matches = [];
-    getKnownRosterWorkerNames().forEach((name) => {
-        const normalized = normalizeRosterWorkerName(name);
-        if (!/^[가-힣]{2,4}\d?$/.test(normalized)) return;
-        const spacedName = Array.from(normalized).map(escapeRosterRegex).join("\\s*");
-        const pattern = new RegExp(`(^|[^가-힣0-9])(${spacedName})(?=$|[^가-힣0-9])`, "g");
-        let match;
-        while ((match = pattern.exec(source))) {
-            const detected = match[2] || "";
-            if (!/\s/.test(detected)) continue;
-            const start = match.index + (match[1] || "").length;
-            matches.push({ name, normalized, start, end: start + detected.length });
-        }
-    });
-    const selected = matches
-        .sort((left, right) => left.start - right.start || right.normalized.length - left.normalized.length)
-        .reduce((accepted, candidate) => {
-            const overlaps = accepted.some((item) => candidate.start < item.end && candidate.end > item.start);
-            if (!overlaps) accepted.push(candidate);
-            return accepted;
-        }, []);
-    if (!selected.length) return [];
-
-    // 이름 외에 '근무', '명단' 같은 머리말만 남는 줄은 작업자 행으로 추정하지 않습니다.
-    const masked = selected.reduce((text, candidate) => `${text.slice(0, candidate.start)}${" ".repeat(candidate.end - candidate.start)}${text.slice(candidate.end)}`, source);
-    const compactRemainder = masked.replace(/[^가-힣]/g, "");
-    if ([...ROSTER_NAME_NOISE].some((noise) => compactRemainder.includes(noise))) return [];
-    return selected.map((candidate) => candidate.name);
-}
-
 function pickWorkersFromOcrLine(line) {
-    const withoutMetadata = String(line)
-        .replace(/(20\d{2})\s*[.\-/년]\s*\d{1,2}\s*[.\-/월]\s*\d{1,2}\s*일?/g, " ")
-        .replace(/(?:^|[^\d:])\d{1,2}\s*[.\-/월]\s*\d{1,2}\s*일?(?![\d:])/g, " ")
-        .replace(/\d{1,2}\s*:\s*\d{2}/g, " ")
-        .replace(/\d{1,2}\s*시(?!\s*간)/g, " ")
-        .replace(/[A-Za-z][A-Za-z0-9&'.-]*/g, " ")
-        .replace(/\([1-9]\)|\d{1,2}\s*조(?![가-힣])|[①-⑨]/g, " ")
-        .replace(/지원/g, " ");
-    const direct = withoutMetadata.split(/[\s,/、]+/)
-        .map((value) => value.trim())
-        .filter((value) => /^[가-힣]{2,4}\d?$/.test(value))
-        .filter((value) => !ROSTER_NAME_NOISE.has(value) && !ROSTER_NAME_NOISE.has(value.replace(/\d$/, "")))
-        .filter((value) => !ROSTER_COMPANIES.includes(value) && !ROSTER_COMPANIES.includes(value.replace(/\d$/, "")));
-    return mergeWorkers(direct, recoverFragmentedRosterWorkerNames(withoutMetadata));
+    return String(line || "").normalize("NFKC").match(/[가-힣]+(?:\d+)?/g) || [];
 }
 
 function mergeWorkers(existing, incoming) {
-    const values = new Map((existing || []).map((name) => [normalizeRosterWorkerName(name), name]));
-    (incoming || []).forEach((name) => {
-        const key = normalizeRosterWorkerName(name);
-        if (key && !values.has(key)) values.set(key, name);
-    });
-    return [...values.values()];
+    return [...(existing || []), ...(incoming || [])]
+        .map((name) => String(name || "").trim())
+        .filter(Boolean);
 }
 
 function parseRosterPhotoText(rawText, options) {
@@ -780,43 +619,29 @@ function parseRosterPhotoText(rawText, options) {
     const lines = cleanOcrText(rawText).split("\n").map((line) => line.trim()).filter(Boolean);
     if (!lines.length) return { entries: [], warnings: ["글자가 없습니다. 사진을 다시 고르거나 직접 입력해 주세요."] };
 
-    const result = { date: suppliedDate, current: null, byKey: new Map(), entries: [], unrecognizedVesselHeadings: 0 };
+    const result = { date: suppliedDate, current: null, entries: [] };
     lines.forEach((line) => {
         const date = readDateFromOcrLine(line, fallbackYear);
         if (date) result.date = date;
         const workers = pickWorkersFromOcrLine(line);
         const vessel = pickVesselFromOcrLine(line);
         if (!vessel) {
-            // OCR이 다음 선박 머리말을 읽지 못했을 때, 이어지는 이름이 직전 선박으로
-            // 잘못 붙는 것을 막습니다. 이런 경우에는 검토 경고를 보여 직접 고칠 수 있습니다.
-            if (isLikelyUnrecognizedVesselHeading(line)) {
-                result.current = null;
-                result.unrecognizedVesselHeadings += 1;
-                return;
-            }
+            // 읽지 못한 머리말도 추정하거나 차단하지 않습니다. 다음 한글 덩어리는 현재 검토 행에 그대로 붙습니다.
             if (result.current) result.current.workers = mergeWorkers(result.current.workers, workers);
             return;
         }
-        const key = `${result.date}|${normalizeRosterVesselKey(vessel)}`;
-        let row = result.byKey.get(key);
-        const discovered = {
+        const row = {
             date: result.date,
             vessel,
             time: readTimeFromOcrLine(line),
             company: pickCompanyFromOcrLine(line),
             support: pickSupportFromOcrLine(line),
             group: pickGroupFromOcrLine(line),
-            workers: [],
+            workers,
             source: "photo"
         };
-        if (!row) {
-            row = discovered;
-            result.byKey.set(key, row);
-            result.entries.push(row);
-        } else {
-            ["time", "company", "support", "group"].forEach((field) => { if (!row[field] && discovered[field]) row[field] = discovered[field]; });
-        }
-        row.workers = mergeWorkers(row.workers, workers);
+        // 날짜·선박이 같아도 OCR이 만든 행을 합치지 않고 검토표에 모두 남깁니다.
+        result.entries.push(row);
         result.current = row;
     });
 
@@ -825,31 +650,16 @@ function parseRosterPhotoText(rawText, options) {
     const missingDates = result.entries.filter((row) => !row.date).length;
     const missingWorkers = result.entries.filter((row) => !row.workers.length).length;
     if (missingDates) warnings.push(`${missingDates}척은 날짜를 찾지 못했습니다. 검토 표에서 날짜를 채워 주세요.`);
-    if (missingWorkers) warnings.push(`${missingWorkers}척은 작업자 이름을 찾지 못했습니다. 사진을 보며 직접 입력해 주세요.`);
-    if (result.unrecognizedVesselHeadings) {
-        warnings.push(`${result.unrecognizedVesselHeadings}개 선박 머리말을 확실히 읽지 못해, 뒤 이름을 앞선 선박에 넣지 않았습니다. 원문을 수정하거나 ‘내 명단 추가’로 해당 배정을 넣어 주세요.`);
-    }
+    if (missingWorkers) warnings.push(`${missingWorkers}척은 한글 덩어리를 찾지 못했습니다. 사진을 보며 직접 입력해 주세요.`);
+    warnings.push("자동 보정·제외·중복 처리 없이 인식한 내용을 그대로 표시했습니다. 적용 전 검토표를 확인해 주세요.");
     return { entries: result.entries, warnings };
 }
 
 function mergeRosterPhotoEntries(rows) {
-    const positions = new Map();
-    const output = [];
-    for (const raw of rows || []) {
-        const row = normalizeRosterAssignment(raw, "photo");
-        if (!row) continue;
-        const key = rosterAssignmentKey(row);
-        const index = positions.get(key);
-        if (index === undefined) {
-            positions.set(key, output.length);
-            output.push(row);
-        } else {
-            // 최신 선박 정보는 반영하되, 다른 작업자를 지우지 않습니다.
-            // 같은 선박의 같은 이름만 정규화하여 한 번으로 유지합니다.
-            output[index] = { ...row, workers: mergeWorkers(output[index].workers, row.workers) };
-        }
-    }
-    return output;
+    // 누적 사진 명단도 같은 날짜·선박·작업자를 자동으로 합치지 않습니다.
+    return (rows || [])
+        .map((raw) => normalizeRosterAssignment(raw, "photo"))
+        .filter(Boolean);
 }
 
 function replaceRosterPhotoEntries(rows) {
@@ -1160,7 +970,7 @@ function parseRosterPhotoTextFromBox() {
     rosterRuntime.photoModeEngaged = true;
     rosterRuntime.reviewRows = parsed.entries.map((row) => ({ ...row, workers: [...row.workers] }));
     renderRosterPhotoRows(parsed.warnings);
-    if (rosterRuntime.reviewRows.some((row) => row.date && row.vessel)) applyRosterPhotoRoster({ automatic: true });
+    setRosterPhotoStatus("📝 인식한 내용을 보정 없이 검토표에 표시했습니다. 날짜·선박명·작업자를 확인한 뒤 [현재 검색 명단에 적용]을 눌러 주세요.");
     return parsed;
 }
 
@@ -1185,7 +995,7 @@ function renderRosterPhotoRows(warnings) {
         <label class="roster-photo-row-workers">작업자 (${row.workers.length}명)<textarea rows="2" onchange="updateRosterPhotoRow(${index}, 'workers', this.value)">${escapeShipCommentHtml(row.workers.join(", "))}</textarea></label>
         <button type="button" class="roster-photo-row-del" onclick="removeRosterPhotoRow(${index})">이 줄 삭제</button>
     </div>`).join("");
-    container.innerHTML = `${warningHtml}${rows}<label class="roster-photo-persist"><input type="checkbox" id="rosterPhotoPersist"${rosterRuntime.persistPhotoText ? " checked" : ""}> 이 명단을 내 기기에 저장 (사진은 저장하지 않습니다)</label><button type="button" class="roster-photo-apply-btn" onclick="applyRosterPhotoRoster()">✅ 현재 검색 명단에 합치기 (${rosterRuntime.reviewRows.length}척)</button>`;
+    container.innerHTML = `${warningHtml}${rows}<label class="roster-photo-persist"><input type="checkbox" id="rosterPhotoPersist"${rosterRuntime.persistPhotoText ? " checked" : ""}> 이 명단을 내 기기에 저장 (사진은 저장하지 않습니다)</label><button type="button" class="roster-photo-apply-btn" onclick="applyRosterPhotoRoster()">✅ 검토한 행을 현재 검색 명단에 적용 (${rosterRuntime.reviewRows.length}행)</button>`;
 }
 
 function updateRosterPhotoRow(index, field, value) {
@@ -1207,23 +1017,22 @@ function clearRosterSearchResult() {
     if (output) output.innerHTML = "";
 }
 
-function applyRosterPhotoRoster(options) {
+function applyRosterPhotoRoster() {
     const usable = rosterRuntime.reviewRows
         .map((row) => normalizeRosterAssignment(row, "photo"))
         .filter((row) => row && row.date && row.vessel);
     if (!usable.length) {
-        if (!(options || {}).automatic) showToast("⚠️ 날짜와 선박명을 확인한 뒤 명단을 적용해 주세요.");
+        showToast("⚠️ 날짜와 선박명을 확인한 뒤 명단을 적용해 주세요.");
         return false;
     }
     const before = rosterRuntime.photoAssignments.length;
     rosterRuntime.photoModeEngaged = true;
-    // 새 사진은 현재 명단에 합칩니다. 같은 날짜·선박만 최신 사진으로 갱신되고,
-    // 다른 선박은 유지되어 한 작업자의 모든 배정을 검색할 수 있습니다.
+    // 검토자가 적용한 행은 같은 날짜·선박·작업자와 비교하지 않고 입력 순서 그대로 누적합니다.
     appendRosterPhotoEntries(usable);
     const persistCheck = rosterElement("rosterPhotoPersist");
-    const persist = (options || {}).automatic ? rosterRuntime.persistPhotoText : Boolean(persistCheck?.checked);
+    const persist = Boolean(persistCheck?.checked);
     if (persist) savePhotoRosterToDevice();
-    else if (!(options || {}).automatic) {
+    else {
         try {
             localStorage.removeItem(ROSTER_STORAGE.photo);
             localStorage.removeItem(ROSTER_STORAGE.persist);
@@ -1232,14 +1041,12 @@ function applyRosterPhotoRoster(options) {
     }
     clearRosterSearchResult();
     renderRosterPhotoSaved();
-    if (!(options || {}).automatic) {
-        const total = rosterRuntime.photoAssignments.length;
-        showToast(before
-            ? `✅ 사진 명단 ${usable.length}척을 합쳤습니다. 현재 ${total}척을 검색합니다.${persist ? " (이 기기에 저장됨)" : ""}`
-            : `✅ 사진 명단 ${total}척을 적용했습니다.${persist ? " (이 기기에 저장됨)" : ""}`);
-        trackAppEvent?.("actions", "roster_photo_applied");
-        if (rosterElement("rosterFinderInput")?.value.trim()) searchRosterVessels();
-    }
+    const total = rosterRuntime.photoAssignments.length;
+    showToast(before
+        ? `✅ 검토한 사진 명단 ${usable.length}행을 추가했습니다. 현재 ${total}행을 검색합니다.${persist ? " (이 기기에 저장됨)" : ""}`
+        : `✅ 검토한 사진 명단 ${total}행을 적용했습니다.${persist ? " (이 기기에 저장됨)" : ""}`);
+    trackAppEvent?.("actions", "roster_photo_applied");
+    if (rosterElement("rosterFinderInput")?.value.trim()) searchRosterVessels();
     return true;
 }
 
@@ -1252,7 +1059,7 @@ function renderRosterPhotoSaved() {
         return;
     }
     const items = list.slice(0, 12).map((row, index) => `<div class="roster-photo-saved-item"><span>${escapeShipCommentHtml(row.date)} · ${escapeShipCommentHtml(row.vessel)}${row.workers.length ? ` · ${escapeShipCommentHtml(row.workers.join(", "))}` : ""}</span><button type="button" onclick="deleteSavedPhotoRosterEntry(${index})">삭제</button></div>`).join("");
-    container.innerHTML = `<div class="roster-photo-saved-head">📋 사진으로 만든 명단 ${list.length}척${rosterRuntime.persistPhotoText ? " · 내 기기에 저장됨" : " · 이번 탭에서만"}</div>${items}${list.length > 12 ? `<div class="roster-photo-empty">…외 ${list.length - 12}척</div>` : ""}<button type="button" class="roster-photo-clear-all" onclick="clearPhotoRosterEntries()">🗑️ 사진 명단 모두 지우기</button>`;
+    container.innerHTML = `<div class="roster-photo-saved-head">📋 사진으로 만든 검토 명단 ${list.length}행${rosterRuntime.persistPhotoText ? " · 내 기기에 저장됨" : " · 이번 탭에서만"}</div>${items}${list.length > 12 ? `<div class="roster-photo-empty">…외 ${list.length - 12}행</div>` : ""}<button type="button" class="roster-photo-clear-all" onclick="clearPhotoRosterEntries()">🗑️ 사진 명단 모두 지우기</button>`;
 }
 
 function deleteSavedPhotoRosterEntry(index) {

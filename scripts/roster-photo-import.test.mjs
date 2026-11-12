@@ -41,11 +41,11 @@ MAGNA 14:00 고려 ④
 ULTIMA 15:00 조영 ①
 오경환 원지현 정영중`;
 
-test('OCR 텍스트는 날짜 상속·선박·시간·회사·지원·조·작업자를 새 파이프라인으로 읽는다', () => {
+test('OCR 텍스트는 날짜·영문 선박으로 검토 행을 만들고, 한글 덩어리를 보정 없이 그대로 표시한다', () => {
     const photo = createPhotoVm();
     const result = JSON.parse(JSON.stringify(photo.run(`parseRosterPhotoText(${JSON.stringify(sample)}, { defaultYear: 2026 })`)));
     assert.equal(result.entries.length, 7);
-    assert.deepEqual(result.warnings, []);
+    assert.ok(result.warnings.some((warning) => warning.includes('자동 보정·제외·중복 처리 없이')));
     const byVessel = Object.fromEntries(result.entries.map((entry) => [entry.vessel, entry]));
     assert.equal(byVessel['CMA CGM AUSTRAL'].date, '2026-11-10');
     assert.equal(byVessel['PRESIDENT CARTER'].date, '2026-11-11');
@@ -53,28 +53,25 @@ test('OCR 텍스트는 날짜 상속·선박·시간·회사·지원·조·작�
     assert.equal(byVessel['PRESIDENT CARTER'].company, '고려');
     assert.equal(byVessel['PRESIDENT CARTER'].support, 'BNCT 지원');
     assert.equal(byVessel['PRESIDENT CARTER'].group, '2');
-    assert.equal(byVessel['CMA CGM AUSTRAL'].workers.length, 8);
+    assert.ok(byVessel['CMA CGM AUSTRAL'].workers.includes('세정'), '회사명도 자동 제외하지 않습니다');
+    assert.ok(byVessel['CMA CGM AUSTRAL'].workers.includes('지원'), '메타데이터도 자동 제외하지 않습니다');
     assert.ok(byVessel['CMA CGM PANAMA'].workers.includes('이춘학'));
     assert.ok(byVessel['CMA CGM AUSTRAL'].workers.includes('김민재2'));
 });
 
-test('OCR이 한 글자씩 띄운 작업자 이름도 명단 이름으로 복구한다', () => {
+test('한 글자씩 띄운 이름은 자동 복구하지 않고 인식한 한글 덩어리 그대로 남긴다', () => {
     const photo = createPhotoVm();
     const result = JSON.parse(JSON.stringify(photo.run(`parseRosterPhotoText(${JSON.stringify(`2026. 11. 12
 SM LONG BEACH 08:00
 이 수 열 김 명 준 김 근 우 1`)}, { defaultYear: 2026 })`)));
-    assert.deepEqual(result.entries[0].workers, ['이수열', '김명준', '김근우1']);
+    assert.deepEqual(result.entries[0].workers, ['이', '수', '열', '김', '명', '준', '김', '근', '우']);
 });
 
-test('공백 복구는 일반 한글 문구와 명단 머리말을 작업자로 오인하지 않는다', () => {
+test('제목·명단 머리말도 자동 제외하지 않고 검토표에 그대로 남긴다', () => {
     const photo = createPhotoVm();
     assert.deepEqual(
-        JSON.parse(JSON.stringify(photo.run(`recoverFragmentedRosterWorkerNames(${JSON.stringify('이 수 열차 운행 안내')})`))),
-        []
-    );
-    assert.deepEqual(
         JSON.parse(JSON.stringify(photo.run(`pickWorkersFromOcrLine(${JSON.stringify('근무 명단: 이 수 열')})`))),
-        []
+        ['근무', '명단', '이', '수', '열']
     );
 });
 
@@ -114,30 +111,18 @@ test('OCR 결과가 날짜 또는 선박을 찾지 못하면 검토용 경고를
     assert.ok(noVessel.warnings.some((warning) => warning.includes('선박명')));
 });
 
-test('짧은 선박명도 따로 읽고, 읽지 못한 다음 선박 머리말의 이름을 앞 선박에 붙이지 않는다', () => {
+test('선박 판독이 없는 한글 줄은 안전 차단 없이 현재 검토 행에 그대로 붙인다', () => {
     const photo = createPhotoVm();
     const parsed = JSON.parse(JSON.stringify(photo.run(`parseRosterPhotoText(${JSON.stringify(`2026. 11. 12
 SM LONG BEACH 08:00
 김성원
-ONE HAI 10:00
-이수열
-ABC DEF 12:00
-김명준`)}, { defaultYear: 2026 })`)));
-    const byVessel = Object.fromEntries(parsed.entries.map((entry) => [entry.vessel, entry]));
-    assert.deepEqual(byVessel['SM LONG BEACH'].workers, ['김성원']);
-    assert.deepEqual(byVessel['ONE HAI'].workers, ['이수열']);
-    assert.deepEqual(byVessel['ABC DEF'].workers, ['김명준']);
-
-    const guarded = JSON.parse(JSON.stringify(photo.run(`parseRosterPhotoText(${JSON.stringify(`2026. 11. 12
-SM LONG BEACH 08:00
-김성원
-ABC DEF
+다음 선박
 이수열`)}, { defaultYear: 2026 })`)));
-    assert.deepEqual(guarded.entries[0].workers, ['김성원']);
-    assert.ok(guarded.warnings.some((warning) => warning.includes('앞선 선박')));
+    assert.deepEqual(parsed.entries[0].workers, ['김성원', '다음', '선박', '이수열']);
+    assert.equal(parsed.warnings.some((warning) => warning.includes('앞선 선박')), false);
 });
 
-test('사진 명단은 같은 선박·같은 이름만 합치고, 같은 이름의 다른 선박은 보존한다', () => {
+test('사진 명단은 같은 날짜·선박·이름도 자동으로 합치거나 제외하지 않는다', () => {
     const photo = createPhotoVm();
     const rows = JSON.parse(JSON.stringify(photo.run(`mergeRosterPhotoEntries([
         { date: '2026-11-11', vessel: 'PRESIDENT CARTER', workers: ['이춘학'] },
@@ -145,15 +130,16 @@ test('사진 명단은 같은 선박·같은 이름만 합치고, 같은 이름�
         { date: '2026-11-11', vessel: 'CMA CGM PANAMA', workers: ['이춘학'] },
         { date: '2026-11-12', vessel: 'PRESIDENT CARTER', workers: ['김명준'] }
     ])`)));
-    assert.equal(rows.length, 3);
-    assert.deepEqual(rows[0].workers, ['이춘학', '안영준']);
-    assert.deepEqual(rows[1].workers, ['이춘학']);
-    assert.equal(rows[1].vessel, 'CMA CGM PANAMA');
-    assert.equal(rows[2].date, '2026-11-12');
+    assert.equal(rows.length, 4);
+    assert.deepEqual(rows[0].workers, ['이춘학']);
+    assert.deepEqual(rows[1].workers, ['이춘학', '안영준']);
+    assert.equal(rows[1].vessel, 'president  carter');
+    assert.equal(rows[2].vessel, 'CMA CGM PANAMA');
+    assert.equal(rows[3].date, '2026-11-12');
 
-    photo.run('replaceRosterPhotoEntries([{ date: "2026-11-11", vessel: "PRESIDENT CARTER", workers: ["이춘학"] }]); appendRosterPhotoEntries([{ date: "2026-11-11", vessel: "CMA CGM PANAMA", workers: ["이춘학"] }]); savePhotoRosterToDevice()');
+    photo.run('replaceRosterPhotoEntries([{ date: "2026-11-11", vessel: "PRESIDENT CARTER", workers: ["이춘학"] }]); appendRosterPhotoEntries([{ date: "2026-11-11", vessel: "PRESIDENT CARTER", workers: ["이춘학"] }]); savePhotoRosterToDevice()');
     const accumulated = JSON.parse(JSON.stringify(photo.run('getPhotoRosterEntries()')));
-    assert.deepEqual(accumulated.map((row) => row.vessel), ['PRESIDENT CARTER', 'CMA CGM PANAMA']);
+    assert.deepEqual(accumulated.map((row) => row.vessel), ['PRESIDENT CARTER', 'PRESIDENT CARTER']);
     assert.ok(photo.data.busanPortRosterPhoto.includes('PRESIDENT CARTER'));
     assert.ok(!photo.data.busanPortRosterPhoto.includes('data:image'));
     assert.equal(photo.data.busanPortRosterPhotoPersist, '1');
@@ -172,7 +158,7 @@ test('사진 처리 경로는 이미지 업로드 API 없이 Object URL·캔버�
     assert.match(engine, /"kor\+eng"/);
 });
 
-test('화면은 카메라·갤러리·수정·기기저장 UI를 그대로 제공한다', () => {
+test('화면은 카메라·갤러리·수정·기기저장 UI와 검토 후 적용 흐름을 제공한다', () => {
     for (const id of ['rosterPhotoInput', 'rosterPhotoGalleryInput', 'rosterPhotoOcrBtn', 'rosterPhotoClearBtn', 'rosterPhotoStatus', 'rosterPhotoPreviewWrap', 'rosterPhotoPreview', 'rosterPhotoTextDetails', 'rosterPhotoText', 'rosterPhotoRows', 'rosterPhotoSaved']) {
         assert.equal(html.split(`id="${id}"`).length - 1, 1, `missing or duplicate #${id}`);
     }
@@ -180,7 +166,10 @@ test('화면은 카메라·갤러리·수정·기기저장 UI를 그대로 제�
     assert.match(html, /id="rosterPhotoGalleryInput" accept="image\/\*"/);
     assert.ok(html.includes('서버로 전송되지 않고'));
     assert.ok(html.includes('사진 자체는 저장하지 않습니다'));
-    assert.ok(html.includes('여러 장을 읽으면 선박 명단을 합치며'));
+    assert.ok(html.includes('이름 보정·제목\/회사 제외·중복 제거 없이'));
+    assert.ok(html.includes('인식 내용 검토표로 보기'));
     assert.match(html, /parseRosterPhotoTextFromBox\(\)/);
-    assert.match(engine, /function applyRosterPhotoRoster\(/);
+    assert.match(engine, /function applyRosterPhotoRoster\(\)/);
+    const parseFromTextBox = engine.slice(engine.indexOf('function parseRosterPhotoTextFromBox'), engine.indexOf('function renderRosterPhotoRows'));
+    assert.doesNotMatch(parseFromTextBox, /applyRosterPhotoRoster\(/, 'OCR 결과는 검토 전 자동 적용하면 안 됩니다');
 });
