@@ -667,11 +667,7 @@ export function classifyVesselStatus(rawStatus: any): 'CANCELLED' | 'SUSPENDED' 
   return '';
 }
 
-export function detectVesselScheduleChanges(
-  previous: any,
-  current: any,
-  berthTimeThresholdMinutes: number = SCHEDULE_DIFF_THRESHOLD_MINUTES
-): any[] {
+export function detectVesselScheduleChanges(previous: any, current: any): any[] {
   const changes: any[] = [];
   const oldAtd = normalizeDateTimeStr(previous?.ATD);
   const newAtd = normalizeDateTimeStr(current?.ATD);
@@ -681,7 +677,7 @@ export function detectVesselScheduleChanges(
 
   const oldEtb = normalizeDateTimeStr(previous?.ETB);
   const newEtb = normalizeDateTimeStr(current?.ETB);
-  if (oldEtb && newEtb && isScheduleShiftedByAtLeastOneHour(oldEtb, newEtb, berthTimeThresholdMinutes)) {
+  if (hasDepartureTimeChanged(oldEtb, newEtb)) {
     changes.push({ field: 'ETB', oldValue: oldEtb, newValue: newEtb, diffMinutes: calculateScheduleDiffMinutes(oldEtb, newEtb) });
   }
 
@@ -1587,14 +1583,22 @@ async function fetchTerminalScheduleVesselsUncached(tid: string, startDate: stri
   return [];
 }
 
-// --- 선박 출항 시각 변경·접안 시각 1시간 이상 변경 감지 및 알림 파이프라인 ---
-async function sendPushNotification(userId: string, title: string, body: string, type: string = 'SCHEDULE_CHANGE'): Promise<boolean> {
+// --- 선박 출항·접안·선석·운항 상태 변경 감지 및 전체 사용자 알림 파이프라인 ---
+async function sendPushNotification(
+  userId: string,
+  title: string,
+  body: string,
+  type: string = 'SCHEDULE_CHANGE',
+  profileData?: Record<string, any>
+): Promise<boolean> {
   try {
     if (getApps().length === 0) return false;
-    const userDoc = await getFirestore().collection('user_profiles').doc(userId).get();
-    if (!userDoc.exists) return false;
-
-    const data = userDoc.data() || {};
+    let data = profileData;
+    if (!data) {
+      const userDoc = await getFirestore().collection('user_profiles').doc(userId).get();
+      if (!userDoc.exists) return false;
+      data = userDoc.data() || {};
+    }
     const token = data.fcmToken;
     if (!token) return false;
 
@@ -1643,7 +1647,7 @@ export async function deliverActiveEmergencyNoticeNotifications(expectedRevision
       return true;
     });
     if (!wasCreated) continue;
-    await sendPushNotification(user.id, title, body, 'OPERATIONAL_NOTICE');
+    await sendPushNotification(user.id, title, body, 'OPERATIONAL_NOTICE', user.data() || {});
     created += 1;
   }
   return created;
@@ -1682,7 +1686,7 @@ export async function runScheduleChangeDetection(): Promise<{ changedVessels: nu
     }
 
     const cacheRef = firestore.collection('vessel_schedules_cache');
-    const logsRef = firestore.collection('work_logs');
+    let registeredUsersSnapshot: any = null;
 
     // 취소 선박은 터미널 일정에서 사라지는 경우도 있어, 정상 수집된 연속 두 회차의 부재만 신호로 봅니다.
     // stale/실패 응답은 절대 취소로 추정하지 않습니다.
@@ -1755,41 +1759,56 @@ export async function runScheduleChangeDetection(): Promise<{ changedVessels: nu
         const changeLabel = changeDescriptions.join(' · ');
         console.log(`[CRON] 선박 변경 감지: ${v.VSL_NM} (${changeLabel})`);
 
-        const snapshot = await logsRef.where('date', '>=', startDate).where('date', '<=', endDate).get();
-        const notifiedUsers = new Set<string>();
-        const targetShipName = v.VSL_NM.replace(/\s+/g, '').toUpperCase();
+        // 일정 변경 알림은 특정 근무자 선별 없이 등록된 모든 사용자에게 전달합니다.
+        // 변경된 값 조합 + 한국 날짜를 기준으로 동일 이벤트의 중복 푸시만 억제합니다.
+        if (!registeredUsersSnapshot) registeredUsersSnapshot = await firestore.collection('user_profiles').get();
+        const localDate = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Seoul' });
+        const eventSignature = JSON.stringify(scheduleChanges
+          .map((change) => ({
+            field: change.field,
+            oldValue: change.field === 'CANCELLED' || change.field === 'SUSPENDED' ? '' : String(change.oldValue || ''),
+            newValue: change.field === 'CANCELLED' || change.field === 'SUSPENDED' ? '' : String(change.newValue || '')
+          }))
+          .sort((a, b) => a.field.localeCompare(b.field)));
 
-        for (const logDoc of snapshot.docs) {
-          const logData = logDoc.data() || {};
-          const savedShipName = String(logData.shipName || '').replace(/\s+/g, '').toUpperCase();
-          const workerId = String(logData.workerId || '').trim();
-          // 해당 선박 근무일지가 있는 작업자에게만 발송해 무관한 일정 알림을 배제합니다.
-          if (!workerId || !savedShipName.includes(targetShipName) || notifiedUsers.has(workerId)) continue;
-          notifiedUsers.add(workerId);
-
-          const localDate = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Seoul' });
-          const dedupeId = crypto.createHash('sha256').update(`${workerId}|${vslId}|${localDate}`).digest('hex').slice(0, 40);
-          const notiRef = firestore.collection('notifications').doc(`sched_${dedupeId}`);
-          // 동일 선박 반복 수정은 하루 한 건으로 제한하며 두 번째 이후에는 푸시도 보내지 않습니다.
-          if ((await notiRef.get()).exists) continue;
-
-          const title = `${v.VSL_NM} 운항 정보 변경 안내 🚢`;
-          const message = `[${v.TERMINAL}] ${v.VSL_NM}호: ${changeLabel}`;
-          await notiRef.set({
-            userId: workerId,
-            title,
-            body: message,
-            type: 'SCHEDULE_CHANGE',
-            terminal: v.TERMINAL,
-            vesselName: v.VSL_NM,
-            changes: scheduleChanges,
-            read: false,
-            createdAt: FieldValue.serverTimestamp(),
-            createdAtMs: Date.now()
-          });
-
-          await sendPushNotification(workerId, title, message, 'SCHEDULE_CHANGE');
-          notificationsSent += 1;
+        const recipients = registeredUsersSnapshot.docs;
+        for (let offset = 0; offset < recipients.length; offset += 20) {
+          const batchResults = await Promise.all(recipients.slice(offset, offset + 20).map(async (user: any) => {
+            const userId = String(user.id || '').trim();
+            if (!userId) return false;
+            try {
+              const dedupeId = crypto.createHash('sha256')
+                .update(`${userId}|${vslId}|${localDate}|${eventSignature}`)
+                .digest('hex').slice(0, 40);
+              const notiRef = firestore.collection('notifications').doc(`sched_${dedupeId}`);
+              const title = `${v.VSL_NM} 운항 정보 변경 안내 🚢`;
+              const message = `[${v.TERMINAL}] ${v.VSL_NM}호: ${changeLabel}`;
+              const wasCreated = await firestore.runTransaction(async (transaction) => {
+                const existing = await transaction.get(notiRef);
+                if (existing.exists) return false;
+                transaction.create(notiRef, {
+                  userId,
+                  title,
+                  body: message,
+                  type: 'SCHEDULE_CHANGE',
+                  terminal: v.TERMINAL,
+                  vesselName: v.VSL_NM,
+                  changes: scheduleChanges,
+                  read: false,
+                  createdAt: FieldValue.serverTimestamp(),
+                  createdAtMs: Date.now()
+                });
+                return true;
+              });
+              if (!wasCreated) return false;
+              await sendPushNotification(userId, title, message, 'SCHEDULE_CHANGE', user.data() || {});
+              return true;
+            } catch (deliveryErr: any) {
+              console.error(`[NOTIFICATION] ${userId} 일정 알림 생성 실패:`, deliveryErr?.message || deliveryErr);
+              return false;
+            }
+          }));
+          notificationsSent += batchResults.filter(Boolean).length;
         }
       }
     }
