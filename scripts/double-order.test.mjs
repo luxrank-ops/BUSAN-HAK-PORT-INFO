@@ -15,7 +15,10 @@ const wageLogTargetDate = extractFunction(appJs, 'getWageLogTargetDate');
 const parseWorklogShipNames = extractFunction(appJs, 'parseWorklogShipNames');
 const normalizeWorklogShipKey = extractFunction(appJs, 'normalizeWorklogShipKey');
 const dedupeWorklogShipNames = extractFunction(appJs, 'dedupeWorklogShipNames');
-assert.ok(segmentFn && calculator && transfer && activeWorkLogDate && wageLogTargetDate && parseWorklogShipNames && normalizeWorklogShipKey && dedupeWorklogShipNames, 'calculator, date routing and transfer code found');
+const parseWorklogCalculatedWageLine = extractFunction(appJs, 'parseWorklogCalculatedWageLine');
+const planWorklogCalculatedVesselSlots = extractFunction(appJs, 'planWorklogCalculatedVesselSlots');
+const replaceWorklogCalculatedWageMemo = extractFunction(appJs, 'replaceWorklogCalculatedWageMemo');
+assert.ok(segmentFn && calculator && transfer && activeWorkLogDate && wageLogTargetDate && parseWorklogShipNames && normalizeWorklogShipKey && dedupeWorklogShipNames && parseWorklogCalculatedWageLine && planWorklogCalculatedVesselSlots && replaceWorklogCalculatedWageMemo, 'calculator, date routing and transfer code found');
 
 function setup({ doubleOrder = false, savedLog = null, sameDateDraft = false } = {}) {
     const elements = {};
@@ -86,7 +89,7 @@ function setup({ doubleOrder = false, savedLog = null, sameDateDraft = false } =
         renderRow: (label, amount) => `${label}: ${amount}`,
         setTimeout() {}, console: { error() {} }
     });
-    vm.runInContext(`let lastCalculatedWageData = null; ${activeWorkLogDate}\n${wageLogTargetDate}\n${parseWorklogShipNames}\n${normalizeWorklogShipKey}\n${dedupeWorklogShipNames}\nfunction calculateWageSegment(${segmentFn}function calculateWage() {${calculator}let wageToLogTransferPending = false;${transfer}`, context);
+    vm.runInContext(`let lastCalculatedWageData = null; ${activeWorkLogDate}\n${wageLogTargetDate}\n${parseWorklogShipNames}\n${normalizeWorklogShipKey}\n${dedupeWorklogShipNames}\n${parseWorklogCalculatedWageLine}\n${planWorklogCalculatedVesselSlots}\n${replaceWorklogCalculatedWageMemo}\nfunction calculateWageSegment(${segmentFn}function calculateWage() {${calculator}let wageToLogTransferPending = false;${transfer}`, context);
     return {
         elements, context, messages,
         get fetchCount() { return fetchCount; },

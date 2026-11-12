@@ -44,8 +44,10 @@ const WAGE_FUNCTIONS = [
     'updateSelectedWageAllowanceHours', 'calculateWageSegment', 'calculateWage',
     'onWageShipNameChange', 'autoGrowWorkLogMemo', 'sendCalculatedWageToLog',
     'sendWorkLogShipToWage', 'resetWageForm', 'selectBestCalcSegment',
-    // sendCalculatedWageToLog 멀티 경로의 선박명 병합(중복 제외)이 전이적으로 호출
-    'parseWorklogShipNames', 'normalizeWorklogShipKey', 'dedupeWorklogShipNames'
+    // sendCalculatedWageToLog 멀티 경로의 선박·자동 작업내역 중복 방지 도구가 전이적으로 호출
+    'parseWorklogShipNames', 'normalizeWorklogShipKey', 'dedupeWorklogShipNames',
+    'parseWorklogCalculatedWageLine', 'planWorklogCalculatedVesselSlots',
+    'replaceWorklogCalculatedWageMemo', 'dedupeWorklogCalculatedWageMemo'
 ];
 
 const appBundle = [
@@ -253,6 +255,50 @@ test('3. selecting up to 2 vessels auto-checks double order, sums hours, and cal
     assert.equal(elements.logShipName.value, 'SHIP ALPHA / SHIP BETA');
     assert.match(elements.logMemo.value, /\[더블오더 · 임금 1 · SHIP ALPHA\]/);
     assert.match(elements.logMemo.value, /\[더블오더 · 임금 2 · SHIP BETA\]/);
+});
+
+test('같은 날짜에 같은 선박을 다시 검색해 역순으로 전송해도 기존 임금 칸·작업내역을 중복하지 않는다', async () => {
+    const { context, elements, scheduleVessels } = setup();
+    context.applyWageScheduleShip(scheduleVessels[0], '2026-10-08', 'hjnc');
+    context.applyWageScheduleShip(scheduleVessels[1], '2026-10-08', 'hjnc');
+    context.calculateWage();
+    const initial = JSON.parse(JSON.stringify(vm.runInContext('lastCalculatedWageData', context)));
+    await context.sendCalculatedWageToLog();
+    elements.logMemo.value += '\n사용자 메모는 유지';
+
+    // 사진·스케줄을 다시 찾아 계산기에서 선택 순서가 B → A로 바뀐 경우를 재현한다.
+    const reversed = { ...initial, segments: [initial.segments[1], initial.segments[0]] };
+    vm.runInContext(`lastCalculatedWageData = ${JSON.stringify(reversed)};`, context);
+    await context.sendCalculatedWageToLog();
+
+    assert.equal(elements.logShipName.value, 'SHIP ALPHA / SHIP BETA');
+    assert.equal(elements.logWage1.value, initial.segments[0].totalPay, 'ALPHA는 처음의 임금 1 자리를 유지한다');
+    assert.equal(elements.logWage2.value, initial.segments[1].totalPay, 'BETA는 처음의 임금 2 자리를 유지한다');
+    assert.equal((elements.logMemo.value.match(/SHIP ALPHA/g) || []).length, 1);
+    assert.equal((elements.logMemo.value.match(/SHIP BETA/g) || []).length, 1);
+    assert.match(elements.logMemo.value, /\[더블오더 · 임금 1 · SHIP ALPHA\]/);
+    assert.match(elements.logMemo.value, /\[더블오더 · 임금 2 · SHIP BETA\]/);
+    assert.match(elements.logMemo.value, /사용자 메모는 유지/);
+});
+
+test('저장 직전 정리는 이미 쌓인 같은 날짜·같은 선박의 자동 작업내역도 한 줄만 남긴다', () => {
+    const { context } = setup();
+    const before = [
+        '[더블오더 · 임금 1 · IRENES RALLY] [본선] 2026-10-31 00시~2026-11-01 01시 · 총 25H',
+        '[더블오더 · 임금 2 · ONE APUS] [본선] 2026-11-10 08시~2026-11-11 11시 · 총 27H',
+        '[더블오더 · 임금 1 · ONE APUS] [본선] 2026-11-10 08시~2026-11-11 11시 · 총 27H',
+        '[더블오더 · 임금 2 · IRENES RALLY] [본선] 2026-10-31 00시~2026-11-01 01시 · 총 25H',
+        '사용자 메모는 유지'
+    ].join('\n');
+    const normalized = JSON.parse(JSON.stringify(context.dedupeWorklogCalculatedWageMemo(
+        before,
+        ['IRENES RALLY', 'ONE APUS']
+    )));
+
+    assert.equal(normalized.removedCount, 2);
+    assert.equal((normalized.memo.match(/IRENES RALLY/g) || []).length, 1);
+    assert.equal((normalized.memo.match(/ONE APUS/g) || []).length, 1);
+    assert.match(normalized.memo, /사용자 메모는 유지/);
 });
 
 // 선박 3~4척(트리플·쿼드오더): 시간 합산 · 블록 노출 · 임금 1~4 분리 입력
