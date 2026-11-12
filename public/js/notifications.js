@@ -5,6 +5,9 @@
 // ============================================================================
 // notifications.js - 실시간 알림 및 FCM 푸시 관리
 let notiUnsubscribe = null;
+let notiActiveUserId = "";
+let notiInitialSnapshotLoaded = false;
+let notiAnnouncedIds = new Set();
 let fcmInitPromise = null;
 let fcmServiceWorkerRegistrationPromise = null;
 let fcmMessagingInstance = null;
@@ -21,48 +24,144 @@ function escapeNotificationHtml(value) {
         .replace(/'/g, '&#39;');
 }
 
-function toggleNotificationPanel() {
+function notificationTypeLabel(type) {
+    const labels = {
+        SCHEDULE_CHANGE: "운항 시간 변경",
+        AUTO_BLIND: "운영 알림"
+    };
+    return labels[String(type || "")] || "새 알림";
+}
+
+function notificationTimeLabel(value) {
+    let date = null;
+    if (value?.toDate) date = value.toDate();
+    else if (value instanceof Date) date = value;
+    else if (typeof value === "number") date = new Date(value);
+    else if (typeof value === "string" && value) date = new Date(value);
+    if (!date || Number.isNaN(date.getTime())) return "방금 도착";
+
+    const elapsed = Math.max(0, Date.now() - date.getTime());
+    if (elapsed < 60_000) return "방금 도착";
+    if (elapsed < 3_600_000) return `${Math.floor(elapsed / 60_000)}분 전`;
+    const today = new Date();
+    const sameDay = date.getFullYear() === today.getFullYear()
+        && date.getMonth() === today.getMonth()
+        && date.getDate() === today.getDate();
+    const time = `${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`;
+    return sameDay ? `오늘 ${time}` : `${date.getMonth() + 1}.${date.getDate()} ${time}`;
+}
+
+function notificationPanelIsOpen() {
+    return Boolean(document.getElementById('notiPanel')?.classList.contains('is-open'));
+}
+
+function updateNotificationToggle(open) {
+    const toggle = document.getElementById('notiToggle');
+    if (!toggle) return;
+    toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+    toggle.setAttribute('aria-label', open ? '알림 센터 닫기' : '알림 센터 열기');
+}
+
+function ensureNotificationPanel() {
     let panel = document.getElementById('notiPanel');
-    if (!panel) {
-        panel = document.createElement('div');
-        panel.id = 'notiPanel';
-        panel.style.cssText = [
-            'position: fixed',
-            'top: 60px',
-            'right: 10px',
-            'width: 300px',
-            'max-height: 400px',
-            'background: var(--surface)',
-            'border: 1px solid var(--border)',
-            'border-radius: 8px',
-            'box-shadow: 0 4px 12px rgba(0,0,0,0.15)',
-            'z-index: 9999',
-            'overflow-y: auto',
-            'display: none',
-            'padding: 10px',
-            'color: var(--text)'
-        ].join('; ') + ';';
+    if (panel) return panel;
 
-        const header = document.createElement('div');
-        header.innerHTML = '<h3 style="margin:0 0 10px 0; border-bottom:1px solid var(--border); padding-bottom:5px;">알림 센터</h3>';
-        panel.appendChild(header);
+    panel = document.createElement('section');
+    panel.id = 'notiPanel';
+    panel.className = 'noti-panel';
+    panel.setAttribute('role', 'dialog');
+    panel.setAttribute('aria-modal', 'false');
+    panel.setAttribute('aria-labelledby', 'notiPanelTitle');
+    panel.innerHTML = `
+        <div class="noti-panel-head">
+            <div class="noti-panel-title-wrap">
+                <span class="noti-panel-icon" aria-hidden="true">🔔</span>
+                <div>
+                    <h2 id="notiPanelTitle">알림 센터</h2>
+                    <p>내 근무와 운영 소식을 바로 알려드립니다.</p>
+                </div>
+            </div>
+            <button type="button" class="noti-panel-close" onclick="closeNotificationPanel()" aria-label="알림 창 닫기">✕</button>
+        </div>
+        <div class="noti-panel-summary">
+            <span id="notiPanelUnread" class="noti-panel-unread">새 알림 없음</span>
+            <span class="noti-panel-summary-hint">열면 읽음으로 표시됩니다.</span>
+        </div>
+        <div id="notiList" class="noti-list" aria-live="polite">
+            <div class="noti-empty-state"><span aria-hidden="true">✨</span><strong>도착한 알림이 없습니다.</strong><p>새 소식이 생기면 이 창으로 바로 알려드릴게요.</p></div>
+        </div>`;
+    document.body.appendChild(panel);
+    return panel;
+}
 
-        const list = document.createElement('div');
-        list.id = 'notiList';
-        list.innerHTML = '<p style="color:var(--text-secondary); text-align:center; font-size:0.9rem;">알림이 없습니다.</p>';
-        panel.appendChild(list);
+function openNotificationPanel(options = {}) {
+    const panel = ensureNotificationPanel();
+    panel.classList.add('is-open');
+    updateNotificationToggle(true);
+    if (options.markRead !== false) markAllNotisAsRead();
+    if (options.prepareMessaging && typeof initMessagingPush === 'function') initMessagingPush();
+    return panel;
+}
 
-        document.body.appendChild(panel);
+function closeNotificationPanel() {
+    const panel = document.getElementById('notiPanel');
+    if (panel) panel.classList.remove('is-open');
+    updateNotificationToggle(false);
+}
+
+function toggleNotificationPanel() {
+    if (notificationPanelIsOpen()) {
+        closeNotificationPanel();
+        return;
     }
+    // ⚡ 지연 로드(A-2): 사용자가 알림 버튼을 열 때만 메신저 SDK를 준비합니다.
+    openNotificationPanel({ markRead: true, prepareMessaging: true });
+}
 
-    if (panel.style.display === 'none') {
-        panel.style.display = 'block';
-        markAllNotisAsRead();
-        // ⚡ 지연 로드(A-2): 알림 패널을 여는 시점에 메신저 SDK를 준비합니다.
-        if (typeof initMessagingPush === 'function') initMessagingPush();
+function renderNotificationRows(snapshot) {
+    let unreadCount = 0;
+    let html = '';
+    if (snapshot.empty) {
+        html = '<div class="noti-empty-state"><span aria-hidden="true">✨</span><strong>도착한 알림이 없습니다.</strong><p>새 소식이 생기면 이 창으로 바로 알려드릴게요.</p></div>';
     } else {
-        panel.style.display = 'none';
+        snapshot.forEach((doc) => {
+            const data = doc.data() || {};
+            const isUnread = !data.read;
+            if (isUnread) unreadCount += 1;
+            const safeTitle = escapeNotificationHtml(data.title || '알림');
+            const safeBody = escapeNotificationHtml(data.body || '내용이 없습니다.');
+            const safeType = escapeNotificationHtml(notificationTypeLabel(data.type));
+            const timeLabel = escapeNotificationHtml(notificationTimeLabel(data.createdAt || data.createdAtMs));
+            html += `
+                <article class="noti-item${isUnread ? ' is-unread' : ''}">
+                    <span class="noti-item-dot" aria-hidden="true"></span>
+                    <div class="noti-item-content">
+                        <div class="noti-item-meta"><span class="noti-item-type">${safeType}</span><time>${timeLabel}</time></div>
+                        <h3>${safeTitle}</h3>
+                        <p>${safeBody}</p>
+                    </div>
+                </article>`;
+        });
     }
+
+    const list = document.getElementById('notiList');
+    if (list) list.innerHTML = html;
+    const badge = document.getElementById('notiBadge');
+    if (badge) {
+        badge.classList.toggle('has-unread', unreadCount > 0);
+        badge.hidden = unreadCount === 0;
+        badge.textContent = unreadCount > 99 ? '99+' : String(unreadCount);
+    }
+    const summary = document.getElementById('notiPanelUnread');
+    if (summary) summary.textContent = unreadCount > 0 ? `새 알림 ${unreadCount}개` : '새 알림 없음';
+    return unreadCount;
+}
+
+function showIncomingNotification(data) {
+    const title = String(data?.title || '새 알림');
+    const body = String(data?.body || '알림 센터에서 내용을 확인해 주세요.');
+    openNotificationPanel({ markRead: true });
+    if (typeof showToast === 'function') showToast(`🔔 ${title}${body ? ` · ${body}` : ''}`);
 }
 
 function reportNotificationFailure(scope, error, message) {
@@ -109,11 +208,7 @@ function attachForegroundMessageHandler(messaging) {
     messaging.onMessage((payload) => {
         console.log('Message received: ', payload);
         const notification = payload?.notification || payload?.data || {};
-        if (typeof showToast === 'function') {
-            const title = String(notification.title || '새 알림');
-            const body = String(notification.body || '');
-            showToast(body ? `${title} - ${body}` : title);
-        }
+        showIncomingNotification(notification);
     });
 }
 
@@ -184,56 +279,38 @@ async function initMessagingPush(userId) {
 
 function initNotifications(userId) {
     if (!userId) return;
-
-    // 2. Firestore In-App Notification 리스너 등록
     if (typeof db === 'undefined' || !db || !db.collection) return;
     if (notiUnsubscribe) {
         try { notiUnsubscribe(); } catch (_) {}
     }
+    notiActiveUserId = String(userId);
+    notiInitialSnapshotLoaded = false;
+    notiAnnouncedIds = new Set();
+
     try {
         notiUnsubscribe = db.collection('notifications')
             .where('userId', '==', userId)
             .orderBy('createdAt', 'desc')
             .limit(20)
             .onSnapshot((snapshot) => {
-                let unreadCount = 0;
-                let html = '';
+                const isInitialSnapshot = !notiInitialSnapshotLoaded;
+                const additions = !isInitialSnapshot && typeof snapshot.docChanges === 'function'
+                    ? snapshot.docChanges().filter((change) => change.type === 'added')
+                    : [];
+                renderNotificationRows(snapshot);
+                notiInitialSnapshotLoaded = true;
 
-                if (snapshot.empty) {
-                    html = '<p style="color:var(--text-secondary); text-align:center; font-size:0.9rem; padding: 10px 0;">알림이 없습니다.</p>';
-                } else {
-                    snapshot.forEach(doc => {
-                        const data = doc.data() || {};
-                        if (!data.read) unreadCount++;
-                        const bg = data.read ? 'transparent' : 'rgba(37, 99, 235, 0.1)';
-                        const safeTitle = escapeNotificationHtml(data.title || '알림');
-                        const safeBody = escapeNotificationHtml(data.body || '');
-                        html += `
-                            <div style="padding: 10px; border-bottom: 1px solid var(--border); background: ${bg}; border-radius: 4px; margin-bottom: 5px;">
-                                <div style="font-weight:bold; font-size:0.95rem; margin-bottom:4px;">${safeTitle}</div>
-                                <div style="font-size:0.85rem; color:var(--text-secondary);">${safeBody}</div>
-                            </div>
-                        `;
-                    });
-                }
-
-                const listEl = document.getElementById('notiList');
-                if (listEl) listEl.innerHTML = html;
-
-                const badge = document.getElementById('notiBadge');
-                if (badge) {
-                    if (unreadCount > 0) {
-                        badge.style.display = 'inline-block';
-                        badge.innerText = String(unreadCount);
-                    } else {
-                        badge.style.display = 'none';
-                    }
-                }
-            }, (err) => {
-                console.warn('알림 리스너 오류:', err);
+                additions.forEach((change) => {
+                    const id = String(change.doc?.id || '');
+                    if (id && notiAnnouncedIds.has(id)) return;
+                    if (id) notiAnnouncedIds.add(id);
+                    showIncomingNotification(change.doc?.data?.() || {});
+                });
+            }, (error) => {
+                reportNotificationFailure('알림 센터 연결 실패', error, '⚠️ 알림 센터를 실시간으로 연결하지 못했습니다.');
             });
-    } catch (e) {
-        console.warn('알림 구독 설정 실패:', e);
+    } catch (error) {
+        reportNotificationFailure('알림 구독 설정 실패', error, '⚠️ 알림 센터를 준비하지 못했습니다.');
     }
 }
 
@@ -242,13 +319,20 @@ function stopNotifications() {
         try { notiUnsubscribe(); } catch (_) {}
         notiUnsubscribe = null;
     }
+    notiActiveUserId = "";
+    notiInitialSnapshotLoaded = false;
+    notiAnnouncedIds = new Set();
     // 다음 로그인은 토큰을 해당 계정에 다시 연결해야 합니다.
     fcmRegisteredUserId = "";
     if (typeof document === 'undefined') return;
+    closeNotificationPanel();
     const badge = document.getElementById('notiBadge');
-    if (badge) badge.style.display = 'none';
+    if (badge) {
+        badge.hidden = true;
+        badge.classList.remove('has-unread');
+    }
     const list = document.getElementById('notiList');
-    if (list) list.innerHTML = '<p style="color:var(--text-secondary); text-align:center; font-size:0.9rem; padding: 10px 0;">로그인 후 알림을 확인할 수 있습니다.</p>';
+    if (list) list.innerHTML = '<div class="noti-empty-state"><span aria-hidden="true">🔒</span><strong>로그인 후 알림을 확인할 수 있습니다.</strong></div>';
 }
 
 function markAllNotisAsRead() {
@@ -260,10 +344,10 @@ function markAllNotisAsRead() {
         .where('userId', '==', currentWorkerId)
         .where('read', '==', false)
         .get()
-        .then(snapshot => {
+        .then((snapshot) => {
             if (snapshot.empty) return;
             const batch = db.batch();
-            snapshot.forEach(doc => {
+            snapshot.forEach((doc) => {
                 batch.update(doc.ref, {
                     read: true,
                     readAt: readTimestamp
@@ -271,13 +355,18 @@ function markAllNotisAsRead() {
             });
             return batch.commit();
         })
-        .catch(err => console.warn('알림 읽기 조회/갱신 실패:', err));
+        .catch((error) => console.warn('알림 읽기 조회/갱신 실패:', error));
 }
 
 if (typeof window !== 'undefined') {
     window.toggleNotificationPanel = toggleNotificationPanel;
+    window.openNotificationPanel = openNotificationPanel;
+    window.closeNotificationPanel = closeNotificationPanel;
     window.initNotifications = initNotifications;
     window.initMessagingPush = initMessagingPush;
     window.markAllNotisAsRead = markAllNotisAsRead;
     window.stopNotifications = stopNotifications;
+    window.addEventListener?.('keydown', (event) => {
+        if (event.key === 'Escape' && notificationPanelIsOpen()) closeNotificationPanel();
+    });
 }
