@@ -160,23 +160,6 @@ function auditRosterPhotoWorkerCounts(rows, unassignedWorkerCount = 0, expectedS
     };
 }
 
-/**
- * OCR 자체를 영구 학습하는 대신, 최대 3가지 로컬 이미지 보정 결과를 비교합니다.
- * 작업자 조각이 모두 칸에 배정된 결과를 우선하고, 불가피한 경우에는 미배정 조각이 적은 결과를 씁니다.
- */
-function chooseRosterTableOcrCandidate(current, candidate) {
-    if (!candidate) return current;
-    if (!current) return candidate;
-    const currentUnassigned = Math.max(0, Number(current.unassignedWorkerCellCount) || 0);
-    const candidateUnassigned = Math.max(0, Number(candidate.unassignedWorkerCellCount) || 0);
-    if (candidateUnassigned !== currentUnassigned) {
-        return candidateUnassigned < currentUnassigned ? candidate : current;
-    }
-    const currentConfidence = Number(current.confidence) || 0;
-    const candidateConfidence = Number(candidate.confidence) || 0;
-    return candidateConfidence > currentConfidence ? candidate : current;
-}
-
 /** OCR 검토 행을 저장 절차와 별개로 현재 탭의 찾기에 바로 반영합니다. 인원 대조는 경고·검토 정보로만 유지합니다. */
 function syncRosterPhotoSearchEntries() {
     const audit = auditRosterPhotoWorkerCounts(rosterRuntime.reviewRows, rosterRuntime.sourceUnassignedWorkerCount, rosterRuntime.sourceWorkerCount);
@@ -1672,50 +1655,20 @@ async function runRosterPhotoOcr() {
     try {
         const [engine, enhancedCanvas] = await Promise.all([getRosterOcrEngine(), prepareRosterCanvasForOcr("enhanced")]);
         let tableResult = null;
-        let tableRegions = null;
-        let tableFallbackYear = new Date().getFullYear();
-        let tableOcrAttempts = 0;
         let enhancedPixels = null;
         try {
             enhancedPixels = enhancedCanvas.getContext("2d")?.getImageData(0, 0, enhancedCanvas.width, enhancedCanvas.height);
-            tableRegions = detectRosterTableRegions(enhancedPixels, enhancedCanvas.width, enhancedCanvas.height);
+            const tableRegions = detectRosterTableRegions(enhancedPixels, enhancedCanvas.width, enhancedCanvas.height);
             if (tableRegions) {
                 const activeDate = (() => {
                     try { return String(getActiveWorkLogDate() || ""); } catch (error) { return ""; }
                 })();
-                tableFallbackYear = Number(activeDate.slice(0, 4)) || new Date().getFullYear();
+                const fallbackYear = Number(activeDate.slice(0, 4)) || new Date().getFullYear();
                 setRosterPhotoStatus(`🔍 ${tableRegions.length}개 선박 표 칸을 분리해 읽는 중…`);
-                tableResult = await recognizeRosterTablePhoto(engine, enhancedCanvas, tableRegions, tableFallbackYear);
-                if (tableResult) tableOcrAttempts = 1;
+                tableResult = await recognizeRosterTablePhoto(engine, enhancedCanvas, tableRegions, fallbackYear);
             }
         } catch (error) {
             console.warn("[roster] table layout detection unavailable", error);
-        }
-        // 표 OCR에서 경계에 걸려 빠진 작업자 조각이 있으면 다른 로컬 보정 방식으로 최대 2회 더 읽습니다.
-        // 자동 재확인에 성공하지 못해도 검토표와 찾기·저장은 계속 사용할 수 있습니다.
-        if (tableResult && !tableResult.workerCountAudit?.isVerified && tableRegions) {
-            for (const profile of ["adaptive", "binary"]) {
-                if (tableOcrAttempts >= 3 || tableResult.workerCountAudit?.isVerified) break;
-                const profileLabel = profile === "adaptive" ? "부분별 밝기 보정" : "고대비 흑백";
-                setRosterPhotoStatus(`🔁 작업자 칸 인원 불일치로 ${profileLabel} 보정 재확인 중… (${tableOcrAttempts + 1}/3)`);
-                try {
-                    const retryCanvas = await prepareRosterCanvasForOcr(profile);
-                    const retryPixels = retryCanvas.getContext("2d")?.getImageData(0, 0, retryCanvas.width, retryCanvas.height);
-                    const retryRegions = detectRosterTableRegions(retryPixels, retryCanvas.width, retryCanvas.height) || tableRegions;
-                    const retryResult = await recognizeRosterTablePhoto(engine, retryCanvas, retryRegions, tableFallbackYear);
-                    if (!retryResult) continue;
-                    tableOcrAttempts += 1;
-                    tableResult = chooseRosterTableOcrCandidate(tableResult, retryResult);
-                } catch (error) {
-                    console.warn(`[roster] ${profile} table OCR retry unavailable`, error);
-                }
-            }
-            if (tableOcrAttempts > 1) {
-                const resultNote = tableResult.workerCountAudit?.isVerified
-                    ? "인식된 작업자 조각이 모두 출력 칸에 배정되었습니다."
-                    : `재확인 후에도 ${tableResult.unassignedWorkerCellCount}개 작업자 조각의 칸 배정이 불확실합니다.`;
-                tableResult.warnings.push(`사진을 다른 보정 방식으로 총 ${tableOcrAttempts}회 읽어 비교했습니다. ${resultNote} 출력 결과는 그대로 찾기·저장에 사용할 수 있습니다.`);
-            }
         }
         if (tableResult) {
             rosterRuntime.recognizedText = tableResult.text;
@@ -1727,7 +1680,7 @@ async function runRosterPhotoOcr() {
             const box = rosterElement("rosterPhotoText");
             if (box) box.value = rosterRuntime.recognizedText;
             rosterElement("rosterPhotoTextDetails")?.classList.remove("hidden");
-            beginRosterPhotoReview(rosterRuntime.tableOcrParsed, `✅ 표 구조로 명단을 읽었습니다 (${Math.max(1, tableOcrAttempts)}회 보정 인식·비교). 인원 불일치와 관계없이 현재 출력으로 찾기·저장을 계속할 수 있습니다. 입·출항 스케줄과 선박명을 교차 확인하는 중입니다.`);
+            beginRosterPhotoReview(rosterRuntime.tableOcrParsed, "✅ 표 구조로 선박별 작업자 명단을 읽었습니다. 인원 불일치와 관계없이 현재 출력으로 찾기·저장을 계속할 수 있습니다. 입·출항 스케줄과 선박명을 교차 확인하는 중입니다.");
             trackAppEvent?.("actions", "roster_photo_table_ocr_done");
             return tableResult;
         }

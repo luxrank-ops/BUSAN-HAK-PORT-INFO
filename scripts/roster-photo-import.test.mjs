@@ -188,20 +188,6 @@ test('원본 작업자 칸 수와 검토 출력 인원이 달라도 경고를 �
     assert.deepEqual(result, { source: 2, output: 3, verified: false, beforeSave: 1, saved: true, persisted: 1, staleFinderResults: 0, searchableOutputWorker: 1 });
 });
 
-test('반복 OCR 후보는 작업자 칸에 배정되지 않은 조각이 적은 결과를 우선한다', () => {
-    const photo = createPhotoVm();
-    const result = JSON.parse(JSON.stringify(photo.run(`(() => {
-        const incomplete = { text: 'first', unassignedWorkerCellCount: 2, confidence: 95 };
-        const complete = { text: 'second', unassignedWorkerCellCount: 0, confidence: 45 };
-        const tied = { text: 'third', unassignedWorkerCellCount: 0, confidence: 80 };
-        return [
-            chooseRosterTableOcrCandidate(incomplete, complete).text,
-            chooseRosterTableOcrCandidate(complete, tied).text
-        ];
-    })()`)));
-    assert.deepEqual(result, ['second', 'third']);
-});
-
 test('원본 작업자 칸 수와 출력 인원이 같으면 표 OCR 명단은 즉시 찾기에 반영한다', () => {
     const photo = createPhotoVm();
     const result = JSON.parse(JSON.stringify(photo.run(`(() => {
@@ -506,8 +492,9 @@ test('화면은 카메라·갤러리·수정·기기저장 UI와 검토 후 적�
     assert.ok(html.includes('인식 내용 검토표로 보기'));
     assert.ok(html.includes('2열 반복 표는 선박별 헤더와 작업자 칸을 따로 읽으며'));
     assert.ok(html.includes('인원과 출력 인원이 달라도 찾기·저장을 막지 않고'));
-    assert.ok(html.includes('다른 이미지 보정 방식으로 최대 3회까지 재인식'));
-    assert.ok(html.includes('OCR 모델을 서버에서 영구 학습시키지는 않습니다'));
+    assert.ok(html.includes('자동 반복 인식·학습은 실행하지 않으며'));
+    assert.ok(html.includes('사진에서 명단 다시 읽기'));
+    assert.doesNotMatch(engine, /for \(const profile of \["adaptive", "binary"\]/);
     assert.ok(html.includes('날짜별 전 터미널 입·출항 스케줄로 선박명을 교차 확인'));
     assert.match(html, /parseRosterPhotoTextFromBox\(\)/);
     assert.match(engine, /function detectRosterTableRegions\(imageData, width, height\)/);
