@@ -181,7 +181,34 @@ test('임금·근무일지 공용 선박 목록 정리기는 공백·대소문�
     assert.deepEqual(value.duplicates, ['cma cgm panama', 'MAGNA']);
 });
 
-test('근무배치 엔진은 근무일지에 이미 있는 선박을 찾아 자동으로 건너뛰지 않는다', () => {
+test('근무배치 등록은 현재 날짜 근무일지에 같은 선박을 다시 넣지 않는다', () => {
+    const fields = { logShipName: { value: '[BNCT] CMA CGM PANAMA' } };
+    const toasts = [];
+    const vmRoster = createRosterVm({
+        MAX_WORK_VESSELS: 4,
+        parseWorklogShipNames: (value) => String(value || '').split(/\s*\/\s*/).map((item) => item.trim()).filter(Boolean),
+        getActiveWorkLogDate: () => '2026-11-11',
+        syncWorklogDoubleOrderMemo() {},
+        refreshWorklogVesselList() {},
+        updateWorklogDoubleOrderStatus() {},
+        showToast: (message) => toasts.push(message),
+        document: {
+            getElementById: (id) => fields[id] || null,
+            querySelector: () => null,
+            querySelectorAll: () => []
+        }
+    });
+    const duplicate = vmRoster.run(`attachRosterResultToOpenLog({ assignment: { vessel: 'cma cgm panama' }, found: false })`);
+    assert.equal(duplicate, false);
+    assert.equal(fields.logShipName.value, '[BNCT] CMA CGM PANAMA');
+    assert.match(toasts.at(-1), /2026-11-11 근무일지에 cma cgm panama은\(는\) 이미 입력되어 있어 중복 등록하지 않았습니다/);
+
+    const added = vmRoster.run(`attachRosterResultToOpenLog({ assignment: { vessel: 'ONE APUS' }, found: false })`);
+    assert.equal(added, true);
+    assert.equal(fields.logShipName.value, '[BNCT] CMA CGM PANAMA / ONE APUS');
+});
+
+test('근무배치 원문은 근무일지와 비교해 자동 삭제하지 않는다', () => {
     assert.equal(engine.includes('function isVesselRegisteredOnDate'), false);
     assert.equal(engine.includes('function splitNewAndDuplicateVessels'), false);
     assert.equal(engine.includes('이미 등록되어 제외했습니다'), false);

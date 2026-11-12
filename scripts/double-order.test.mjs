@@ -12,7 +12,10 @@ const calculator = appJs.split('function calculateWage() {')[1].split('function 
 const transfer = appJs.split('let wageToLogTransferPending = false;')[1].split('async function sendWorkLogShipToWage(')[0];
 const activeWorkLogDate = extractFunction(appJs, 'getActiveWorkLogDate');
 const wageLogTargetDate = extractFunction(appJs, 'getWageLogTargetDate');
-assert.ok(segmentFn && calculator && transfer && activeWorkLogDate && wageLogTargetDate, 'calculator, date routing and transfer code found');
+const parseWorklogShipNames = extractFunction(appJs, 'parseWorklogShipNames');
+const normalizeWorklogShipKey = extractFunction(appJs, 'normalizeWorklogShipKey');
+const dedupeWorklogShipNames = extractFunction(appJs, 'dedupeWorklogShipNames');
+assert.ok(segmentFn && calculator && transfer && activeWorkLogDate && wageLogTargetDate && parseWorklogShipNames && normalizeWorklogShipKey && dedupeWorklogShipNames, 'calculator, date routing and transfer code found');
 
 function setup({ doubleOrder = false, savedLog = null, sameDateDraft = false } = {}) {
     const elements = {};
@@ -83,7 +86,7 @@ function setup({ doubleOrder = false, savedLog = null, sameDateDraft = false } =
         renderRow: (label, amount) => `${label}: ${amount}`,
         setTimeout() {}, console: { error() {} }
     });
-    vm.runInContext(`let lastCalculatedWageData = null; ${activeWorkLogDate}\n${wageLogTargetDate}\nfunction calculateWageSegment(${segmentFn}function calculateWage() {${calculator}let wageToLogTransferPending = false;${transfer}`, context);
+    vm.runInContext(`let lastCalculatedWageData = null; ${activeWorkLogDate}\n${wageLogTargetDate}\n${parseWorklogShipNames}\n${normalizeWorklogShipKey}\n${dedupeWorklogShipNames}\nfunction calculateWageSegment(${segmentFn}function calculateWage() {${calculator}let wageToLogTransferPending = false;${transfer}`, context);
     return {
         elements, context, messages,
         get fetchCount() { return fetchCount; },
