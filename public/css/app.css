@@ -2319,6 +2319,7 @@
     .roster-photo-row-workers textarea { resize: vertical; line-height: var(--lh-4); }
     .roster-photo-schedule-toolbar {
         display: flex;
+        flex-wrap: wrap;
         align-items: center;
         justify-content: space-between;
         gap: var(--sp-5);
