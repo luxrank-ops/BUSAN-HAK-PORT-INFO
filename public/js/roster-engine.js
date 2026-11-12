@@ -36,6 +36,10 @@ const rosterRuntime = {
     persistPhotoText: false,
     photoAssignments: [],
     reviewRows: [],
+    reviewWarnings: [],
+    reviewVerifications: [],
+    reviewVerificationState: "idle",
+    reviewVerificationRequestId: 0,
     finderResults: [],
     activeImageUrl: "",
     recognizedText: "",
@@ -209,6 +213,60 @@ function buildRosterVesselPlan(assignments, schedules) {
             found: Boolean(partial?.vessel)
         };
     });
+}
+
+function rosterScheduleDatePrefix(value) {
+    const match = String(value || "").trim().match(/^(\d{4})[-./](\d{2})[-./](\d{2})/);
+    return match ? `${match[1]}-${match[2]}-${match[3]}` : "";
+}
+
+/** 사진에 적힌 날짜가 입·출항/작업 기간에 포함되는지 확인합니다. */
+function isRosterScheduleVesselActiveOnDate(vessel, date) {
+    if (!vessel || !/^\d{4}-\d{2}-\d{2}$/.test(String(date || ""))) return false;
+    const dates = ["ETB", "ATA", "ATW", "ATD", "ATC"].map((key) => rosterScheduleDatePrefix(vessel[key]));
+    if (dates.includes(date)) return true;
+    const start = rosterScheduleDatePrefix(vessel.ATA) || rosterScheduleDatePrefix(vessel.ETB) || rosterScheduleDatePrefix(vessel.ATW);
+    const end = rosterScheduleDatePrefix(vessel.ATD) || rosterScheduleDatePrefix(vessel.ATC) || start;
+    return Boolean(start && end && start <= date && date <= end);
+}
+
+function collectRosterScheduleEntries(schedules) {
+    return Object.entries(schedules || {}).flatMap(([terminalId, vessels]) => (Array.isArray(vessels) ? vessels : [])
+        .filter((vessel) => String(vessel?.VSL_NM || "").trim())
+        .map((vessel) => ({ terminalId, vessel })));
+}
+
+/**
+ * OCR 선박명은 고치지 않고, 해당 날짜의 전 터미널 입·출항 스케줄과 비교한 결과만 돌려줍니다.
+ * `candidate`는 OCR 원문을 대체하지 않으며, 검토자가 명시적으로 선택할 때만 스케줄명을 쓸 수 있습니다.
+ */
+function verifyRosterPhotoVesselName(row, schedules) {
+    const literalName = String(row?.vessel || "").trim();
+    const date = String(row?.date || "").trim();
+    if (!literalName) return { status: "missing-name", matches: [] };
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return { status: "needs-date", literalName, matches: [] };
+
+    const entries = collectRosterScheduleEntries(schedules);
+    if (!entries.length) return { status: "schedule-unavailable", literalName, matches: [] };
+    const target = normalizeRosterVesselKey(literalName);
+    const activeEntries = entries.filter((entry) => isRosterScheduleVesselActiveOnDate(entry.vessel, date));
+    const exactActive = activeEntries.filter((entry) => normalizeRosterVesselKey(entry.vessel.VSL_NM) === target);
+    if (exactActive.length) return { status: "verified", literalName, matches: exactActive };
+
+    const partialActive = activeEntries.filter((entry) => {
+        const key = normalizeRosterVesselKey(entry.vessel.VSL_NM);
+        return key && (key.includes(target) || target.includes(key));
+    });
+    if (partialActive.length === 1) return { status: "candidate", literalName, matches: partialActive };
+    if (partialActive.length > 1) return { status: "ambiguous", literalName, matches: partialActive };
+
+    const exactOtherDate = entries.filter((entry) => normalizeRosterVesselKey(entry.vessel.VSL_NM) === target);
+    if (exactOtherDate.length) return { status: "date-mismatch", literalName, matches: exactOtherDate };
+    return { status: "not-found", literalName, matches: [] };
+}
+
+function buildRosterPhotoVesselVerifications(rows, schedules) {
+    return (rows || []).map((row) => verifyRosterPhotoVesselName(row, schedules));
 }
 
 function isRosterFinderUnlocked() {
@@ -728,6 +786,10 @@ function handleRosterPhotoSelected(event) {
     rosterRuntime.activeImageUrl = URL.createObjectURL(file);
     rosterRuntime.recognizedText = "";
     rosterRuntime.reviewRows = [];
+    rosterRuntime.reviewWarnings = [];
+    rosterRuntime.reviewVerifications = [];
+    rosterRuntime.reviewVerificationState = "idle";
+    rosterRuntime.reviewVerificationRequestId += 1;
     const preview = rosterElement("rosterPhotoPreview");
     if (preview) preview.src = rosterRuntime.activeImageUrl;
     rosterElement("rosterPhotoPreviewWrap")?.classList.remove("hidden");
@@ -969,12 +1031,116 @@ function parseRosterPhotoTextFromBox() {
     const parsed = parseRosterPhotoText(raw, { defaultYear: new Date().getFullYear(), defaultDate: activeDate });
     rosterRuntime.photoModeEngaged = true;
     rosterRuntime.reviewRows = parsed.entries.map((row) => ({ ...row, workers: [...row.workers] }));
-    renderRosterPhotoRows(parsed.warnings);
-    setRosterPhotoStatus("📝 인식한 내용을 보정 없이 검토표에 표시했습니다. 날짜·선박명·작업자를 확인한 뒤 [현재 검색 명단에 적용]을 눌러 주세요.");
+    rosterRuntime.reviewWarnings = [...parsed.warnings];
+    rosterRuntime.reviewVerifications = parsed.entries.map(() => ({ status: "pending", matches: [] }));
+    rosterRuntime.reviewVerificationState = "pending";
+    renderRosterPhotoRows();
+    setRosterPhotoStatus("📝 인식한 내용을 그대로 검토표에 표시했습니다. 전 터미널 입·출항 스케줄과 선박명을 교차 확인하는 중입니다.");
+    verifyRosterPhotoVessels();
     return parsed;
 }
 
-function renderRosterPhotoRows(warnings) {
+function rosterPhotoScheduleValue(vessel, fields) {
+    for (const field of fields) {
+        const value = String(vessel?.[field] || "").trim();
+        if (value) return value;
+    }
+    return "-";
+}
+
+function rosterPhotoVerificationHtml(verification, index) {
+    const check = verification || { status: "pending", matches: [] };
+    const first = check.matches?.[0];
+    const terminal = first && typeof getTerminalMeta === "function"
+        ? getTerminalMeta(first.terminalId)
+        : null;
+    const terminalLabel = terminal?.badge || String(first?.terminalId || "").toUpperCase();
+    const vesselName = String(first?.vessel?.VSL_NM || "").trim();
+    const scheduleInfo = first
+        ? ` · ${escapeShipCommentHtml(terminalLabel)} · ${escapeShipCommentHtml(vesselName)} · 입항 ${escapeShipCommentHtml(rosterPhotoScheduleValue(first.vessel, ["ATA", "ETB", "ATW"]))} · 출항 ${escapeShipCommentHtml(rosterPhotoScheduleValue(first.vessel, ["ATD", "ATC"]))}`
+        : "";
+    const more = check.matches?.length > 1 ? ` 외 ${check.matches.length - 1}척` : "";
+    const candidateButton = check.status === "candidate" && vesselName
+        ? `<button type="button" class="roster-photo-schedule-name-btn" onclick="applyRosterPhotoScheduleCandidate(${index})">스케줄명으로 바꾸기</button>`
+        : "";
+    const labels = {
+        pending: "⏳ 스케줄 교차 확인 대기",
+        loading: "⏳ 전 터미널 입·출항 스케줄 확인 중",
+        verified: "✅ 입·출항 스케줄과 선박명 일치",
+        candidate: "🔎 비슷한 스케줄 선박 후보 — 사진 원문은 유지됨",
+        ambiguous: "⚠️ 비슷한 스케줄 선박이 여러 척 — 사진을 보고 선택",
+        "date-mismatch": "⚠️ 같은 선박명이지만 입력 날짜의 입·출항 일정과 다름",
+        "not-found": "⚠️ 해당 날짜 전 터미널 스케줄에서 선박명을 찾지 못함",
+        "schedule-unavailable": "ℹ️ 스케줄 데이터가 없어 교차 확인 보류",
+        "needs-date": "ℹ️ 날짜를 입력하면 입·출항 스케줄과 교차 확인",
+        "missing-name": "ℹ️ 선박명을 입력하면 입·출항 스케줄과 교차 확인",
+        stale: "✏️ 선박명 또는 날짜를 수정함 — 스케줄 재확인 필요"
+    };
+    return `<div class="roster-photo-schedule-check is-${escapeShipCommentHtml(check.status || "pending")}"><span>${labels[check.status] || labels.pending}${scheduleInfo}${more}</span>${candidateButton}</div>`;
+}
+
+function summarizeRosterPhotoVerification(verifications) {
+    const counts = (verifications || []).reduce((summary, item) => {
+        summary[item?.status || "pending"] = (summary[item?.status || "pending"] || 0) + 1;
+        return summary;
+    }, {});
+    const parts = [];
+    if (counts.verified) parts.push(`일치 ${counts.verified}척`);
+    if (counts.candidate) parts.push(`후보 ${counts.candidate}척`);
+    if (counts.ambiguous || counts["date-mismatch"] || counts["not-found"]) parts.push(`확인 필요 ${(counts.ambiguous || 0) + (counts["date-mismatch"] || 0) + (counts["not-found"] || 0)}척`);
+    if (counts["schedule-unavailable"]) parts.push(`스케줄 보류 ${counts["schedule-unavailable"]}척`);
+    if (counts["needs-date"]) parts.push(`날짜 입력 필요 ${counts["needs-date"]}척`);
+    return parts.join(" · ") || "확인할 선박명이 없습니다.";
+}
+
+async function verifyRosterPhotoVessels() {
+    const rows = rosterRuntime.reviewRows.map((row) => ({ ...row }));
+    const requestId = ++rosterRuntime.reviewVerificationRequestId;
+    if (!rows.length) return [];
+    const eligible = rows.filter((row) => row.date && row.vessel);
+    if (!eligible.length) {
+        const verifications = buildRosterPhotoVesselVerifications(rows, {});
+        if (requestId !== rosterRuntime.reviewVerificationRequestId) return [];
+        rosterRuntime.reviewVerifications = verifications;
+        rosterRuntime.reviewVerificationState = "ready";
+        renderRosterPhotoRows();
+        setRosterPhotoStatus(`🗓️ ${summarizeRosterPhotoVerification(verifications)}`);
+        return verifications;
+    }
+
+    rosterRuntime.reviewVerificationState = "loading";
+    rosterRuntime.reviewVerifications = rows.map(() => ({ status: "loading", matches: [] }));
+    renderRosterPhotoRows();
+    let schedules = {};
+    try {
+        schedules = await collectRosterSchedules(eligible);
+    } catch (error) {
+        console.warn("[roster] photo schedule verification unavailable", error);
+    }
+    if (requestId !== rosterRuntime.reviewVerificationRequestId) return [];
+    const verifications = buildRosterPhotoVesselVerifications(rows, schedules);
+    rosterRuntime.reviewVerifications = verifications;
+    rosterRuntime.reviewVerificationState = "ready";
+    renderRosterPhotoRows();
+    setRosterPhotoStatus(`🗓️ 사진의 선박명은 바꾸지 않고 입·출항 스케줄과 교차 확인했습니다. ${summarizeRosterPhotoVerification(verifications)}`);
+    trackAppEvent?.("actions", "roster_photo_schedule_verify");
+    return verifications;
+}
+
+function applyRosterPhotoScheduleCandidate(index) {
+    const row = rosterRuntime.reviewRows[index];
+    const candidate = rosterRuntime.reviewVerifications[index]?.matches?.[0]?.vessel;
+    const vesselName = String(candidate?.VSL_NM || "").trim();
+    if (!row || !vesselName) return;
+    row.vessel = vesselName;
+    rosterRuntime.reviewVerifications[index] = { status: "stale", matches: [] };
+    rosterRuntime.reviewVerificationState = "stale";
+    renderRosterPhotoRows();
+    setRosterPhotoStatus(`✍️ ${vesselName} 스케줄명을 검토 행에 반영했습니다. 다시 교차 확인합니다.`);
+    verifyRosterPhotoVessels();
+}
+
+function renderRosterPhotoRows() {
     const container = rosterElement("rosterPhotoRows");
     if (!container) return;
     if (!rosterRuntime.reviewRows.length) {
@@ -984,7 +1150,9 @@ function renderRosterPhotoRows(warnings) {
         container.innerHTML = `<div class="roster-photo-empty">${message}</div>`;
         return;
     }
-    const warningHtml = (warnings || []).map((warning) => `<div class="roster-photo-warn">⚠️ ${escapeShipCommentHtml(warning)}</div>`).join("");
+    const warningHtml = (rosterRuntime.reviewWarnings || []).map((warning) => `<div class="roster-photo-warn">⚠️ ${escapeShipCommentHtml(warning)}</div>`).join("");
+    const state = rosterRuntime.reviewVerificationState;
+    const refreshLabel = state === "loading" ? "🗓️ 스케줄 확인 중…" : "🗓️ 입·출항 스케줄로 선박명 다시 확인";
     const rows = rosterRuntime.reviewRows.map((row, index) => `<div class="roster-photo-row">
         <div class="roster-photo-row-grid">
             <label>날짜<input type="date" value="${escapeShipCommentHtml(row.date)}" onchange="updateRosterPhotoRow(${index}, 'date', this.value)"></label>
@@ -992,10 +1160,11 @@ function renderRosterPhotoRows(warnings) {
             <label>시간<input type="text" value="${escapeShipCommentHtml(row.time)}" placeholder="HH:MM" onchange="updateRosterPhotoRow(${index}, 'time', this.value)"></label>
             <label>회사<input type="text" value="${escapeShipCommentHtml(row.company)}" onchange="updateRosterPhotoRow(${index}, 'company', this.value)"></label>
         </div>
+        ${rosterPhotoVerificationHtml(rosterRuntime.reviewVerifications[index], index)}
         <label class="roster-photo-row-workers">작업자 (${row.workers.length}명)<textarea rows="2" onchange="updateRosterPhotoRow(${index}, 'workers', this.value)">${escapeShipCommentHtml(row.workers.join(", "))}</textarea></label>
         <button type="button" class="roster-photo-row-del" onclick="removeRosterPhotoRow(${index})">이 줄 삭제</button>
     </div>`).join("");
-    container.innerHTML = `${warningHtml}${rows}<label class="roster-photo-persist"><input type="checkbox" id="rosterPhotoPersist"${rosterRuntime.persistPhotoText ? " checked" : ""}> 이 명단을 내 기기에 저장 (사진은 저장하지 않습니다)</label><button type="button" class="roster-photo-apply-btn" onclick="applyRosterPhotoRoster()">✅ 검토한 행을 현재 검색 명단에 적용 (${rosterRuntime.reviewRows.length}행)</button>`;
+    container.innerHTML = `${warningHtml}<div class="roster-photo-schedule-toolbar"><span>사진의 인식 선박명은 자동으로 바꾸지 않습니다. 날짜별 입·출항 스케줄은 검토 참고용입니다.</span><button type="button" onclick="verifyRosterPhotoVessels()"${state === "loading" ? " disabled" : ""}>${refreshLabel}</button></div>${rows}<label class="roster-photo-persist"><input type="checkbox" id="rosterPhotoPersist"${rosterRuntime.persistPhotoText ? " checked" : ""}> 이 명단을 내 기기에 저장 (사진은 저장하지 않습니다)</label><button type="button" class="roster-photo-apply-btn" onclick="applyRosterPhotoRoster()">✅ 검토한 행을 현재 검색 명단에 적용 (${rosterRuntime.reviewRows.length}행)</button>`;
 }
 
 function updateRosterPhotoRow(index, field, value) {
@@ -1004,11 +1173,20 @@ function updateRosterPhotoRow(index, field, value) {
     if (field === "workers") row.workers = mergeWorkers([], String(value || "").split(/[,、\n]+/).map((item) => item.trim()).filter(Boolean));
     else if (field === "date") row.date = /^\d{4}-\d{2}-\d{2}$/.test(String(value || "")) ? String(value) : "";
     else row[field] = String(value || "").trim();
+    if (field === "date" || field === "vessel") {
+        // 이전 값으로 진행 중이던 비동기 스케줄 조회 결과가 새 입력을 덮어쓰지 않게 합니다.
+        rosterRuntime.reviewVerificationRequestId += 1;
+        rosterRuntime.reviewVerifications[index] = { status: "stale", matches: [] };
+        rosterRuntime.reviewVerificationState = "stale";
+        renderRosterPhotoRows();
+    }
 }
 
 function removeRosterPhotoRow(index) {
+    rosterRuntime.reviewVerificationRequestId += 1;
     rosterRuntime.reviewRows.splice(index, 1);
-    renderRosterPhotoRows([]);
+    rosterRuntime.reviewVerifications.splice(index, 1);
+    renderRosterPhotoRows();
 }
 
 function clearRosterSearchResult() {
@@ -1074,6 +1252,10 @@ function deleteSavedPhotoRosterEntry(index) {
 function clearPhotoRosterEntries() {
     clearPhotoRosterFromDevice();
     rosterRuntime.reviewRows = [];
+    rosterRuntime.reviewWarnings = [];
+    rosterRuntime.reviewVerifications = [];
+    rosterRuntime.reviewVerificationState = "idle";
+    rosterRuntime.reviewVerificationRequestId += 1;
     clearRosterSearchResult();
     renderRosterPhotoSaved();
     renderRosterPhotoRows([]);
@@ -1084,6 +1266,10 @@ function clearRosterPhoto() {
     releaseRosterPhotoObjectUrl();
     rosterRuntime.recognizedText = "";
     rosterRuntime.reviewRows = [];
+    rosterRuntime.reviewWarnings = [];
+    rosterRuntime.reviewVerifications = [];
+    rosterRuntime.reviewVerificationState = "idle";
+    rosterRuntime.reviewVerificationRequestId += 1;
     rosterRuntime.photoModeEngaged = false;
     const preview = rosterElement("rosterPhotoPreview");
     if (preview) preview.removeAttribute("src");

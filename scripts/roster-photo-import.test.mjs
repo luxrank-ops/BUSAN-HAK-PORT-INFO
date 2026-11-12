@@ -122,6 +122,38 @@ SM LONG BEACH 08:00
     assert.equal(parsed.warnings.some((warning) => warning.includes('앞선 선박')), false);
 });
 
+test('사진 OCR 선박명은 날짜별 입출항 스케줄과 교차 확인하되 원문을 자동으로 고치지 않는다', () => {
+    const photo = createPhotoVm();
+    const schedules = {
+        bnct: [
+            { VSL_NM: 'CMA CGM PANAMA', ETB: '2026-11-11 10:00', ATD: '2026-11-12 15:00', BERTH_NO: '3B' },
+            { VSL_NM: 'SCHEDULED LATER', ETB: '2026-11-14 09:00', ATD: '2026-11-15 19:00' }
+        ],
+        hjnc: [
+            { VSL_NM: 'CMA CGM PANAMA EXPRESS', ETB: '2026-11-11 11:00', ATD: '2026-11-12 17:00' }
+        ]
+    };
+    const verified = JSON.parse(JSON.stringify(photo.run(`verifyRosterPhotoVesselName(
+        { date: '2026-11-11', vessel: 'CMA CGM PANAMA' }, ${JSON.stringify(schedules)}
+    )`)));
+    assert.equal(verified.status, 'verified');
+    assert.equal(verified.matches[0].terminalId, 'bnct');
+
+    const singleCandidateSchedules = { bnct: [schedules.bnct[0]] };
+    const candidate = JSON.parse(JSON.stringify(photo.run(`verifyRosterPhotoVesselName(
+        { date: '2026-11-11', vessel: 'CMA CGM PANAM' }, ${JSON.stringify(singleCandidateSchedules)}
+    )`)));
+    assert.equal(candidate.status, 'candidate');
+    assert.equal(candidate.literalName, 'CMA CGM PANAM', 'OCR에서 읽은 선박명은 후보 확인만으로 바꾸지 않습니다');
+    assert.equal(candidate.matches[0].vessel.VSL_NM, 'CMA CGM PANAMA');
+    assert.equal(photo.run(`(() => { const row = { date: '2026-11-11', vessel: 'CMA CGM PANAM' }; verifyRosterPhotoVesselName(row, ${JSON.stringify(singleCandidateSchedules)}); return row.vessel; })()`), 'CMA CGM PANAM');
+    assert.equal(photo.run(`verifyRosterPhotoVesselName({ date: '2026-11-11', vessel: 'CMA CGM PANAM' }, ${JSON.stringify(schedules)}).status`), 'ambiguous');
+
+    assert.equal(photo.run(`verifyRosterPhotoVesselName({ date: '2026-11-11', vessel: 'SCHEDULED LATER' }, ${JSON.stringify(schedules)}).status`), 'date-mismatch');
+    assert.equal(photo.run(`verifyRosterPhotoVesselName({ date: '', vessel: 'CMA CGM PANAMA' }, ${JSON.stringify(schedules)}).status`), 'needs-date');
+    assert.equal(photo.run(`verifyRosterPhotoVesselName({ date: '2026-11-11', vessel: 'UNKNOWN VESSEL' }, ${JSON.stringify(schedules)}).status`), 'not-found');
+});
+
 test('사진 명단은 같은 날짜·선박·이름도 자동으로 합치거나 제외하지 않는다', () => {
     const photo = createPhotoVm();
     const rows = JSON.parse(JSON.stringify(photo.run(`mergeRosterPhotoEntries([
@@ -168,7 +200,11 @@ test('화면은 카메라·갤러리·수정·기기저장 UI와 검토 후 적�
     assert.ok(html.includes('사진 자체는 저장하지 않습니다'));
     assert.ok(html.includes('이름 보정·제목\/회사 제외·중복 제거 없이'));
     assert.ok(html.includes('인식 내용 검토표로 보기'));
+    assert.ok(html.includes('입·출항 스케줄로 선박명을 교차 확인'));
+    assert.ok(html.includes('스케줄명으로 자동 변경·적용하지 않으니'));
     assert.match(html, /parseRosterPhotoTextFromBox\(\)/);
+    assert.match(engine, /function verifyRosterPhotoVessels\(\)/);
+    assert.match(engine, /function applyRosterPhotoScheduleCandidate\(index\)/);
     assert.match(engine, /function applyRosterPhotoRoster\(\)/);
     const parseFromTextBox = engine.slice(engine.indexOf('function parseRosterPhotoTextFromBox'), engine.indexOf('function renderRosterPhotoRows'));
     assert.doesNotMatch(parseFromTextBox, /applyRosterPhotoRoster\(/, 'OCR 결과는 검토 전 자동 적용하면 안 됩니다');
