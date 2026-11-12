@@ -122,7 +122,7 @@ SM LONG BEACH 08:00
     assert.equal(parsed.warnings.some((warning) => warning.includes('앞선 선박')), false);
 });
 
-test('사진 OCR 선박명은 날짜별 입출항 스케줄과 교차 확인하되 원문을 자동으로 고치지 않는다', () => {
+test('사진 OCR 선박명은 단일 활성 입출항 스케줄 후보일 때만 정식명으로 자동 확정한다', () => {
     const photo = createPhotoVm();
     const schedules = {
         bnct: [
@@ -144,10 +144,35 @@ test('사진 OCR 선박명은 날짜별 입출항 스케줄과 교차 확인하�
         { date: '2026-11-11', vessel: 'CMA CGM PANAM' }, ${JSON.stringify(singleCandidateSchedules)}
     )`)));
     assert.equal(candidate.status, 'candidate');
-    assert.equal(candidate.literalName, 'CMA CGM PANAM', 'OCR에서 읽은 선박명은 후보 확인만으로 바꾸지 않습니다');
+    assert.equal(candidate.literalName, 'CMA CGM PANAM');
     assert.equal(candidate.matches[0].vessel.VSL_NM, 'CMA CGM PANAMA');
-    assert.equal(photo.run(`(() => { const row = { date: '2026-11-11', vessel: 'CMA CGM PANAM' }; verifyRosterPhotoVesselName(row, ${JSON.stringify(singleCandidateSchedules)}); return row.vessel; })()`), 'CMA CGM PANAM');
-    assert.equal(photo.run(`verifyRosterPhotoVesselName({ date: '2026-11-11', vessel: 'CMA CGM PANAM' }, ${JSON.stringify(schedules)}).status`), 'ambiguous');
+    assert.equal(photo.run(`(() => { const row = { date: '2026-11-11', vessel: 'CMA CGM PANAM' }; verifyRosterPhotoVesselName(row, ${JSON.stringify(singleCandidateSchedules)}); return row.vessel; })()`), 'CMA CGM PANAM', '비교 함수 자체는 원문을 바꾸지 않습니다');
+    const automatic = JSON.parse(JSON.stringify(photo.run(`(() => {
+        const rows = [{ date: '2026-11-11', vessel: 'CMA CGM PANAM' }];
+        const checks = buildRosterPhotoVesselVerifications(rows, ${JSON.stringify(singleCandidateSchedules)});
+        const applied = applyUniqueRosterPhotoScheduleNames(rows, checks);
+        return { applied, row: rows[0], check: checks[0] };
+    })()`)));
+    assert.equal(automatic.applied, 1);
+    assert.equal(automatic.row.vessel, 'CMA CGM PANAMA');
+    assert.equal(automatic.row.scheduleNameSource, 'CMA CGM PANAM');
+    assert.equal(automatic.check.status, 'auto-corrected');
+    assert.equal(automatic.check.officialName, 'CMA CGM PANAMA');
+    const refreshed = JSON.parse(JSON.stringify(photo.run(`(() => {
+        const rows = [{ date: '2026-11-11', vessel: 'CMA CGM PANAMA', scheduleNameSource: 'CMA CGM PANAM' }];
+        const checks = buildRosterPhotoVesselVerifications(rows, ${JSON.stringify(singleCandidateSchedules)});
+        const applied = applyUniqueRosterPhotoScheduleNames(rows, checks);
+        return { applied, vessel: rows[0].vessel, status: checks[0].status, literalName: checks[0].literalName };
+    })()`)));
+    assert.deepEqual(refreshed, { applied: 0, vessel: 'CMA CGM PANAMA', status: 'auto-corrected', literalName: 'CMA CGM PANAM' }, '재확인해도 OCR 원문과 확정 근거를 보여 줍니다');
+
+    const ambiguous = JSON.parse(JSON.stringify(photo.run(`(() => {
+        const rows = [{ date: '2026-11-11', vessel: 'CMA CGM PANAM' }];
+        const checks = buildRosterPhotoVesselVerifications(rows, ${JSON.stringify(schedules)});
+        const applied = applyUniqueRosterPhotoScheduleNames(rows, checks);
+        return { applied, vessel: rows[0].vessel, status: checks[0].status };
+    })()`)));
+    assert.deepEqual(ambiguous, { applied: 0, vessel: 'CMA CGM PANAM', status: 'ambiguous' }, '복수 후보는 자동 확정하면 안 됩니다');
 
     assert.equal(photo.run(`verifyRosterPhotoVesselName({ date: '2026-11-11', vessel: 'SCHEDULED LATER' }, ${JSON.stringify(schedules)}).status`), 'date-mismatch');
     assert.equal(photo.run(`verifyRosterPhotoVesselName({ date: '', vessel: 'CMA CGM PANAMA' }, ${JSON.stringify(schedules)}).status`), 'needs-date');
@@ -201,10 +226,11 @@ test('화면은 카메라·갤러리·수정·기기저장 UI와 검토 후 적�
     assert.ok(html.includes('이름 보정·제목\/회사 제외·중복 제거 없이'));
     assert.ok(html.includes('인식 내용 검토표로 보기'));
     assert.ok(html.includes('입·출항 스케줄로 선박명을 교차 확인'));
-    assert.ok(html.includes('스케줄명으로 자동 변경·적용하지 않으니'));
+    assert.ok(html.includes('스케줄 정식명으로 자동 확정'));
+    assert.ok(html.includes('복수 후보·날짜 불일치·미발견은 자동 변경하지 않습니다'));
     assert.match(html, /parseRosterPhotoTextFromBox\(\)/);
     assert.match(engine, /function verifyRosterPhotoVessels\(\)/);
-    assert.match(engine, /function applyRosterPhotoScheduleCandidate\(index\)/);
+    assert.match(engine, /function applyUniqueRosterPhotoScheduleNames\(rows, verifications\)/);
     assert.match(engine, /function applyRosterPhotoRoster\(\)/);
     const parseFromTextBox = engine.slice(engine.indexOf('function parseRosterPhotoTextFromBox'), engine.indexOf('function renderRosterPhotoRows'));
     assert.doesNotMatch(parseFromTextBox, /applyRosterPhotoRoster\(/, 'OCR 결과는 검토 전 자동 적용하면 안 됩니다');
