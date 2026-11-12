@@ -1008,8 +1008,86 @@ function rosterOcrThreshold(histogram, pixelCount) {
     return bestThreshold;
 }
 
-/** 대비를 자동 보정하고, 필요할 때는 고대비 흑백본을 만듭니다. */
-function enhanceRosterOcrPixels(imageData, profile = "enhanced") {
+/**
+ * 조명 그림자가 있는 사진은 페이지 전체의 한 임계값으로 글자와 어두운 종이 바탕을 구분하기 어렵습니다.
+ * 작은 타일마다 밝기·분산을 따로 계산해, 원문자를 바꾸지 않고 OCR 입력 픽셀만 흑백화합니다.
+ */
+function applyRosterOcrAdaptiveThreshold(imageData, width, height) {
+    const data = imageData?.data;
+    const safeWidth = Math.floor(Number(width) || 0);
+    const safeHeight = Math.floor(Number(height) || 0);
+    if (!data?.length || !safeWidth || !safeHeight || safeWidth * safeHeight * 4 > data.length) return false;
+    const tileSize = Math.max(36, Math.min(96, Math.round(Math.min(safeWidth, safeHeight) / 18) || 48));
+    const columns = Math.ceil(safeWidth / tileSize);
+    const rows = Math.ceil(safeHeight / tileSize);
+    const sums = new Array(columns * rows).fill(0);
+    const squares = new Array(columns * rows).fill(0);
+    const counts = new Array(columns * rows).fill(0);
+    for (let y = 0; y < safeHeight; y += 1) {
+        const tileRow = Math.floor(y / tileSize);
+        for (let x = 0; x < safeWidth; x += 1) {
+            const tileIndex = tileRow * columns + Math.floor(x / tileSize);
+            const gray = data[(y * safeWidth + x) * 4];
+            sums[tileIndex] += gray;
+            squares[tileIndex] += gray * gray;
+            counts[tileIndex] += 1;
+        }
+    }
+    const thresholds = sums.map((sum, index) => {
+        const count = counts[index] || 1;
+        const mean = sum / count;
+        const variance = Math.max(0, (squares[index] / count) - mean ** 2);
+        // 배경보다 충분히 어두운 글자만 남기되, 흐린 획도 버리지 않도록 표준편차에 맞춰 여유를 둡니다.
+        const offset = Math.max(10, Math.min(35, Math.sqrt(variance) * 0.55));
+        return Math.max(25, Math.min(245, mean - offset));
+    });
+    for (let y = 0; y < safeHeight; y += 1) {
+        const tileRow = Math.floor(y / tileSize);
+        for (let x = 0; x < safeWidth; x += 1) {
+            const index = (y * safeWidth + x) * 4;
+            const threshold = thresholds[tileRow * columns + Math.floor(x / tileSize)];
+            const value = data[index] <= threshold ? 0 : 255;
+            data[index] = value;
+            data[index + 1] = value;
+            data[index + 2] = value;
+            data[index + 3] = 255;
+        }
+    }
+    return true;
+}
+
+/** 사진 영역별 평균 밝기 차이로 전역 흑백/부분별 흑백 재시도 방식을 고릅니다. */
+function inspectRosterOcrLighting(imageData, width, height) {
+    const data = imageData?.data;
+    const safeWidth = Math.floor(Number(width) || 0);
+    const safeHeight = Math.floor(Number(height) || 0);
+    if (!data?.length || !safeWidth || !safeHeight || safeWidth * safeHeight * 4 > data.length) {
+        return { uneven: false, spread: 0 };
+    }
+    const tileSize = Math.max(80, Math.min(240, Math.round(Math.min(safeWidth, safeHeight) / 8) || 120));
+    const columns = Math.ceil(safeWidth / tileSize);
+    const rows = Math.ceil(safeHeight / tileSize);
+    const sums = new Array(columns * rows).fill(0);
+    const counts = new Array(columns * rows).fill(0);
+    for (let y = 0; y < safeHeight; y += 4) {
+        const tileRow = Math.floor(y / tileSize);
+        for (let x = 0; x < safeWidth; x += 4) {
+            const tileIndex = tileRow * columns + Math.floor(x / tileSize);
+            sums[tileIndex] += data[(y * safeWidth + x) * 4];
+            counts[tileIndex] += 1;
+        }
+    }
+    const means = sums.map((sum, index) => sum / (counts[index] || 1));
+    const spread = means.length ? Math.max(...means) - Math.min(...means) : 0;
+    return { uneven: spread >= 42, spread: Math.round(spread) };
+}
+
+function getRosterOcrRetryProfile(imageData, width, height) {
+    return inspectRosterOcrLighting(imageData, width, height).uneven ? "adaptive" : "binary";
+}
+
+/** 대비를 자동 보정하고, 필요할 때는 전역 또는 부분별 고대비 흑백본을 만듭니다. */
+function enhanceRosterOcrPixels(imageData, profile = "enhanced", width, height) {
     const data = imageData?.data;
     if (!data?.length) return false;
     const pixelCount = Math.floor(data.length / 4);
@@ -1027,11 +1105,19 @@ function enhanceRosterOcrPixels(imageData, profile = "enhanced") {
         const gray = rosterOcrLuminance(data[index], data[index + 1], data[index + 2]);
         const normalized = span > 0 ? Math.max(0, Math.min(255, ((gray - low) * 255) / span)) : gray;
         const contrast = Math.max(0, Math.min(255, (normalized - 128) * 1.45 + 128));
-        const value = profile === "binary" ? (gray <= threshold ? 0 : 255) : Math.round(contrast);
+        // 부분별 임계값은 그림자 영역을 전역 대비로 먼저 검게 만들지 않도록 원래 회색값으로 시작합니다.
+        const value = profile === "adaptive"
+            ? gray
+            : (profile === "binary" ? (gray <= threshold ? 0 : 255) : Math.round(contrast));
         data[index] = value;
         data[index + 1] = value;
         data[index + 2] = value;
         data[index + 3] = 255;
+    }
+    if (profile === "adaptive") {
+        return applyRosterOcrAdaptiveThreshold(imageData, width, height)
+            // Canvas 크기를 알 수 없는 비브라우저 호출도 기존 고대비 동작으로 안전하게 처리합니다.
+            || enhanceRosterOcrPixels(imageData, "binary");
     }
     return true;
 }
@@ -1068,7 +1154,7 @@ async function prepareRosterCanvasForOcr(profile = "enhanced") {
     context.drawImage(image, 0, 0, canvas.width, canvas.height);
     try {
         const pixels = context.getImageData(0, 0, canvas.width, canvas.height);
-        enhanceRosterOcrPixels(pixels, profile);
+        enhanceRosterOcrPixels(pixels, profile, canvas.width, canvas.height);
         context.putImageData(pixels, 0, 0);
     } catch (error) {
         // Some browsers disallow pixel access for an image. The scaled canvas is still usable.
@@ -1442,9 +1528,10 @@ async function runRosterPhotoOcr() {
     try {
         const [engine, enhancedCanvas] = await Promise.all([getRosterOcrEngine(), prepareRosterCanvasForOcr("enhanced")]);
         let tableResult = null;
+        let enhancedPixels = null;
         try {
-            const pixels = enhancedCanvas.getContext("2d")?.getImageData(0, 0, enhancedCanvas.width, enhancedCanvas.height);
-            const regions = detectRosterTableRegions(pixels, enhancedCanvas.width, enhancedCanvas.height);
+            enhancedPixels = enhancedCanvas.getContext("2d")?.getImageData(0, 0, enhancedCanvas.width, enhancedCanvas.height);
+            const regions = detectRosterTableRegions(enhancedPixels, enhancedCanvas.width, enhancedCanvas.height);
             if (regions) {
                 const activeDate = (() => {
                     try { return String(getActiveWorkLogDate() || ""); } catch (error) { return ""; }
@@ -1471,22 +1558,32 @@ async function runRosterPhotoOcr() {
         const primaryResult = await recognize(engine, enhancedImage, "보정");
         const primary = assessRosterOcrText(primaryResult?.data?.text, primaryResult?.data?.confidence);
         let selected = primary;
-        let retried = false;
+        let retryProfile = "";
         if (shouldRetryRosterOcr(primary)) {
-            retried = true;
-            setRosterPhotoStatus("🔍 이름 인식이 부족해 고대비 흑백으로 한 번 더 확인하는 중…");
-            const binaryImage = await prepareRosterImageForOcr("binary");
-            const retryResult = await recognize(engine, binaryImage, "고대비 재확인");
+            // 그림자·부분 역광이 크면 타일별 임계값, 균일한 사진이면 기존 전역 흑백을 사용합니다.
+            retryProfile = enhancedPixels
+                ? getRosterOcrRetryProfile(enhancedPixels, enhancedCanvas.width, enhancedCanvas.height)
+                : "binary";
+            const retryLabel = retryProfile === "adaptive" ? "부분별 밝기 보정" : "고대비 흑백";
+            setRosterPhotoStatus(`🔍 이름 인식이 부족해 ${retryLabel}으로 한 번 더 확인하는 중…`);
+            const retryImage = await prepareRosterImageForOcr(retryProfile);
+            const retryResult = await recognize(engine, retryImage, `${retryLabel} 재확인`);
             const alternate = assessRosterOcrText(retryResult?.data?.text, retryResult?.data?.confidence);
             selected = chooseRosterOcrCandidate(primary, alternate);
-            trackAppEvent?.("actions", "roster_photo_ocr_retry");
+            trackAppEvent?.("actions", retryProfile === "adaptive"
+                ? "roster_photo_ocr_adaptive_retry"
+                : "roster_photo_ocr_retry");
         }
         rosterRuntime.recognizedText = selected.text;
         rosterRuntime.tableOcrParsed = null;
         const box = rosterElement("rosterPhotoText");
         if (box) box.value = rosterRuntime.recognizedText;
         rosterElement("rosterPhotoTextDetails")?.classList.remove("hidden");
-        const retryLabel = retried ? (selected === primary ? " · 보정본 선택" : " · 고대비 재확인본 선택") : "";
+        const retryLabel = retryProfile
+            ? (selected === primary
+                ? " · 보정본 선택"
+                : ` · ${retryProfile === "adaptive" ? "부분별 밝기 보정" : "고대비"} 재확인본 선택`)
+            : "";
         beginRosterPhotoReview(parseRosterPhotoTextFromBox({ skipReview: true }), `✅ 글자 인식 완료 (${rosterRuntime.recognizedText.length}자${retryLabel}). 전 터미널 입·출항 스케줄과 선박명을 교차 확인하는 중입니다.`);
         trackAppEvent?.("actions", "roster_photo_ocr_done");
         return selected;

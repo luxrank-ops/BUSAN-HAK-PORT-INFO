@@ -154,6 +154,47 @@ test('OCR 이미지 보정은 최대 변 길이를 지키고 대비·흑백 보�
     assert.ok(whitePage.every((value, index) => index % 4 === 3 || value === 255));
 });
 
+test('그림자처럼 영역별 밝기 차이가 큰 사진은 부분별 흑백 보정으로 양쪽 글자를 남긴다', () => {
+    const photo = createPhotoVm();
+    const result = JSON.parse(JSON.stringify(photo.run(`(() => {
+        const width = 144;
+        const height = 72;
+        const pixels = new Uint8ClampedArray(width * height * 4);
+        const paint = (x, y, value) => {
+            const index = (y * width + x) * 4;
+            pixels[index] = pixels[index + 1] = pixels[index + 2] = value;
+            pixels[index + 3] = 255;
+        };
+        for (let y = 0; y < height; y += 1) {
+            for (let x = 0; x < width; x += 1) {
+                const inLeftText = x >= 18 && x < 23;
+                const inRightText = x >= 102 && x < 107;
+                paint(x, y, x < width / 2 ? (inLeftText ? 180 : 230) : (inRightText ? 70 : 120));
+            }
+        }
+        const before = { data: new Uint8ClampedArray(pixels) };
+        const retryForShadow = getRosterOcrRetryProfile(before, width, height);
+        const retryForEvenLight = getRosterOcrRetryProfile({ data: new Uint8ClampedArray(width * height * 4).fill(220) }, width, height);
+        enhanceRosterOcrPixels({ data: pixels }, 'adaptive', width, height);
+        const read = (x, y = 20) => pixels[(y * width + x) * 4];
+        return {
+            retryForShadow,
+            retryForEvenLight,
+            leftBackground: read(5),
+            leftText: read(20),
+            rightBackground: read(85),
+            rightText: read(104)
+        };
+    })()`)));
+    assert.equal(result.retryForShadow, 'adaptive');
+    assert.equal(result.retryForEvenLight, 'binary');
+    assert.deepEqual(
+        [result.leftBackground, result.leftText, result.rightBackground, result.rightText],
+        [255, 0, 255, 0],
+        '밝은 면과 그림자 면 모두에서 바탕은 흰색·글자는 검은색으로 구분한다'
+    );
+});
+
 test('OCR 결과가 날짜 또는 선박을 찾지 못하면 검토용 경고를 제공한다', () => {
     const photo = createPhotoVm();
     const noDate = photo.run(`parseRosterPhotoText('PRESIDENT CARTER 00:00 고려\\n이춘학 안영준', { defaultYear: 2026 })`);
