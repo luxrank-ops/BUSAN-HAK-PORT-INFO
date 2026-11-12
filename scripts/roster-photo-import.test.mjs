@@ -18,7 +18,9 @@ function createPhotoVm() {
         },
         document: { getElementById: () => null, querySelector: () => null, querySelectorAll: () => [] },
         ROSTER_FINDER_UNLOCK_KEY: 'rosterFinderBetaUnlocked',
-        readSessionValue: () => null
+        readSessionValue: () => null,
+        showToast() {},
+        trackAppEvent() {}
     });
     vm.runInContext(engine, context, { filename: 'public/js/roster-engine.js' });
     return { run: (code) => vm.runInContext(code, context), data };
@@ -255,6 +257,39 @@ test('사진 명단은 같은 날짜·선박·이름도 자동으로 합치거�
     assert.equal(photo.data.busanPortRosterPhoto, undefined);
 });
 
+test('근무배치 초기화는 사진 명단·OCR 검토·찾기 상태를 비우되 직접 추가 명단은 지운다고 가정하지 않는다', () => {
+    const photo = createPhotoVm();
+    const result = JSON.parse(JSON.stringify(photo.run(`(() => {
+        rosterRuntime.photoModeEngaged = true;
+        rosterRuntime.persistPhotoText = true;
+        rosterRuntime.photoAssignments = [{ date: '2026-11-12', vessel: 'PRESIDENT CARTER', workers: ['이춘학'] }];
+        rosterRuntime.searchableReviewAssignments = [{ date: '2026-11-12', vessel: 'MAGNA', workers: ['김명준'] }];
+        rosterRuntime.reviewRows = [{ date: '2026-11-12', vessel: 'MAGNA', workers: ['김명준'] }];
+        localStorage.setItem(ROSTER_STORAGE.photo, 'saved');
+        localStorage.setItem(ROSTER_STORAGE.persist, '1');
+        localStorage.setItem(ROSTER_STORAGE.manual, JSON.stringify([{ date: '2026-11-12', vessel: 'DIRECT SHIP', workers: ['직접입력'] }]));
+        resetRosterFinder();
+        return {
+            photoModeEngaged: rosterRuntime.photoModeEngaged,
+            photoAssignments: rosterRuntime.photoAssignments.length,
+            searchableReviewAssignments: rosterRuntime.searchableReviewAssignments.length,
+            reviewRows: rosterRuntime.reviewRows.length,
+            manualAssignments: getRosterExtraEntries().length,
+            persistedPhoto: localStorage.getItem(ROSTER_STORAGE.photo),
+            persistedFlag: localStorage.getItem(ROSTER_STORAGE.persist)
+        };
+    })()`)));
+    assert.deepEqual(result, {
+        photoModeEngaged: false,
+        photoAssignments: 0,
+        searchableReviewAssignments: 0,
+        reviewRows: 0,
+        manualAssignments: 1,
+        persistedPhoto: null,
+        persistedFlag: null
+    });
+});
+
 test('사진 처리 경로는 이미지 업로드 API 없이 Object URL·캔버스·브라우저 OCR만 사용한다', () => {
     const photoSection = engine.slice(engine.indexOf('function handleRosterPhotoSelected'), engine.indexOf('function updateRosterPhotoRow'));
     for (const forbidden of ['fetch(', 'XMLHttpRequest', 'FormData', 'sendBeacon', '/api/']) {
@@ -276,12 +311,32 @@ test('사진을 고르면 명단 읽기를 자동으로 시작하고 필요하�
     assert.ok(html.includes('사진을 고르면 이 기기에서만 자동으로 글자를 읽어 명단으로 만들어 줍니다.'));
 });
 
+test('자동으로 읽은 사진 명단은 별도 적용 없이 이름·관련 단어·선박명으로 바로 찾을 수 있다', () => {
+    const photo = createPhotoVm();
+    const result = JSON.parse(JSON.stringify(photo.run(`(() => {
+        beginRosterPhotoReview({ entries: [{
+            date: '2026-11-12', vessel: 'PRESIDENT CARTER', company: '고려', support: 'BNCT 지원', workers: ['이춘학']
+        }], warnings: [] });
+        return {
+            name: findAllRosterAssignments('춘학').assignments.map((row) => row.vessel),
+            related: findAllRosterAssignments('고려').assignments.map((row) => row.vessel),
+            vessel: findAllRosterAssignments('CARTER').assignments.map((row) => row.vessel),
+            saved: rosterRuntime.photoAssignments.length
+        };
+    })()`)));
+    assert.deepEqual(result.name, ['PRESIDENT CARTER']);
+    assert.deepEqual(result.related, ['PRESIDENT CARTER']);
+    assert.deepEqual(result.vessel, ['PRESIDENT CARTER']);
+    assert.equal(result.saved, 0, '찾기에만 즉시 반영하며 기기 저장·임금·근무일지 등록은 자동 실행하지 않습니다');
+});
+
 test('화면은 카메라·갤러리·수정·기기저장 UI와 검토 후 적용 흐름을 제공한다', () => {
-    for (const id of ['rosterPhotoInput', 'rosterPhotoGalleryInput', 'rosterPhotoOcrBtn', 'rosterPhotoClearBtn', 'rosterPhotoStatus', 'rosterPhotoPreviewWrap', 'rosterPhotoPreview', 'rosterPhotoTextDetails', 'rosterPhotoText', 'rosterPhotoRows', 'rosterPhotoSaved']) {
+    for (const id of ['rosterPhotoInput', 'rosterPhotoGalleryInput', 'rosterPhotoOcrBtn', 'rosterPhotoClearBtn', 'rosterFinderResetBtn', 'rosterPhotoStatus', 'rosterPhotoPreviewWrap', 'rosterPhotoPreview', 'rosterPhotoTextDetails', 'rosterPhotoText', 'rosterPhotoRows', 'rosterPhotoSaved']) {
         assert.equal(html.split(`id="${id}"`).length - 1, 1, `missing or duplicate #${id}`);
     }
     assert.match(html, /id="rosterPhotoInput" accept="image\/\*" capture="environment"/);
     assert.match(html, /id="rosterPhotoGalleryInput" accept="image\/\*"/);
+    assert.match(html, /id="rosterFinderResetBtn"[^>]*onclick="resetRosterFinder\(\)"/);
     assert.ok(html.includes('서버로 전송되지 않고'));
     assert.ok(html.includes('사진 자체는 저장하지 않습니다'));
     assert.ok(html.includes('이름 보정·제목\/회사 제외·중복 제거 없이'));
@@ -296,7 +351,11 @@ test('화면은 카메라·갤러리·수정·기기저장 UI와 검토 후 적�
     assert.match(engine, /function recognizeRosterTablePhoto\(engine, sourceCanvas, regions, defaultYear\)/);
     assert.match(engine, /function verifyRosterPhotoVessels\(\)/);
     assert.match(engine, /function applyUniqueRosterPhotoScheduleNames\(rows, verifications\)/);
+    assert.match(engine, /function syncRosterPhotoSearchEntries\(\)/);
+    assert.match(engine, /function findRosterRelatedTermsInAssignment\(row, query\)/);
     assert.match(engine, /function applyRosterPhotoRoster\(\)/);
-    const parseFromTextBox = engine.slice(engine.indexOf('function parseRosterPhotoTextFromBox'), engine.indexOf('function renderRosterPhotoRows'));
-    assert.doesNotMatch(parseFromTextBox, /applyRosterPhotoRoster\(/, 'OCR 결과는 검토 전 자동 적용하면 안 됩니다');
+    const reviewStart = engine.slice(engine.indexOf('function beginRosterPhotoReview'), engine.indexOf('function parseRosterPhotoTextFromBox'));
+    assert.match(reviewStart, /syncRosterPhotoSearchEntries\(\)/, 'OCR 결과는 별도 적용 없이 찾기에 바로 반영합니다');
+    assert.match(reviewStart, /rosterFinderInput.*void searchRosterVessels\(\)/, '이미 입력한 찾기어는 OCR 완료 즉시 새 명단으로 다시 검색합니다');
+    assert.doesNotMatch(reviewStart, /sendCalculatedWageToLog|attachRosterResultToOpenLog/, 'OCR 결과가 임금·근무일지에 자동 등록되면 안 됩니다');
 });
