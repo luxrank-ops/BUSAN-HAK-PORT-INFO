@@ -61,6 +61,13 @@ test('OCR 텍스트는 날짜·영문 선박으로 검토 행을 만들고, 한�
     assert.ok(byVessel['CMA CGM AUSTRAL'].workers.includes('김민재2'));
 });
 
+test('영문이 세로로 한 글자씩 분리 인식되면 각 글자를 선박명으로 만들지 않는다', () => {
+    const photo = createPhotoVm();
+    const result = JSON.parse(JSON.stringify(photo.run(`parseRosterPhotoText(${JSON.stringify(`2026. 11. 12\nP\nR\nE\nS\nI\nD\nE\nN\nT`)}, { defaultYear: 2026 })`)));
+    assert.deepEqual(result.entries, []);
+    assert.ok(photo.run(`pickVesselFromOcrLine('CMA CGM PANAMA')`) === 'CMA CGM PANAMA');
+});
+
 test('한 글자씩 띄운 이름은 자동 복구하지 않고 인식한 한글 덩어리 그대로 남긴다', () => {
     const photo = createPhotoVm();
     const result = JSON.parse(JSON.stringify(photo.run(`parseRosterPhotoText(${JSON.stringify(`2026. 11. 12
@@ -112,6 +119,42 @@ test('2열 반복 오더 표는 선박별 헤더와 그 아래 작업자 영역�
     assert.deepEqual(result.workers, ['김민재2', '강무성']);
     assert.deepEqual(result.header, { date: '2026-11-08', vessel: 'EA GATUN', time: '16:00', company: '웨스턴' });
     assert.equal(photo.run(`detectRosterTableRegions({ data: new Uint8ClampedArray(100 * 180 * 4).fill(255) }, 100, 180)`), null);
+});
+
+test('표 헤더의 실제 잉크를 확인하고, 7칸 중 선박명이 읽힌 2칸만 검토 행으로 만든다', () => {
+    const photo = createPhotoVm();
+    const result = JSON.parse(JSON.stringify(photo.run(`(() => {
+        const width = 120;
+        const height = 50;
+        const pixels = new Uint8ClampedArray(width * height * 4).fill(255);
+        for (let index = 3; index < pixels.length; index += 4) pixels[index] = 255;
+        const mark = (x, y) => {
+            const offset = (y * width + x) * 4;
+            pixels[offset] = pixels[offset + 1] = pixels[offset + 2] = 0;
+        };
+        // 첫 헤더에는 글자 형태의 잉크를 넣고, 다른 빈 헤더에는 표면 노이즈 수준의 점만 둡니다.
+        for (let y = 10; y < 18; y += 1) {
+            for (let x = 10; x < 18; x += 1) mark(x, y);
+            for (let x = 40; x < 48; x += 1) mark(x, y);
+        }
+        mark(80, 12);
+        const regions = Array.from({ length: 7 }, (_, index) => ({ workers: { x: 0, y: 0, width: 100, height: 30 }, index }));
+        const headers = [
+            { date: '2026-11-12', vessel: 'PRESIDENT CARTER' },
+            { date: '', vessel: '' }, { date: '', vessel: '' },
+            { date: '', vessel: '' }, { date: '', vessel: '' },
+            { date: '2026-11-12', vessel: 'CMA CGM PANAMA' }, { date: '', vessel: '' }
+        ];
+        const assignments = regions.map(() => []);
+        return {
+            firstHasInk: hasRosterTableHeaderInk({ data: pixels, width, height }, { x: 8, y: 8, width: 20, height: 12 }),
+            blankHasInk: hasRosterTableHeaderInk({ data: pixels, width, height }, { x: 70, y: 8, width: 20, height: 12 }),
+            entries: buildRosterTableOcrEntries(regions, headers, assignments).map((entry) => entry.vessel)
+        };
+    })()`)));
+    assert.equal(result.firstHasInk, true);
+    assert.equal(result.blankHasInk, false, '빈 헤더의 고립된 점은 선박 헤더 증거가 아니다');
+    assert.deepEqual(result.entries, ['PRESIDENT CARTER', 'CMA CGM PANAMA']);
 });
 
 test('반복 표가 4행 이상이면 마지막 선박의 명단 칸을 앞 행에 합치지 않는다', () => {
@@ -498,8 +541,12 @@ test('화면은 카메라·갤러리·수정·기기저장 UI와 검토 후 적�
     assert.ok(html.includes('날짜별 전 터미널 입·출항 스케줄로 선박명을 교차 확인'));
     assert.match(html, /parseRosterPhotoTextFromBox\(\)/);
     assert.match(engine, /function detectRosterTableRegions\(imageData, width, height\)/);
+    assert.match(engine, /function rotateRosterCanvasForOcr\(sourceCanvas, degrees\)/);
+    assert.match(engine, /if \(selected\.entryCount === 0\)/);
+    assert.match(engine, /function hasRosterTableHeaderInk\(imageData, region\)/);
+    assert.match(engine, /function buildRosterTableOcrEntries\(regions, headers, assignedWords\)/);
     assert.match(engine, /function collectRosterTableWorkers\(words, region\)/);
-    assert.match(engine, /function recognizeRosterTablePhoto\(engine, sourceCanvas, regions, defaultYear\)/);
+    assert.match(engine, /function recognizeRosterTablePhoto\(engine, sourceCanvas, imageData, regions, defaultYear\)/);
     assert.match(engine, /function verifyRosterPhotoVessels\(\)/);
     assert.match(engine, /function applyUniqueRosterPhotoScheduleNames\(rows, verifications\)/);
     assert.match(engine, /function syncRosterPhotoSearchEntries\(\)/);
