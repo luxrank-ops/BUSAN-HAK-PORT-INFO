@@ -183,7 +183,10 @@ function renderNotificationRows(snapshot) {
 function showIncomingNotification(data) {
     const title = String(data?.title || '새 알림');
     const body = String(data?.body || '알림 센터에서 내용을 확인해 주세요.');
-    openNotificationPanel({ markRead: true });
+    // 자동으로 패널을 띄우거나 토스트를 보여주는 것만으로는 사용자가 알림을 확인한 것이 아닙니다.
+    // 사용자가 직접 열었거나 이미 패널을 보고 있을 때에만 미확인 알림을 읽음 처리합니다.
+    const panelWasAlreadyOpen = notificationPanelIsOpen();
+    openNotificationPanel({ markRead: panelWasAlreadyOpen });
     if (typeof showToast === 'function') showToast(`🔔 ${title}${body ? ` · ${body}` : ''}`);
 }
 

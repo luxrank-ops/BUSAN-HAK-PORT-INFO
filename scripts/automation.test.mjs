@@ -25,6 +25,7 @@ for (const part of [
 }
 
 const notificationsCode = fs.readFileSync(new URL('../public/js/notifications.js', import.meta.url), 'utf8');
+const notificationsCss = fs.readFileSync(new URL('../public/css/app.css', import.meta.url), 'utf8');
 const firestoreIndexes = JSON.parse(fs.readFileSync(new URL('../firestore.indexes.json', import.meta.url), 'utf8'));
 const serverCode = fs.readFileSync(new URL('../server.ts', import.meta.url), 'utf8');
 
@@ -158,6 +159,11 @@ test('선박 알림 분류기는 시각·선석 변경과 명시적인 취소·�
   assert.equal(f.classifyVesselStatus('정상'), '');
 });
 
+test('읽지 않은 알림이 없으면 CSS가 hidden 배지를 실제 화면에서 감춘다', () => {
+  assert.match(notificationsCss, /\.noti-badge\[hidden\]\s*\{\s*display:\s*none\s*!important;/,
+    '배지 자체가 inline-flex 이므로 hidden 상태의 display:none 규칙이 필요합니다');
+});
+
 test('1순위 & 2순위: notifications.js가 문법 오류 없이 동작하며 읽음 처리 시 readAt 타임스탬프를 기록한다', async () => {
   const updatedDocs = [];
   const sandbox = {
@@ -284,6 +290,7 @@ test('새 Firestore 알림은 초기 목록과 구분해 알림 창을 자동으
     notiPanelUnread: { textContent: '' }
   };
   let snapshotListener = null;
+  let readQueryCount = 0;
   const query = {
     where: () => query,
     orderBy: () => query,
@@ -292,7 +299,10 @@ test('새 Firestore 알림은 초기 목록과 구분해 알림 창을 자동으
       snapshotListener = listener;
       return () => { snapshotListener = null; };
     },
-    get: async () => ({ empty: true })
+    get: async () => {
+      readQueryCount += 1;
+      return { empty: true };
+    }
   };
   const toasts = [];
   const sandbox = {
@@ -326,6 +336,9 @@ test('새 Firestore 알림은 초기 목록과 구분해 알림 창을 자동으
   assert.match(elements.notiList.innerHTML, /출항 시간 변경/);
   assert.match(elements.notiList.innerHTML, /선박 일정 변경/);
   assert.match(toasts[0], /출항 시간 변경/);
+  assert.equal(elements.notiBadge.textContent, '1', '새 알림이 자동 표시되어도 미확인 배지는 실제 개수를 유지해야 합니다');
+  assert.equal(elements.notiBadge.hidden, false);
+  assert.equal(readQueryCount, 0, '알림 수신만으로 읽음 처리 쿼리를 실행하면 안 됩니다');
 });
 
 test('알림 센터의 userId + createdAt 실시간 조회용 Firestore 복합 색인이 선언되어 있다', () => {

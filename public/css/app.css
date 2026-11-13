@@ -270,6 +270,7 @@
     .noti-toggle:active { transform: translateY(-50%) scale(0.94); }
     .noti-toggle-icon { font-size: var(--fs-13); line-height: var(--lh-1); }
     .noti-badge { position: absolute; top: -5px; right: -7px; min-width: 19px; height: 19px; padding: 0 var(--sp-4); display: inline-flex; align-items: center; justify-content: center; border: 2px solid var(--card-bg); border-radius: var(--radius-pill); background: var(--danger); color: var(--n-000); font-size: var(--fs-2); font-weight: var(--fw-black); font-variant-numeric: tabular-nums; line-height: var(--lh-1); box-shadow: var(--shadow-elev-2); }
+    .noti-badge[hidden] { display: none !important; }
     .noti-badge.has-unread { animation: notificationBadgePulse 1.8s ease-in-out infinite; }
     .noti-panel { position: fixed; top: calc(env(safe-area-inset-top, 0px) + 64px); right: var(--sp-12); z-index: var(--z-toast); width: min(400px, calc(100vw - 24px)); max-height: min(560px, calc(100dvh - 88px)); display: flex; flex-direction: column; overflow: hidden; border: 1px solid var(--blue-200); border-radius: var(--radius-2xl); background: var(--card-bg); color: var(--text-main); box-shadow: var(--shadow-focus-light); opacity: 0; pointer-events: none; transform: translateY(-10px) scale(0.98); transform-origin: top right; visibility: hidden; transition: opacity var(--dur-200) ease, transform var(--dur-200) ease, visibility var(--dur-200) ease; }
     .noti-panel.is-open { opacity: 1; pointer-events: auto; transform: translateY(0) scale(1); visibility: visible; }
