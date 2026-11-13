@@ -31,7 +31,7 @@
 > `/api/*` 는 `api/[...path].ts`(Vercel Function)가 `server.ts` 의 Express 앱을 그대로 실행해 처리하고,
 > 나머지 경로는 `build/public` 정적 산출물을 CDN 이 서빙합니다(과거처럼 index.html 로 폴백되지 않습니다).
 > 스케줄 감시·DB 정리·백업 등 주기 작업 트리거와 필요한 환경변수 등록은
-> 아래 **"Vercel 배포 구성 (Node 런타임 + 정적 하이브리드)"** 절을 참고하세요.
+> 아래 **"Vercel 배포 구성 (Node 런타임 + 정적 하이브리드)"** 절과 [운영 런북](docs/운영_런북.md)을 참고하세요.
 
 ## 🔐 화면 잠금 비밀번호 (PIN) 관리
 
@@ -223,7 +223,7 @@ Vercel 에서 동작하는 서버 API(로컬 `npm run dev` 와 동일한 코드�
 | --- | --- | --- | --- |
 | 선박 스케줄 변경 감지 + FCM 푸시 | `/api/cron/schedule-watch` | GitHub Actions `cron-schedule-watch.yml` | 매시간 5분 (UTC) |
 | DB 자가 정리(30일 캐시·14일 읽은 알림 TTL) | `/api/cron/daily-cleanup` | Vercel Cron (`vercel.json` crons) | 매일 03:00 (UTC) |
-| 주간 Firestore 백업 | `/api/cron/weekly-backup` | Vercel Cron (`vercel.json` crons) | 매주 일요일 00:00 (UTC) |
+| 주간 Firestore 핵심 컬렉션 백업 (`work_logs`, `ships`, `posts`) | `/api/cron/weekly-backup` | Vercel Cron (`vercel.json` crons) | 매주 일요일 00:00 (UTC) · GCS 업로드 성공 시만 성공 |
 | **주간 자가 점검 · 자가 복구** | **`/api/cron/weekly-self-check`** | **Vercel Cron + GitHub Actions `weekly-self-check.yml` + node-cron** | **매주 월요일 05:00 (KST)** |
 
 > **왜 스케줄 감시만 GitHub Actions 인가** — 운영 Vercel 프로젝트는 **Hobby(무료) 플랜**이라
@@ -234,7 +234,7 @@ Vercel 에서 동작하는 서버 API(로컬 `npm run dev` 와 동일한 코드�
 
 **환경변수 등록 (1회 필요)**
 
-1. **Vercel** Project Settings → Environment Variables: `SCREEN_LOCK_PIN`, `UNLOCK_TOKEN_SECRET`, `FIREBASE_SERVICE_ACCOUNT_KEY`(Base64), `VAPID_KEY`, `CRON_SECRET`(권장: `openssl rand -hex 32`) — 등록 후 **Redeploy**
+1. **Vercel** Project Settings → Environment Variables: `SCREEN_LOCK_PIN`, `UNLOCK_TOKEN_SECRET`, `FIREBASE_SERVICE_ACCOUNT_KEY`(Base64), `VAPID_KEY`, `CRON_SECRET`(권장: `openssl rand -hex 32`), `FIRESTORE_BACKUP_BUCKET`(비공개 GCS 버킷 이름) — 백업 버킷 IAM 설정 후 등록하고 **Redeploy**
 2. **GitHub** Settings → Secrets and variables → Actions: `CRON_SECRET` — Vercel 과 **동일한 값** (매시간 트리거 인증용). 미등록 시 매시간 워크플로가 실패 알림을 띄웁니다
 
 `CRON_SECRET`·`FIREBASE_SERVICE_ACCOUNT_KEY` 가 없어도 사이트와 화면 잠금(빌드 해시 폴백)은 동작하지만, 스케줄 API 의 Firestore 폴백·FCM 알림·주기 작업은 동작하지 않습니다.
@@ -325,7 +325,7 @@ npm run selfcheck -- --email-only         # 직전 보고서(latest)만 메일 �
 ### 서버리스 특성·한계
 
 - 메모리 캐시(스케줄 stale 캐시)와 PIN 속도 제한 상태는 **함수 인스턴스 단위 best-effort** 입니다(인스턴스가 여러 개이거나 재활용되면 초기화됨). Firestore `vessel_schedules_cache` 폴백 체인은 기존과 동일하게 동작합니다.
-- 주간 백업은 Vercel 에서 `/tmp` 에만 쓸 수 있어 **파일이 영구 보존되지 않습니다**(응답에 `note` 필드로 표시). 영구 백업은 상시 프로세스 서버 배포(로컬 `backups/`)에서만 유효합니다.
+- Vercel 주간 백업은 `FIRESTORE_BACKUP_BUCKET`으로 지정한 **비공개 GCS 버킷 업로드가 확인된 경우에만 성공**으로 처리합니다. 미설정 시 임시 `/tmp` 파일은 남더라도 영구 백업으로 간주하지 않고 API가 실패 응답을 반환합니다. 설정 절차와 복구 점검은 [운영 런북](docs/운영_런북.md)을 참고하세요.
 - 함수 실행 시간은 Vercel 기본값(Fluid compute, 전 플랜 300초)을 사용합니다 — 별도 `maxDuration` 설정 없음.
 - **Firebase Hosting(busan-hak-port.web.app)은 변경 없이 순수 정적**입니다 — 서버 API 가 없으므로 화면 잠금은 빌드 시 주입된 해시 폴백(2순위)으로 동작합니다.
 
@@ -535,7 +535,7 @@ FIREBASE_SERVICE_ACCOUNT_BUSAN_HAK_PORT
 
 등록 후 워크플로를 다시 실행하면 자격 확인 단계가 키의 `project_id`가 `busan-hak-port`인지 확인합니다. 다른 프로젝트 키(예: `busan-hak-port-paid-2026`)이면 `"Failed to get Firebase project"` 오류로 실패하기 전에 안내와 함께 건너뜁니다.
 
-서비스 계정 키는 저장소 파일이나 채팅에 올리지 말고 GitHub의 암호화된 Secret에만 저장합니다. 운영 URL은 `https://busan-hak-port.web.app`입니다.
+서비스 계정 키는 저장소 파일이나 채팅에 올리지 말고 GitHub의 암호화된 Secret에만 저장합니다. 현재 공식 운영 URL은 `https://busan-hak-port-info.vercel.app`이며, `https://busan-hak-port.web.app`은 레거시 Firebase Hosting 주소입니다. 운영 점검·복구 절차는 [운영 런북](docs/운영_런북.md)을 참고하세요.
 
 > `server.ts`의 터미널 일정 API는 로컬 Express 실행용입니다. 현재 Firebase Hosting 워크플로는 `public/` 정적 파일만 배포하며 서버 프로세스는 배포하지 않습니다. 운영 화면은 API 응답이 JSON일 때만 해당 응답을 사용하고, 그 외에는 Firestore 캐시를 사용합니다.
 

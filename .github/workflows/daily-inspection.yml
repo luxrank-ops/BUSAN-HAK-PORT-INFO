@@ -51,7 +51,8 @@ jobs:
       - name: 의존성 설치
         run: npm ci
 
-      - name: 품질 검사 (typecheck + validate + tokens:check)
+      - name: 품질 검사 (typecheck + validate + tokens:check + test)
+        id: quality
         run: npm run check
 
       - name: 일일 기능 점검 실행
@@ -81,6 +82,7 @@ jobs:
           echo "=== 일일 기능 점검 시작 ($(date -u) UTC / $(TZ=Asia/Seoul date) KST) ==="
           node scripts/daily-inspection.mjs 2>&1 | tee /tmp/inspection.log
           status=${PIPESTATUS[0]}
+          echo "exit_code=${status}" >> "$GITHUB_OUTPUT"
           echo ""
           echo "=== 점검 로그 ==="
           cat /tmp/inspection.log
@@ -94,19 +96,28 @@ jobs:
           fi
           exit 0
 
+      - name: Java 설정 (Firestore 에뮬레이터용)
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '21'
+
       - name: Firestore 보안 규칙 테스트
+        id: rules
         run: |
           set +e
           npm run test:rules 2>&1 | tee /tmp/rules.log
           status=${PIPESTATUS[0]}
+          echo "exit_code=${status}" >> "$GITHUB_OUTPUT"
           if [ $status -ne 0 ]; then
-            echo "::warning::Firestore 규칙 테스트 실패"
-            cat /tmp/rules.log | tail -30
+            echo "::warning::Firestore 규칙 테스트 실패 — 결과를 업로드한 뒤 워크플로를 실패 처리합니다."
+            tail -30 /tmp/rules.log
           fi
-          # 규칙 테스트 실패는 점검 보고서에 반영되지만 워크플로 자체는 계속 진행
+          # 보고서를 먼저 커밋·업로드하도록 여기서는 계속 진행하고 마지막 단계에서 실패를 반영합니다.
           exit 0
 
       - name: 보고서 커밋
+        id: report_commit
         run: |
           set -euo pipefail
           # 생성된 보고서 확인
@@ -133,8 +144,8 @@ jobs:
             try { const j=JSON.parse(require('fs').readFileSync(0,'utf8')); console.log(\`\${j.summary.overall} PASS \${j.summary.pass}/\${j.summary.total} WARN \${j.summary.warn} FAIL \${j.summary.fail}\`); } catch(e) { console.log(''); }
           " || echo "")
 
-          git commit -m "docs: 일일 기능 점검 보고서 ${KST_DATE} — ${SUMMARY}" || echo "커밋 실패 (변경 없음)"
-          git push || echo "::warning::푸시 실패 — 브랜치 보호 규칙을 확인하세요."
+          git commit -m "docs: 일일 기능 점검 보고서 ${KST_DATE} — ${SUMMARY}"
+          git push
 
       - name: 점검 요약 출력
         if: always()
@@ -164,6 +175,33 @@ jobs:
             점검보고서_*.md
           if-no-files-found: warn
           retention-days: 30
+
+      - name: 점검 결과를 워크플로 상태에 반영
+        if: always()
+        env:
+          QUALITY_OUTCOME: ${{ steps.quality.outcome }}
+          INSPECTION_EXIT_CODE: ${{ steps.inspection.outputs.exit_code || 'not_run' }}
+          RULES_EXIT_CODE: ${{ steps.rules.outputs.exit_code || 'not_run' }}
+          REPORT_COMMIT_OUTCOME: ${{ steps.report_commit.outcome }}
+        run: |
+          failed=0
+          if [ "$QUALITY_OUTCOME" != "success" ]; then
+            echo "::error::품질 검사 결과: ${QUALITY_OUTCOME}"
+            failed=1
+          fi
+          if [ "$INSPECTION_EXIT_CODE" != "0" ]; then
+            echo "::error::일일 점검에서 FAIL 이 발생했거나 점검이 실행되지 않았습니다 (exit=${INSPECTION_EXIT_CODE}). reports/latest.md 를 확인하세요."
+            failed=1
+          fi
+          if [ "$RULES_EXIT_CODE" != "0" ]; then
+            echo "::error::Firestore 에뮬레이터 규칙 테스트 실패 또는 미실행 (exit=${RULES_EXIT_CODE})."
+            failed=1
+          fi
+          if [ "$REPORT_COMMIT_OUTCOME" = "failure" ]; then
+            echo "::error::점검 보고서 커밋/푸시에 실패했습니다."
+            failed=1
+          fi
+          exit "$failed"
 
   # Vercel Cron과 중복 실행되지만, GitHub Actions는 영구 커밋을 남기므로 둘 다 유지
   # 필요 시 Vercel Cron 대신 이 워크플로에서 API를 호출하도록 확장 가능:

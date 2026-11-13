@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://busan-hak-port.web.app/sitemap.xml
+Sitemap: https://busan-hak-port-info.vercel.app/sitemap.xml

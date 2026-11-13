@@ -147,6 +147,15 @@ test('서버리스에서 백업 경로는 쓰기 가능한 /tmp 를 사용한다
   assert.equal(run(false), '/var/task/backups', '상시 프로세스 서버에서는 기존 backups/ 경로를 유지합니다');
 });
 
+test('Vercel 주간 백업은 영구 GCS 저장을 확인할 때만 성공으로 처리한다', () => {
+  assert.match(serverCode, /export function buildFirestoreBackupObjectPath\(date: Date\): string/);
+  assert.match(serverCode, /FIRESTORE_BACKUP_BUCKET/);
+  assert.match(serverCode, /getStorage\(\)\.bucket\(bucketName\)\.file\(backupObjectPath\)\.save\(payload/);
+  assert.match(serverCode, /const persistent = Boolean\(backupObjectPath\) \|\| !IS_VERCEL/);
+  assert.match(serverCode, /if \(!result\.persistent \|\| result\.error\)/);
+  assert.match(serverCode, /result\.error === 'persistent_backup_bucket_not_configured' \? 503 : 500/);
+});
+
 test('매칭되지 않은 /api/* 는 index.html 대신 JSON 404 를 반환한다', () => {
   assert.match(serverCode, /app\.use\('\/api',\s*\(_req,\s*res\)\s*=>\s*{\s*res\.status\(404\)\.json\({\s*ok:\s*false,\s*error:\s*'not_found'\s*}\);/);
 });

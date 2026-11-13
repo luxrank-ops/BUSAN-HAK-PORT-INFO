@@ -17,6 +17,7 @@ import { fileURLToPath } from 'url';
 import { initializeApp, cert, getApps } from 'firebase-admin/app';
 import { getFirestore, FieldValue } from 'firebase-admin/firestore';
 import { getMessaging } from 'firebase-admin/messaging';
+import { getStorage } from 'firebase-admin/storage';
 import cron from 'node-cron';
 // 일일 점검 보고서 메일 발송기 (scripts/daily-report-mailer.mjs — 타입은 .d.mts 에 선언)
 import { sendInspectionReportEmail, resolveMailTransport, DEFAULT_REPORT_EMAIL_TO } from './scripts/daily-report-mailer.mjs';
@@ -520,6 +521,8 @@ export const automationRuntimeStatus = {
     lastRunAt: null as string | null,
     lastSuccessAt: null as string | null,
     lastBackupPath: null as string | null,
+    lastBackupObjectPath: null as string | null,
+    lastPersisted: false,
     lastError: null as string | null
   },
   dailyInspection: {
@@ -1928,13 +1931,27 @@ export async function runDatabaseAutoCleanup(nowMs: number = Date.now()): Promis
  * 매주 일요일 자정(0 0 * * 0) 실행:
  * Firestore의 핵심 데이터(work_logs, ships, posts)를 JSON으로 덤프하여 backups/ 폴더에 보관
  */
-export async function runWeeklyFirestoreBackup(targetDir: string = path.join(__dirname, 'backups')): Promise<{ backupFilePath: string | null; counts: Record<string, number> }> {
+export function buildFirestoreBackupObjectPath(date: Date): string {
+  const dateTag = `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, '0')}-${String(date.getUTCDate()).padStart(2, '0')}`;
+  const timestamp = date.toISOString().replace(/[:.]/g, '-');
+  return `firestore-backups/${dateTag}/firestore-backup-${timestamp}.json`;
+}
+
+export async function runWeeklyFirestoreBackup(targetDir: string = path.join(__dirname, 'backups')): Promise<{
+  backupFilePath: string | null;
+  backupObjectPath: string | null;
+  persistent: boolean;
+  error: string | null;
+  counts: Record<string, number>;
+}> {
   automationRuntimeStatus.weeklyBackup.lastRunAt = new Date().toISOString();
   const counts: Record<string, number> = { work_logs: 0, ships: 0, posts: 0 };
+  let backupFilePath: string | null = null;
+  let backupObjectPath: string | null = null;
 
   try {
     if (getApps().length === 0) {
-      return { backupFilePath: null, counts };
+      throw new Error('firebase_admin_not_initialized');
     }
     const firestore = getFirestore();
     const dumpData: Record<string, any[]> = {};
@@ -1951,8 +1968,8 @@ export async function runWeeklyFirestoreBackup(targetDir: string = path.join(__d
 
     await fs.mkdir(targetDir, { recursive: true });
     const now = new Date();
-    const dateTag = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-    const backupFilePath = path.join(targetDir, `firestore-backup-${dateTag}.json`);
+    const dateTag = `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, '0')}-${String(now.getUTCDate()).padStart(2, '0')}`;
+    backupFilePath = path.join(targetDir, `firestore-backup-${dateTag}.json`);
 
     const payload = JSON.stringify({
       backedUpAt: now.toISOString(),
@@ -1963,7 +1980,20 @@ export async function runWeeklyFirestoreBackup(targetDir: string = path.join(__d
 
     await fs.writeFile(backupFilePath, payload, 'utf-8');
 
-    // 최근 8개 백업 파일만 유지하고 오래된 백업 파일 정리
+    // Vercel /tmp 는 함수 종료 후 사라집니다. 운영 백업은 별도 비공개 GCS 버킷에 저장해야 합니다.
+    const bucketName = String(process.env.FIRESTORE_BACKUP_BUCKET || '').trim();
+    if (bucketName) {
+      backupObjectPath = buildFirestoreBackupObjectPath(now);
+      await getStorage().bucket(bucketName).file(backupObjectPath).save(payload, {
+        resumable: false,
+        metadata: {
+          contentType: 'application/json',
+          cacheControl: 'private, no-store'
+        }
+      });
+    }
+
+    // 최근 8개 백업 파일만 유지하고 오래된 로컬 파일을 정리합니다.
     const files = (await fs.readdir(targetDir))
       .filter((f) => /^firestore-backup-\d{4}-\d{2}-\d{2}\.json$/.test(f))
       .sort();
@@ -1974,15 +2004,34 @@ export async function runWeeklyFirestoreBackup(targetDir: string = path.join(__d
       }
     }
 
-    automationRuntimeStatus.weeklyBackup.lastSuccessAt = new Date().toISOString();
-    automationRuntimeStatus.weeklyBackup.lastBackupPath = backupFilePath;
-    automationRuntimeStatus.weeklyBackup.lastError = null;
-    console.log(`[BACKUP] 주간 정기 백업 완료: ${backupFilePath}`, counts);
-    return { backupFilePath, counts };
+    const persistent = Boolean(backupObjectPath) || !IS_VERCEL;
+    const backupStatus = automationRuntimeStatus.weeklyBackup;
+    backupStatus.lastPersisted = persistent;
+    backupStatus.lastBackupPath = backupFilePath;
+    backupStatus.lastBackupObjectPath = backupObjectPath;
+    if (persistent) {
+      backupStatus.lastSuccessAt = new Date().toISOString();
+      backupStatus.lastError = null;
+    } else {
+      backupStatus.lastError = 'persistent_backup_bucket_not_configured';
+    }
+
+    console.log(`[BACKUP] 주간 정기 백업 ${persistent ? '완료' : '미보존'}: ${backupObjectPath || backupFilePath}`, counts);
+    return {
+      backupFilePath,
+      backupObjectPath,
+      persistent,
+      error: persistent ? null : 'persistent_backup_bucket_not_configured',
+      counts
+    };
   } catch (err: any) {
-    automationRuntimeStatus.weeklyBackup.lastError = err?.message || String(err);
+    const error = err?.message || String(err);
+    automationRuntimeStatus.weeklyBackup.lastPersisted = false;
+    automationRuntimeStatus.weeklyBackup.lastBackupPath = backupFilePath;
+    automationRuntimeStatus.weeklyBackup.lastBackupObjectPath = backupObjectPath;
+    automationRuntimeStatus.weeklyBackup.lastError = error;
     console.error('[BACKUP] 주간 백업 실패:', err);
-    return { backupFilePath: null, counts };
+    return { backupFilePath, backupObjectPath, persistent: false, error, counts };
   }
 }
 
@@ -4150,20 +4199,23 @@ app.get('/api/cron/daily-cleanup', cronDailyCleanupHandler);
 app.get('/api/cron-daily-cleanup', cronDailyCleanupHandler);
 
 // 3) 주간 Firestore 백업 — Vercel Cron 매주 일요일 00시
-//    ⚠️ 서버리스에서는 /tmp 에만 쓸 수 있고 인스턴스 종료 시 사라지므로 영구 보관이
-//    아닙니다(응답의 note 필드 참고). 영구 백업은 상시 프로세스 서버 배포에서만 유효합니다.
+//    Vercel 운영에서는 FIRESTORE_BACKUP_BUCKET 이 설정되고 업로드가 확인된 경우에만 성공 처리합니다.
 const cronWeeklyBackupHandler = async (req: Request, res: Response) => {
   if (!authorizeCronRequest(req, res)) return;
   try {
     const result = await runWeeklyFirestoreBackup(resolveBackupDir());
-    res.json({
-      ok: true,
-      task: 'weekly-backup',
-      ...result,
-      ...(IS_VERCEL
-        ? { note: 'ephemeral_filesystem: 서버리스 /tmp 백업은 함수 종료 후 유지되지 않습니다' }
-        : {})
-    });
+    if (!result.persistent || result.error) {
+      const status = result.error === 'persistent_backup_bucket_not_configured' ? 503 : 500;
+      return res.status(status).json({
+        ok: false,
+        task: 'weekly-backup',
+        ...result,
+        note: result.error === 'persistent_backup_bucket_not_configured'
+          ? 'FIRESTORE_BACKUP_BUCKET 을 설정하고 비공개 GCS 버킷 업로드 권한을 부여해야 합니다.'
+          : '백업 생성 또는 영구 저장에 실패했습니다.'
+      });
+    }
+    res.json({ ok: true, task: 'weekly-backup', ...result });
   } catch (error: any) {
     res.status(500).json({ ok: false, task: 'weekly-backup', error: error?.message || String(error) });
   }
