@@ -34,9 +34,9 @@
     <link rel="icon" href="./favicon.ico">
     <link rel="stylesheet" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.8/dist/web/static/pretendard.css" />
     <link rel="manifest" href="./manifest.json">
-    <link rel="stylesheet" href="./css/app.css?v=2027.60">
+    <link rel="stylesheet" href="./css/app.css?v=2027.61">
     <link rel="apple-touch-icon" href="./icon-192.png">
-<script src="./js/notifications.js?v=2027.60"></script></head>
+<script src="./js/notifications.js?v=2027.61"></script></head>
 <body data-app-view="legacy">
 <header>
     <div class="today-visitor-badge-slot" aria-hidden="true"></div>
@@ -687,7 +687,7 @@
                 <div class="roster-photo-box">
                     <div class="roster-photo-head">
                         <strong>📷 근무 배치 사진으로 명단 만들기</strong>
-                        <small>사진은 <b>서버로 전송되지 않고</b> 이 기기에서만 읽으며 사진 자체는 저장하지 않습니다. 이름 보정·제목/회사 제외·중복 제거 없이 인식 내용을 검토표에 표시하고, 읽은 이름·관련 단어·선박명은 저장/적용 전에도 바로 아래 찾기에서 검색할 수 있습니다. 2열 반복 표는 선박별 헤더와 작업자 칸을 따로 읽으며, 작업자 칸 인원과 출력 인원이 달라도 찾기·저장을 막지 않고 현재 출력 결과로 진행합니다. 자동 반복 인식·학습은 실행하지 않으며, 필요할 때는 ‘사진에서 명단 다시 읽기’를 직접 눌러 주세요. 날짜별 전 터미널 입·출항 스케줄로 선박명을 교차 확인하며, 날짜별 활성 후보가 한 척일 때만 정식명으로 자동 확정합니다.</small>
+                        <small>기본 판독은 이 기기에서만 처리하며 사진을 저장하지 않습니다. 서버에서 온라인 OCR이 설정된 경우, 결과가 불확실하면 ‘온라인 OCR 재판독’을 눌러 Google Cloud Vision에 사진을 전송할 수 있습니다(전송 전 확인 창 표시). 이름 보정·제목/회사 제외·중복 제거 없이 결과를 검토표에 표시하고, 읽은 이름·관련 단어·선박명은 저장/적용 전에도 검색할 수 있습니다. 2열 반복 표는 선박별 헤더와 작업자 칸을 따로 읽고, 빈 칸은 선박 행으로 만들지 않습니다. 작업자 칸 인원과 출력 인원이 달라도 찾기·저장을 막지 않습니다. 날짜별 전 터미널 입·출항 스케줄로 선박명을 교차 확인하며, 날짜별 활성 후보가 한 척일 때만 정식명으로 자동 확정합니다.</small>
                     </div>
                     <div class="roster-photo-actions">
                         <label id="rosterPhotoUploadLabel" class="roster-photo-upload" for="rosterPhotoInput">📷 사진 촬영</label>
@@ -697,6 +697,7 @@
                         <input type="file" id="rosterPhotoGalleryInput" accept="image/*"
                                onchange="handleRosterPhotoSelected(event)">
                         <button type="button" id="rosterPhotoOcrBtn" class="roster-photo-ocr-btn" onclick="runRosterPhotoOcr()" disabled>🔄 사진에서 명단 다시 읽기</button>
+                        <button type="button" id="rosterPhotoCloudOcrBtn" class="roster-photo-ocr-btn hidden" onclick="runRosterCloudOcr()" disabled>☁️ 온라인 OCR 재판독 (사진 전송)</button>
                         <button type="button" id="rosterPhotoClearBtn" class="roster-photo-clear-btn" onclick="clearRosterPhoto()" disabled>✖ 사진 지우기</button>
                         <button type="button" id="rosterFinderResetBtn" class="roster-finder-reset-btn" onclick="resetRosterFinder()">↺ 근무배치 초기화</button>
                     </div>
@@ -1992,18 +1993,18 @@
     </div>
 </div>
 
-<script src="./js/app.js?v=2027.60"></script>
-<script src="./js/roster-engine.js?v=2027.60"></script>
+<script src="./js/app.js?v=2027.61"></script>
+<script src="./js/roster-engine.js?v=2027.61"></script>
   
     <!-- [여기서부터 복사] 조장 근무일 비밀번호 검증 스크립트 -->
 <!-- [추가할 보안 및 실행 스크립트] -->
-<script src="./js/leader-access.js?v=2027.60"></script>
+<script src="./js/leader-access.js?v=2027.61"></script>
   <!-- [프로덕션 수준] 파이어베이스 'ships' 컬렉션 전체 데이터 조회 및 검색 모듈 -->
-<script src="./js/ships-board.js?v=2027.60"></script>
+<script src="./js/ships-board.js?v=2027.61"></script>
 
-<script src="./js/tab-views.js?v=2027.60"></script>
-<script src="./js/kkung-relay.js?v=2027.60"></script>
-<script src="./js/want-board.js?v=2027.60"></script>
+<script src="./js/tab-views.js?v=2027.61"></script>
+<script src="./js/kkung-relay.js?v=2027.61"></script>
+<script src="./js/want-board.js?v=2027.61"></script>
 </body>
 </html>
 
