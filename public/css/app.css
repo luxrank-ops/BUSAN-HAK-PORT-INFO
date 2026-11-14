@@ -2266,6 +2266,19 @@
         color: var(--blue-700);
     }
     body.dark-mode .roster-photo-text-details summary { color: var(--blue-300); }
+    .roster-photo-raw-hint {
+        margin: var(--sp-4) 0 0;
+        color: var(--text-sub);
+        font-size: var(--fs-2);
+        font-weight: var(--fw-semibold);
+        line-height: var(--lh-3);
+    }
+    .roster-photo-text-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: var(--sp-4);
+        align-items: center;
+    }
     .roster-photo-textarea {
         width: 100%;
         margin-top: var(--sp-5);
@@ -2280,6 +2293,31 @@
         background: var(--blue-600);
         color: var(--n-000);
     }
+    .roster-photo-copy-btn {
+        margin-top: var(--sp-5);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-sm);
+        background: var(--n-050);
+        color: var(--text-main);
+        padding: var(--sp-3) var(--sp-5);
+        font-size: var(--fs-2);
+        font-weight: var(--fw-black);
+        cursor: pointer;
+    }
+    .roster-photo-ocr-audit {
+        margin-bottom: var(--sp-5);
+        padding: var(--sp-5);
+        border: 1px solid var(--blue-200);
+        border-radius: var(--radius-sm);
+        background: var(--blue-50);
+        color: var(--blue-800);
+        font-size: var(--fs-2);
+        line-height: var(--lh-3);
+    }
+    .roster-photo-ocr-audit strong { display: block; margin-bottom: var(--sp-3); font-weight: var(--fw-black); }
+    .roster-photo-ocr-audit > div { display: flex; flex-wrap: wrap; gap: var(--sp-3) var(--sp-5); }
+    .roster-photo-ocr-audit span { font-weight: var(--fw-semibold); }
+    body.dark-mode .roster-photo-ocr-audit { border-color: var(--blue-700); background: rgba(37, 99, 235, 0.16); color: var(--blue-200); }
     .roster-photo-rows { margin-top: var(--sp-7); }
     .roster-photo-empty,
     .roster-photo-warn {
@@ -2302,6 +2340,22 @@
         margin-bottom: var(--sp-5);
         background: var(--card-bg);
     }
+    .roster-photo-source-text {
+        display: flex;
+        flex-direction: column;
+        gap: var(--sp-2);
+        margin-bottom: var(--sp-4);
+        padding: var(--sp-4);
+        border-radius: var(--radius-sm);
+        background: var(--n-050);
+        color: var(--text-sub);
+        font-size: var(--fs-2);
+        line-height: var(--lh-3);
+        white-space: pre-wrap;
+        overflow-wrap: anywhere;
+    }
+    .roster-photo-source-text strong { color: var(--text-main); font-weight: var(--fw-black); }
+    body.dark-mode .roster-photo-source-text { background: var(--surface-dark); }
     .roster-photo-row-grid {
         display: grid;
         grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -2373,7 +2427,7 @@
         line-height: var(--lh-3);
     }
     .roster-photo-schedule-check.is-verified,
-    .roster-photo-schedule-check.is-auto-corrected {
+    .roster-photo-schedule-check.is-user-confirmed {
         border-color: var(--emerald-300);
         background: var(--emerald-50);
         color: var(--emerald-700);
@@ -2386,10 +2440,22 @@
         background: var(--amber-50);
         color: var(--amber-800);
     }
+    .roster-photo-schedule-apply {
+        flex-shrink: 0;
+        border: 1px solid var(--blue-300);
+        border-radius: var(--radius-sm);
+        background: var(--n-000);
+        color: var(--blue-700);
+        padding: var(--sp-2) var(--sp-4);
+        font-size: var(--fs-2);
+        font-weight: var(--fw-black);
+        cursor: pointer;
+    }
+    body.dark-mode .roster-photo-schedule-apply { background: var(--surface-dark); color: var(--blue-200); border-color: var(--blue-500); }
     body.dark-mode .roster-photo-schedule-toolbar { background: rgba(37, 99, 235, 0.16); color: var(--blue-200); }
     body.dark-mode .roster-photo-schedule-toolbar button { background: rgba(15, 23, 42, 0.75); color: var(--blue-200); }
     body.dark-mode .roster-photo-schedule-check.is-verified,
-    body.dark-mode .roster-photo-schedule-check.is-auto-corrected { background: rgba(5, 150, 105, 0.16); color: var(--emerald-300); }
+    body.dark-mode .roster-photo-schedule-check.is-user-confirmed { background: rgba(5, 150, 105, 0.16); color: var(--emerald-300); }
     body.dark-mode .roster-photo-schedule-check.is-candidate,
     body.dark-mode .roster-photo-schedule-check.is-ambiguous,
     body.dark-mode .roster-photo-schedule-check.is-date-mismatch,
