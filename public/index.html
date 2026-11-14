@@ -34,9 +34,9 @@
     <link rel="icon" href="./favicon.ico">
     <link rel="stylesheet" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.8/dist/web/static/pretendard.css" />
     <link rel="manifest" href="./manifest.json">
-    <link rel="stylesheet" href="./css/app.css?v=2027.64">
+    <link rel="stylesheet" href="./css/app.css?v=2027.65">
     <link rel="apple-touch-icon" href="./icon-192.png">
-<script src="./js/notifications.js?v=2027.64"></script></head>
+<script src="./js/notifications.js?v=2027.65"></script></head>
 <body data-app-view="legacy">
 <header>
     <div class="today-visitor-badge-slot" aria-hidden="true"></div>
@@ -687,7 +687,7 @@
                 <div class="roster-photo-box">
                     <div class="roster-photo-head">
                         <strong>📷 근무 배치 사진으로 명단 만들기</strong>
-                        <small>기본 판독은 이 기기에서만 처리하며 사진을 저장하지 않습니다. 서버에서 온라인 OCR이 설정된 경우, 결과가 불확실하면 ‘온라인 OCR 재판독’을 눌러 Google Cloud Vision에 사진을 전송할 수 있습니다(전송 전 확인 창 표시). 이름 보정·제목/회사 제외·중복 제거 없이 결과를 검토표에 표시하고, 읽은 이름·관련 단어·선박명은 저장/적용 전에도 검색할 수 있습니다. 2열 반복 표는 선박별 헤더와 작업자 칸을 따로 읽고, 빈 칸은 선박 행으로 만들지 않습니다. 작업자 칸 인원과 출력 인원이 달라도 찾기·저장을 막지 않습니다. 날짜별 전 터미널 입·출항 스케줄로 선박명을 교차 확인하며, 날짜별 활성 후보가 한 척일 때만 정식명으로 자동 확정합니다.</small>
+                        <small>기기 내 OCR을 기본으로 하고, 추출한 OCR 원문 텍스트를 먼저 보여 드립니다. 원문 줄 수·표 칸 수·검토표 선박 행 수와 각 행의 OCR 원문을 비교할 수 있습니다. 이름 보정·제목/회사 제외·중복 제거 없이 결과를 검토표에 표시합니다. 2열 반복 표는 선박별 헤더와 작업자 칸을 따로 읽고, 빈 칸은 선박 행으로 만들지 않습니다. 작업자 수 불일치가 있어도 검토·저장은 계속할 수 있습니다. 날짜별 전 터미널 입·출항 스케줄은 선박명 대조용으로만 사용하고 후보는 자동 적용하지 않습니다. 사진은 저장하지 않습니다. 온라인 OCR은 버튼을 누른 뒤 확인 창에서 동의한 사진만 Google Cloud Vision에 전송됩니다.</small>
                     </div>
                     <div class="roster-photo-actions">
                         <label id="rosterPhotoUploadLabel" class="roster-photo-upload" for="rosterPhotoInput">📷 사진 촬영</label>
@@ -706,10 +706,14 @@
                         <img id="rosterPhotoPreview" class="roster-photo-preview" alt="업로드한 근무 배치 사진 (기기에서만 표시)">
                     </div>
                     <details id="rosterPhotoTextDetails" class="roster-photo-text-details hidden">
-                        <summary>✍️ 읽은 글자 확인·수정 (사진 없이 직접 적어도 됩니다)</summary>
-                        <textarea id="rosterPhotoText" class="input-field roster-photo-textarea" rows="6"
-                                  placeholder="예) 2026.11.11&#10;PRESIDENT CARTER 00:00 고려 BNCT 지원 ②&#10;조훈철 오규환 신경호 이춘학 ..."></textarea>
-                        <button type="button" class="roster-photo-parse-btn" onclick="parseRosterPhotoTextFromBox()">인식 내용 검토표로 보기</button>
+                        <summary>1단계 · 추출한 OCR 원문 확인·복사</summary>
+                        <p class="roster-photo-raw-hint">이 칸에는 OCR 원문을 그대로 표시합니다. 표 OCR의 칸 연결을 유지하려면 내용 수정은 아래 검토표에서 하세요. 원문 텍스트를 수정해 다시 읽을 때는 일반 텍스트 방식으로 분석됩니다.</p>
+                        <textarea id="rosterPhotoText" class="input-field roster-photo-textarea" rows="8"
+                                  placeholder="사진에서 추출한 글자가 여기에 표시됩니다. 직접 입력해도 됩니다."></textarea>
+                        <div class="roster-photo-text-actions">
+                            <button type="button" class="roster-photo-parse-btn" onclick="parseRosterPhotoTextFromBox()">2단계 · 원문을 검토표로 읽기</button>
+                            <button type="button" id="rosterPhotoOcrCopyBtn" class="roster-photo-copy-btn" onclick="copyRosterPhotoOcrText()">OCR 원문 복사</button>
+                        </div>
                     </details>
                     <div id="rosterPhotoRows" class="roster-photo-rows" aria-live="polite"></div>
                     <div id="rosterPhotoSaved" class="roster-photo-saved"></div>
@@ -1993,18 +1997,18 @@
     </div>
 </div>
 
-<script src="./js/app.js?v=2027.64"></script>
-<script src="./js/roster-engine.js?v=2027.64"></script>
+<script src="./js/app.js?v=2027.65"></script>
+<script src="./js/roster-engine.js?v=2027.65"></script>
   
     <!-- [여기서부터 복사] 조장 근무일 비밀번호 검증 스크립트 -->
 <!-- [추가할 보안 및 실행 스크립트] -->
-<script src="./js/leader-access.js?v=2027.64"></script>
+<script src="./js/leader-access.js?v=2027.65"></script>
   <!-- [프로덕션 수준] 파이어베이스 'ships' 컬렉션 전체 데이터 조회 및 검색 모듈 -->
-<script src="./js/ships-board.js?v=2027.64"></script>
+<script src="./js/ships-board.js?v=2027.65"></script>
 
-<script src="./js/tab-views.js?v=2027.64"></script>
-<script src="./js/kkung-relay.js?v=2027.64"></script>
-<script src="./js/want-board.js?v=2027.64"></script>
+<script src="./js/tab-views.js?v=2027.65"></script>
+<script src="./js/kkung-relay.js?v=2027.65"></script>
+<script src="./js/want-board.js?v=2027.65"></script>
 </body>
 </html>
 
