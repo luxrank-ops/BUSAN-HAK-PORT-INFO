@@ -338,6 +338,8 @@
         header { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; padding: var(--sp-10) var(--sp-8); gap: var(--sp-6) var(--sp-8); }
         header h1 { flex: 1 1 auto; min-width: 0; font-size: var(--fs-10); letter-spacing: 0.1px; text-align: center; }
         .theme-toggle, .noti-toggle { position: static; transform: none; width: 36px; height: 36px; font-size: var(--fs-12); }
+        /* 🔔 배지(position:absolute)의 기준점이 헤더 모서리로 튀지 않도록 종 버튼은 relative 로 유지 */
+        .noti-toggle { position: relative; top: auto; right: auto; }
         .theme-toggle { margin-left: auto; }
         .noti-toggle:active { transform: scale(0.94); }
         .today-visitor-badge-slot { min-width: 64px; min-height: 34px; }

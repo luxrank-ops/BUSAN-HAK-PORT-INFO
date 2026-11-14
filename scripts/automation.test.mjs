@@ -164,6 +164,77 @@ test('읽지 않은 알림이 없으면 CSS가 hidden 배지를 실제 화면에
     '배지 자체가 inline-flex 이므로 hidden 상태의 display:none 규칙이 필요합니다');
 });
 
+test('좁은 화면(≤380px)에서도 미확인 배지가 종 버튼 위에 붙어 보인다', () => {
+  const narrow = notificationsCss.match(/@media \(max-width: 380px\) \{([\s\S]*?)\n    \}/);
+  assert.ok(narrow, '380px 이하 헤더 레이아웃 미디어 쿼리가 있어야 합니다');
+  assert.match(narrow[1], /\.noti-toggle\s*\{\s*position:\s*relative;/,
+    '종 버튼이 static 이면 absolute 배지가 헤더 모서리(화면 밖)로 밀려나므로 relative 기준점이 필요합니다');
+});
+
+test('알림 창을 처음 열 때 이미 받은 미확인 알림 목록과 배지 개수를 바로 그린다', async () => {
+  const makeClassList = () => {
+    const values = new Set();
+    return {
+      add: (...n) => n.forEach((x) => values.add(x)),
+      remove: (...n) => n.forEach((x) => values.delete(x)),
+      contains: (x) => values.has(x),
+      toggle: (x, force) => { const on = force === undefined ? !values.has(x) : Boolean(force); if (on) values.add(x); else values.delete(x); return on; }
+    };
+  };
+  const elements = {
+    notiToggle: { setAttribute() {} },
+    notiBadge: { classList: makeClassList(), hidden: true, textContent: '0' }
+  };
+  const createdElement = () => {
+    const el = { classList: makeClassList(), setAttribute() {}, _html: '' };
+    Object.defineProperty(el, 'innerHTML', {
+      get() { return el._html; },
+      set(value) {
+        el._html = value;
+        // 패널 템플릿이 들어오면 내부 요소를 id 로 찾을 수 있게 등록합니다.
+        if (/id="notiList"/.test(value)) {
+          elements.notiList = { innerHTML: '' };
+          elements.notiPanelUnread = { textContent: '' };
+        }
+      }
+    });
+    return el;
+  };
+  let snapshotListener = null;
+  const query = {
+    where: () => query, orderBy: () => query, limit: () => query,
+    onSnapshot: (listener) => { snapshotListener = listener; return () => {}; },
+    get: async () => ({ empty: true })
+  };
+  const sandbox = {
+    console, Date, String, Set, Promise, Math, Number,
+    currentWorkerId: '작업자B',
+    document: {
+      getElementById: (id) => elements[id] || null,
+      createElement: () => createdElement(),
+      body: { appendChild: (el) => { elements.notiPanel = el; } }
+    },
+    firebase: { firestore: { FieldValue: { serverTimestamp: () => 'TS' } } },
+    db: { collection: () => query, batch: () => ({ update() {}, commit: async () => {} }) }
+  };
+  vm.createContext(sandbox);
+  vm.runInContext(notificationsCode, sandbox, { filename: 'public/js/notifications.js' });
+  await sandbox.initNotifications('작업자B');
+
+  // 최신 1건만 미확인, 나머지 2건은 이미 읽음
+  const docs = [1, 2, 3].map((n) => ({ id: `n${n}`, data: () => ({ title: `알림${n}`, body: '본문', read: n !== 1, type: 'SCHEDULE_CHANGE', createdAtMs: Date.now() - n }) }));
+  snapshotListener({ forEach: (fn) => docs.forEach(fn), docChanges: () => [] });
+  assert.equal(elements.notiBadge.hidden, false, '미확인 알림이 있으면 종 배지가 보여야 합니다');
+  assert.equal(elements.notiBadge.textContent, '1');
+  assert.equal(elements.notiList, undefined, '패널은 아직 만들어지지 않은 상태');
+
+  sandbox.openNotificationPanel({ markRead: false });
+  assert.match(elements.notiList.innerHTML, /알림1/, '창을 처음 열어도 기존 알림이 바로 보여야 합니다');
+  assert.match(elements.notiList.innerHTML, /is-unread/);
+  assert.equal(elements.notiPanelUnread.textContent, '새 알림 1개');
+  assert.equal(elements.notiBadge.textContent, '1');
+});
+
 test('1순위 & 2순위: notifications.js가 문법 오류 없이 동작하며 읽음 처리 시 readAt 타임스탬프를 기록한다', async () => {
   const updatedDocs = [];
   const sandbox = {
