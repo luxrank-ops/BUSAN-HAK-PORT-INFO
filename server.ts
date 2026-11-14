@@ -17,7 +17,10 @@ import { fileURLToPath } from 'url';
 import { initializeApp, cert, getApps } from 'firebase-admin/app';
 import { getFirestore, FieldValue } from 'firebase-admin/firestore';
 import { getMessaging } from 'firebase-admin/messaging';
+import { getAuth } from 'firebase-admin/auth';
 import { getStorage } from 'firebase-admin/storage';
+import { GoogleAuth } from 'google-auth-library';
+import { normalizeGoogleVisionOcrResult } from './scripts/roster-cloud-ocr.mjs';
 import cron from 'node-cron';
 // 일일 점검 보고서 메일 발송기 (scripts/daily-report-mailer.mjs — 타입은 .d.mts 에 선언)
 import { sendInspectionReportEmail, resolveMailTransport, DEFAULT_REPORT_EMAIL_TO } from './scripts/daily-report-mailer.mjs';
@@ -105,8 +108,8 @@ const screenUnlockAttempts = new Map<string, { count: number; resetAt: number }>
  */
 function isScreenUnlockRateLimited(
   ip: string,
-  scope: 'screen' | 'emergency' | 'admin' | 'anon' = 'screen',
-  maxAttempts: number = scope === 'anon' ? 120 : SCREEN_UNLOCK_MAX_ATTEMPTS
+  scope: 'screen' | 'emergency' | 'admin' | 'anon' | 'ocr' = 'screen',
+  maxAttempts: number = scope === 'anon' ? 120 : scope === 'ocr' ? 5 : SCREEN_UNLOCK_MAX_ATTEMPTS
 ): boolean {
   const now = Date.now();
   const key = `${scope}:${ip}`;
@@ -3097,7 +3100,7 @@ app.use('/api', (req, res, next) => {
     res.setHeader('Access-Control-Allow-Origin', origin);
     res.setHeader('Vary', 'Origin');
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Roster-Ocr-Consent');
   }
   if (req.method === 'OPTIONS') {
     res.status(204).end();
@@ -3108,6 +3111,101 @@ app.use('/api', (req, res, next) => {
 
 // JSON 본문 파싱 (화면 잠금 해제 요청용, 4KB 제한)
 app.use('/api', express.json({ limit: '4kb' }));
+
+const GOOGLE_CLOUD_VISION_SCOPE = 'https://www.googleapis.com/auth/cloud-platform';
+let rosterVisionAuth: GoogleAuth | null = null;
+
+function isRosterCloudOcrEnabled(): boolean {
+  return process.env.ROSTER_CLOUD_OCR_ENABLED === '1'
+    && Boolean(process.env.FIREBASE_SERVICE_ACCOUNT_KEY || process.env.GOOGLE_APPLICATION_CREDENTIALS);
+}
+
+function getRosterVisionAuth(): GoogleAuth {
+  if (rosterVisionAuth) return rosterVisionAuth;
+  const rawKey = String(process.env.FIREBASE_SERVICE_ACCOUNT_KEY || '').trim();
+  let credentials: any;
+  if (rawKey) {
+    const decoded = rawKey.startsWith('{') ? rawKey : Buffer.from(rawKey, 'base64').toString('utf8');
+    credentials = JSON.parse(decoded) as Record<string, unknown>;
+  }
+  rosterVisionAuth = new GoogleAuth({
+    credentials,
+    keyFilename: credentials ? undefined : process.env.GOOGLE_APPLICATION_CREDENTIALS || undefined,
+    projectId: process.env.FIREBASE_PROJECT_ID || undefined,
+    scopes: [GOOGLE_CLOUD_VISION_SCOPE]
+  });
+  return rosterVisionAuth;
+}
+
+app.get('/api/roster-ocr/config', (_req, res) => {
+  res.setHeader('Cache-Control', 'no-store');
+  res.json({ enabled: isRosterCloudOcrEnabled(), provider: 'google-cloud-vision' });
+});
+
+// Google Cloud Vision is an explicit, user-requested fallback only. Raw image bytes are
+// processed in memory and never written to logs, Firestore, or local storage.
+app.post('/api/roster-ocr', express.raw({ type: 'image/jpeg', limit: '4mb' }), async (req, res) => {
+  res.setHeader('Cache-Control', 'no-store');
+  if (!isRosterCloudOcrEnabled()) {
+    res.status(503).json({ ok: false, error: 'cloud_ocr_not_configured' });
+    return;
+  }
+  if (req.get('X-Roster-Ocr-Consent') !== '1') {
+    res.status(400).json({ ok: false, error: 'explicit_consent_required' });
+    return;
+  }
+  const authorization = String(req.get('Authorization') || '').match(/^Bearer\s+(.+)$/i);
+  if (!authorization) {
+    res.status(401).json({ ok: false, error: 'authentication_required' });
+    return;
+  }
+  try {
+    await getAuth().verifyIdToken(authorization[1]);
+  } catch {
+    res.status(401).json({ ok: false, error: 'authentication_required' });
+    return;
+  }
+  const ip = String(req.ip || req.socket?.remoteAddress || 'unknown');
+  if (isScreenUnlockRateLimited(ip, 'ocr', 5)) {
+    res.status(429).json({ ok: false, error: 'too_many_requests' });
+    return;
+  }
+  const image = Buffer.isBuffer(req.body) ? req.body : Buffer.alloc(0);
+  if (!image.length || image.length > 4 * 1024 * 1024 || image[0] !== 0xff || image[1] !== 0xd8 || image[2] !== 0xff) {
+    res.status(400).json({ ok: false, error: 'invalid_jpeg' });
+    return;
+  }
+  try {
+    const googleAuth = getRosterVisionAuth();
+    const client = await googleAuth.getClient();
+    const accessToken = await client.getAccessToken();
+    if (!accessToken.token) throw new Error('Google Vision access token unavailable');
+    const visionResponse = await fetch('https://vision.googleapis.com/v1/images:annotate', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${accessToken.token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        requests: [{
+          image: { content: image.toString('base64') },
+          features: [{ type: 'DOCUMENT_TEXT_DETECTION' }],
+          imageContext: { languageHints: ['ko', 'en'] }
+        }]
+      })
+    });
+    if (!visionResponse.ok) {
+      console.warn(`[roster] Google Cloud Vision returned HTTP ${visionResponse.status}`);
+      res.status(502).json({ ok: false, error: 'cloud_ocr_provider_error' });
+      return;
+    }
+    const result = normalizeGoogleVisionOcrResult(await visionResponse.json());
+    res.json({ ok: true, provider: 'google-cloud-vision', ...result });
+  } catch (error: any) {
+    console.warn('[roster] Google Cloud Vision OCR unavailable:', error?.message || 'unknown error');
+    res.status(502).json({ ok: false, error: 'cloud_ocr_unavailable' });
+  }
+});
 
 app.get('/api/config', (_req, res) => {
   res.json({

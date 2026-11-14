@@ -42,6 +42,7 @@ const rosterRuntime = {
     reviewVerificationRequestId: 0,
     finderResults: [],
     activeImageUrl: "",
+    cloudOcrEnabled: false,
     recognizedText: "",
     tableOcrParsed: null,
     // 표 OCR에서 어떤 칸에도 안전하게 귀속할 수 없었던 한글 조각 수입니다. 원본 인원 대조에는 포함합니다.
@@ -936,10 +937,29 @@ function setRosterPhotoStatus(message) {
     if (status) status.textContent = String(message || "");
 }
 
+async function refreshRosterCloudOcrButton() {
+    const button = rosterElement("rosterPhotoCloudOcrBtn");
+    if (!button) return false;
+    button.classList.add("hidden");
+    button.disabled = true;
+    rosterRuntime.cloudOcrEnabled = false;
+    try {
+        const response = await fetch("/api/roster-ocr/config", { cache: "no-store" });
+        const config = response.ok ? await response.json() : null;
+        rosterRuntime.cloudOcrEnabled = Boolean(config?.enabled);
+        button.classList.toggle("hidden", !rosterRuntime.cloudOcrEnabled);
+        button.disabled = !rosterRuntime.cloudOcrEnabled || !rosterRuntime.activeImageUrl;
+        return rosterRuntime.cloudOcrEnabled;
+    } catch (error) {
+        return false;
+    }
+}
+
 function setRosterPhotoBusy(isBusy, message) {
-    ["rosterPhotoOcrBtn", "rosterPhotoClearBtn", "rosterFinderResetBtn"].forEach((id) => {
+    ["rosterPhotoOcrBtn", "rosterPhotoCloudOcrBtn", "rosterPhotoClearBtn", "rosterFinderResetBtn"].forEach((id) => {
         const button = rosterElement(id);
-        if (button) button.disabled = Boolean(isBusy);
+        if (!button) return;
+        button.disabled = Boolean(isBusy) || (id === "rosterPhotoCloudOcrBtn" && (!rosterRuntime.cloudOcrEnabled || !rosterRuntime.activeImageUrl));
     });
     ["rosterPhotoUploadLabel", "rosterPhotoGalleryLabel"].forEach((id) => rosterElement(id)?.classList.toggle("is-busy", Boolean(isBusy)));
     if (message) setRosterPhotoStatus(message);
@@ -962,6 +982,9 @@ function handleRosterPhotoSelected(event) {
     rosterRuntime.photoModeEngaged = true;
     releaseRosterPhotoObjectUrl();
     rosterRuntime.activeImageUrl = URL.createObjectURL(file);
+    rosterRuntime.cloudOcrEnabled = false;
+    const cloudOcrButton = rosterElement("rosterPhotoCloudOcrBtn");
+    if (cloudOcrButton) { cloudOcrButton.classList.add("hidden"); cloudOcrButton.disabled = true; }
     rosterRuntime.recognizedText = "";
     rosterRuntime.tableOcrParsed = null;
     rosterRuntime.sourceUnassignedWorkerCount = 0;
@@ -1629,6 +1652,58 @@ function buildRosterTableOcrEntries(regions, headers, assignedWords) {
     });
 }
 
+function parseRosterCloudTableResult(result, regions, defaultYear) {
+    const words = Array.isArray(result?.words) ? result.words : [];
+    const headers = (regions || []).map((region) => {
+        const headerWords = words.map((word) => ({
+            word,
+            x: rosterTableWordCenter(word, "x"),
+            y: rosterTableWordCenter(word, "y")
+        })).filter((item) => Number.isFinite(item.x) && Number.isFinite(item.y)
+            && item.x >= region.header.x && item.x <= region.header.x + region.header.width
+            && item.y >= region.header.y && item.y <= region.header.y + region.header.height)
+            .sort((a, b) => a.y - b.y || a.x - b.x);
+        const lines = [];
+        const tolerance = Math.max(8, Math.min(18, region.header.height * 0.24));
+        headerWords.forEach((item) => {
+            const line = lines.find((candidate) => Math.abs(candidate.y - item.y) <= tolerance);
+            if (line) {
+                line.items.push(item);
+                line.y = (line.y * (line.items.length - 1) + item.y) / line.items.length;
+            } else {
+                lines.push({ y: item.y, items: [item] });
+            }
+        });
+        const text = lines.sort((a, b) => a.y - b.y)
+            .map((line) => line.items.sort((a, b) => a.x - b.x).map((item) => item.word.text).join(" "))
+            .join(" ");
+        const header = parseRosterTableHeader(text, { defaultYear });
+        const confidences = headerWords.map((item) => Number(item.word.confidence)).filter(Number.isFinite);
+        return { ...header, confidence: confidences.length ? confidences.reduce((sum, value) => sum + value, 0) / confidences.length : 0, raw: text };
+    });
+    for (let index = 0; index < headers.length; index += 2) {
+        const left = headers[index];
+        const right = headers[index + 1];
+        if (!left?.date && right?.date) left.date = right.date;
+        if (!right?.date && left?.date) right.date = left.date;
+    }
+    const allocation = assignRosterTableWordsToWorkerRegions(words, regions);
+    const entries = buildRosterTableOcrEntries(regions, headers, allocation.assigned);
+    const workerCountAudit = auditRosterPhotoWorkerCounts(entries, allocation.unassigned.length);
+    const warnings = ["☁️ Google Cloud Vision으로 온라인 재판독했습니다. 사진 원본과 비교해 검토해 주세요."];
+    if (!entries.length) warnings.push("선박명이 확인된 표 칸이 없습니다. 빈 칸은 선박 행으로 만들지 않았습니다. 사진을 확인하거나 직접 입력해 주세요.");
+    if (allocation.unassigned.length) warnings.push(`${allocation.unassigned.length}개 한글 OCR 조각은 작업자 칸 경계에 걸려 자동 배정하지 않았습니다.`);
+    warnings.push(`👥 사진 작업자 칸 ${workerCountAudit.sourceCount}명 · 출력 ${workerCountAudit.outputCount}명${workerCountAudit.isVerified ? " 일치" : " 불일치 — 원본 확인 권장"}`);
+    return {
+        text: buildRosterTableOcrText(entries),
+        entries,
+        warnings,
+        unassignedWorkerCellCount: allocation.unassigned.length,
+        workerCountAudit,
+        confidence: Number(result?.confidence) || 0
+    };
+}
+
 function buildRosterTableOcrText(entries) {
     return (entries || []).map((row) => [
         [row.date, row.vessel, row.time, row.company].filter(Boolean).join(" "),
@@ -1731,6 +1806,7 @@ async function runRosterPhotoOcr() {
             if (box) box.value = rosterRuntime.recognizedText;
             rosterElement("rosterPhotoTextDetails")?.classList.remove("hidden");
             beginRosterPhotoReview(rosterRuntime.tableOcrParsed, "✅ 표 구조로 선박별 작업자 명단을 읽었습니다. 인원 불일치와 관계없이 현재 출력으로 찾기·저장을 계속할 수 있습니다. 입·출항 스케줄과 선박명을 교차 확인하는 중입니다.");
+            void refreshRosterCloudOcrButton();
             trackAppEvent?.("actions", "roster_photo_table_ocr_done");
             return tableResult;
         }
@@ -1785,13 +1861,98 @@ async function runRosterPhotoOcr() {
                 : ` · ${retryProfile === "adaptive" ? "부분별 밝기 보정" : "고대비"} 재확인본 선택`)
             : ""}${orientationLabel}`;
         beginRosterPhotoReview(parseRosterPhotoTextFromBox({ skipReview: true }), `✅ 글자 인식 완료 (${rosterRuntime.recognizedText.length}자${retryLabel}). 전 터미널 입·출항 스케줄과 선박명을 교차 확인하는 중입니다.`);
+        void refreshRosterCloudOcrButton();
         trackAppEvent?.("actions", "roster_photo_ocr_done");
         return selected;
     } catch (error) {
         console.error("[roster] OCR failed", error);
         rosterElement("rosterPhotoTextDetails")?.classList.remove("hidden");
-        setRosterPhotoStatus("⚠️ 자동 인식에 실패했습니다. 사진을 보며 아래 칸에 직접 입력할 수 있습니다.");
+        void refreshRosterCloudOcrButton();
+        setRosterPhotoStatus("⚠️ 자동 인식에 실패했습니다. 사진을 보며 아래 칸에 직접 입력하거나 온라인 OCR로 재판독할 수 있습니다.");
         showToast("⚠️ 자동 인식에 실패했습니다. 직접 입력으로 계속할 수 있습니다.");
+    } finally {
+        setRosterPhotoBusy(false);
+    }
+}
+
+async function runRosterCloudOcr() {
+    if (!isRosterFinderUnlocked()) return unlockRosterFinder();
+    if (!rosterRuntime.activeImageUrl) return showToast("📷 먼저 근무 배치 사진을 선택해 주세요.");
+    if (!rosterRuntime.cloudOcrEnabled) return showToast("⚠️ 온라인 OCR이 서버에 설정되어 있지 않습니다.");
+    const approved = window.confirm("온라인 재판독을 위해 보정한 사진을 Google Cloud Vision으로 전송합니다. 전송을 계속할까요?");
+    if (!approved) return false;
+    setRosterPhotoBusy(true, "☁️ 동의한 사진만 Google Cloud Vision으로 전송해 재판독 중입니다…");
+    try {
+        const [engineCanvas, user] = await Promise.all([
+            prepareRosterCanvasForOcr("enhanced"),
+            (async () => {
+                let current = null;
+                try { current = typeof auth !== "undefined" ? auth?.currentUser || null : null; } catch (error) { current = null; }
+                if (!current && typeof ensureAnonymousAuth === "function") current = await ensureAnonymousAuth();
+                return current;
+            })()
+        ]);
+        if (!user?.getIdToken) throw new Error("온라인 OCR에는 앱 로그인이 필요합니다.");
+        const idToken = await user.getIdToken();
+        const jpeg = await new Promise((resolve, reject) => {
+            engineCanvas.toBlob((blob) => blob ? resolve(blob) : reject(new Error("사진을 온라인 판독용으로 준비하지 못했습니다.")), "image/jpeg", 0.88);
+        });
+        if (jpeg.size > 4 * 1024 * 1024) throw new Error("온라인 판독용 사진이 4MB를 넘습니다. 사진을 더 작게 잘라 다시 시도해 주세요.");
+        const response = await fetch("/api/roster-ocr", {
+            method: "POST",
+            headers: {
+                "Content-Type": "image/jpeg",
+                Authorization: `Bearer ${idToken}`,
+                "X-Roster-Ocr-Consent": "1"
+            },
+            body: jpeg,
+            cache: "no-store"
+        });
+        const cloudResult = await response.json().catch(() => ({}));
+        if (!response.ok || !cloudResult?.ok) {
+            const messages = {
+                cloud_ocr_not_configured: "서버에 온라인 OCR 자격 설정이 필요합니다.",
+                authentication_required: "앱 로그인 후 온라인 OCR을 다시 시도해 주세요.",
+                too_many_requests: "온라인 OCR 요청이 많습니다. 잠시 뒤 다시 시도해 주세요.",
+                cloud_ocr_provider_error: "온라인 OCR 서비스가 요청을 처리하지 못했습니다.",
+                cloud_ocr_unavailable: "온라인 OCR 서비스에 연결하지 못했습니다."
+            };
+            throw new Error(messages[cloudResult?.error] || "온라인 재판독에 실패했습니다.");
+        }
+        const imageData = engineCanvas.getContext("2d")?.getImageData(0, 0, engineCanvas.width, engineCanvas.height);
+        const regions = detectRosterTableRegions(imageData, engineCanvas.width, engineCanvas.height);
+        const activeDate = (() => {
+            try { return String(getActiveWorkLogDate() || ""); } catch (error) { return ""; }
+        })();
+        const defaultYear = Number(activeDate.slice(0, 4)) || new Date().getFullYear();
+        if (regions?.length) {
+            const parsed = parseRosterCloudTableResult(cloudResult, regions, defaultYear);
+            rosterRuntime.recognizedText = parsed.text;
+            rosterRuntime.tableOcrParsed = {
+                entries: parsed.entries,
+                warnings: parsed.warnings,
+                unassignedWorkerCellCount: parsed.unassignedWorkerCellCount
+            };
+            const box = rosterElement("rosterPhotoText");
+            if (box) box.value = parsed.text;
+            rosterElement("rosterPhotoTextDetails")?.classList.remove("hidden");
+            beginRosterPhotoReview(rosterRuntime.tableOcrParsed, `✅ Google Cloud Vision 재판독 완료 (${parsed.entries.length}척). 원본 사진과 검토해 주세요.`);
+        } else {
+            const parsed = parseRosterPhotoText(cloudResult.text, { defaultYear, defaultDate: activeDate });
+            parsed.warnings.unshift("☁️ Google Cloud Vision 온라인 재판독 결과입니다. 표 구조를 찾지 못해 사진 원문과 대조해 주세요.");
+            rosterRuntime.recognizedText = String(cloudResult.text || "");
+            rosterRuntime.tableOcrParsed = null;
+            const box = rosterElement("rosterPhotoText");
+            if (box) box.value = rosterRuntime.recognizedText;
+            rosterElement("rosterPhotoTextDetails")?.classList.remove("hidden");
+            beginRosterPhotoReview(parsed, `✅ Google Cloud Vision 재판독 완료 (${parsed.entries.length}척). 원본 사진과 검토해 주세요.`);
+        }
+        trackAppEvent?.("actions", "roster_photo_cloud_ocr_done");
+        return cloudResult;
+    } catch (error) {
+        console.error("[roster] cloud OCR failed", error);
+        showToast(`⚠️ ${error?.message || "온라인 OCR 재판독에 실패했습니다."}`);
+        return null;
     } finally {
         setRosterPhotoBusy(false);
     }
@@ -2102,6 +2263,9 @@ function renderRosterFinderHint() {
 
 function clearRosterPhoto() {
     releaseRosterPhotoObjectUrl();
+    rosterRuntime.cloudOcrEnabled = false;
+    const cloudOcrButton = rosterElement("rosterPhotoCloudOcrBtn");
+    if (cloudOcrButton) { cloudOcrButton.classList.add("hidden"); cloudOcrButton.disabled = true; }
     rosterRuntime.recognizedText = "";
     rosterRuntime.tableOcrParsed = null;
     rosterRuntime.sourceUnassignedWorkerCount = 0;

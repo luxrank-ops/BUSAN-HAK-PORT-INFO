@@ -157,6 +157,31 @@ test('표 헤더의 실제 잉크를 확인하고, 7칸 중 선박명이 읽힌 
     assert.deepEqual(result.entries, ['PRESIDENT CARTER', 'CMA CGM PANAMA']);
 });
 
+test('온라인 OCR도 표 헤더 좌표로 선박 행만 만들고 빈 칸의 잡음을 제외한다', () => {
+    const photo = createPhotoVm();
+    const result = JSON.parse(JSON.stringify(photo.run(`(() => {
+        const regions = Array.from({ length: 8 }, (_, index) => {
+            const row = Math.floor(index / 2);
+            const column = index % 2;
+            const x = column * 200;
+            const y = row * 120;
+            return { header: { x, y, width: 180, height: 40 }, workers: { x, y: y + 45, width: 180, height: 65 } };
+        });
+        const word = (text, x, y, confidence = 95) => ({ text, bbox: { x0: x, x1: x + Math.max(12, text.length * 8), y0: y, y1: y + 12 }, confidence });
+        const words = [
+            word('11/13', 8, 10), word('ONE', 55, 10), word('MADRID', 85, 10),
+            word('11/13', 208, 10), word('NYK', 250, 10), word('PAULA', 280, 10), word('22:00', 330, 10), word('고려', 365, 10),
+            word('I', 12, 130),
+            word('원지현', 15, 65)
+        ];
+        return parseRosterCloudTableResult({ words, confidence: 92 }, regions, 2026);
+    })()`)));
+    assert.deepEqual(result.entries.map((entry) => entry.vessel), ['ONE MADRID', 'NYK PAULA']);
+    assert.equal(result.entries[0].date, '2026-11-13');
+    assert.equal(result.entries[1].time, '22:00');
+    assert.deepEqual(result.entries[0].workers, ['원지현']);
+});
+
 test('반복 표가 4행 이상이면 마지막 선박의 명단 칸을 앞 행에 합치지 않는다', () => {
     const photo = createPhotoVm();
     const result = JSON.parse(JSON.stringify(photo.run(`(() => {
@@ -482,8 +507,8 @@ test('근무배치 초기화는 OCR 검토·찾기만 비우고 저장한 사진
     });
 });
 
-test('사진 처리 경로는 이미지 업로드 API 없이 Object URL·캔버스·브라우저 OCR만 사용한다', () => {
-    const photoSection = engine.slice(engine.indexOf('function handleRosterPhotoSelected'), engine.indexOf('function updateRosterPhotoRow'));
+test('사진 선택은 기기 내 OCR만 시작하고, 온라인 전송은 확인·인증 뒤에만 실행한다', () => {
+    const photoSection = engine.slice(engine.indexOf('function handleRosterPhotoSelected'), engine.indexOf('function openRosterPhotoPicker'));
     for (const forbidden of ['fetch(', 'XMLHttpRequest', 'FormData', 'sendBeacon', '/api/']) {
         assert.equal(photoSection.includes(forbidden), false, `server upload trace: ${forbidden}`);
     }
@@ -491,6 +516,10 @@ test('사진 처리 경로는 이미지 업로드 API 없이 Object URL·캔버�
     assert.match(engine, /URL\.revokeObjectURL/);
     assert.match(engine, /tesseract\.js@5\.1\.1/);
     assert.match(engine, /"kor\+eng"/);
+    const cloudRoutine = engine.slice(engine.indexOf('async function runRosterCloudOcr'), engine.indexOf('function beginRosterPhotoReview'));
+    assert.ok(cloudRoutine.includes('window.confirm'));
+    assert.ok(cloudRoutine.includes('X-Roster-Ocr-Consent'));
+    assert.ok(cloudRoutine.includes('/api/roster-ocr'));
 });
 
 test('사진을 고르면 명단 읽기를 자동으로 시작하고 필요하면 다시 읽을 수 있다', () => {
@@ -523,19 +552,18 @@ test('자동으로 읽은 사진 명단은 별도 적용 없이 이름·관련 �
 });
 
 test('화면은 카메라·갤러리·수정·기기저장 UI와 검토 후 적용 흐름을 제공한다', () => {
-    for (const id of ['rosterPhotoInput', 'rosterPhotoGalleryInput', 'rosterPhotoOcrBtn', 'rosterPhotoClearBtn', 'rosterFinderResetBtn', 'rosterPhotoStatus', 'rosterPhotoPreviewWrap', 'rosterPhotoPreview', 'rosterPhotoTextDetails', 'rosterPhotoText', 'rosterPhotoRows', 'rosterPhotoSaved']) {
+    for (const id of ['rosterPhotoInput', 'rosterPhotoGalleryInput', 'rosterPhotoOcrBtn', 'rosterPhotoClearBtn', 'rosterFinderResetBtn', 'rosterPhotoStatus', 'rosterPhotoPreviewWrap', 'rosterPhotoPreview', 'rosterPhotoTextDetails', 'rosterPhotoText', 'rosterPhotoRows', 'rosterPhotoSaved', 'rosterPhotoCloudOcrBtn']) {
         assert.equal(html.split(`id="${id}"`).length - 1, 1, `missing or duplicate #${id}`);
     }
     assert.match(html, /id="rosterPhotoInput" accept="image\/\*" capture="environment"/);
     assert.match(html, /id="rosterPhotoGalleryInput" accept="image\/\*"/);
     assert.match(html, /id="rosterFinderResetBtn"[^>]*onclick="resetRosterFinder\(\)"/);
-    assert.ok(html.includes('서버로 전송되지 않고'));
-    assert.ok(html.includes('사진 자체는 저장하지 않습니다'));
+    assert.ok(html.includes('기본 판독은 이 기기에서만 처리하며 사진을 저장하지 않습니다'));
+    assert.ok(html.includes('Google Cloud Vision에 사진을 전송할 수 있습니다(전송 전 확인 창 표시)'));
     assert.ok(html.includes('이름 보정·제목\/회사 제외·중복 제거 없이'));
     assert.ok(html.includes('인식 내용 검토표로 보기'));
-    assert.ok(html.includes('2열 반복 표는 선박별 헤더와 작업자 칸을 따로 읽으며'));
-    assert.ok(html.includes('인원과 출력 인원이 달라도 찾기·저장을 막지 않고'));
-    assert.ok(html.includes('자동 반복 인식·학습은 실행하지 않으며'));
+    assert.ok(html.includes('2열 반복 표는 선박별 헤더와 작업자 칸을 따로 읽고, 빈 칸은 선박 행으로 만들지 않습니다'));
+    assert.ok(html.includes('인원과 출력 인원이 달라도 찾기·저장을 막지 않습니다'));
     assert.ok(html.includes('사진에서 명단 다시 읽기'));
     assert.doesNotMatch(engine, /for \(const profile of \["adaptive", "binary"\]/);
     assert.ok(html.includes('날짜별 전 터미널 입·출항 스케줄로 선박명을 교차 확인'));
@@ -545,6 +573,10 @@ test('화면은 카메라·갤러리·수정·기기저장 UI와 검토 후 적�
     assert.match(engine, /if \(selected\.entryCount === 0\)/);
     assert.match(engine, /function hasRosterTableHeaderInk\(imageData, region\)/);
     assert.match(engine, /function buildRosterTableOcrEntries\(regions, headers, assignedWords\)/);
+    assert.match(engine, /function parseRosterCloudTableResult\(result, regions, defaultYear\)/);
+    assert.match(engine, /async function runRosterCloudOcr\(\)/);
+    assert.match(engine, /X-Roster-Ocr-Consent/);
+    assert.ok(html.includes('Google Cloud Vision'));
     assert.match(engine, /function collectRosterTableWorkers\(words, region\)/);
     assert.match(engine, /function recognizeRosterTablePhoto\(engine, sourceCanvas, imageData, regions, defaultYear\)/);
     assert.match(engine, /function verifyRosterPhotoVessels\(\)/);
