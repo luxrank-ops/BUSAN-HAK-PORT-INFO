@@ -9,6 +9,8 @@ let notiActiveUserId = "";
 let notiInitialSnapshotLoaded = false;
 let notiAnnouncedIds = new Set();
 let notiSubscriptionVersion = 0;
+// 알림 창은 처음 열 때 만들어지므로, 그 전에 받은 최신 스냅샷을 보관했다가 창 생성 즉시 그려 줍니다.
+let notiLastSnapshot = null;
 let fcmInitPromise = null;
 let fcmServiceWorkerRegistrationPromise = null;
 let fcmMessagingInstance = null;
@@ -93,7 +95,37 @@ function ensureNotificationPanel() {
             <div class="noti-empty-state"><span aria-hidden="true">✨</span><strong>도착한 알림이 없습니다.</strong><p>새 소식이 생기면 이 창으로 바로 알려드릴게요.</p></div>
         </div>`;
     document.body.appendChild(panel);
+    if (notiLastSnapshot) renderNotificationRows(notiLastSnapshot);
     return panel;
+}
+
+/**
+ * 🔔 종 배지: 알림 센터에 들어 있는 알림 개수(읽음 포함)를 항상 숫자로 보여 줍니다.
+ * - 안 읽은 알림이 하나라도 있으면 빨간색 + 깜빡임(has-unread)
+ * - 모두 읽었으면 회색 숫자(is-read)로 남겨 "알림 내용이 있다"는 것만 알려 줍니다.
+ * - 알림이 하나도 없을 때만 배지를 숨깁니다.
+ * @param {number} totalCount 알림 센터에 보이는 알림 수
+ * @param {number} unreadCount 그중 안 읽은 알림 수
+ * @param {boolean} [hasMore] 화면 표시 한도(20건)를 넘는 알림이 더 있는지
+ */
+function updateNotificationBadge(totalCount, unreadCount, hasMore = false) {
+    const total = Math.max(0, Number(totalCount) || 0);
+    const unread = Math.min(total, Math.max(0, Number(unreadCount) || 0));
+    const label = hasMore ? `${total}+` : (total > 99 ? '99+' : String(total));
+    const badge = document.getElementById('notiBadge');
+    if (badge) {
+        badge.hidden = total === 0;
+        badge.textContent = label;
+        badge.classList.toggle('has-unread', unread > 0);
+        badge.classList.toggle('is-read', total > 0 && unread === 0);
+    }
+    const toggle = document.getElementById('notiToggle');
+    if (toggle && typeof toggle.setAttribute === 'function') {
+        const title = total === 0
+            ? '알림 센터'
+            : `알림 센터 · 알림 ${label}개${unread > 0 ? ` (새 알림 ${unread}개)` : ''}`;
+        toggle.setAttribute('title', title);
+    }
 }
 
 function openNotificationPanel(options = {}) {
@@ -130,20 +162,29 @@ function notificationCreatedAtMs(data) {
     return Number.isFinite(parsed) ? parsed : 0;
 }
 
-function visibleNotificationDocs(snapshot) {
+const NOTIFICATION_VISIBLE_LIMIT = 20;
+
+function allNotificationDocs(snapshot) {
     const docs = [];
     snapshot?.forEach?.((doc) => docs.push(doc));
+    return docs;
+}
+
+function visibleNotificationDocs(snapshot) {
+    const docs = allNotificationDocs(snapshot);
     // 복합 인덱스가 아직 만들어지는 동안의 대체 조회도 화면에서는 최신 20건처럼 보입니다.
     return docs.sort((left, right) => {
         const diff = notificationCreatedAtMs(right?.data?.()) - notificationCreatedAtMs(left?.data?.());
         return diff || String(right?.id || '').localeCompare(String(left?.id || ''));
-    }).slice(0, 20);
+    }).slice(0, NOTIFICATION_VISIBLE_LIMIT);
 }
 
 function renderNotificationRows(snapshot) {
     let unreadCount = 0;
     let html = '';
     const docs = visibleNotificationDocs(snapshot);
+    // 복합 색인 대체 조회(제한 없음)일 때만 20건을 넘는 알림이 더 있는지 알 수 있습니다.
+    const hasMore = allNotificationDocs(snapshot).length > docs.length;
     if (!docs.length) {
         html = '<div class="noti-empty-state"><span aria-hidden="true">✨</span><strong>도착한 알림이 없습니다.</strong><p>새 소식이 생기면 이 창으로 바로 알려드릴게요.</p></div>';
     } else {
@@ -169,21 +210,24 @@ function renderNotificationRows(snapshot) {
 
     const list = document.getElementById('notiList');
     if (list) list.innerHTML = html;
-    const badge = document.getElementById('notiBadge');
-    if (badge) {
-        badge.classList.toggle('has-unread', unreadCount > 0);
-        badge.hidden = unreadCount === 0;
-        badge.textContent = unreadCount > 99 ? '99+' : String(unreadCount);
-    }
+    updateNotificationBadge(docs.length, unreadCount, hasMore);
     const summary = document.getElementById('notiPanelUnread');
-    if (summary) summary.textContent = unreadCount > 0 ? `새 알림 ${unreadCount}개` : '새 알림 없음';
+    if (summary) {
+        const totalLabel = `알림 ${docs.length}${hasMore ? '+' : ''}개`;
+        summary.textContent = !docs.length
+            ? '새 알림 없음'
+            : (unreadCount > 0 ? `${totalLabel} · 새 알림 ${unreadCount}개` : `${totalLabel} · 모두 확인함`);
+    }
     return unreadCount;
 }
 
 function showIncomingNotification(data) {
     const title = String(data?.title || '새 알림');
     const body = String(data?.body || '알림 센터에서 내용을 확인해 주세요.');
-    openNotificationPanel({ markRead: true });
+    // 자동으로 패널을 띄우거나 토스트를 보여주는 것만으로는 사용자가 알림을 확인한 것이 아닙니다.
+    // 사용자가 직접 열었거나 이미 패널을 보고 있을 때에만 미확인 알림을 읽음 처리합니다.
+    const panelWasAlreadyOpen = notificationPanelIsOpen();
+    openNotificationPanel({ markRead: panelWasAlreadyOpen });
     if (typeof showToast === 'function') showToast(`🔔 ${title}${body ? ` · ${body}` : ''}`);
 }
 
@@ -319,6 +363,7 @@ function subscribeToNotifications(userId, version, useFallbackQuery) {
             const additions = !isInitialSnapshot && typeof snapshot.docChanges === 'function'
                 ? snapshot.docChanges().filter((change) => change.type === 'added')
                 : [];
+            notiLastSnapshot = snapshot;
             renderNotificationRows(snapshot);
             notiInitialSnapshotLoaded = true;
 
@@ -365,6 +410,7 @@ async function initNotifications(userId) {
     notiActiveUserId = String(userId);
     notiInitialSnapshotLoaded = false;
     notiAnnouncedIds = new Set();
+    notiLastSnapshot = null;
 
     // 기존 로그인 정보(localStorage)가 먼저 복원되어도 Firestore 구독은 인증 완료 뒤에 시작합니다.
     try {
@@ -386,15 +432,12 @@ function stopNotifications() {
     notiActiveUserId = "";
     notiInitialSnapshotLoaded = false;
     notiAnnouncedIds = new Set();
+    notiLastSnapshot = null;
     // 다음 로그인은 토큰을 해당 계정에 다시 연결해야 합니다.
     fcmRegisteredUserId = "";
     if (typeof document === 'undefined') return;
     closeNotificationPanel();
-    const badge = document.getElementById('notiBadge');
-    if (badge) {
-        badge.hidden = true;
-        badge.classList.remove('has-unread');
-    }
+    updateNotificationBadge(0, 0);
     const list = document.getElementById('notiList');
     if (list) list.innerHTML = '<div class="noti-empty-state"><span aria-hidden="true">🔒</span><strong>로그인 후 알림을 확인할 수 있습니다.</strong></div>';
 }
