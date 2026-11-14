@@ -9,6 +9,8 @@ let notiActiveUserId = "";
 let notiInitialSnapshotLoaded = false;
 let notiAnnouncedIds = new Set();
 let notiSubscriptionVersion = 0;
+// 알림 창은 처음 열 때 만들어지므로, 그 전에 받은 최신 스냅샷을 보관했다가 창 생성 즉시 그려 줍니다.
+let notiLastSnapshot = null;
 let fcmInitPromise = null;
 let fcmServiceWorkerRegistrationPromise = null;
 let fcmMessagingInstance = null;
@@ -93,7 +95,22 @@ function ensureNotificationPanel() {
             <div class="noti-empty-state"><span aria-hidden="true">✨</span><strong>도착한 알림이 없습니다.</strong><p>새 소식이 생기면 이 창으로 바로 알려드릴게요.</p></div>
         </div>`;
     document.body.appendChild(panel);
+    if (notiLastSnapshot) renderNotificationRows(notiLastSnapshot);
     return panel;
+}
+
+function updateNotificationBadge(unreadCount) {
+    const count = Math.max(0, Number(unreadCount) || 0);
+    const badge = document.getElementById('notiBadge');
+    if (badge) {
+        badge.classList.toggle('has-unread', count > 0);
+        badge.hidden = count === 0;
+        badge.textContent = count > 99 ? '99+' : String(count);
+    }
+    const toggle = document.getElementById('notiToggle');
+    if (toggle && typeof toggle.setAttribute === 'function') {
+        toggle.setAttribute('title', count > 0 ? `알림 센터 · 새 알림 ${count}개` : '알림 센터');
+    }
 }
 
 function openNotificationPanel(options = {}) {
@@ -169,12 +186,7 @@ function renderNotificationRows(snapshot) {
 
     const list = document.getElementById('notiList');
     if (list) list.innerHTML = html;
-    const badge = document.getElementById('notiBadge');
-    if (badge) {
-        badge.classList.toggle('has-unread', unreadCount > 0);
-        badge.hidden = unreadCount === 0;
-        badge.textContent = unreadCount > 99 ? '99+' : String(unreadCount);
-    }
+    updateNotificationBadge(unreadCount);
     const summary = document.getElementById('notiPanelUnread');
     if (summary) summary.textContent = unreadCount > 0 ? `새 알림 ${unreadCount}개` : '새 알림 없음';
     return unreadCount;
@@ -322,6 +334,7 @@ function subscribeToNotifications(userId, version, useFallbackQuery) {
             const additions = !isInitialSnapshot && typeof snapshot.docChanges === 'function'
                 ? snapshot.docChanges().filter((change) => change.type === 'added')
                 : [];
+            notiLastSnapshot = snapshot;
             renderNotificationRows(snapshot);
             notiInitialSnapshotLoaded = true;
 
@@ -368,6 +381,7 @@ async function initNotifications(userId) {
     notiActiveUserId = String(userId);
     notiInitialSnapshotLoaded = false;
     notiAnnouncedIds = new Set();
+    notiLastSnapshot = null;
 
     // 기존 로그인 정보(localStorage)가 먼저 복원되어도 Firestore 구독은 인증 완료 뒤에 시작합니다.
     try {
@@ -389,15 +403,12 @@ function stopNotifications() {
     notiActiveUserId = "";
     notiInitialSnapshotLoaded = false;
     notiAnnouncedIds = new Set();
+    notiLastSnapshot = null;
     // 다음 로그인은 토큰을 해당 계정에 다시 연결해야 합니다.
     fcmRegisteredUserId = "";
     if (typeof document === 'undefined') return;
     closeNotificationPanel();
-    const badge = document.getElementById('notiBadge');
-    if (badge) {
-        badge.hidden = true;
-        badge.classList.remove('has-unread');
-    }
+    updateNotificationBadge(0);
     const list = document.getElementById('notiList');
     if (list) list.innerHTML = '<div class="noti-empty-state"><span aria-hidden="true">🔒</span><strong>로그인 후 알림을 확인할 수 있습니다.</strong></div>';
 }
