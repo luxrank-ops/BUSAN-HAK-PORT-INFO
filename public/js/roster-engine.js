@@ -75,6 +75,11 @@ function normalizeRosterVesselKey(value) {
         .toLocaleUpperCase("ko-KR");
 }
 
+/** 선박명 대조용 키: OCR이 끊어 낸 공백·점·기호는 무시하되 글자와 숫자는 보존합니다. */
+function normalizeRosterVesselMatchKey(value) {
+    return normalizeRosterVesselKey(value).replace(/[^A-Z0-9가-힣]/g, "");
+}
+
 function normalizeRosterAssignment(row, source) {
     const vessel = String(row?.vessel || "").trim();
     if (!vessel) return null;
@@ -318,9 +323,62 @@ function collectRosterScheduleEntries(schedules) {
         .map((vessel) => ({ terminalId, vessel })));
 }
 
+function rosterVesselEditDistance(left, right) {
+    const a = String(left || "");
+    const b = String(right || "");
+    if (a === b) return 0;
+    if (!a.length) return b.length;
+    if (!b.length) return a.length;
+    let previous = Array.from({ length: b.length + 1 }, (_, index) => index);
+    for (let row = 1; row <= a.length; row += 1) {
+        const current = [row];
+        for (let column = 1; column <= b.length; column += 1) {
+            const substitution = previous[column - 1] + (a[row - 1] === b[column - 1] ? 0 : 1);
+            current[column] = Math.min(previous[column] + 1, current[column - 1] + 1, substitution);
+        }
+        previous = current;
+    }
+    return previous[b.length];
+}
+
+/** 일정 내 같은 선박의 여러 터미널 행을 하나의 이름 후보로 묶고 OCR 유사도를 계산합니다. */
+function rankRosterScheduleVesselNames(literalName, entries) {
+    const target = normalizeRosterVesselMatchKey(literalName);
+    if (!target) return [];
+    const groups = new Map();
+    (entries || []).forEach((entry) => {
+        const officialName = String(entry?.vessel?.VSL_NM || "").trim();
+        const key = normalizeRosterVesselMatchKey(officialName);
+        if (!key) return;
+        if (!groups.has(key)) groups.set(key, { key, officialName, matches: [] });
+        groups.get(key).matches.push(entry);
+    });
+    return [...groups.values()].map((group) => {
+        const distance = rosterVesselEditDistance(target, group.key);
+        const similarity = 1 - distance / Math.max(target.length, group.key.length, 1);
+        return { ...group, distance, similarity };
+    }).sort((a, b) => b.similarity - a.similarity || a.distance - b.distance || a.officialName.localeCompare(b.officialName));
+}
+
+function rosterPhotoVesselMatchResult(status, literalName, groups, extra = {}) {
+    const candidates = groups || [];
+    return {
+        status,
+        literalName,
+        matches: candidates.flatMap((group) => group.matches),
+        candidateVesselCount: candidates.length,
+        candidateNames: candidates.map((group) => group.officialName),
+        candidateName: candidates[0]?.officialName || "",
+        similarity: candidates[0]?.similarity ?? null,
+        matchType: extra.matchType || "fuzzy",
+        ...extra
+    };
+}
+
 /**
- * OCR 선박명을 해당 날짜의 전 터미널 입·출항 스케줄과 비교합니다.
- * 후보 판정 자체는 원문을 바꾸지 않으며, 단일 활성 후보는 이후 검토 흐름에서 스케줄명으로 확정합니다.
+ * OCR 선박명을 날짜별 전 터미널 스케줄과 대조합니다.
+ * 공백·기호가 분리된 글자는 같은 단어로 비교하고, 작은 글자 차이는 유사 후보로 제시합니다.
+ * 판정은 OCR 원문을 바꾸지 않으며, 스케줄 정식명은 사용자가 선택해야 적용됩니다.
  */
 function verifyRosterPhotoVesselName(row, schedules) {
     const literalName = String(row?.vessel || "").trim();
@@ -330,21 +388,53 @@ function verifyRosterPhotoVesselName(row, schedules) {
 
     const entries = collectRosterScheduleEntries(schedules);
     if (!entries.length) return { status: "schedule-unavailable", literalName, matches: [] };
-    const target = normalizeRosterVesselKey(literalName);
+    const targetKey = normalizeRosterVesselMatchKey(literalName);
     const activeEntries = entries.filter((entry) => isRosterScheduleVesselActiveOnDate(entry.vessel, date));
-    const exactActive = activeEntries.filter((entry) => normalizeRosterVesselKey(entry.vessel.VSL_NM) === target);
-    if (exactActive.length) return { status: "verified", literalName, matches: exactActive };
+    if (!activeEntries.length) {
+        const otherDateMatches = rankRosterScheduleVesselNames(literalName, entries)
+            .filter((group) => group.key === targetKey || (targetKey.length >= 6 && group.similarity >= 0.78))
+            .slice(0, 1);
+        return otherDateMatches.length
+            ? rosterPhotoVesselMatchResult("date-mismatch", literalName, otherDateMatches)
+            : { status: "not-found", literalName, matches: [] };
+    }
 
-    const partialActive = activeEntries.filter((entry) => {
-        const key = normalizeRosterVesselKey(entry.vessel.VSL_NM);
-        return key && (key.includes(target) || target.includes(key));
-    });
-    if (partialActive.length === 1) return { status: "candidate", literalName, matches: partialActive };
-    if (partialActive.length > 1) return { status: "ambiguous", literalName, matches: partialActive };
+    const ranked = rankRosterScheduleVesselNames(literalName, activeEntries);
+    const exact = ranked.filter((group) => group.key === targetKey);
+    if (exact.length) {
+        const group = exact[0];
+        const displayMatches = literalName.normalize("NFKC").trim().toLocaleUpperCase("ko-KR")
+            === group.officialName.normalize("NFKC").trim().toLocaleUpperCase("ko-KR");
+        const status = displayMatches ? "verified" : "candidate";
+        return rosterPhotoVesselMatchResult(status, literalName, [group], {
+            matchType: displayMatches ? "exact" : "joined-letters",
+            similarity: 1
+        });
+    }
 
-    const exactOtherDate = entries.filter((entry) => normalizeRosterVesselKey(entry.vessel.VSL_NM) === target);
-    if (exactOtherDate.length) return { status: "date-mismatch", literalName, matches: exactOtherDate };
-    return { status: "not-found", literalName, matches: [] };
+    if (targetKey.length < 6) {
+        const exactOtherDate = rankRosterScheduleVesselNames(literalName, entries.filter((entry) => !activeEntries.includes(entry)))
+            .filter((group) => group.key === targetKey)
+            .slice(0, 1);
+        return exactOtherDate.length
+            ? rosterPhotoVesselMatchResult("date-mismatch", literalName, exactOtherDate)
+            : { status: "not-found", literalName, matches: [] };
+    }
+    const likely = ranked.filter((group) => group.similarity >= 0.78);
+    if (!likely.length) {
+        const otherDateMatches = rankRosterScheduleVesselNames(literalName, entries.filter((entry) => !activeEntries.includes(entry)))
+            .filter((group) => group.key === targetKey || group.similarity >= 0.78)
+            .slice(0, 1);
+        return otherDateMatches.length
+            ? rosterPhotoVesselMatchResult("date-mismatch", literalName, otherDateMatches)
+            : { status: "not-found", literalName, matches: [] };
+    }
+    const topScore = likely[0].similarity;
+    const topCandidates = likely.filter((group) => topScore - group.similarity <= 0.06);
+    if (topCandidates.length > 1) {
+        return rosterPhotoVesselMatchResult("ambiguous", literalName, topCandidates, { matchType: "fuzzy" });
+    }
+    return rosterPhotoVesselMatchResult("candidate", literalName, [topCandidates[0]], { matchType: "fuzzy" });
 }
 
 function buildRosterPhotoVesselVerifications(rows, schedules) {
@@ -372,17 +462,36 @@ function markUserConfirmedRosterPhotoScheduleNames(rows, verifications) {
     return confirmed;
 }
 
-function applyRosterPhotoScheduleName(index) {
+function rosterPhotoScheduleCandidateNames(check) {
+    if (!["candidate", "ambiguous"].includes(check?.status)) return [];
+    const names = Array.isArray(check.candidateNames) && check.candidateNames.length
+        ? check.candidateNames
+        : (check.matches || []).map((entry) => entry?.vessel?.VSL_NM);
+    return [...new Set(names.map((name) => String(name || "").trim()).filter(Boolean))];
+}
+
+function applyRosterPhotoScheduleName(index, candidateIndex = 0) {
     const row = rosterRuntime.reviewRows[index];
     const check = rosterRuntime.reviewVerifications[index];
-    const officialName = String(check?.status === "candidate" ? check.matches?.[0]?.vessel?.VSL_NM || "" : "").trim();
+    const candidateNames = rosterPhotoScheduleCandidateNames(check);
+    const selectedIndex = Number(candidateIndex);
+    const officialName = Number.isInteger(selectedIndex) && selectedIndex >= 0
+        ? String(candidateNames[selectedIndex] || "").trim()
+        : "";
     const currentName = String(row?.vessel || "").trim();
     if (!row || !officialName || !currentName) return false;
+    const selectedMatches = (check.matches || []).filter((entry) =>
+        normalizeRosterVesselMatchKey(entry?.vessel?.VSL_NM) === normalizeRosterVesselMatchKey(officialName));
+    if (!selectedMatches.length) return false;
     row.scheduleNameSource = row.scheduleNameSource || currentName;
     row.vessel = officialName;
     rosterRuntime.reviewVerifications[index] = {
         ...check,
         status: "user-confirmed",
+        matches: selectedMatches,
+        candidateNames: [officialName],
+        candidateName: officialName,
+        candidateVesselCount: 1,
         literalName: row.scheduleNameSource,
         officialName,
         userConfirmed: true
@@ -845,11 +954,39 @@ function readTimeFromOcrLine(line) {
     return hour >= 0 && hour < 24 && minute >= 0 && minute < 60 ? `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}` : "";
 }
 
+function combineRosterOcrLetterFragments(line) {
+    return String(line || "").replace(/(^|[^A-Za-z0-9])((?:[A-Za-z][\s.-]+){3,}[A-Za-z])(?=$|[^A-Za-z0-9])/g,
+        (match, prefix, fragment) => `${prefix}${fragment.replace(/[^A-Za-z0-9]/g, "")}`);
+}
+
+function combineRosterOcrCharacterLines(lines) {
+    const source = Array.isArray(lines) ? lines : [];
+    const combined = [];
+    for (let index = 0; index < source.length;) {
+        if (!/^[A-Za-z]$/.test(source[index])) {
+            combined.push({ text: source[index], sourceText: source[index] });
+            index += 1;
+            continue;
+        }
+        let end = index;
+        while (end < source.length && /^[A-Za-z]$/.test(source[end])) end += 1;
+        const fragments = source.slice(index, end);
+        if (fragments.length >= 4) {
+            combined.push({ text: fragments.join(""), sourceText: fragments.join("\n") });
+        } else {
+            fragments.forEach((text) => combined.push({ text, sourceText: text }));
+        }
+        index = end;
+    }
+    return combined;
+}
+
 function pickVesselFromOcrLine(line) {
-    const candidates = String(line).match(/[A-Za-z][A-Za-z0-9&'.-]*(?:\s+[A-Za-z][A-Za-z0-9&'.-]*)*/g) || [];
+    const combinedLine = combineRosterOcrLetterFragments(line);
+    const candidates = combinedLine.match(/[A-Za-z][A-Za-z0-9&'.-]*(?:\s+[A-Za-z][A-Za-z0-9&'.-]*)*/g) || [];
     return candidates.reduce((winner, candidate) => {
         const name = candidate.trim().toUpperCase();
-        // 세로로 분리 인식된 글자(예: P / R / E)나 표 선의 영문 노이즈를 선박 행으로 만들지 않습니다.
+        // 연속된 단일 영문 조각은 먼저 결합하고, 남은 1~2글자·표 선 노이즈는 선박 행으로 만들지 않습니다.
         if ((name.match(/[A-Z]/g) || []).length < 3) return winner;
         return name.length > winner.length ? name : winner;
     }, "");
@@ -890,18 +1027,22 @@ function parseRosterPhotoText(rawText, options) {
     const settings = options || {};
     const fallbackYear = Number(settings.defaultYear) || new Date().getFullYear();
     const suppliedDate = /^\d{4}-\d{2}-\d{2}$/.test(String(settings.defaultDate || "")) ? String(settings.defaultDate) : "";
-    const lines = cleanOcrText(rawText).split("\n").map((line) => line.trim()).filter(Boolean);
-    if (!lines.length) return { entries: [], warnings: ["글자가 없습니다. 사진을 다시 고르거나 직접 입력해 주세요."] };
+    const rawLines = cleanOcrText(rawText).split("\n").map((line) => line.trim()).filter(Boolean);
+    if (!rawLines.length) return { entries: [], warnings: ["글자가 없습니다. 사진을 다시 고르거나 직접 입력해 주세요."] };
+    const lines = combineRosterOcrCharacterLines(rawLines);
 
     const result = { date: suppliedDate, current: null, entries: [] };
-    lines.forEach((line) => {
+    lines.forEach(({ text: line, sourceText }) => {
         const date = readDateFromOcrLine(line, fallbackYear);
         if (date) result.date = date;
         const workers = pickWorkersFromOcrLine(line);
         const vessel = pickVesselFromOcrLine(line);
         if (!vessel) {
             // 읽지 못한 머리말도 추정하거나 차단하지 않습니다. 다음 한글 덩어리는 현재 검토 행에 그대로 붙습니다.
-            if (result.current) result.current.workers = mergeWorkers(result.current.workers, workers);
+            if (result.current) {
+                result.current.workers = mergeWorkers(result.current.workers, workers);
+                if (sourceText !== line) result.current.sourceOcrLine += `\n${sourceText}`;
+            }
             return;
         }
         const row = {
@@ -912,7 +1053,7 @@ function parseRosterPhotoText(rawText, options) {
             support: pickSupportFromOcrLine(line),
             group: pickGroupFromOcrLine(line),
             workers,
-            sourceOcrLine: line,
+            sourceOcrLine: sourceText,
             sourceOcrVessel: vessel,
             source: "photo"
         };
@@ -2131,10 +2272,16 @@ function rosterPhotoVerificationHtml(verification, index) {
     const correctionInfo = check.status === "user-confirmed"
         ? ` · OCR 원문 ${escapeShipCommentHtml(check.literalName)} → 사용자가 적용 ${escapeShipCommentHtml(check.officialName || vesselName)}`
         : "";
-    const scheduleInfo = first
-        ? ` · ${escapeShipCommentHtml(terminalLabel)} · 스케줄 ${escapeShipCommentHtml(vesselName)}${correctionInfo} · 입항 ${escapeShipCommentHtml(rosterPhotoScheduleValue(first.vessel, ["ATA", "ETB", "ATW"]))} · 출항 ${escapeShipCommentHtml(rosterPhotoScheduleValue(first.vessel, ["ATD", "ATC"]))}`
+    const candidateInfo = check.status === "candidate"
+        ? ` · OCR “${escapeShipCommentHtml(check.literalName)}” → 스케줄 후보 “${escapeShipCommentHtml(check.candidateName || vesselName)}” (${Math.round((Number(check.similarity) || 0) * 100)}% 일치)`
         : "";
-    const more = check.matches?.length > 1 ? ` 외 ${check.matches.length - 1}척` : "";
+    const scheduleInfo = first
+        ? ` · ${escapeShipCommentHtml(terminalLabel)} · 스케줄 ${escapeShipCommentHtml(vesselName)}${candidateInfo}${correctionInfo} · 입항 ${escapeShipCommentHtml(rosterPhotoScheduleValue(first.vessel, ["ATA", "ETB", "ATW"]))} · 출항 ${escapeShipCommentHtml(rosterPhotoScheduleValue(first.vessel, ["ATD", "ATC"]))}`
+        : "";
+    const ambiguousInfo = check.status === "ambiguous" && check.candidateNames?.length
+        ? ` · OCR “${escapeShipCommentHtml(check.literalName)}”와 가까운 후보: ${check.candidateNames.map(escapeShipCommentHtml).join(" / ")}`
+        : "";
+    const more = Number(check.candidateVesselCount) > 1 ? ` 외 ${Number(check.candidateVesselCount) - 1}개 후보` : "";
     const labels = {
         pending: "⏳ 스케줄 교차 확인 대기",
         loading: "⏳ 전 터미널 입·출항 스케줄 확인 중",
@@ -2149,10 +2296,22 @@ function rosterPhotoVerificationHtml(verification, index) {
         "missing-name": "ℹ️ 선박명을 입력하면 입·출항 스케줄과 교차 확인",
         stale: "✏️ 선박명 또는 날짜를 수정함 — 스케줄 재확인 필요"
     };
-    const candidateAction = check.status === "candidate" && vesselName
-        ? `<button type="button" class="roster-photo-schedule-apply" onclick="applyRosterPhotoScheduleName(${Number(index) || 0})">이 후보를 선박명에 적용</button>`
+    const statusLabel = check.status === "candidate" && check.matchType === "joined-letters"
+        ? "🔤 OCR에서 분리된 글자를 결합해 스케줄 단어와 일치시켰습니다 — 원문 유지 중"
+        : labels[check.status] || labels.pending;
+    const candidateNames = rosterPhotoScheduleCandidateNames(check);
+    const candidateActions = candidateNames.length
+        ? `<div class="roster-photo-schedule-actions">${candidateNames.map((name, candidateIndex) => {
+            const action = candidateNames.length === 1
+                ? `applyRosterPhotoScheduleName(${Number(index) || 0})`
+                : `applyRosterPhotoScheduleName(${Number(index) || 0}, ${candidateIndex})`;
+            const label = candidateNames.length === 1
+                ? "스케줄 후보 단어 적용"
+                : `“${escapeShipCommentHtml(name)}” 후보 적용`;
+            return `<button type="button" class="roster-photo-schedule-apply" onclick="${action}">${label}</button>`;
+        }).join("")}</div>`
         : "";
-    return `<div class="roster-photo-schedule-check is-${escapeShipCommentHtml(check.status || "pending")}"><span>${labels[check.status] || labels.pending}${scheduleInfo}${more}</span>${candidateAction}</div>`;
+    return `<div class="roster-photo-schedule-check is-${escapeShipCommentHtml(check.status || "pending")}"><span>${statusLabel}${scheduleInfo}${ambiguousInfo}${more}</span>${candidateActions}</div>`;
 }
 
 function summarizeRosterPhotoVerification(verifications) {
