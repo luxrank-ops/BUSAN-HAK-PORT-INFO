@@ -272,6 +272,9 @@
     .noti-badge { position: absolute; top: -5px; right: -7px; min-width: 19px; height: 19px; padding: 0 var(--sp-4); display: inline-flex; align-items: center; justify-content: center; border: 2px solid var(--card-bg); border-radius: var(--radius-pill); background: var(--danger); color: var(--n-000); font-size: var(--fs-2); font-weight: var(--fw-black); font-variant-numeric: tabular-nums; line-height: var(--lh-1); box-shadow: var(--shadow-elev-2); }
     .noti-badge[hidden] { display: none !important; }
     .noti-badge.has-unread { animation: notificationBadgePulse 1.8s ease-in-out infinite; }
+    /* 모두 읽은 알림만 남아 있을 때: 숫자는 계속 보이되 회색으로 차분하게 */
+    .noti-badge.is-read { background: var(--n-500); animation: none; }
+    body.dark-mode .noti-badge.is-read { background: var(--n-600); }
     .noti-panel { position: fixed; top: calc(env(safe-area-inset-top, 0px) + 64px); right: var(--sp-12); z-index: var(--z-toast); width: min(400px, calc(100vw - 24px)); max-height: min(560px, calc(100dvh - 88px)); display: flex; flex-direction: column; overflow: hidden; border: 1px solid var(--blue-200); border-radius: var(--radius-2xl); background: var(--card-bg); color: var(--text-main); box-shadow: var(--shadow-focus-light); opacity: 0; pointer-events: none; transform: translateY(-10px) scale(0.98); transform-origin: top right; visibility: hidden; transition: opacity var(--dur-200) ease, transform var(--dur-200) ease, visibility var(--dur-200) ease; }
     .noti-panel.is-open { opacity: 1; pointer-events: auto; transform: translateY(0) scale(1); visibility: visible; }
     .noti-panel-head { position: relative; display: flex; align-items: flex-start; justify-content: space-between; gap: var(--sp-10); padding: var(--sp-16); background: linear-gradient(135deg, var(--blue-50), var(--card-bg)); border-bottom: 1px solid var(--blue-100); }

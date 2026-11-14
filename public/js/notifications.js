@@ -99,17 +99,32 @@ function ensureNotificationPanel() {
     return panel;
 }
 
-function updateNotificationBadge(unreadCount) {
-    const count = Math.max(0, Number(unreadCount) || 0);
+/**
+ * 🔔 종 배지: 알림 센터에 들어 있는 알림 개수(읽음 포함)를 항상 숫자로 보여 줍니다.
+ * - 안 읽은 알림이 하나라도 있으면 빨간색 + 깜빡임(has-unread)
+ * - 모두 읽었으면 회색 숫자(is-read)로 남겨 "알림 내용이 있다"는 것만 알려 줍니다.
+ * - 알림이 하나도 없을 때만 배지를 숨깁니다.
+ * @param {number} totalCount 알림 센터에 보이는 알림 수
+ * @param {number} unreadCount 그중 안 읽은 알림 수
+ * @param {boolean} [hasMore] 화면 표시 한도(20건)를 넘는 알림이 더 있는지
+ */
+function updateNotificationBadge(totalCount, unreadCount, hasMore = false) {
+    const total = Math.max(0, Number(totalCount) || 0);
+    const unread = Math.min(total, Math.max(0, Number(unreadCount) || 0));
+    const label = hasMore ? `${total}+` : (total > 99 ? '99+' : String(total));
     const badge = document.getElementById('notiBadge');
     if (badge) {
-        badge.classList.toggle('has-unread', count > 0);
-        badge.hidden = count === 0;
-        badge.textContent = count > 99 ? '99+' : String(count);
+        badge.hidden = total === 0;
+        badge.textContent = label;
+        badge.classList.toggle('has-unread', unread > 0);
+        badge.classList.toggle('is-read', total > 0 && unread === 0);
     }
     const toggle = document.getElementById('notiToggle');
     if (toggle && typeof toggle.setAttribute === 'function') {
-        toggle.setAttribute('title', count > 0 ? `알림 센터 · 새 알림 ${count}개` : '알림 센터');
+        const title = total === 0
+            ? '알림 센터'
+            : `알림 센터 · 알림 ${label}개${unread > 0 ? ` (새 알림 ${unread}개)` : ''}`;
+        toggle.setAttribute('title', title);
     }
 }
 
@@ -147,20 +162,29 @@ function notificationCreatedAtMs(data) {
     return Number.isFinite(parsed) ? parsed : 0;
 }
 
-function visibleNotificationDocs(snapshot) {
+const NOTIFICATION_VISIBLE_LIMIT = 20;
+
+function allNotificationDocs(snapshot) {
     const docs = [];
     snapshot?.forEach?.((doc) => docs.push(doc));
+    return docs;
+}
+
+function visibleNotificationDocs(snapshot) {
+    const docs = allNotificationDocs(snapshot);
     // 복합 인덱스가 아직 만들어지는 동안의 대체 조회도 화면에서는 최신 20건처럼 보입니다.
     return docs.sort((left, right) => {
         const diff = notificationCreatedAtMs(right?.data?.()) - notificationCreatedAtMs(left?.data?.());
         return diff || String(right?.id || '').localeCompare(String(left?.id || ''));
-    }).slice(0, 20);
+    }).slice(0, NOTIFICATION_VISIBLE_LIMIT);
 }
 
 function renderNotificationRows(snapshot) {
     let unreadCount = 0;
     let html = '';
     const docs = visibleNotificationDocs(snapshot);
+    // 복합 색인 대체 조회(제한 없음)일 때만 20건을 넘는 알림이 더 있는지 알 수 있습니다.
+    const hasMore = allNotificationDocs(snapshot).length > docs.length;
     if (!docs.length) {
         html = '<div class="noti-empty-state"><span aria-hidden="true">✨</span><strong>도착한 알림이 없습니다.</strong><p>새 소식이 생기면 이 창으로 바로 알려드릴게요.</p></div>';
     } else {
@@ -186,9 +210,14 @@ function renderNotificationRows(snapshot) {
 
     const list = document.getElementById('notiList');
     if (list) list.innerHTML = html;
-    updateNotificationBadge(unreadCount);
+    updateNotificationBadge(docs.length, unreadCount, hasMore);
     const summary = document.getElementById('notiPanelUnread');
-    if (summary) summary.textContent = unreadCount > 0 ? `새 알림 ${unreadCount}개` : '새 알림 없음';
+    if (summary) {
+        const totalLabel = `알림 ${docs.length}${hasMore ? '+' : ''}개`;
+        summary.textContent = !docs.length
+            ? '새 알림 없음'
+            : (unreadCount > 0 ? `${totalLabel} · 새 알림 ${unreadCount}개` : `${totalLabel} · 모두 확인함`);
+    }
     return unreadCount;
 }
 
@@ -408,7 +437,7 @@ function stopNotifications() {
     fcmRegisteredUserId = "";
     if (typeof document === 'undefined') return;
     closeNotificationPanel();
-    updateNotificationBadge(0);
+    updateNotificationBadge(0, 0);
     const list = document.getElementById('notiList');
     if (list) list.innerHTML = '<div class="noti-empty-state"><span aria-hidden="true">🔒</span><strong>로그인 후 알림을 확인할 수 있습니다.</strong></div>';
 }
