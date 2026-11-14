@@ -2440,6 +2440,13 @@
         background: var(--amber-50);
         color: var(--amber-800);
     }
+    .roster-photo-schedule-actions {
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        flex-wrap: wrap;
+        gap: var(--sp-2);
+    }
     .roster-photo-schedule-apply {
         flex-shrink: 0;
         border: 1px solid var(--blue-300);
