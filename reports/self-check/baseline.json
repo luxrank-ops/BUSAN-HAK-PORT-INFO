@@ -1,10 +1,10 @@
 {
   "version": 1,
   "createdAt": "2026-10-23T07:39:53.245Z",
-  "updatedAt": "2026-11-08T23:16:11.446Z",
+  "updatedAt": "2026-11-15T23:38:27.958Z",
   "terminals": {
     "hjnc": {
-      "count": 33,
+      "count": 34,
       "fieldCoverage": {
         "VSL_NM": 1,
         "ETB": 1,
@@ -14,12 +14,13 @@
         "PTNR_CODE": 1,
         "VOY_NO": 1,
         "ATA": 1,
-        "ATW": 0.4995,
-        "ATC": 0.3861
+        "ATW": 0.4556,
+        "ATC": 0.3695,
+        "STATUS": 1
       },
-      "samples": 3,
-      "updatedAt": "2026-11-08T23:16:11.446Z",
-      "lastObservedCount": 31,
+      "samples": 4,
+      "updatedAt": "2026-11-15T23:38:27.958Z",
+      "lastObservedCount": 34,
       "history": [
         {
           "at": "2026-10-23T07:39:53.245Z",
@@ -32,6 +33,10 @@
         {
           "at": "2026-11-08T23:16:11.446Z",
           "count": 31
+        },
+        {
+          "at": "2026-11-15T23:38:27.958Z",
+          "count": 34
         }
       ]
     },
@@ -46,12 +51,13 @@
         "PTNR_CODE": 1,
         "VOY_NO": 1,
         "ATA": 1,
-        "ATW": 0.5084,
-        "ATC": 1
+        "ATW": 0.527,
+        "ATC": 1,
+        "STATUS": 0
       },
-      "samples": 3,
-      "updatedAt": "2026-11-08T23:16:11.446Z",
-      "lastObservedCount": 23,
+      "samples": 4,
+      "updatedAt": "2026-11-15T23:38:27.958Z",
+      "lastObservedCount": 22,
       "history": [
         {
           "at": "2026-10-23T07:39:53.245Z",
@@ -64,11 +70,15 @@
         {
           "at": "2026-11-08T23:16:11.446Z",
           "count": 23
+        },
+        {
+          "at": "2026-11-15T23:38:27.958Z",
+          "count": 22
         }
       ]
     },
     "dgt": {
-      "count": 34,
+      "count": 33,
       "fieldCoverage": {
         "VSL_NM": 1,
         "ETB": 1,
@@ -78,12 +88,13 @@
         "PTNR_CODE": 1,
         "VOY_NO": 1,
         "ATA": 1,
-        "ATW": 0.4636,
-        "ATC": 0.4038
+        "ATW": 0.5221,
+        "ATC": 0.4438,
+        "STATUS": 1
       },
-      "samples": 3,
-      "updatedAt": "2026-11-08T23:16:11.446Z",
-      "lastObservedCount": 34,
+      "samples": 4,
+      "updatedAt": "2026-11-15T23:38:27.958Z",
+      "lastObservedCount": 31,
       "history": [
         {
           "at": "2026-10-23T07:39:53.245Z",
@@ -96,6 +107,10 @@
         {
           "at": "2026-11-08T23:16:11.446Z",
           "count": 34
+        },
+        {
+          "at": "2026-11-15T23:38:27.958Z",
+          "count": 31
         }
       ]
     },
@@ -113,8 +128,8 @@
         "ATW": 1,
         "ATC": 1
       },
-      "samples": 3,
-      "updatedAt": "2026-11-08T23:16:11.446Z",
+      "samples": 4,
+      "updatedAt": "2026-11-15T23:38:27.958Z",
       "lastObservedCount": 31,
       "history": [
         {
@@ -128,42 +143,14 @@
         {
           "at": "2026-11-08T23:16:11.446Z",
           "count": 31
+        },
+        {
+          "at": "2026-11-15T23:38:27.958Z",
+          "count": 31
         }
       ]
     },
     "hpnt": {
-      "count": 23,
-      "fieldCoverage": {
-        "VSL_NM": 1,
-        "ETB": 1,
-        "ATD": 1,
-        "TERMINAL": 1,
-        "BERTH_NO": 1,
-        "PTNR_CODE": 1,
-        "VOY_NO": 1,
-        "ATA": 1,
-        "ATW": 1,
-        "ATC": 1
-      },
-      "samples": 3,
-      "updatedAt": "2026-11-08T23:16:11.446Z",
-      "lastObservedCount": 24,
-      "history": [
-        {
-          "at": "2026-10-23T07:39:53.245Z",
-          "count": 21
-        },
-        {
-          "at": "2026-10-25T22:09:20.994Z",
-          "count": 20
-        },
-        {
-          "at": "2026-11-08T23:16:11.446Z",
-          "count": 24
-        }
-      ]
-    },
-    "pnit": {
       "count": 25,
       "fieldCoverage": {
         "VSL_NM": 1,
@@ -177,9 +164,45 @@
         "ATW": 1,
         "ATC": 1
       },
-      "samples": 3,
-      "updatedAt": "2026-11-08T23:16:11.446Z",
-      "lastObservedCount": 24,
+      "samples": 4,
+      "updatedAt": "2026-11-15T23:38:27.958Z",
+      "lastObservedCount": 26,
+      "history": [
+        {
+          "at": "2026-10-23T07:39:53.245Z",
+          "count": 21
+        },
+        {
+          "at": "2026-10-25T22:09:20.994Z",
+          "count": 20
+        },
+        {
+          "at": "2026-11-08T23:16:11.446Z",
+          "count": 24
+        },
+        {
+          "at": "2026-11-15T23:38:27.958Z",
+          "count": 26
+        }
+      ]
+    },
+    "pnit": {
+      "count": 22,
+      "fieldCoverage": {
+        "VSL_NM": 1,
+        "ETB": 1,
+        "ATD": 1,
+        "TERMINAL": 1,
+        "BERTH_NO": 1,
+        "PTNR_CODE": 1,
+        "VOY_NO": 1,
+        "ATA": 1,
+        "ATW": 1,
+        "ATC": 1
+      },
+      "samples": 4,
+      "updatedAt": "2026-11-15T23:38:27.958Z",
+      "lastObservedCount": 19,
       "history": [
         {
           "at": "2026-10-23T07:39:53.245Z",
@@ -192,11 +215,15 @@
         {
           "at": "2026-11-08T23:16:11.446Z",
           "count": 24
+        },
+        {
+          "at": "2026-11-15T23:38:27.958Z",
+          "count": 19
         }
       ]
     },
     "bptc": {
-      "count": 106,
+      "count": 107,
       "fieldCoverage": {
         "VSL_NM": 1,
         "ETB": 1,
@@ -207,11 +234,11 @@
         "VOY_NO": 1,
         "ATA": 1,
         "ATW": 1,
-        "ATC": 0.3419
+        "ATC": 0.3345
       },
-      "samples": 3,
-      "updatedAt": "2026-11-08T23:16:11.446Z",
-      "lastObservedCount": 101,
+      "samples": 4,
+      "updatedAt": "2026-11-15T23:38:27.958Z",
+      "lastObservedCount": 107,
       "history": [
         {
           "at": "2026-10-23T07:39:53.245Z",
@@ -224,6 +251,10 @@
         {
           "at": "2026-11-08T23:16:11.446Z",
           "count": 101
+        },
+        {
+          "at": "2026-11-15T23:38:27.958Z",
+          "count": 107
         }
       ]
     },
@@ -241,8 +272,8 @@
         "ATW": 1,
         "ATC": 1
       },
-      "samples": 3,
-      "updatedAt": "2026-11-08T23:16:11.446Z",
+      "samples": 4,
+      "updatedAt": "2026-11-15T23:38:27.958Z",
       "lastObservedCount": 60,
       "history": [
         {
@@ -256,13 +287,17 @@
         {
           "at": "2026-11-08T23:16:11.446Z",
           "count": 60
+        },
+        {
+          "at": "2026-11-15T23:38:27.958Z",
+          "count": 60
         }
       ]
     }
   },
   "runs": [],
   "lastRun": {
-    "at": "2026-11-08T23:16:11.446Z",
+    "at": "2026-11-15T23:38:27.958Z",
     "overall": "WARN",
     "pass": 15,
     "warn": 1,

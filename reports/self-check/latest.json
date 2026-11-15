@@ -1,25 +1,25 @@
 {
   "version": 1,
-  "generatedAt": "2026-11-08T23:16:11.446Z",
-  "startedAt": "2026-11-08T23:16:11.451Z",
-  "completedAt": "2026-11-08T23:16:20.133Z",
-  "durationMs": 8682,
+  "generatedAt": "2026-11-15T23:38:27.958Z",
+  "startedAt": "2026-11-15T23:38:27.962Z",
+  "completedAt": "2026-11-15T23:38:34.334Z",
+  "durationMs": 6372,
   "steps": [
     {
       "name": "probes",
       "label": "기능 점검",
       "status": "ok",
-      "durationMs": 8676,
+      "durationMs": 6359,
       "detail": "점검 항목 16건",
-      "finishedAt": "2026-11-08T23:16:20.127Z"
+      "finishedAt": "2026-11-15T23:38:34.321Z"
     },
     {
       "name": "drift",
       "label": "데이터 변화 판정",
       "status": "ok",
-      "durationMs": 1,
+      "durationMs": 0,
       "detail": "터미널 8곳 · WARN 0 · FAIL 0",
-      "finishedAt": "2026-11-08T23:16:20.128Z"
+      "finishedAt": "2026-11-15T23:38:34.321Z"
     },
     {
       "name": "repairs",
@@ -27,7 +27,7 @@
       "status": "ok",
       "durationMs": 0,
       "detail": "복구 계획 0건 · 실행 0건 · 실패 0건",
-      "finishedAt": "2026-11-08T23:16:20.128Z"
+      "finishedAt": "2026-11-15T23:38:34.321Z"
     },
     {
       "name": "recheck",
@@ -35,7 +35,7 @@
       "status": "ok",
       "durationMs": 0,
       "detail": "검증된 복구 0건",
-      "finishedAt": "2026-11-08T23:16:20.128Z"
+      "finishedAt": "2026-11-15T23:38:34.321Z"
     },
     {
       "name": "baseline",
@@ -43,15 +43,15 @@
       "status": "ok",
       "durationMs": 2,
       "detail": "터미널 8곳",
-      "finishedAt": "2026-11-08T23:16:20.130Z"
+      "finishedAt": "2026-11-15T23:38:34.323Z"
     },
     {
       "name": "report",
       "label": "보고서 생성",
       "status": "ok",
-      "durationMs": 3,
-      "detail": "reports/self-check/weekly-self-check-2026-11-09.md",
-      "finishedAt": "2026-11-08T23:16:20.133Z"
+      "durationMs": 11,
+      "detail": "reports/self-check/weekly-self-check-2026-11-16.md",
+      "finishedAt": "2026-11-15T23:38:34.334Z"
     },
     {
       "name": "email",
@@ -59,12 +59,12 @@
       "status": "skipped",
       "durationMs": 0,
       "detail": "건너뜀 — no_email_flag",
-      "finishedAt": "2026-11-08T23:16:20.133Z"
+      "finishedAt": "2026-11-15T23:38:34.334Z"
     }
   ],
-  "kstDate": "2026-11-09",
-  "kstDateTime": "2026-11-09 (월) 08:16:11 KST",
-  "isoWeek": "2026-W46",
+  "kstDate": "2026-11-16",
+  "kstDateTime": "2026-11-16 (월) 08:38:27 KST",
+  "isoWeek": "2026-W47",
   "platform": "github-actions",
   "summary": {
     "total": 16,
@@ -81,57 +81,69 @@
     {
       "terminal": "hjnc",
       "status": "PASS",
-      "current": 31,
-      "baseline": 35,
-      "changeRatio": 0.886,
-      "findings": []
+      "current": 34,
+      "baseline": 33,
+      "changeRatio": 1.03,
+      "findings": [
+        {
+          "code": "field_added",
+          "severity": "INFO",
+          "detail": "새 필드 감지: STATUS — 다음 점검부터 기준선에 반영"
+        }
+      ]
     },
     {
       "terminal": "bnct",
       "status": "PASS",
-      "current": 23,
+      "current": 22,
       "baseline": 23,
-      "changeRatio": 1,
+      "changeRatio": 0.957,
       "findings": []
     },
     {
       "terminal": "dgt",
       "status": "PASS",
-      "current": 34,
+      "current": 31,
       "baseline": 34,
-      "changeRatio": 1,
-      "findings": []
+      "changeRatio": 0.912,
+      "findings": [
+        {
+          "code": "field_added",
+          "severity": "INFO",
+          "detail": "새 필드 감지: STATUS — 다음 점검부터 기준선에 반영"
+        }
+      ]
     },
     {
       "terminal": "pnc",
       "status": "PASS",
       "current": 31,
-      "baseline": 33,
-      "changeRatio": 0.939,
+      "baseline": 32,
+      "changeRatio": 0.969,
       "findings": []
     },
     {
       "terminal": "hpnt",
       "status": "PASS",
-      "current": 24,
-      "baseline": 21,
-      "changeRatio": 1.143,
+      "current": 26,
+      "baseline": 23,
+      "changeRatio": 1.13,
       "findings": []
     },
     {
       "terminal": "pnit",
       "status": "PASS",
-      "current": 24,
+      "current": 19,
       "baseline": 25,
-      "changeRatio": 0.96,
+      "changeRatio": 0.76,
       "findings": []
     },
     {
       "terminal": "bptc",
       "status": "PASS",
-      "current": 101,
-      "baseline": 111,
-      "changeRatio": 0.91,
+      "current": 107,
+      "baseline": 106,
+      "changeRatio": 1.009,
       "findings": []
     },
     {
@@ -177,7 +189,7 @@
       "status": "PASS",
       "detail": "Vercel Cron '0 20 * * 0' · node-cron · API 라우트 확인",
       "code": null,
-      "durationMs": 2
+      "durationMs": 1
     },
     {
       "id": "repo.workflow",
@@ -193,7 +205,7 @@
       "category": "자가 점검 기준선",
       "name": "기준선 파일",
       "status": "PASS",
-      "detail": "터미널 8곳 기준선 (2026-10-25T22:09:20.994Z)",
+      "detail": "터미널 8곳 기준선 (2026-11-08T23:16:11.446Z)",
       "code": null,
       "durationMs": 0
     },
@@ -202,18 +214,18 @@
       "category": "배포 사이트",
       "name": "헬스 체크 /api/health",
       "status": "PASS",
-      "detail": "HTTP 200 · 2238B",
+      "detail": "HTTP 200 · 2290B",
       "code": null,
-      "durationMs": 1584
+      "durationMs": 408
     },
     {
       "id": "site.home",
       "category": "배포 사이트",
       "name": "메인 화면 응답",
       "status": "PASS",
-      "detail": "HTTP 200 · 169KB · app.js 로드 확인",
+      "detail": "HTTP 200 · 181KB · app.js 로드 확인",
       "code": null,
-      "durationMs": 225
+      "durationMs": 164
     },
     {
       "id": "site.inspection",
@@ -222,34 +234,34 @@
       "status": "WARN",
       "detail": "일일 점검 기록 없음",
       "code": "site.inspection_api",
-      "durationMs": 229
+      "durationMs": 325
     },
     {
       "id": "terminal.hjnc",
       "category": "터미널 데이터",
       "name": "HJNC 스케줄 수집",
       "status": "PASS",
-      "detail": "31척 수집 · VSL_NM 100%",
+      "detail": "새 필드 감지: STATUS — 다음 점검부터 기준선에 반영",
       "code": null,
-      "durationMs": 457
+      "durationMs": 455
     },
     {
       "id": "terminal.bnct",
       "category": "터미널 데이터",
       "name": "BNCT 스케줄 수집",
       "status": "PASS",
-      "detail": "23척 수집 · VSL_NM 100%",
+      "detail": "22척 수집 · VSL_NM 100%",
       "code": null,
-      "durationMs": 497
+      "durationMs": 354
     },
     {
       "id": "terminal.dgt",
       "category": "터미널 데이터",
       "name": "DGT 스케줄 수집",
       "status": "PASS",
-      "detail": "34척 수집 · VSL_NM 100%",
+      "detail": "새 필드 감지: STATUS — 다음 점검부터 기준선에 반영",
       "code": null,
-      "durationMs": 737
+      "durationMs": 742
     },
     {
       "id": "terminal.pnc",
@@ -258,34 +270,34 @@
       "status": "PASS",
       "detail": "31척 수집 · VSL_NM 100%",
       "code": null,
-      "durationMs": 1810
+      "durationMs": 1261
     },
     {
       "id": "terminal.hpnt",
       "category": "터미널 데이터",
       "name": "HPNT 스케줄 수집",
       "status": "PASS",
-      "detail": "24척 수집 · VSL_NM 100%",
+      "detail": "26척 수집 · VSL_NM 100%",
       "code": null,
-      "durationMs": 1325
+      "durationMs": 960
     },
     {
       "id": "terminal.pnit",
       "category": "터미널 데이터",
       "name": "PNIT 스케줄 수집",
       "status": "PASS",
-      "detail": "24척 수집 · VSL_NM 100%",
+      "detail": "19척 수집 · VSL_NM 100%",
       "code": null,
-      "durationMs": 1097
+      "durationMs": 901
     },
     {
       "id": "terminal.bptc",
       "category": "터미널 데이터",
       "name": "BPTC 스케줄 수집",
       "status": "PASS",
-      "detail": "101척 수집 · VSL_NM 100%",
+      "detail": "107척 수집 · VSL_NM 100%",
       "code": null,
-      "durationMs": 347
+      "durationMs": 315
     },
     {
       "id": "terminal.hbct",
@@ -294,7 +306,7 @@
       "status": "PASS",
       "detail": "60척 수집 · VSL_NM 100%",
       "code": null,
-      "durationMs": 362
+      "durationMs": 469
     }
   ],
   "baseline": {
