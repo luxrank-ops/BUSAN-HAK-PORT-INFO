@@ -17,7 +17,6 @@ import { fileURLToPath } from 'url';
 import { initializeApp, cert, getApps } from 'firebase-admin/app';
 import { getFirestore, FieldValue } from 'firebase-admin/firestore';
 import { getMessaging } from 'firebase-admin/messaging';
-import { getAuth } from 'firebase-admin/auth';
 import { getStorage } from 'firebase-admin/storage';
 import { GoogleAuth } from 'google-auth-library';
 import { normalizeGoogleVisionOcrResult } from './scripts/roster-cloud-ocr.mjs';
@@ -3120,6 +3119,40 @@ function isRosterCloudOcrEnabled(): boolean {
     && Boolean(process.env.FIREBASE_SERVICE_ACCOUNT_KEY || process.env.GOOGLE_APPLICATION_CREDENTIALS);
 }
 
+/**
+ * Firebase ID 토큰 검증 — firebase-admin/auth 를 로드하지 않고 Identity Toolkit REST 로 확인합니다.
+ *
+ * 왜 직접 검증하는가 (2026-11-15 장애 복구):
+ *   firebase-admin/auth 를 import 하면 내부 의존성 jwks-rsa(CommonJS)가 ESM 전용 jose 를
+ *   require 하면서, CommonJS 로 번들되는 서버리스 함수가 부팅 단계에서 죽었습니다.
+ *   (`require() of ES Module .../jose/dist/webapi/index.js ... not supported` → /api 전체 500)
+ *   그래서 부팅 경로에서 firebase-admin/auth 를 완전히 제거하고, 이 엔드포인트가 필요로 하는
+ *   토큰 유효성만 REST 로 확인합니다(서명·만료·프로젝트 검증은 Identity Toolkit 이 수행).
+ */
+const FIREBASE_WEB_API_KEY_FALLBACK = 'AIzaSyBWFZr9TE9yybZJCJjEXSsv1YCpGkVb0kA';
+async function verifyFirebaseIdTokenViaRest(idToken: string): Promise<boolean> {
+  const token = String(idToken || '').trim();
+  if (!token) return false;
+  const apiKey = String(process.env.FIREBASE_API_KEY || FIREBASE_WEB_API_KEY_FALLBACK).trim();
+  if (!apiKey) return false;
+  try {
+    const resp = await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=${encodeURIComponent(apiKey)}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ idToken: token })
+    });
+    if (!resp.ok) {
+      console.warn(`[auth] ID 토큰 검증 실패 HTTP ${resp.status}`);
+      return false;
+    }
+    const data: any = await resp.json().catch(() => null);
+    return Boolean(data && Array.isArray(data.users) && data.users.length > 0);
+  } catch (error: any) {
+    console.warn(`[auth] ID 토큰 검증 오류: ${error?.message || error}`);
+    return false;
+  }
+}
+
 function getRosterVisionAuth(): GoogleAuth {
   if (rosterVisionAuth) return rosterVisionAuth;
   const rawKey = String(process.env.FIREBASE_SERVICE_ACCOUNT_KEY || '').trim();
@@ -3160,7 +3193,9 @@ app.post('/api/roster-ocr', express.raw({ type: 'image/jpeg', limit: '4mb' }), a
     return;
   }
   try {
-    await getAuth().verifyIdToken(authorization[1]);
+    if (!(await verifyFirebaseIdTokenViaRest(authorization[1]))) {
+      throw new Error('invalid_id_token');
+    }
   } catch {
     res.status(401).json({ ok: false, error: 'authentication_required' });
     return;

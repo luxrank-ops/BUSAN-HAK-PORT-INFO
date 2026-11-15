@@ -43,7 +43,11 @@ test('빈 Google Cloud Vision 응답은 빈 판독으로 유지한다', () => {
 test('온라인 OCR 엔드포인트는 기본 비활성, 인증·동의·요청 제한·이미지 크기를 확인한다', () => {
     const server = readFileSync(new URL('../server.ts', import.meta.url), 'utf8');
     assert.match(server, /ROSTER_CLOUD_OCR_ENABLED === '1'/);
-    assert.match(server, /verifyIdToken\(authorization\[1\]\)/);
+    // ID 토큰 검증은 Identity Toolkit REST 로 수행합니다.
+    // (firebase-admin/auth 를 부팅 경로에 두면 jwks-rsa → jose(ESM 전용) require 로
+    //  CommonJS 서버리스 함수가 부팅 단계에서 죽어 /api 전체가 500 이 됩니다 — 2026-11-15 장애)
+    assert.match(server, /verifyFirebaseIdTokenViaRest\(authorization\[1\]\)/);
+    assert.doesNotMatch(server, /from 'firebase-admin\/auth'/);
     assert.match(server, /X-Roster-Ocr-Consent/);
     assert.match(server, /isScreenUnlockRateLimited\(ip, 'ocr', 5\)/);
     assert.match(server, /express\.raw\(\{ type: 'image\/jpeg', limit: '4mb' \}\)/);
