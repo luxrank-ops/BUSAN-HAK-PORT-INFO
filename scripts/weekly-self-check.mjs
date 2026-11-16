@@ -31,7 +31,7 @@ import { sendReportEmailMessage, resolveMailTransport } from './daily-report-mai
 
 export const SELF_CHECK_VERSION = 1;
 export const DEFAULT_SELF_CHECK_RECIPIENT = 'luxrank@gmail.com';
-export const SITE_LABEL = '부산항 스마트 작업 가이드';
+export const SITE_LABEL = '부산학 라이싱 작업 가이드';
 
 /** 터미널 스케줄 파서가 반드시 채워야 하는 핵심 필드 (드리프트 판정 기준) */
 export const CORE_VESSEL_FIELDS = ['VSL_NM', 'ETB', 'ATD'];
@@ -882,7 +882,7 @@ export function generateWeeklySelfCheckMarkdown(result) {
   const actionNeeded = checks.filter((c) => c.status !== 'PASS');
 
   let md = '';
-  md += `# 부산항 스마트 작업 가이드 — 주간 자가 점검 · 자가 복구 보고서\n\n`;
+  md += `# 부산학 라이싱 작업 가이드 — 주간 자가 점검 · 자가 복구 보고서\n\n`;
   md += `> **점검 일시**: ${kstDateTime}\n`;
   md += `> **점검 주차**: ${result.isoWeek} · 매주 월요일 05:00 KST 자동 실행\n`;
   md += `> **실행 환경**: ${platform}\n`;
