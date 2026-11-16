@@ -468,7 +468,7 @@ export function generateMarkdownReport(result) {
   }
 
   let md = '';
-  md += `# 부산항 스마트 작업 가이드 — 일일 기능 점검 보고서\n\n`;
+  md += `# 부산학 라이싱 작업 가이드 — 일일 기능 점검 보고서\n\n`;
   md += `> **점검 일시**: ${kstDateTime}\n`;
   md += `> **점검 기준일**: ${kstDate} (KST)\n`;
   md += `> **생성 시각(UTC)**: ${generatedAt}\n`;

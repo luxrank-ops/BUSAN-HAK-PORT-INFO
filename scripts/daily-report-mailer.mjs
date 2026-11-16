@@ -23,7 +23,7 @@
 import crypto from 'node:crypto';
 
 export const DEFAULT_REPORT_EMAIL_TO = 'luxrank@gmail.com';
-export const SITE_LABEL = '부산항 스마트 작업 가이드';
+export const SITE_LABEL = '부산학 라이싱 작업 가이드';
 
 const VERDICT = {
   PASS: { label: '정상', emoji: '🟢', badge: '#0b8043', bg: '#e8f7ee', border: '#b7e4c7' },

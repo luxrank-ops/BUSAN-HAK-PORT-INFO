@@ -11,9 +11,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <meta name="description" content="부산항 신항·북항 현장 근로자를 위한 스마트 작업 관리 플랫폼. 정확한 임금 계산, 실시간 선박 정보, 근무일지 관리, 안전 정보와 쉬는 시간 미니게임을 제공합니다.">
     <meta name="keywords" content="부산항, 항만근로자, 임금계산기, 작업선박정보, HJNC, BNCT, 하역작업, 라싱, 부산신항">
-    <title>부산항 스마트 작업 가이드 | Port Work Guide</title>
+    <title>부산학 라이싱 작업 가이드 | Port Work Guide</title>
 
-    <meta property="og:title" content="부산항 스마트 작업 가이드">
+    <meta property="og:title" content="부산학 라이싱 작업 가이드">
     <meta property="og:description" content="부산항 현장 근로자 필수 앱">
     <meta property="og:type" content="website">
     <meta property="og:url" content="https://busan-hak-port-info.vercel.app/">
@@ -34,9 +34,9 @@
     <link rel="icon" href="./favicon.ico">
     <link rel="stylesheet" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.8/dist/web/static/pretendard.css" />
     <link rel="manifest" href="./manifest.json">
-    <link rel="stylesheet" href="./css/app.css?v=2027.67">
+    <link rel="stylesheet" href="./css/app.css?v=2027.68">
     <link rel="apple-touch-icon" href="./icon-192.png">
-<script src="./js/notifications.js?v=2027.67"></script></head>
+<script src="./js/notifications.js?v=2027.68"></script></head>
 <body data-app-view="legacy">
 <header>
     <div class="today-visitor-badge-slot" aria-hidden="true"></div>
@@ -1527,88 +1527,223 @@
 
     </div>
 
-    <div id="main-manual-card" class="dash-card" data-view-group="home" style="margin-bottom: 22px; border: 1.5px solid #f59e0b; border-radius: 12px; box-shadow: 0 3px 10px rgba(245, 158, 11, 0.12); background: var(--card-bg);">
+    <div id="main-manual-card" class="dash-card manual-card" data-view-group="home" style="margin-bottom: 22px; border: 1.5px solid #f59e0b; border-radius: 12px; box-shadow: 0 3px 10px rgba(245, 158, 11, 0.12); background: var(--card-bg);">
         <div class="dash-header tap-effect" onclick="toggleDashItem('main-manual-card')" style="background: linear-gradient(135deg, #0a1b3f 0%, #1e3a8a 100%) !important; padding: 15px 16px; border-radius: 10px; display: flex; align-items: center; justify-content: space-between;">
-            <div style="display: flex; align-items: center; gap: 8px;">
-                <span style="font-size: 1.25rem;">🔅</span>
-                <span class="dash-title" style="font-size: 1.05rem; font-weight: 900; color: #fde047 !important; letter-spacing: 0px;">앱 공유 방법 / 앱 사용 설명서 (v2027)</span>
+            <div style="display: flex; align-items: center; gap: 8px; min-width: 0;">
+                <span style="font-size: 1.25rem;">📘</span>
+                <div style="min-width: 0;">
+                    <div class="dash-title" style="font-size: 1.05rem; font-weight: 900; color: #fde047 !important; letter-spacing: 0px; text-align: left;">학포트 소개 설명서</div>
+                    <div style="font-size: 0.74rem; font-weight: 700; color: #bfdbfe; margin-top: 3px; text-align: left; line-height: 1.35;">부산학 라이싱 작업 가이드 — 무엇을 어떻게 쓰는지 순서대로</div>
+                </div>
             </div>
             <span class="toggle-icon" style="color: #fde047; font-weight: 900;">▼</span>
         </div>
-        <div class="dash-content" style="padding: 20px; font-size: 0.98rem; line-height: 1.8; font-weight: 600; color: #1e293b; background: var(--card-bg); border-radius: 8px; border-top: 1px solid var(--border);">
-            <div style="margin-bottom: 22px; background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%); border: 2px solid #f59e0b; border-radius: 12px; padding: 15px; box-shadow: 0 2px 8px rgba(245, 158, 11, 0.12);">
-                <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:10px; border-bottom:1.5px dashed #f59e0b; padding-bottom:8px;">
-                    <span style="font-size:1.05rem; font-weight:900; color:#b45309;">📲 동료에게 앱 공유하기 & 휴대폰 아이콘 생성 방법</span>
-                    <button type="button" class="compact-touch-btn" onclick="shareOrCopyAppPromo()" style="background:#d97706; color:#ffffff; border:none; border-radius:8px; padding:6px 12px; font-size:0.82rem; font-weight:900; cursor:pointer; box-shadow:0 2px 4px rgba(217,119,6,0.3);">📤 홍보글 · 주소 원클릭 복사/공유</button>
-                </div>
-                <div style="background:#ffffff; border:1px solid #fcd34d; border-radius:8px; padding:12px; font-size:0.88rem; color:#1e293b; line-height:1.6; margin-bottom:10px;">
-                    <div style="font-weight:900; color:#0a1b3f; font-size:0.95rem; margin-bottom:4px;">🚢 [부산항 항만 근로자 필수 앱 - BUSAN HAK PORT]</div>
-                    <div>• <b>임금계산기:</b> 주·야간/기능공/수당 자동 분리 및 근무일지 1초 연동</div>
-                    <div>• <b>근무일지:</b> 달력 기록 · 월간 정산 · 목표 수입 달성률 · 엑셀 저장</div>
-                    <div>• <b>1·2·3항업 통합:</b> 전 터미널 스케줄·차트·베이 플랜·식단표·셔틀 시간표</div>
-                    <div>• <b>작업 선박 정보(등록및검색) & 기상:</b> 작업 난이도(★1~5)·장비 태그 도감 및 신항·북항 실시간 풍속</div>
-                    <div style="margin-top:6px; font-weight:900; color:#1d4ed8;">👉 접속 주소: <a href="https://busan-hak-port-info.vercel.app" target="_blank" style="color:#2563eb; text-decoration:underline;">busan-hak-port-info.vercel.app</a></div>
-                </div>
-                <div style="display:grid; grid-template-columns:1fr; gap:8px; font-size:0.86rem;">
-                    <div style="background:#eff6ff; border:1px solid #93c5fd; border-radius:8px; padding:10px 12px; color:#1e3a8a;">
-                        <b style="color:#1d4ed8; font-size:0.9rem;">🤖 [갤럭시 / 안드로이드폰] 바탕화면 아이콘 만들기</b><br>
-                        1. 카카오톡에서 열렸다면 우측 하단 <b>[ ⋮ ]</b> → <b>[다른 브라우저로 열기]</b> 선택<br>
-                        2. 크롬/삼성 인터넷 우측 메뉴 <b>[ ⋮ ]</b> 또는 <b>[ ≡ ]</b> 터치 → <b>[홈 화면에 추가]</b> 클릭!
-                    </div>
-                    <div style="background:#f0fdf4; border:1px solid #86efac; border-radius:8px; padding:10px 12px; color:#065f46;">
-                        <b style="color:#047857; font-size:0.9rem;">🍎 [아이폰 (iPhone)] 바탕화면 아이콘 만들기</b><br>
-                        1. <b>사파리(Safari)</b> 앱에서 주소 접속 후 하단 중앙 <b>[공유 버튼 📤]</b> 터치<br>
-                        2. 메뉴에서 <b>[홈 화면에 추가 ➕]</b> 선택 후 우측 상단 <b>[추가]</b> 클릭!
-                    </div>
-                </div>
+        <div class="dash-content manual-content">
+
+            <section class="manual-hero" aria-label="학포트 한눈 요약">
+                <h3>🚢 부산학 라이싱 작업 가이드(학포트)는 부산항 현장 작업을 돕는 웹앱입니다</h3>
+                <p>부산항 신항·북항에서 일하는 본선·기능공·육상 근로자를 위해 <b>임금 계산</b>, <b>근무일지</b>, <b>터미널 선박 스케줄</b>, <b>작업 선박 정보</b>, <b>현장 소식</b>을 한곳에 모았습니다. 설치 없이 주소로 접속하고, 홈 화면에 추가하면 앱처럼 쓸 수 있습니다.</p>
+                <ul>
+                    <li><b>로그인은 근무일지에 내 기록을 저장할 때만</b> 필요합니다. 나머지 화면은 바로 볼 수 있습니다.</li>
+                    <li><b>하단 5개 탭</b>이 모든 기능의 출발점입니다 — 홈 · 임금·일지 · 선박도감 · 커뮤니티 · 현장가이드.</li>
+                    <li>일부 기능은 <b>🔒 화면 잠금 비밀번호</b>가 필요합니다. 운영자가 알려 드리는 번호를 한 번 넣으면 그 브라우저를 쓰는 동안 열려 있습니다.</li>
+                </ul>
+                <p class="manual-address">👉 접속 주소: <a href="https://busan-hak-port-info.vercel.app" target="_blank" rel="noopener noreferrer">busan-hak-port-info.vercel.app</a></p>
+            </section>
+
+            <nav class="manual-quicknav" aria-label="설명서 목차">
+                <a href="#manual-start">시작하기</a>
+                <a href="#manual-wage">임금·일지</a>
+                <a href="#manual-ships">선박도감</a>
+                <a href="#manual-community">커뮤니티</a>
+                <a href="#manual-guide">현장가이드</a>
+                <a href="#manual-home">홈 기능</a>
+                <a href="#manual-faq">자주 묻는 질문</a>
+                <a href="#manual-contact">문의</a>
+            </nav>
+
+            <div class="manual-share">
+                <span>동료에게 앱을 알려 주세요. 아래 버튼을 누르면 홍보글과 주소가 복사되거나 공유 창이 열립니다.</span>
+                <button type="button" class="manual-share-btn" onclick="shareOrCopyAppPromo()">📤 홍보글 · 주소 복사/공유</button>
             </div>
 
-            <p style="margin-bottom: 20px; font-size: 1.02rem; color: #0c4a6e; background: #f0f9ff; padding: 15px; border-radius: 10px; border-left: 5px solid #0284c7;">
-                <b style="color: #0369a1;">본 플랫폼은 2027년 차세대 스마트 항만 시대에 발맞추어, 부산항(신항·북항) 현장 근로자분들의 작업 효율성과 권익 보호, 무재해 안전 환경을 위해 전면 업그레이드되었습니다.</b><br>
-                정밀한 임금 정산과 근무일지 클라우드 백업부터 전 터미널 실시간 선석·식단·베이 플랜 통합 조회까지 현장에 꼭 필요한 모든 기능을 한곳에서 제공합니다.
-            </p>
+            <section id="manual-start" class="manual-section" aria-labelledby="manualStartTitle">
+                <h3 id="manualStartTitle">01 · 처음 5분 — 시작하기</h3>
+                <div class="manual-body">
+                    <ol class="manual-steps">
+                        <li><b>접속</b> — 카카오톡으로 받은 링크나 위 주소를 누릅니다. 처음 화면(홈)에 카드가 모여 있습니다.</li>
+                        <li><b>바탕화면에 아이콘 만들기</b> — 안드로이드는 브라우저 오른쪽 메뉴(⋮ 또는 ≡) → <b>[홈 화면에 추가]</b>, 아이폰은 <b>사파리</b>로 접속해 아래 <b>[공유 📤]</b> → <b>[홈 화면에 추가]</b>를 누릅니다. 카톡 안에서 열렸다면 먼저 [다른 브라우저로 열기]를 고르세요.</li>
+                        <li><b>근무일지 로그인</b> — 하단 <b>[임금·일지]</b> → <b>[📅 근무일지 달력]</b> → 날짜 터치 → <b>[저장하기]</b>를 누르면 로그인 창이 열립니다. 닉네임과 비밀번호를 넣으면 되고, 처음 쓰는 닉네임이면 가입 확인창이 한 번 뜹니다.</li>
+                    </ol>
+                    <p class="manual-tip">💡 닉네임은 본인만 알아보기 쉬운 이름으로, 비밀번호는 다른 곳에서 쓰지 않는 것으로 정하세요. 로그인 상태는 그 기기에만 남아 다음부터는 자동으로 이어집니다.</p>
+                </div>
+            </section>
 
-            <h4 style="color: #1d4ed8; margin-top: 25px; border-left: 4px solid #2563eb; padding-left: 10px;">🧮 1. 2027년형 정밀 임금 산정 및 세무 시뮬레이션</h4>
-            <p style="color: #334155;">본선·기능공·육상 직군별 특성과 계절별 주·야간 시간대(1~3월, 4~9월, 10~12월)를 자동 판별하여 2027년 노임 기준에 맞춘 정밀 계산을 수행합니다.</p>
-            <ul style="background: #eff6ff; color: #1e3a8a; padding: 15px 15px 15px 35px; border-radius: 8px; border: 1px solid #bfdbfe;">
-                <li><b style="color: #1d4ed8;">직군별 맞춤 자동 반영:</b> 본선, 기능공(주·야간 기능공 수당 자동 합산), 육상 선택 시 각 직무에 맞는 할증과 기본급이 즉시 적용됩니다.</li>
-                <li><b style="color: #1d4ed8;">24시간 철야·연속 작업 자동 분리:</b> 시작·종료 일시만 선택하면 자정을 넘기는 철야 작업도 주간/야간/주말/공휴일 시간을 1시간 단위로 정확히 분해합니다.</li>
-                <li><b style="color: #1d4ed8;">특수 수당 & 실수령액 예측:</b> 지게차, 특별 수당, 우천 할증(50%), 혹서기 수당(30%)은 물론 3.3% 원천징수 및 4대 보험(9.4%) 공제 후 실수령 명세표를 즉시 생성합니다.</li>
-            </ul>
+            <section id="manual-wage" class="manual-section" aria-labelledby="manualWageTitle">
+                <h3 id="manualWageTitle">02 · 임금·일지 — 계산하고, 기록하고, 정산하기</h3>
+                <div class="manual-body">
 
-            <h4 style="color: #047857; margin-top: 25px; border-left: 4px solid #10b981; padding-left: 10px;">📅 2. 스마트 근무일지 & 원클릭 엑셀(CSV) 정산</h4>
-            <p style="color: #334155;">매일의 작업 이력을 달력에 기록하고 월별 총수입을 한눈에 관리할 수 있는 개인 전용 클라우드 저장소입니다.</p>
-            <ul style="background: #ecfdf5; color: #065f46; padding: 15px 15px 15px 35px; border-radius: 8px; border: 1px solid #a7f3d0;">
-                <li><b style="color: #047857;">간편 보안 로그인:</b> 별도의 복잡한 가입 절차 없이 본인만의 닉네임과 비밀번호만으로 언제 어디서나 내 근무 기록을 불러옵니다.</li>
-                <li><b style="color: #047857;">현장 기록 통합 보관:</b> 작업 선박명, 임금 1·임금 2 분할 기록, 동반 근무자 배지 표시, 작업 메모, 현장 인증 사진까지 날짜별로 깔끔하게 저장됩니다.</li>
-                <li><b style="color: #047857;">한 달 기록 엑셀 다운로드:</b> 월말 정산 시 <b>[한 달 기록 엑셀 저장(CSV)]</b> 버튼 하나로 전체 근무 내역을 파일로 내려받아 세무·정산 자료로 활용할 수 있습니다.</li>
-            </ul>
+                    <h4 class="manual-sub">🧮 임금계산기</h4>
+                    <ol class="manual-steps">
+                        <li><b>직군 선택</b> — 본선 / 기능공 / 육상 중 하나를 고릅니다. 기능공을 고르면 기능공 수당이 자동으로 더해집니다.</li>
+                        <li><b>시급 확인</b> — 근무 날짜의 연도에 맞는 기본 시급이 자동으로 들어갑니다(2026년 10,320원). 실제 계약 시급이 다르면 직접 고쳐 주세요.</li>
+                        <li><b>시작·종료 시간</b> — [📅 시작·종료 날짜·시간]을 눌러 고릅니다. 카드 위 표의 주간 기준(1~3월 08~18시 · 4~9월 06~19시 · 10~12월 07~17시)을 벗어난 시간은 <b>야간 1.5배</b>로 계산됩니다.</li>
+                        <li><b>작업 선박</b> — ⚓ 당일 입·출항 선박에서 터미널을 고르고 선박 이름을 누르면, 스케줄의 입·출항 시각으로 근무 시간이 자동 입력됩니다. 하루에 배를 2~4척 탔다면 <b>최대 4척</b>까지 고를 수 있고, 척마다 임금 1~4로 나뉩니다.</li>
+                        <li><b>추가 수당</b> — 지게차 · 특별·주말·공휴일 · 우천 · 혹서기(30%) 중 해당하는 것의 시간을 넣습니다. 주말·공휴일은 날짜만 맞으면 자동으로 잡힙니다.</li>
+                        <li><b>내역서 생성 및 계산</b> — 주간·야간·수당이 항목별로 나뉜 내역서와 총액을 확인합니다.</li>
+                        <li><b>근무일지로 보내기</b> — [✨ 이 계산 결과를 근무일지로 보내기]를 누르면 그 날짜 일지에 임금이 자동으로 채워집니다.</li>
+                    </ol>
+                    <p class="manual-tip">💡 내역서를 <b>이미지로 저장</b>하거나 카톡으로 공유하려면 🔒 비밀번호를 한 번 풀어야 합니다. 계산 결과는 참고용이니 최종 금액은 회사·터미널의 급여명세서로 확인하세요.</p>
 
-            <h4 style="color: #b45309; margin-top: 25px; border-left: 4px solid #f59e0b; padding-left: 10px;">🚢 3. 1·2·3항업 전 터미널 통합 관제 & 편의 기능</h4>
-            <p style="color: #334155;">신항 남측(3항업: 한진·고려·동원·BCT), 신항 북측(2항업: PNC·HPNT·PNIT), 북항(1항업: BPTC·HBCT)의 핵심 현장 정보를 원터치로 연결합니다.</p>
-            <ul style="background: #fffbeb; color: #92400e; padding: 15px 15px 15px 35px; border-radius: 8px; border: 1px solid #fde68a;">
-                <li><b style="color: #b45309;">실시간 선석 스케줄 & BAY PLAN:</b> 각 터미널의 선석 스케줄, 차트, 본선 작업 현황 및 한진/통합 BAY PLAN 도면을 즉시 열람할 수 있습니다.</li>
-                <li><b style="color: #b45309;">터미널별 오늘의 식단표 & 셔틀버스:</b> 전 터미널 구내식당 식단 이미지 확인과 PNC 셔틀버스 시간표, 조장 근무일 캘린더를 지원합니다.</li>
-                <li><b style="color: #b45309;">항업별 실시간 알림 티커:</b> 상단 안전 티커와 1·2·3항업 전용 공지 티커를 통해 현장 긴급 공지와 작업 유의 사항을 실시간으로 공유합니다.</li>
-            </ul>
+                    <h4 class="manual-sub">📅 근무일지 달력</h4>
+                    <ol class="manual-steps">
+                        <li>달력에서 <b>날짜를 터치</b>하면 그날 입력칸이 열리고, 날짜마다 그날 수입이 표시됩니다.</li>
+                        <li>배 이름(터미널 스케줄 칩에서 골라도 됩니다), <b>임금 1·2</b>(배를 3~4척 골랐다면 임금 3·4칸도 열립니다), 함께 일한 근무자, 작업 내용, 현장 사진을 넣습니다.</li>
+                        <li><b>[저장하기]</b> — 로그인하지 않았다면 로그인 창이 먼저 열립니다. 저장하면 달력·통계·정산에 바로 반영됩니다.</li>
+                        <li>같은 날짜에 다시 저장하면 그날 기록을 덮어씁니다(같은 날 같은 배는 한 번만 남습니다). [삭제]는 그날 기록을 목록에서 지웁니다.</li>
+                        <li><b>[⏱️ 내 근무시간 통계]</b>를 펼치면 이번 달·지난 달·올해·전체 기간의 주간·야간·평일·주말 근무 시간을 볼 수 있습니다.</li>
+                        <li>맨 아래 <b>[📊 한 달 기록 엑셀 저장(CSV)]</b>로 한 달치 기록을 파일로 받아 정산·세무 자료로 쓸 수 있습니다.</li>
+                    </ol>
+                    <p class="manual-tip">💡 자주 함께 일하는 동료 이름을 원터치로 넣는 칩은 🔒 비밀번호를 풀면 나타납니다.</p>
 
-            <h4 style="color: #6d28d9; margin-top: 25px; border-left: 4px solid #8b5cf6; padding-left: 10px;">🤝 4. 선박 도감 · 커뮤니티 · 현장가이드 & 미니게임</h4>
-            <ul style="background: #f5f3ff; color: #4c1d95; padding: 15px 15px 15px 35px; border-radius: 8px; border: 1px solid #ddd6fe;">
-                <li><b style="color: #6d28d9;">선박 정보 & 댓글 공유:</b> 선박별 특이 사항(라싱 브릿지 구조, 작업 난이도 등)을 검색·등록하고 동료 작업자들과 실시간 댓글로 노하우를 나눕니다.</li>
-                <li><b style="color: #6d28d9;">현장 소통 & 자료실:</b> 공지사항, 왁자지껄 게시판, 각 터미널 셔틀·작업 문서를 모아 둔 자료실 및 실무 용어 가이드를 제공합니다.</li>
-                <li><b style="color: #6d28d9;">도선·기상 & 현장 안전 정보:</b> 부산항 도선사회 실시간 모니터링/도선 상황과 기상 정보를 확인하고, 상단 티커에서 긴급 공지와 작업 유의 사항을 살펴볼 수 있습니다.</li>
-                <li><b style="color: #6d28d9;">꿍꿍따 쉬는 시간 한 판:</b> 내장 사전 3글자 끝말잇기를 AI 또는 친구와 즐기고, 한 턴 제한 시간과 개인 기록으로 가볍게 도전할 수 있습니다.</li>
-            </ul>
+                    <h4 class="manual-sub">📊 정산 리포트 (잠금)</h4>
+                    <p class="manual-plain">🔒 비밀번호를 풀면 <b>목표 수입 달성 게이지</b>(목표 금액은 [목표 설정]에서 변경), <b>월별 총수입·근로일수 그래프</b>, <b>연간 정산 보고서</b>, <b>정산표 이미지 저장·카톡 공유</b>를 쓸 수 있습니다.</p>
 
-            <div style="margin-top: 20px; background: #fff7ed; padding: 15px; border-radius: 8px; border: 1.5px solid #fdba74;">
-                <h3 style="color: #c2410c; font-size: 1.05rem; margin: 0 0 8px 0; font-weight: 900;">
-                    🔒 5. 보안 인증 및 이용 문의 (운영관리자: 이춘학)
-                </h3>
-                <p style="margin: 0; font-size: 0.9rem; color: #9a3412; line-height: 1.6; font-weight: 700;">
-                    • <strong>문의 메일:</strong> luxrank@gmail.com (소속 터미널 및 성함 기입 필수)<br>
-                    • <strong>문의 문자:</strong> 010-2846-8906 (소속 터미널 및 성함 기입 필수)
-                </p>
-            </div>
+                    <h4 class="manual-sub">📋 근무배치(오더 종이) 자동 기입 <span class="manual-beta">시험 운영</span></h4>
+                    <p class="manual-plain">오더 종이를 사진으로 찍거나 갤러리에서 고르면 <b>이 기기 안에서만</b> 글자를 읽어 작업자·선박 명단을 만듭니다(사진은 서버로 보내지 않습니다). 이름이나 선박명을 넣고 [찾기]를 누르면 그 사람이 탄 배의 날짜·시간과 전 터미널 차트·스케줄을 보여 주고, 임금·근무일지로 넘길 수 있습니다. 현재는 🔒 비밀번호로 잠긴 시험 운영 중입니다.</p>
+                </div>
+            </section>
+
+            <section id="manual-ships" class="manual-section" aria-labelledby="manualShipsTitle">
+                <h3 id="manualShipsTitle">03 · 선박도감 — 오늘 어느 배가 어디에 있는지</h3>
+                <div class="manual-body">
+                    <h4 class="manual-sub">⚓ 1·2·3항업 터미널 바로가기</h4>
+                    <ul class="manual-list">
+                        <li><b>3항업(신항)</b> — 한진 HJNC · 고려 BNCT · 동원 DGT · BCT</li>
+                        <li><b>2항업(신항)</b> — PNC · HMM(HPNT) · 신항국제(PNIT)</li>
+                        <li><b>1항업(북항)</b> — 북항통합 BPTC · 허치슨 HBCT</li>
+                    </ul>
+                    <p class="manual-plain">터미널마다 <b>[스케줄] · [차트] · [현황]</b>을 누르면 터미널 공식 페이지가 새 창으로 열립니다. 한진은 BAY PLAN · ALL BAY PLAN · 조장 근무일(🔒), PNC는 셔틀버스 시간표, 터미널마다 [🍱 식단] 버튼이 있습니다. 각 항업 위쪽에는 그 항업 전용 공지가 흐릅니다.</p>
+
+                    <h4 class="manual-sub">⭐ 단골 터미널 빠른 실행 바</h4>
+                    <p class="manual-plain">자주 가는 터미널의 <b>별표(⭐)</b>를 누르면 화면 맨 위에 그 터미널의 스케줄·차트·현황·베이·셔틀·식단 버튼이 생깁니다. 별표를 다시 누르면 해제됩니다.</p>
+
+                    <h4 class="manual-sub">🚢 작업 선박 정보 (등록 및 검색)</h4>
+                    <ol class="manual-steps">
+                        <li><b>검색</b> — 선박명, 초성(예: ㅎㅁ), 태그(예: #오토콘)로 찾습니다.</li>
+                        <li><b>등록</b> — [📝 신규 등록]에 비밀번호, 선박명, 작업 난이도 ★1~5, 필수 장비·특징 태그, 작업 메모, 사진을 넣고 저장합니다. 스케줄 칩으로 배 이름을 바로 넣을 수 있습니다.</li>
+                        <li><b>상세·댓글</b> — 선박을 누르면 그 배의 작업 정보와 동료들이 남긴 댓글을 봅니다. 장비·주의사항을 댓글로 남길 수 있고, 수정·삭제는 댓글에 넣은 비밀번호로 합니다.</li>
+                        <li><b>🌍 실시간 위치</b> — 마린트래픽에서 배의 현재 위치를 확인합니다.</li>
+                    </ol>
+                    <p class="manual-tip">💡 장비 태그·난이도 필터와 전체 선박 목록 보기는 🔒 비밀번호를 풀면 열립니다.</p>
+                </div>
+            </section>
+
+            <section id="manual-community" class="manual-section" aria-labelledby="manualCommunityTitle">
+                <h3 id="manualCommunityTitle">04 · 커뮤니티 — 공지, 이야기, 자료</h3>
+                <div class="manual-body">
+                    <h4 class="manual-sub">📢 공지사항</h4>
+                    <p class="manual-plain">운영자가 올리는 안내입니다. 📌 우선공지는 목록 맨 위에 고정되고, 사진도 함께 볼 수 있습니다. <b>공지 쓰기는 운영자만</b> 할 수 있습니다.</p>
+
+                    <h4 class="manual-sub">💬 스트레스 해소(왁자지껄)</h4>
+                    <ol class="manual-steps">
+                        <li>[✍️ 글쓰기]를 누르면 <b>항만용어 닉네임</b>이 자동으로 들어갑니다(🎲 새 닉네임으로 다시 뽑기, 직접 수정도 가능).</li>
+                        <li>비밀번호·제목·내용을 넣고 사진은 <b>최대 10장, 합계 10MB까지</b> 붙일 수 있습니다.</li>
+                        <li>글을 펼치면 <b>댓글</b>을 달 수 있고, 내 글·댓글은 넣은 비밀번호로 수정하거나 삭제합니다.</li>
+                    </ol>
+
+                    <h4 class="manual-sub">📂 자료실</h4>
+                    <p class="manual-plain">셔틀버스 시간표 같은 자료를 모아 둡니다. [💾 업로드]에 파일 설명·비밀번호·파일을 넣어 올리고, 목록에서 내려받습니다.</p>
+
+                    <h4 class="manual-sub">✨ 운영자에게 바란다</h4>
+                    <p class="manual-plain">화면 왼쪽 아래의 반짝이는 <b>[📝 운영자에게 바란다]</b> 버튼을 누르면 개선 요청을 남길 수 있습니다. <b>내용은 나와 운영자만</b> 볼 수 있고, 답글도 운영자만 답니다. 불편한 점이나 현장에서 필요한 기능을 편하게 적어 주세요.</p>
+                </div>
+            </section>
+
+            <section id="manual-guide" class="manual-section" aria-labelledby="manualGuideTitle">
+                <h3 id="manualGuideTitle">05 · 현장가이드 — 쉬는 시간과 현장 용어</h3>
+                <div class="manual-body">
+                    <h4 class="manual-sub">💬 꿍꿍따 3글자 끝말잇기 댓글 릴레이</h4>
+                    <p class="manual-plain">이기고 지는 게임이 아니라 <b>이어쓰기</b>입니다. 화면에 나온 <b>‘이 글자로 시작’</b>에 맞는 세 글자 단어를 댓글로 남기면 다음 사람이 이어 갑니다. 막히면 [💡 이어갈 단어 추천]을 누르고, 30개를 채우거나 막히면 누구나 [🎬 첫 릴레이 시작]으로 새로 시작할 수 있습니다. <b>작업 중에는 쓰지 말고 쉬는 시간에만</b> 이용해 주세요.</p>
+
+                    <h4 class="manual-sub">📖 현장 실무 용어 가이드</h4>
+                    <p class="manual-plain">라싱·중장비·선박 구조·현장 실무 용어를 검색창에 넣거나 카테고리(#작업·도구 #중장비 #선박 구조 #현장 실무)로 골라 봅니다.</p>
+
+                    <h4 class="manual-sub">🔤 생활영어 한문장</h4>
+                    <p class="manual-plain">매일 <b>09:00</b>에 새 문장으로 바뀝니다. [🔊 천천히 듣기]로 발음을 듣고, 달력에서 지난 날짜를 눌러 그날 문장을 다시 복습할 수 있습니다.</p>
+                </div>
+            </section>
+
+            <section id="manual-home" class="manual-section" aria-labelledby="manualHomeTitle">
+                <h3 id="manualHomeTitle">06 · 홈 화면과 위쪽 버튼</h3>
+                <div class="manual-body">
+                    <ul class="manual-list">
+                        <li><b>📡 날씨 및 도선 상황</b> — 신항(2·3항업)·북항(1항업)의 실시간 기온·풍속·강수. 순간 풍속 <b>10m/s면 강풍 주의, 15m/s면 고소 작업 통제</b> 기준입니다. [모니터]·[도선 상황]으로 부산항 도선사회 상황도 봅니다.</li>
+                        <li><b>🚨 긴급 공지</b> — 운영자가 띄운 긴급 안내가 화면 위에 뜹니다. ✕로 접어도 오른쪽 아래 🚨 버튼으로 다시 볼 수 있습니다.</li>
+                        <li><b>📢 흐르는 안전 문구</b> — 맨 위 티커와 1·2·3항업별 티커에서 현장 공지를 확인합니다.</li>
+                        <li><b>🟢 오늘 · 🏆 누적 방문자</b> — 헤더 왼쪽 배지. 오늘 몇 명이 들어왔는지 보여 줍니다.</li>
+                        <li><b>🔔 알림</b> — 오른쪽 위 종 버튼. 선박 일정 변경과 안전·운영 공지를 모아 봅니다(근무일지에 로그인하면 받기 시작합니다).</li>
+                        <li><b>🌙 다크 모드</b> — 오른쪽 위 달 버튼. 밤 작업이나 눈부심을 줄일 때 씁니다.</li>
+                        <li><b>🛡️ 실전 보안 및 개인정보 가이드</b> — 어떤 정보를 왜 모으고 어떻게 지키는지, 내 기록을 지우는 방법을 안내합니다.</li>
+                    </ul>
+                </div>
+            </section>
+
+            <section id="manual-faq" class="manual-section manual-faq" aria-labelledby="manualFaqTitle">
+                <h3 id="manualFaqTitle">07 · 자주 묻는 질문</h3>
+                <div class="manual-body">
+                    <details>
+                        <summary>로그인하지 않아도 쓸 수 있나요?</summary>
+                        <p>네. 스케줄·차트·날씨·선박 정보·게시판·용어 가이드는 로그인 없이 볼 수 있습니다. <b>근무일지에 내 기록을 저장하고 불러올 때만</b> 닉네임과 비밀번호가 필요합니다.</p>
+                    </details>
+                    <details>
+                        <summary>비밀번호를 잊어버렸어요.</summary>
+                        <p>앱 안에서 자동으로 찾아 주는 기능은 없습니다. <b>소속 터미널과 성함</b>을 적어 운영자에게 문자(010-2846-8906)로 알려 주세요. 닉네임을 새로 만들어 쓰셔도 되지만, 이전 기록은 그 닉네임에 남아 있습니다.</p>
+                    </details>
+                    <details>
+                        <summary>다른 사람이 내 닉네임을 쓰고 있어요.</summary>
+                        <p>닉네임과 비밀번호가 곧 계정입니다. 같은 닉네임은 먼저 등록한 비밀번호를 넣어야 열리므로, 겹치면 다른 닉네임을 쓰시고 운영자에게도 알려 주세요.</p>
+                    </details>
+                    <details>
+                        <summary>🔒 잠김 표시는 무엇인가요?</summary>
+                        <p>내역서 이미지 저장, 정산 리포트, 동료 이름 칩, 선박 태그·전체 목록, 근무배치 사진 읽기 같은 일부 기능은 <b>화면 잠금 비밀번호</b>가 필요합니다. 운영자에게 안내받은 번호를 넣으면 그 브라우저를 쓰는 동안 열려 있습니다.</p>
+                    </details>
+                    <details>
+                        <summary>근무일지를 지우면 완전히 사라지나요?</summary>
+                        <p>삭제하면 내 달력과 통계에서 빠집니다. 실수로 지웠다면 <b>날짜를 적어 운영자에게</b> 알려 주세요. 운영자가 확인해 복구할 수 있습니다.</p>
+                    </details>
+                    <details>
+                        <summary>계산한 금액이 실제 받은 급여와 달라요.</summary>
+                        <p>시급·시작/종료 시간·추가 수당 시간이 실제와 같은지 먼저 확인해 주세요. 앱 계산은 <b>참고용</b>이고, 최종 지급 기준은 회사와 터미널의 규정을 따릅니다.</p>
+                    </details>
+                    <details>
+                        <summary>알림이 오지 않아요.</summary>
+                        <p>근무일지에 로그인했는지, 브라우저에서 <b>알림 권한을 허용</b>했는지 확인해 주세요. 휴대폰 설정에서 해당 브라우저의 알림이 꺼져 있으면 다시 켜야 합니다.</p>
+                    </details>
+                    <details>
+                        <summary>컴퓨터에서도 쓸 수 있나요?</summary>
+                        <p>같은 주소로 접속하면 됩니다. 화면이 넓으면 카드가 두 줄로 배치되어 더 편하게 볼 수 있습니다.</p>
+                    </details>
+                    <details>
+                        <summary>인터넷이 끊기면 어떻게 되나요?</summary>
+                        <p>저장과 스케줄 조회는 인터넷 연결이 필요합니다. 연결이 끊긴 상태에서 저장하면 실패 안내가 뜨니, 연결을 확인한 뒤 다시 저장해 주세요.</p>
+                    </details>
+                </div>
+            </section>
+
+            <section id="manual-contact" class="manual-section manual-contact" aria-labelledby="manualContactTitle">
+                <h3 id="manualContactTitle">08 · 문의 · 운영자</h3>
+                <div class="manual-body">
+                    <p><b>운영관리자: 이춘학</b></p>
+                    <p>문의 메일: <a href="mailto:luxrank@gmail.com">luxrank@gmail.com</a><br>
+                       문의 문자: <a href="sms:01028468906">010-2846-8906</a><br>
+                       <span class="manual-note">문의하실 때 소속 터미널과 성함을 함께 적어 주세요.</span></p>
+                    <p>앱 안에서는 왼쪽 아래 <b>[✨ 운영자에게 바란다]</b> 버튼으로 바로 남길 수 있습니다.</p>
+                    <p class="manual-note">개인정보 보호 책임자: 이춘학 (위 연락처와 같습니다)</p>
+                </div>
+            </section>
+
+            <p class="manual-foot">이 설명서는 앱에 실제로 들어 있는 기능만 담았습니다. 화면과 설명이 다르거나 더 필요한 안내가 있으면 [✨ 운영자에게 바란다]로 알려 주세요.</p>
         </div>
     </div>
 </div>
@@ -1997,18 +2132,18 @@
     </div>
 </div>
 
-<script src="./js/app.js?v=2027.67"></script>
-<script src="./js/roster-engine.js?v=2027.67"></script>
+<script src="./js/app.js?v=2027.68"></script>
+<script src="./js/roster-engine.js?v=2027.68"></script>
   
     <!-- [여기서부터 복사] 조장 근무일 비밀번호 검증 스크립트 -->
 <!-- [추가할 보안 및 실행 스크립트] -->
-<script src="./js/leader-access.js?v=2027.67"></script>
+<script src="./js/leader-access.js?v=2027.68"></script>
   <!-- [프로덕션 수준] 파이어베이스 'ships' 컬렉션 전체 데이터 조회 및 검색 모듈 -->
-<script src="./js/ships-board.js?v=2027.67"></script>
+<script src="./js/ships-board.js?v=2027.68"></script>
 
-<script src="./js/tab-views.js?v=2027.67"></script>
-<script src="./js/kkung-relay.js?v=2027.67"></script>
-<script src="./js/want-board.js?v=2027.67"></script>
+<script src="./js/tab-views.js?v=2027.68"></script>
+<script src="./js/kkung-relay.js?v=2027.68"></script>
+<script src="./js/want-board.js?v=2027.68"></script>
 </body>
 </html>
 

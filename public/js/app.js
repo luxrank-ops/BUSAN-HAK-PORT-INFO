@@ -532,7 +532,7 @@ const STATS_BLOCK_META = [
     { id: "safety-card", label: "🎮 꿍꿍따 미니게임", color: "#10b981" },
     { id: "guide-card", label: "📖 현장 실무 용어 가이드", color: "#8b5cf6" },
     { id: "privacy-center-card", label: "🛡️ 실전 보안 가이드", color: "#64748b" },
-    { id: "main-manual-card", label: "🔅 앱 공유 · 사용 설명서", color: "#f59e0b" }
+    { id: "main-manual-card", label: "📘 학포트 소개 설명서", color: "#f59e0b" }
 ];
 const STATS_TERMINAL_META = [
     { id: "hjnc", label: "한진신항만 (HJNC · 3항업)", color: "#f97316" },
@@ -5618,7 +5618,7 @@ async function shareOrCopyAppPromo() {
     try {
         if (navigator.share) {
             await navigator.share({
-                title: "부산항 스마트 작업 가이드 (BUSAN HAK PORT)",
+                title: "부산학 라이싱 작업 가이드 (BUSAN HAK PORT)",
                 text: promoText,
                 url: "https://busan-hak-port-info.vercel.app"
             });

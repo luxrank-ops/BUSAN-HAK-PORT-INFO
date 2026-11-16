@@ -1,5 +1,5 @@
 /* ════════════════════════════════════════════════════════════════════
-   🎨 디자인 스타일 정본 (Source of Truth) — 부산항 스마트 작업 가이드
+   🎨 디자인 스타일 정본 (Source of Truth) — 부산학 라이싱 작업 가이드
    [A-1 · 2026-10-17] index.html 인라인 <style> 블록을 이 파일로 분리했습니다.
    화면 표시 결과는 분리 전과 동일하며, index.html 은 아래를 <link> 로만 참조합니다.
 
@@ -10,7 +10,7 @@
    ════════════════════════════════════════════════════════════════════
  */
 /* ══════════════════════════════════════════════════════════════════════
-   🎨 디자인 토큰 (Design Tokens) — 부산항 스마트 작업 가이드
+   🎨 디자인 토큰 (Design Tokens) — 부산학 라이싱 작업 가이드
    이 블록은 scripts/design-tokens.mjs 에서 생성됩니다. 직접 수정하지 마세요.
    화면 코드는 아래 토큰만 참조합니다 (원시값 하드코딩 금지).
    ══════════════════════════════════════════════════════════════════════ */
@@ -3987,3 +3987,59 @@ body.dark-mode .want-board-reply-input { background: rgba(6, 78, 59, 0.5); borde
 body.dark-mode .want-board-nick-btn { background: rgba(37, 99, 235, 0.25); color: var(--blue-300); border-color: var(--blue-500); }
 body.dark-mode .want-board-form-row .input-field { background: var(--surface-dark); }
 body.dark-mode .want-board-textarea { background: var(--surface-dark); }
+
+/* ══════════════════════════════════════════════════════════════════════
+   📘 학포트 소개 설명서 (main-manual-card)
+   · 모바일 우선: 한 줄에 한 가지씩, 단계와 팁을 나눠 읽기 쉽게 구성
+   ══════════════════════════════════════════════════════════════════════ */
+.manual-content { padding: var(--sp-16) var(--sp-12); font-size: var(--fs-fluid-4); line-height: var(--lh-9); color: var(--text-main); }
+.manual-hero { padding: var(--sp-14); border: 1px solid var(--blue-200); border-left: 4px solid var(--blue-600); border-radius: var(--radius-lg); background: linear-gradient(135deg, var(--blue-50), var(--n-050)); }
+.manual-hero h3 { margin: 0 0 var(--sp-8); font-size: var(--fs-9); font-weight: var(--fw-black); color: var(--blue-900); line-height: var(--lh-6); word-break: keep-all; }
+.manual-hero p { margin: 0 0 var(--sp-8); font-weight: var(--fw-semibold); }
+.manual-hero ul { margin: 0; padding-left: var(--sp-16); }
+.manual-hero li { margin-bottom: var(--sp-5); font-weight: var(--fw-semibold); word-break: keep-all; }
+.manual-address { margin: var(--sp-10) 0 0 !important; font-weight: var(--fw-extrabold); color: var(--blue-800); }
+.manual-address a { color: var(--blue-700); text-decoration: underline; word-break: break-all; }
+.manual-quicknav { display: flex; flex-wrap: wrap; gap: var(--sp-6); margin: var(--sp-12) 0 0; }
+.manual-quicknav a { display: inline-flex; align-items: center; padding: var(--sp-5) var(--sp-10); border: 1px solid var(--blue-200); border-radius: var(--radius-pill); background: var(--blue-50); color: var(--blue-800); font-size: var(--fs-fluid-5); font-weight: var(--fw-extrabold); text-decoration: none; }
+.manual-quicknav a:active { background: var(--blue-100); }
+.manual-share { display: flex; flex-direction: column; gap: var(--sp-8); margin-top: var(--sp-12); padding: var(--sp-12); border: 1px solid var(--amber-200); border-radius: var(--radius-lg); background: var(--amber-50); font-size: var(--fs-fluid-5); font-weight: var(--fw-semibold); color: var(--amber-800); line-height: var(--lh-8); word-break: keep-all; }
+.manual-share-btn { align-self: flex-start; padding: var(--sp-8) var(--sp-14); border: none; border-radius: var(--radius-md); background: var(--amber-600); color: var(--n-000); font-size: var(--fs-fluid-5); font-weight: var(--fw-black); cursor: pointer; box-shadow: var(--shadow-soft); }
+.manual-section { margin-top: var(--sp-18); border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; background: var(--card-bg); }
+.manual-section > h3 { margin: 0; padding: var(--sp-12) var(--sp-14); background: linear-gradient(135deg, var(--navy-900), var(--blue-800)); color: var(--n-000); font-size: var(--fs-fluid-2); font-weight: var(--fw-black); line-height: var(--lh-6); word-break: keep-all; }
+.manual-body { padding: var(--sp-14) var(--sp-12); }
+.manual-sub { margin: var(--sp-14) 0 var(--sp-6); font-size: var(--fs-fluid-4); font-weight: var(--fw-black); color: var(--blue-800); line-height: var(--lh-6); word-break: keep-all; }
+.manual-body > .manual-sub:first-child { margin-top: 0; }
+.manual-steps { margin: 0; padding-left: var(--sp-18); }
+.manual-steps li { margin-bottom: var(--sp-8); font-weight: var(--fw-medium); word-break: keep-all; }
+.manual-steps li:last-child { margin-bottom: 0; }
+.manual-list { margin: 0; padding-left: var(--sp-16); }
+.manual-list li { margin-bottom: var(--sp-7); font-weight: var(--fw-medium); word-break: keep-all; }
+.manual-list li:last-child { margin-bottom: 0; }
+.manual-plain { margin: 0; font-weight: var(--fw-medium); word-break: keep-all; }
+.manual-tip { margin: var(--sp-10) 0 0; padding: var(--sp-10) var(--sp-12); border: 1px solid var(--amber-200); border-radius: var(--radius-md); background: var(--amber-50); color: var(--amber-800); font-size: var(--fs-fluid-5); font-weight: var(--fw-bold); line-height: var(--lh-8); word-break: keep-all; }
+.manual-beta { display: inline-block; margin-left: var(--sp-4); padding: var(--sp-2) var(--sp-6); border-radius: var(--radius-pill); background: var(--emerald-50); border: 1px solid var(--emerald-300); color: var(--emerald-700); font-size: var(--fs-3); font-weight: var(--fw-extrabold); vertical-align: middle; }
+.manual-faq details { margin-bottom: var(--sp-7); padding: var(--sp-10) var(--sp-12); border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--surface-muted); }
+.manual-faq details:last-child { margin-bottom: 0; }
+.manual-faq summary { cursor: pointer; font-size: var(--fs-fluid-4); font-weight: var(--fw-extrabold); color: var(--text-main); line-height: var(--lh-6); word-break: keep-all; }
+.manual-faq details p { margin: var(--sp-8) 0 0; font-size: var(--fs-fluid-5); font-weight: var(--fw-medium); color: var(--text-sub); line-height: var(--lh-8); word-break: keep-all; }
+.manual-contact p { margin: 0 0 var(--sp-8); font-weight: var(--fw-semibold); word-break: keep-all; }
+.manual-contact a { color: var(--blue-700); font-weight: var(--fw-extrabold); text-decoration: underline; }
+.manual-note { font-size: var(--fs-fluid-5); font-weight: var(--fw-semibold); color: var(--text-sub); }
+.manual-foot { margin: var(--sp-14) 0 0; padding-top: var(--sp-10); border-top: 1px dashed var(--border); font-size: var(--fs-fluid-5); font-weight: var(--fw-semibold); color: var(--text-sub); text-align: center; line-height: var(--lh-8); word-break: keep-all; }
+@media (max-width: 480px) {
+    .manual-content { padding: var(--sp-12) var(--sp-10); }
+    .manual-body { padding: var(--sp-12) var(--sp-10); }
+    .manual-hero { padding: var(--sp-12); }
+    .manual-quicknav a { padding: var(--sp-5) var(--sp-9); }
+    .manual-share-btn { align-self: stretch; text-align: center; }
+}
+body.dark-mode .manual-hero { background: linear-gradient(135deg, rgba(30, 58, 138, 0.35), rgba(15, 23, 42, 0.55)); border-color: var(--border-dark); }
+body.dark-mode .manual-hero h3 { color: var(--blue-200); }
+body.dark-mode .manual-address a { color: var(--blue-300); }
+body.dark-mode .manual-quicknav a { background: rgba(37, 99, 235, 0.18); border-color: var(--blue-500); color: var(--blue-200); }
+body.dark-mode .manual-share { background: rgba(245, 158, 11, 0.12); border-color: var(--amber-500); color: var(--amber-200); }
+body.dark-mode .manual-sub { color: var(--blue-300); }
+body.dark-mode .manual-tip { background: rgba(245, 158, 11, 0.12); border-color: var(--amber-500); color: var(--amber-200); }
+body.dark-mode .manual-beta { background: rgba(16, 185, 129, 0.14); border-color: var(--emerald-500); color: var(--emerald-300); }
+body.dark-mode .manual-faq details { background: rgba(255, 255, 255, 0.04); }
