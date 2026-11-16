@@ -362,8 +362,11 @@ test('표 OCR 원문을 수정해 재파싱할 때 좌표 연결 손실을 먼�
 
 test('OCR 이미지 보정은 최대 변 길이를 지키고 대비·흑백 보정본을 만든다', () => {
     const photo = createPhotoVm();
-    assert.equal(photo.run('getRosterOcrScale(600, 3000)'), 2000 / 3000);
-    assert.equal(photo.run('getRosterOcrScale(600, 1200)'), 2000 / 1200);
+    // 2026-11-17: 2000px 상한은 4032px 폰 사진을 절반으로 줄여 표의 작은 글자를 16~18px까지 떨어뜰렸습니다.
+    // 상한을 3000px로 올려 글자 높이를 1.5배로 키우고, 그보다 큰 사진만 줄입니다.
+    assert.equal(photo.run('getRosterOcrScale(600, 3000)'), 1);
+    assert.equal(photo.run('getRosterOcrScale(600, 4000)'), 3000 / 4000);
+    assert.equal(photo.run('getRosterOcrScale(600, 1200)'), 3000 / 1200);
     const enhanced = JSON.parse(JSON.stringify(photo.run(`(() => {
         const pixels = { data: new Uint8ClampedArray([20, 40, 60, 255, 220, 230, 240, 255]) };
         enhanceRosterOcrPixels(pixels, 'enhanced');
@@ -694,13 +697,16 @@ test('화면은 카메라·갤러리·수정·기기저장 UI와 검토 후 적�
     assert.match(engine, /function rotateRosterCanvasForOcr\(sourceCanvas, degrees\)/);
     assert.match(engine, /if \(selected\.entryCount === 0\)/);
     assert.match(engine, /function hasRosterTableHeaderInk\(imageData, region\)/);
-    assert.match(engine, /function buildRosterTableOcrEntries\(regions, headers, assignedWords\)/);
+    assert.match(engine, /function buildRosterTableOcrEntries\(regions, headers, assignedWords, cellNames\)/);
+    assert.match(engine, /function findRosterColumnSplits\(imageData, width, height\)/);
+    assert.match(engine, /async function recognizeRosterPhotoColumns\(recognize, sourceCanvas, splits\)/);
+    assert.match(engine, /async function readRosterTableWorkerCells\(worker, sourceCanvas, regions, headers\)/);
     assert.match(engine, /function parseRosterCloudTableResult\(result, regions, defaultYear\)/);
     assert.match(engine, /async function runRosterCloudOcr\(\)/);
     assert.match(engine, /X-Roster-Ocr-Consent/);
     assert.ok(html.includes('Google Cloud Vision'));
     assert.match(engine, /function collectRosterTableWorkers\(words, region\)/);
-    assert.match(engine, /function recognizeRosterTablePhoto\(engine, sourceCanvas, imageData, regions, defaultYear\)/);
+    assert.match(engine, /async function recognizeRosterTablePhoto\(worker, sourceCanvas, imageData, regions, defaultYear\)/);
     assert.match(engine, /function verifyRosterPhotoVessels\(\)/);
     assert.match(engine, /function markUserConfirmedRosterPhotoScheduleNames\(rows, verifications\)/);
     assert.match(engine, /function applyRosterPhotoScheduleName\(index, candidateIndex = 0\)/);

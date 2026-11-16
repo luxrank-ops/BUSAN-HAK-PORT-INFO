@@ -3175,6 +3175,14 @@ app.get('/api/roster-ocr/config', (_req, res) => {
   res.json({ enabled: isRosterCloudOcrEnabled(), provider: 'google-cloud-vision' });
 });
 
+// Vercel 의 catch-all 함수(api/[...path].ts)는 1세그먼트 경로만 매칭합니다.
+// 그래서 브라우저가 /api/roster-ocr/config 를 부르면 플랫폼 라우터가 404(NOT_FOUND)를 돌려주고,
+// 클라이언트는 온라인 OCR 버튼을 영원히 숨깁니다. 앱은 이 단일 세그먼트 별칭을 먼저 조회합니다.
+app.get('/api/roster-ocr-config', (_req, res) => {
+  res.setHeader('Cache-Control', 'no-store');
+  res.json({ enabled: isRosterCloudOcrEnabled(), provider: 'google-cloud-vision' });
+});
+
 // Google Cloud Vision is an explicit, user-requested fallback only. Raw image bytes are
 // processed in memory and never written to logs, Firestore, or local storage.
 app.post('/api/roster-ocr', express.raw({ type: 'image/jpeg', limit: '4mb' }), async (req, res) => {
