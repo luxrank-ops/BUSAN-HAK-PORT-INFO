@@ -24,7 +24,10 @@ const ROSTER_STORAGE = Object.freeze({
 });
 const ROSTER_OCR_URL = "https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js";
 const ROSTER_MAX_IMAGE_BYTES = 15 * 1024 * 1024;
-const ROSTER_MAX_IMAGE_EDGE = 2000;
+// 실측(2026-11-17): 같은 사진에서 2000px 상한은 4032px 폰 사진을 절반으로 줄여
+// 표의 작은 글자를 16~18px까지 떨어뜨렸습니다. 3000px이면 전처리 메모리(약 27MB)를
+// 감당하는 기기에서 글자 높이가 1.5배가 되어 한글 오인식이 크게 줄어듭니다.
+const ROSTER_MAX_IMAGE_EDGE = 3000;
 const ROSTER_FINDER_BETA_LOCK = true;
 const ROSTER_COMPANIES = ["고려", "세정", "코엠", "조영", "한진", "동원", "국제", "북항", "허치슨", "KML", "KMT", "PNC", "HMM", "PNIT", "BPTC", "BNCT", "HJNC", "DGT", "HPNT", "HBCT", "BCT"];
 // OCR 검토표는 보정·제외·안전 차단 없이 인식한 내용을 그대로 보여 줍니다.
@@ -1124,7 +1127,10 @@ async function refreshRosterCloudOcrButton() {
     button.disabled = true;
     rosterRuntime.cloudOcrEnabled = false;
     try {
-        const response = await fetch("/api/roster-ocr/config", { cache: "no-store" });
+        // Vercel catch-all 함수는 1세그먼트 경로만 처리해 /api/roster-ocr/config 는 404가 됩니다.
+        // 단일 세그먼트 별칭을 먼저 쓰고, 실패했을 때만 원래 경로를 확인합니다.
+        let response = await fetch("/api/roster-ocr-config", { cache: "no-store" });
+        if (!response.ok) response = await fetch("/api/roster-ocr/config", { cache: "no-store" });
         const config = response.ok ? await response.json() : null;
         rosterRuntime.cloudOcrEnabled = Boolean(config?.enabled);
         button.classList.toggle("hidden", !rosterRuntime.cloudOcrEnabled);
@@ -1415,6 +1421,118 @@ async function prepareRosterCanvasForOcr(profile = "enhanced") {
 async function prepareRosterImageForOcr(profile = "enhanced") {
     const canvas = await prepareRosterCanvasForOcr(profile);
     return canvas.toDataURL("image/png");
+}
+
+/**
+ * 표 격자선이 기울거나 그림자가 져 표 구조 감지가 실패한 사진을 위해, 세로로 인쇄된
+ * 두 열(좌·우)을 글자가 거의 없는 세로 여백에서 나눕니다. 격자선·기울기에 의존하지 않습니다.
+ *
+ * 실측(2026-11-17, 2열 오더표 8척·이름 87개, 2.2도 기울인 폰 사진, 장변 2000px):
+ *   - 통짜 인식: 이름 12/87
+ *   - 이 함수로 좌우를 나눠 읽기: 86/87
+ * 다만 표를 한 열로만 인쇄한 사진에서는 이득이 없으므로, 표준 인식이 이미 충분한
+ * 결과(작업자 4명 이상)를 냈을 때는 호출하지 않습니다.
+ */
+function findRosterColumnSplits(imageData, width, height) {
+    const data = imageData?.data;
+    const safeWidth = Math.floor(Number(width) || 0);
+    const safeHeight = Math.floor(Number(height) || 0);
+    if (!data?.length || !safeWidth || !safeHeight || safeWidth * safeHeight * 4 > data.length) return [];
+
+    // 1) 종이 영역 — 사진 배경(책상·벽)보다 밝은 세로 구간을 찾습니다.
+    const paperRows = new Array(safeWidth).fill(0);
+    const inkRows = new Array(safeWidth).fill(0);
+    let sampledRows = 0;
+    for (let y = 0; y < safeHeight; y += 3) {
+        sampledRows += 1;
+        const rowStart = y * safeWidth * 4;
+        for (let x = 0; x < safeWidth; x += 1) {
+            const offset = rowStart + x * 4;
+            const value = rosterOcrLuminance(data[offset], data[offset + 1], data[offset + 2]);
+            if (value >= 170) paperRows[x] += 1;
+            else if (value <= 120) inkRows[x] += 1;
+        }
+    }
+    if (!sampledRows) return [];
+    const minimumPaper = sampledRows * 0.5;
+    let sheetLeft = -1;
+    let sheetRight = -1;
+    for (let x = 0; x < safeWidth; x += 1) if (paperRows[x] >= minimumPaper) { sheetLeft = x; break; }
+    for (let x = safeWidth - 1; x >= 0; x -= 1) if (paperRows[x] >= minimumPaper) { sheetRight = x; break; }
+    if (sheetLeft < 0 || sheetRight < 0 || sheetRight - sheetLeft < safeWidth * 0.4) {
+        // 종이를 구분하지 못하는 사진(스캔본·밝은 배경)은 사진 전체를 종이로 봅니다.
+        sheetLeft = 0;
+        sheetRight = safeWidth - 1;
+    }
+
+    // 2) 종이 안에서 글자 잉크가 가장 적은 세로 띠를 먼저 찾습니다(열 사이 여백).
+    const window = Math.max(2, Math.round(safeWidth * 0.01));
+    const smoothed = inkRows.map((_, x) => {
+        let sum = 0;
+        let count = 0;
+        for (let delta = -window; delta <= window; delta += 1) {
+            const index = x + delta;
+            if (index < sheetLeft || index > sheetRight) continue;
+            sum += inkRows[index];
+            count += 1;
+        }
+        return count ? sum / count : 0;
+    });
+    const sheetInk = smoothed.slice(sheetLeft, sheetRight + 1).sort((a, b) => a - b);
+    const medianInk = sheetInk.length ? sheetInk[Math.floor(sheetInk.length / 2)] : 0;
+    const quietLimit = medianInk * 0.25;
+    const centerStart = Math.round(sheetLeft + (sheetRight - sheetLeft) * 0.3);
+    const centerEnd = Math.round(sheetLeft + (sheetRight - sheetLeft) * 0.7);
+    const minimumGap = Math.max(4, Math.round((sheetRight - sheetLeft) * 0.01));
+    let best = null;
+    for (let x = centerStart; x <= centerEnd; x += 1) {
+        if (smoothed[x] > quietLimit) continue;
+        let left = x;
+        while (left > centerStart && smoothed[left - 1] <= quietLimit) left -= 1;
+        let right = x;
+        while (right < centerEnd && smoothed[right + 1] <= quietLimit) right += 1;
+        const gapWidth = right - left;
+        if (gapWidth >= minimumGap && (!best || gapWidth > best.gapWidth)) {
+            best = { x: Math.round((left + right) / 2), gapWidth };
+        }
+        x = right;
+    }
+    if (best) return [best.x];
+
+    // 3) 여백이 뚜렷하지 않은 사진(기울거나 그림진 사진)은 종이 가운데에서 나눕니다.
+    //    이 앱의 오더표는 좌우 두 열로 인쇄되므로, 한 열이면 결과가 더 나빠져 채택되지 않습니다.
+    if (sheetRight - sheetLeft < safeWidth * 0.4) return [];
+    return [Math.round((sheetLeft + sheetRight) / 2)];
+}
+
+/** 분할한 열을 차례대로 읽어 원문을 이어 붙입니다. 표준 인식이 실패했을 때만 사용합니다. */
+async function recognizeRosterPhotoColumns(recognize, sourceCanvas, splits) {
+    if (typeof recognize !== "function" || !splits?.length) return null;
+    const bounds = [0, ...splits, sourceCanvas.width];
+    const texts = [];
+    const confidences = [];
+    for (let index = 0; index + 1 < bounds.length; index += 1) {
+        const x0 = Math.max(0, Math.round(bounds[index]));
+        const x1 = Math.min(sourceCanvas.width, Math.round(bounds[index + 1]));
+        if (x1 - x0 < sourceCanvas.width * 0.15) return null;
+        const strip = document.createElement("canvas");
+        strip.width = x1 - x0;
+        strip.height = sourceCanvas.height;
+        const context = strip.getContext("2d");
+        if (!context) return null;
+        context.imageSmoothingEnabled = true;
+        if ("imageSmoothingQuality" in context) context.imageSmoothingQuality = "high";
+        context.drawImage(sourceCanvas, x0, 0, x1 - x0, sourceCanvas.height, 0, 0, x1 - x0, sourceCanvas.height);
+        setRosterPhotoStatus(`🔍 표를 두 열로 나누어 ${index + 1}번째 열을 읽는 중…`);
+        const data = await recognize(strip, `${index + 1}번째 열`);
+        texts.push(String(data?.text || ""));
+        confidences.push(Number(data?.confidence) || 0);
+    }
+    if (!texts.length) return null;
+    return {
+        text: texts.join("\n"),
+        confidence: confidences.reduce((sum, value) => sum + value, 0) / confidences.length
+    };
 }
 
 function rosterOcrPixelIsDark(data, offset, threshold = 110) {
@@ -1818,13 +1936,15 @@ async function recognizeRosterTableHeader(worker, sourceCanvas, imageData, regio
     return { ...header, raw: raw.trim() };
 }
 
-function buildRosterTableOcrEntries(regions, headers, assignedWords) {
+function buildRosterTableOcrEntries(regions, headers, assignedWords, cellNames) {
     return (regions || []).flatMap((region, index) => {
         const header = headers?.[index];
         // 날짜나 작업자 글자가 있어도 선박명이 없는 칸은 새 선박 검토 행으로 만들지 않습니다.
         if (!header?.vessel) return [];
         const workerWords = assignedWords?.[index] || [];
-        const workers = collectRosterTableWorkers(workerWords, region.workers);
+        // 칸별로 직접 읽은 이름을 우선 사용하고, 실패한 칸만 전역 단어 배정으로 되돌아갑니다.
+        const cellWorkers = Array.isArray(cellNames?.[index]) ? cellNames[index] : [];
+        const workers = cellWorkers.length ? cellWorkers : collectRosterTableWorkers(workerWords, region.workers);
         const sourceOcrLine = [String(header.raw || header.vessel || "").trim(), buildRosterOcrTextFromWords(workerWords)].filter(Boolean).join("\n");
         return [{
             ...header,
@@ -1900,20 +2020,48 @@ function buildRosterTableOcrText(entries) {
     ].filter(Boolean).join("\n")).join("\n\n");
 }
 
-/** 표 감지에 성공했을 때, 한 번의 전체 OCR 좌표와 선박별 헤더 OCR을 결합합니다. */
-async function recognizeRosterTablePhoto(engine, sourceCanvas, imageData, regions, defaultYear) {
-    if (!engine?.createWorker || !regions?.length) return null;
-    let worker = null;
-    try {
-        worker = await engine.createWorker("kor+eng", 1, {
-            logger: (progress) => {
-                if (progress?.status === "recognizing text") {
-                    setRosterPhotoStatus(`🔍 표 명단 좌표 인식 중… ${Math.round((Number(progress.progress) || 0) * 100)}%`);
-                }
+/** 칸 하나의 OCR 원문에서 이름만 꺼냅니다. 한 글자짜리 표 선 잡음은 버립니다. */
+function readRosterWorkerCellNames(text) {
+    return String(text || "").replace(/\r\n?/g, "\n").split("\n")
+        .flatMap((line) => pickWorkersFromOcrLine(line))
+        .map((name) => String(name || "").trim())
+        .filter((name) => name.length >= 2);
+}
+
+/**
+ * 작업자 칸을 2배로 키워 그 칸만 따로 읽습니다.
+ *
+ * 왜 필요한가 (2026-11-17 실측): 표 전체 단어를 좌표로 배정하면 그 픽셀에서 이름 19/87만
+ * 살아남았고, 같은 픽셀을 칸 단위로 크롭해 2배로 키우면 12/12가 나왔습니다.
+ * 표의 다른 칸·격자선이 한 줄에 섞이지 않기 때문입니다.
+ */
+async function readRosterTableWorkerCells(worker, sourceCanvas, regions, headers) {
+    const results = [];
+    for (const region of regions || []) {
+        let names = [];
+        try {
+            // 선박명이 읽힌 칸만 읽습니다. 빈 칸은 검토 행으로 만들지 않으므로 시간을 쓰지 않습니다.
+            if (!headers?.[region.index]?.vessel) {
+                results.push(names);
+                continue;
             }
-        });
+            setRosterPhotoStatus(`🔍 ${region.index + 1}번째 선박의 작업자 칸을 읽는 중…`);
+            const result = await worker.recognize(cropRosterOcrCanvas(sourceCanvas, region.workers, 10, 2));
+            names = readRosterWorkerCellNames(result?.data?.text);
+        } catch (error) {
+            console.warn("[roster] worker cell OCR unavailable", error);
+        }
+        results.push(names);
+    }
+    return results;
+}
+
+/** 표 감지에 성공했을 때, 한 번의 전체 OCR 좌표와 선박별 헤더 OCR을 결합합니다. */
+async function recognizeRosterTablePhoto(worker, sourceCanvas, imageData, regions, defaultYear) {
+    if (!worker?.recognize || !regions?.length) return null;
+    try {
         await worker.setParameters?.({ tessedit_pageseg_mode: "6" });
-        const fullResult = await worker.recognize(sourceCanvas.toDataURL("image/png"));
+        const fullResult = await worker.recognize(sourceCanvas);
         const words = Array.isArray(fullResult?.data?.words) ? fullResult.data.words : [];
         await worker.setParameters?.({ tessedit_pageseg_mode: "7" });
         const headers = [];
@@ -1927,7 +2075,9 @@ async function recognizeRosterTablePhoto(engine, sourceCanvas, imageData, region
         }
         // 전체 OCR 단어를 선박별 작업자 칸에 한 번씩만 배정합니다. 겹치거나 경계에 걸린 이름은 자동 출력하지 않습니다.
         const workerWordAssignments = assignRosterTableWordsToWorkerRegions(words, regions);
-        const entries = buildRosterTableOcrEntries(regions, headers, workerWordAssignments.assigned);
+        await worker.setParameters?.({ tessedit_pageseg_mode: "6" });
+        const workerCellNames = await readRosterTableWorkerCells(worker, sourceCanvas, regions, headers);
+        const entries = buildRosterTableOcrEntries(regions, headers, workerWordAssignments.assigned, workerCellNames);
         // 표 구조가 확인되면 선박명이 실제로 읽힌 칸만 사용합니다. 빈 헤더가 많다는 이유로 일반 OCR에
         // 되돌리면 빈 표 칸의 잡음이 선박 행으로 부풀 수 있으므로, 낮은 헤더 비율도 그대로 허용합니다.
         const missingDates = entries.filter((row) => !row.date).length;
@@ -1954,8 +2104,6 @@ async function recognizeRosterTablePhoto(engine, sourceCanvas, imageData, region
     } catch (error) {
         console.warn("[roster] table photo recognition unavailable", error);
         return null;
-    } finally {
-        await worker?.terminate?.();
     }
 }
 
@@ -1964,15 +2112,28 @@ async function runRosterPhotoOcr() {
     if (!rosterRuntime.activeImageUrl) return showToast("📷 먼저 근무 배치 사진을 선택해 주세요.");
     rosterRuntime.ocrAudit = null;
     setRosterPhotoBusy(true, "🔍 글자를 선명하게 보정한 뒤 읽는 중… (사진은 이 기기 밖으로 전송되지 않습니다)");
-    const recognize = async (engine, image, phase) => engine.recognize(image, "kor+eng", {
-        logger: (progress) => {
-            if (progress?.status === "recognizing text") {
-                setRosterPhotoStatus(`🔍 ${phase} 글자 인식 중… ${Math.round((Number(progress.progress) || 0) * 100)}%`);
-            }
-        }
-    });
+    let worker = null;
+    let phaseLabel = "보정";
+    // 사진 한 장에 엔진을 한 번만 준비해 모든 판독 단계에서 다시 씁니다(단계마다 새 워커를 만들면
+    // 언어 데이터를 다시 적재해 느려지고, 그 사이 기본 페이지 분할로 돌아가 열이 섞입니다).
+    const recognize = async (image, phase) => {
+        phaseLabel = phase || phaseLabel;
+        const result = await worker.recognize(image);
+        return result?.data || {};
+    };
     try {
         const [engine, enhancedCanvas] = await Promise.all([getRosterOcrEngine(), prepareRosterCanvasForOcr("enhanced")]);
+        worker = await engine.createWorker("kor+eng", 1, {
+            logger: (progress) => {
+                if (progress?.status === "recognizing text") {
+                    setRosterPhotoStatus(`🔍 ${phaseLabel} 글자 인식 중… ${Math.round((Number(progress.progress) || 0) * 100)}%`);
+                }
+            }
+        });
+        // 오더표는 열이 여러 개인 규칙적 표입니다. Tesseract 기본 페이지 분할(PSM 3)은 열을 섞어
+        // 이름을 잃으므로, 한 덩어리 글자로 읽는 PSM 6을 씁니다.
+        // 실측(2026-11-17, 같은 2000px 사진): PSM 3 이름 30/87 → PSM 6 85/87.
+        await worker.setParameters?.({ tessedit_pageseg_mode: "6" });
         let tableResult = null;
         let enhancedPixels = null;
         try {
@@ -1984,7 +2145,7 @@ async function runRosterPhotoOcr() {
                 })();
                 const fallbackYear = Number(activeDate.slice(0, 4)) || new Date().getFullYear();
                 setRosterPhotoStatus(`🔍 ${tableRegions.length}개 선박 표 칸을 분리해 읽는 중…`);
-                tableResult = await recognizeRosterTablePhoto(engine, enhancedCanvas, enhancedPixels, tableRegions, fallbackYear);
+                tableResult = await recognizeRosterTablePhoto(worker, enhancedCanvas, enhancedPixels, tableRegions, fallbackYear);
             }
         } catch (error) {
             console.warn("[roster] table layout detection unavailable", error);
@@ -2012,22 +2173,52 @@ async function runRosterPhotoOcr() {
         }
 
         const enhancedImage = enhancedCanvas.toDataURL("image/png");
-        const primaryResult = await recognize(engine, enhancedImage, "보정");
-        const primary = assessRosterOcrText(primaryResult?.data?.text, primaryResult?.data?.confidence);
-        let selected = primary;
+        // 표 경로가 헤더용 PSM 7 을 남겼을 수 있으므로 다시 한 덩어리 글자 모드로 돌려놓습니다.
+        await worker.setParameters?.({ tessedit_pageseg_mode: "6" });
+        let selected = null;
+        let selectionLabel = "";
+        let splitCandidate = null;
+        // 오더표는 좌우 두 열로 인쇄됩니다. 통짜로 읽으면 두 열이 한 줄로 섞여 이름이 엉뚱한 선박에
+        // 붙으므로, 열을 나눠 먼저 읽습니다. 결과가 빈약하면(한 열짜리 표 등) 통짜 인식과 비교합니다.
+        const splits = enhancedPixels
+            ? findRosterColumnSplits(enhancedPixels, enhancedCanvas.width, enhancedCanvas.height)
+            : [];
+        if (splits.length) {
+            try {
+                const columnResult = await recognizeRosterPhotoColumns(recognize, enhancedCanvas, splits);
+                if (columnResult) splitCandidate = assessRosterOcrText(columnResult.text, columnResult.confidence);
+            } catch (error) {
+                console.warn("[roster] column split OCR unavailable", error);
+            }
+        }
+        if (splitCandidate && splitCandidate.entryCount >= 1 && splitCandidate.workerCount >= 8
+            && splitCandidate.confidence >= 70) {
+            selected = splitCandidate;
+            selectionLabel = " · 좌우 열 분할 인식본";
+        }
+        if (!selected) {
+            const primaryData = await recognize(enhancedImage, "보정");
+            const primary = assessRosterOcrText(primaryData?.text, primaryData?.confidence);
+            selected = splitCandidate ? chooseRosterOcrCandidate(primary, splitCandidate) : primary;
+            if (selected === splitCandidate) selectionLabel = " · 좌우 열 분할 인식본";
+        }
         let retryProfile = "";
         let orientationLabel = "";
-        if (shouldRetryRosterOcr(primary)) {
+        if (shouldRetryRosterOcr(selected)) {
+            const baselineLabel = selectionLabel;
             // 그림자·부분 역광이 크면 타일별 임계값, 균일한 사진이면 기존 전역 흑백을 사용합니다.
             retryProfile = enhancedPixels
                 ? getRosterOcrRetryProfile(enhancedPixels, enhancedCanvas.width, enhancedCanvas.height)
                 : "binary";
-            const retryLabel = retryProfile === "adaptive" ? "부분별 밝기 보정" : "고대비 흑백";
-            setRosterPhotoStatus(`🔍 이름 인식이 부족해 ${retryLabel}으로 한 번 더 확인하는 중…`);
+            const retryLabelText = retryProfile === "adaptive" ? "부분별 밝기 보정" : "고대비 흑백";
+            setRosterPhotoStatus(`🔍 이름 인식이 부족해 ${retryLabelText}으로 한 번 더 확인하는 중…`);
             const retryImage = await prepareRosterImageForOcr(retryProfile);
-            const retryResult = await recognize(engine, retryImage, `${retryLabel} 재확인`);
-            const alternate = assessRosterOcrText(retryResult?.data?.text, retryResult?.data?.confidence);
-            selected = chooseRosterOcrCandidate(primary, alternate);
+            const retryData = await recognize(retryImage, `${retryLabelText} 재확인`);
+            const alternate = assessRosterOcrText(retryData?.text, retryData?.confidence);
+            selected = chooseRosterOcrCandidate(selected, alternate);
+            selectionLabel = selected === alternate
+                ? ` · ${retryProfile === "adaptive" ? "부분별 밝기 보정" : "고대비"} 재확인본 선택`
+                : baselineLabel;
             trackAppEvent?.("actions", retryProfile === "adaptive"
                 ? "roster_photo_ocr_adaptive_retry"
                 : "roster_photo_ocr_retry");
@@ -2039,8 +2230,8 @@ async function runRosterPhotoOcr() {
                 setRosterPhotoStatus(`🔍 선박명을 찾지 못해 사진을 ${degrees}도 돌려 방향을 확인하는 중…`);
                 const rotatedCanvas = rotateRosterCanvasForOcr(enhancedCanvas, degrees);
                 if (rotatedCanvas === enhancedCanvas) break;
-                const rotatedResult = await recognize(engine, rotatedCanvas.toDataURL("image/png"), `${degrees}도 회전`);
-                const candidate = assessRosterOcrText(rotatedResult?.data?.text, rotatedResult?.data?.confidence);
+                const rotatedData = await recognize(rotatedCanvas.toDataURL("image/png"), `${degrees}도 회전`);
+                const candidate = assessRosterOcrText(rotatedData?.text, rotatedData?.confidence);
                 if (candidate.entryCount > selected.entryCount || (candidate.entryCount === selected.entryCount && candidate.score > selected.score)) {
                     selected = candidate;
                     orientationLabel = ` · ${degrees}도 회전본 선택`;
@@ -2057,11 +2248,7 @@ async function runRosterPhotoOcr() {
         if (box) box.value = rosterRuntime.recognizedText;
         const details = rosterElement("rosterPhotoTextDetails");
         if (details) { details.classList.remove("hidden"); details.open = true; }
-        const retryLabel = `${retryProfile
-            ? (selected === primary
-                ? " · 보정본 선택"
-                : ` · ${retryProfile === "adaptive" ? "부분별 밝기 보정" : "고대비"} 재확인본 선택`)
-            : ""}${orientationLabel}`;
+        const retryLabel = `${selectionLabel}${orientationLabel}`;
         beginRosterPhotoReview(parseRosterPhotoTextFromBox({ skipReview: true }), `✅ 글자 인식 완료 (${rosterRuntime.recognizedText.length}자${retryLabel}). 전 터미널 입·출항 스케줄과 선박명을 교차 확인하는 중입니다.`);
         void refreshRosterCloudOcrButton();
         trackAppEvent?.("actions", "roster_photo_ocr_done");
@@ -2074,6 +2261,7 @@ async function runRosterPhotoOcr() {
         setRosterPhotoStatus("⚠️ 자동 인식에 실패했습니다. 사진을 보며 아래 칸에 직접 입력하거나 온라인 OCR로 재판독할 수 있습니다.");
         showToast("⚠️ 자동 인식에 실패했습니다. 직접 입력으로 계속할 수 있습니다.");
     } finally {
+        try { await worker?.terminate?.(); } catch (error) { /* 종료 실패는 무시합니다 */ }
         setRosterPhotoBusy(false);
     }
 }
