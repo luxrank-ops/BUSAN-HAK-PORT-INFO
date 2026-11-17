@@ -3185,7 +3185,11 @@ app.get('/api/roster-ocr-config', (_req, res) => {
 
 // Google Cloud Vision is an explicit, user-requested fallback only. Raw image bytes are
 // processed in memory and never written to logs, Firestore, or local storage.
-app.post('/api/roster-ocr', express.raw({ type: 'image/jpeg', limit: '4mb' }), async (req, res) => {
+//
+// 라우팅 주의: Vercel 의 catch-all 함수(api/[...path].ts)는 1세그먼트 경로만 매칭합니다.
+// /api/roster-ocr 는 1세그먼트라 도달하지만, 앱은 별칭 /api/roster-ocr-run 을 먼저 호출하고
+// 실패했을 때만 원래 경로로 재시도합니다(플랫폼 라우팅 변경에도 버튼이 살아 있도록).
+async function handleRosterCloudOcr(req: any, res: any) {
   res.setHeader('Cache-Control', 'no-store');
   if (!isRosterCloudOcrEnabled()) {
     res.status(503).json({ ok: false, error: 'cloud_ocr_not_configured' });
@@ -3248,7 +3252,12 @@ app.post('/api/roster-ocr', express.raw({ type: 'image/jpeg', limit: '4mb' }), a
     console.warn('[roster] Google Cloud Vision OCR unavailable:', error?.message || 'unknown error');
     res.status(502).json({ ok: false, error: 'cloud_ocr_unavailable' });
   }
-});
+}
+
+const rosterCloudOcrBodyParser = express.raw({ type: 'image/jpeg', limit: '4mb' });
+app.post('/api/roster-ocr', rosterCloudOcrBodyParser, handleRosterCloudOcr);
+// 1세그먼트 별칭 — 앱이 먼저 시도하는 경로입니다.
+app.post('/api/roster-ocr-run', rosterCloudOcrBodyParser, handleRosterCloudOcr);
 
 app.get('/api/config', (_req, res) => {
   res.json({
