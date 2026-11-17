@@ -3878,11 +3878,13 @@ if (typeof window !== "undefined" && typeof window.addEventListener === "functio
  */
 function syncWageVesselSlotVisibility(selectedCount) {
     const count = Math.max(0, Math.min(MAX_WORK_VESSELS, Number(selectedCount) || 0));
+    // 1번 블록은 선박을 고르지 않아도 직접 입력한 시간이 보이므로 비어 있지 않습니다.
+    const filled = Math.max(1, count);
     for (let slot = 1; slot <= MAX_WORK_VESSELS; slot++) {
         const card = document.getElementById(`wageVessel${slot}Card`);
         if (!card || !card.classList) continue;
         card.classList.remove("is-slot-hidden");
-        card.classList.toggle("is-empty", slot > count);
+        card.classList.toggle("is-empty", slot > filled);
     }
     return MAX_WORK_VESSELS;
 }
