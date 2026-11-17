@@ -24,6 +24,7 @@ import { normalizeGoogleVisionOcrResult } from './scripts/roster-cloud-ocr.mjs';
 import {
   hasRosterAiVisionCredential,
   resolveRosterAiVisionModel,
+  resolveRosterAiVisionModels,
   runRosterAiVisionRequest
 } from './scripts/roster-ai-vision.mjs';
 import { ROSTER_AI_VISION_REFERENCE_BASE64, ROSTER_AI_VISION_REFERENCE_MIME } from './scripts/roster-ai-vision-reference.mjs';
@@ -3126,7 +3127,11 @@ let rosterVisionAuth: GoogleAuth | null = null;
 // 예시 이미지(사용자가 색 테두리로 규칙을 표시한 사진)를 함께 보내는 Few-shot 판독입니다.
 // 자격: GEMINI_API_KEY(AI Studio) 또는 기존 Firebase 서비스 계정(Vertex AI) — 둘 다 없으면
 // 호출하지 않고 기존 Google Cloud Vision·기기 판독으로 내려갑니다.
-const rosterAiVisionState: { blockedUntil: number; lastSuccessAt?: number; lastAttempts?: Array<{ provider: string; status: number; error: string }> } = { blockedUntil: 0 };
+const rosterAiVisionState: { blockedUntil: number; lastSuccessAt?: number; lastAttempts?: Array<{ provider: string; model?: string; status: number; error: string }> } = { blockedUntil: 0 };
+
+/** AI 비전 1차 판독에 쓸 수 있는 시간 — 사진 선택 직후(1차)는 짧게, 수동 재판독은 넉넉하게. */
+const ROSTER_AI_VISION_FIRST_PASS_BUDGET_MS = 24000;
+const ROSTER_AI_VISION_REREAD_BUDGET_MS = 48000;
 
 function isRosterAiVisionEnabled(): boolean {
   return hasRosterAiVisionCredential(process.env as Record<string, string | undefined>);
@@ -3181,6 +3186,7 @@ async function getRosterVertexAccessToken(): Promise<string | null> {
 function rosterAiFallbackReason(reason: string): string {
   switch (reason) {
     case 'quota_exceeded': return 'ai_quota_exceeded';
+    case 'transient_unavailable': return 'ai_transient';
     case 'not_configured': return 'ai_not_configured';
     case 'cooldown': return 'ai_cooldown';
     case 'no_vessels': return 'ai_no_vessels';
@@ -3256,7 +3262,9 @@ function sendRosterOcrConfig(_req: any, res: any) {
     aiVision: advertised,
     // 자격은 있지만 광고 전(Vertex API·권한 미비)인 상태도 구분해 둡니다.
     aiVisionCredential: isRosterAiVisionEnabled(),
-    aiVisionModel: advertised ? resolveRosterAiVisionModel(process.env as Record<string, string | undefined>) : ''
+    aiVisionModel: advertised ? resolveRosterAiVisionModel(process.env as Record<string, string | undefined>) : '',
+    // 폴백 체인 — 앞 모델이 수요 폭주(503)로 막힐 때 이어서 시도하는 모델 목록입니다.
+    aiVisionFallbackModels: advertised ? resolveRosterAiVisionModels(process.env as Record<string, string | undefined>).slice(1) : []
   });
 }
 
@@ -3322,6 +3330,8 @@ async function handleRosterCloudOcr(req: any, res: any) {
         referenceBase64: ROSTER_AI_VISION_REFERENCE_BASE64,
         referenceMimeType: ROSTER_AI_VISION_REFERENCE_MIME,
         defaultDate: readRosterOcrDefaultDate(req),
+        // 1차 판독(사진 선택 직후)은 짧게 끝내고 곧바로 기기 판독으로 넘깁니다.
+        totalBudgetMs: aiOnly ? ROSTER_AI_VISION_FIRST_PASS_BUDGET_MS : ROSTER_AI_VISION_REREAD_BUDGET_MS,
         env: process.env as Record<string, string | undefined>,
         getAccessToken: getRosterVertexAccessToken,
         // Vertex AI URL 에 쓰는 프로젝트 ID — Firebase 초기화와 같은 기본값을 씁니다.
@@ -3342,7 +3352,9 @@ async function handleRosterCloudOcr(req: any, res: any) {
         return;
       }
       aiFailureReason = aiResult.ok ? 'no_vessels' : aiResult.reason;
-      aiAttempts = (aiResult.attempts || []).map((attempt) => `${attempt.provider}:${attempt.status}`);
+      aiAttempts = (aiResult.attempts || []).map((attempt) => (attempt.model
+        ? `${attempt.provider}:${attempt.model}:${attempt.status}`
+        : `${attempt.provider}:${attempt.status}`));
       if (!aiResult.ok) {
         console.warn(`[roster] AI 비전 판독 건너뜀 (${aiResult.reason})`,
           (aiResult.attempts || []).map((attempt) => `${attempt.provider}:${attempt.error}`).join(' / '));

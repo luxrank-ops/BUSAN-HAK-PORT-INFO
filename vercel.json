@@ -115,5 +115,10 @@
       "path": "/api/cron/weekly-self-check",
       "schedule": "0 20 * * 0"
     }
-  ]
+  ],
+  "functions": {
+    "api/[...path].ts": {
+      "maxDuration": 60
+    }
+  }
 }
