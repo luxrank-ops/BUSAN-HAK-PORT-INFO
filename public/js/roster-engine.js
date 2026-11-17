@@ -2945,7 +2945,11 @@ async function maybeRunRosterAiVisionFirst() {
             // 서버가 AI 판독을 못 하면(키 미설정·권한·모델 오류) 이 탭에서는 다시 시도하지 않고
             // 사진마다 확인창·지연을 반복하지 않도록 기기 판독으로 바로 진행합니다.
             if (result?.aiVision?.used === false) rosterRuntime.aiVisionEnabled = false;
-            setRosterPhotoStatus("🔍 이 기기에서 글자를 읽는 중… (사진은 기기 밖으로 전송되지 않았습니다)");
+            // 한도 초과·일시 오류는 팝업 없이 기기 판독으로 이어 갑니다(사진은 이 기기 안에서만 읽습니다).
+            const fallbackNotice = result?.fallbackReason === "ai_quota_exceeded"
+                ? "🤖 AI 판독은 오늘 무료 한도를 다 써서 쉬는 중입니다. 기기에서 읽습니다…"
+                : "🔍 이 기기에서 글자를 읽는 중… (사진은 기기 밖으로 전송되지 않았습니다)";
+            setRosterPhotoStatus(fallbackNotice);
             return false;
         }
         applyRosterAiVisionResult(result);

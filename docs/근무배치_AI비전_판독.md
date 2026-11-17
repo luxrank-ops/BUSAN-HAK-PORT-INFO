@@ -33,6 +33,16 @@
 
 `온라인 OCR 재판독` 버튼(서버에 AI 비전이 설정되면 `🤖 AI 비전으로 다시 읽기`)은 AI → Vision 순서로 시도합니다.
 
+### 무료 한도·오류 시 폴백 (2026-11-17 추가)
+
+- Gemini 가 429(무료 티어 하루 한도 초과)나 그 밖의 오류로 실패하면 **팝업 없이 서버 안에서 즉시**
+  Google Cloud Vision 으로 내려가고, 그 응답에 기존 판독 결과가 함께 실려 옵니다.
+- Vision 도 실패하면 클라이언트가 기기 Tesseract(테두리·블럭 크롭)로 이어 갑니다.
+- 응답 메타: `fallbackReason: 'ai_quota_exceeded' | 'ai_unavailable' | 'ai_not_configured' | 'ai_no_vessels' | 'ai_cooldown'`,
+  `fallbackProvider: 'google-cloud-vision' | 'device-tesseract'`.
+- 한도 초과는 30분, 그 밖의 오류는 10분 동안 AI 호출을 쉬어 사진마다 대기하지 않습니다.
+  클라이언트도 AI 가 꺼진 것을 확인한 세션에서는 다시 시도하지 않습니다.
+
 ## 3. 필요한 설정 (Vercel → Project Settings → Environment Variables)
 
 | 변수 | 필수 | 설명 |
@@ -58,8 +68,12 @@
 ## 5. 레퍼런스 이미지
 
 - 파일: `assets/roster-ocr-reference.jpg` (휴대폰 갤러리 UI 제거 후 종이+색 테두리만 크롭, 긴 변 1024px)
+- **작업자 이름은 모자이크 처리**했습니다(`scripts/anonymize-roster-reference.py`). 날짜·선박명·시간·회사명
+  머리말, 색 테두리, 형광펜 메모, 표 구조는 원본 그대로 두어 규칙 학습에 필요한 정보를 유지합니다.
+  모자이크 후 같은 사진을 Google Cloud Vision 으로 다시 읽혀 이름이 하나도 남지 않는 것을 확인했습니다
+  (머리말·회사명·메모만 인식).
 - 서버리스 번들은 파일 경로에 의존하지 않도록 base64 사본 `scripts/roster-ai-vision-reference.mjs` 를 함께 커밋합니다.
-- 재생성: `python3 scripts/generate-roster-ai-reference.py`
+- 재생성: `python3 scripts/anonymize-roster-reference.py` → `python3 scripts/generate-roster-ai-reference.py`
 
 ## 6. 검증
 

@@ -18,6 +18,8 @@ export const ROSTER_AI_VISION_VERTEX_LOCATION_DEFAULT = 'global';
 export const ROSTER_AI_VISION_TIMEOUT_MS = 25000;
 /** AI 판독 실패(키 없음·권한 없음·타임아웃)를 같은 인스턴스에서 다시 시도하지 않는 시간 */
 export const ROSTER_AI_VISION_FAILURE_COOLDOWN_MS = 10 * 60 * 1000;
+/** 무료 티어 일일 한도(429)를 만났을 때 재시도를 멈추는 시간 — 한도는 보통 하루 단위로 풀립니다. */
+export const ROSTER_AI_VISION_QUOTA_COOLDOWN_MS = 30 * 60 * 1000;
 
 /** 모델이 지켜야 하는 JSON 스키마 — Gemini responseSchema(OpenAPI 부분집합) */
 export const ROSTER_AI_VISION_RESPONSE_SCHEMA = {
@@ -484,9 +486,22 @@ export async function runRosterAiVisionRequest(options = {}) {
   }
 
   // 자격은 있는데 호출이 실패하면 잠시 건너뜁니다(사진마다 25초를 버리지 않도록).
+  // 429(무료 티어 하루 한도)는 더 오래 쉽니다 — 그동안은 기존 판독으로 바로 내려갑니다.
+  const reason = classifyRosterAiVisionFailure(attempts);
   state.lastAttempts = attempts.slice();
-  state.blockedUntil = now.getTime() + ROSTER_AI_VISION_FAILURE_COOLDOWN_MS;
-  return { ok: false, reason: 'request_failed', model, attempts };
+  state.blockedUntil = now.getTime() + (reason === 'quota_exceeded'
+    ? ROSTER_AI_VISION_QUOTA_COOLDOWN_MS
+    : ROSTER_AI_VISION_FAILURE_COOLDOWN_MS);
+  return { ok: false, reason, model, attempts };
+}
+
+/** 실패 원인 분류 — 429/한도 초과는 'quota_exceeded', 그 밖은 'request_failed'. */
+export function classifyRosterAiVisionFailure(attempts) {
+  const list = Array.isArray(attempts) ? attempts : [];
+  if (list.some((attempt) => Number(attempt?.status) === 429 || /RESOURCE_EXHAUSTED|quota|rate limit/i.test(String(attempt?.error || '')))) {
+    return 'quota_exceeded';
+  }
+  return 'request_failed';
 }
 
 function finish(result, options) {

@@ -301,6 +301,34 @@ test('프로젝트 ID 를 인자로 받으면 Vertex URL 을 만들고, 없으�
     assert.deepEqual(noProject.attempts, []);
 });
 
+test('무료 티어 한도(429)는 quota_exceeded 로 분류하고 30분 쉽니다', async () => {
+    const state = {};
+    const result = await runRosterAiVisionRequest({
+        imageBase64: 'VEFSR0VU',
+        env: { GEMINI_API_KEY: 'k' },
+        state,
+        fetchImpl: async () => jsonResponse({ error: { status: 'RESOURCE_EXHAUSTED', message: 'Quota exceeded for quota metric' } }, 429)
+    });
+    assert.equal(result.ok, false);
+    assert.equal(result.reason, 'quota_exceeded');
+    assert.ok(state.blockedUntil - Date.now() > 25 * 60 * 1000, '한도 초과는 30분 동안 재시도하지 않습니다');
+    // 그동안은 호출 자체를 하지 않아 사진마다 기다리지 않습니다.
+    const cooled = await runRosterAiVisionRequest({ imageBase64: 'VEFSR0VU', env: { GEMINI_API_KEY: 'k' }, state });
+    assert.equal(cooled.reason, 'cooldown');
+    assert.deepEqual(cooled.attempts.map((attempt) => attempt.status), [429]);
+});
+
+test('서버·앱은 AI 실패 사유(fallbackReason)를 팝업 없이 따라간다', () => {
+    const server = readFileSync(new URL('../server.ts', import.meta.url), 'utf8');
+    assert.match(server, /function rosterAiFallbackReason/);
+    assert.match(server, /case 'quota_exceeded': return 'ai_quota_exceeded'/);
+    assert.match(server, /fallbackProvider: 'google-cloud-vision'/);
+    assert.match(server, /fallbackProvider: 'device-tesseract'/);
+    const engine = readFileSync(new URL('../public/js/roster-engine.js', import.meta.url), 'utf8');
+    assert.match(engine, /ai_quota_exceeded/);
+    assert.match(engine, /무료 한도/);
+});
+
 test('자격이 없거나 호출이 실패하면 예외 없이 실패 이유를 돌려주고 잠시 재시도를 멈춘다', async () => {
     const noCredential = await runRosterAiVisionRequest({ imageBase64: 'VEFSR0VU', env: {} });
     assert.equal(noCredential.ok, false);
