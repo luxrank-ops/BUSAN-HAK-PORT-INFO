@@ -15,6 +15,7 @@ export interface RosterAiVisionEntry {
 
 export interface RosterAiVisionAttempt {
     provider: string;
+    model?: string;
     status: number;
     error: string;
 }
@@ -51,15 +52,24 @@ export interface RosterAiVisionRequestOptions {
     projectId?: string;
     now?: Date;
     state?: { blockedUntil?: number };
+    /** 이 요청 전체에 쓸 수 있는 시간(ms) — 넘으면 다음 모델 시도 없이 기존 판독으로 내려갑니다. */
+    totalBudgetMs?: number;
+    /** 5xx 재시도 간격(ms) 목록 — 테스트에서 0 으로 줄일 때 씁니다. */
+    retryDelaysMs?: number[];
+    models?: string[];
 }
 
 export const ROSTER_AI_VISION_DEFAULT_MODEL: string;
 export const ROSTER_AI_VISION_GENERATIVE_ENDPOINT: string;
 export const ROSTER_AI_VISION_VERTEX_LOCATION_DEFAULT: string;
 export const ROSTER_AI_VISION_TIMEOUT_MS: number;
+export const ROSTER_AI_VISION_FALLBACK_MODELS: string[];
+export const ROSTER_AI_VISION_TOTAL_BUDGET_MS: number;
+export const ROSTER_AI_VISION_RETRY_DELAYS_MS: number[];
 export const ROSTER_AI_VISION_FAILURE_COOLDOWN_MS: number;
+export const ROSTER_AI_VISION_TRANSIENT_COOLDOWN_MS: number;
 export const ROSTER_AI_VISION_QUOTA_COOLDOWN_MS: number;
-export function classifyRosterAiVisionFailure(attempts: RosterAiVisionAttempt[]): 'quota_exceeded' | 'request_failed';
+export function classifyRosterAiVisionFailure(attempts: RosterAiVisionAttempt[]): 'quota_exceeded' | 'transient_unavailable' | 'request_failed';
 export const ROSTER_AI_VISION_RESPONSE_SCHEMA: Record<string, unknown>;
 
 export function buildRosterAiVisionInstruction(options?: { defaultDate?: string; defaultYear?: number }): string;
@@ -77,4 +87,5 @@ export function normalizeRosterAiVisionResult(
 export function buildRosterAiVisionText(rows: RosterAiVisionEntry[]): string;
 export function hasRosterAiVisionCredential(env?: Record<string, string | undefined>): boolean;
 export function resolveRosterAiVisionModel(env?: Record<string, string | undefined>): string;
+export function resolveRosterAiVisionModels(env?: Record<string, string | undefined>): string[];
 export function runRosterAiVisionRequest(options?: RosterAiVisionRequestOptions): Promise<RosterAiVisionSuccess | RosterAiVisionFailure>;

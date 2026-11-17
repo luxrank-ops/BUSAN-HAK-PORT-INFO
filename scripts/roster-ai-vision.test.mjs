@@ -16,6 +16,8 @@ import {
     normalizeRosterAiWorkerName,
     parseRosterAiVisionJson,
     resolveRosterAiVisionModel,
+    resolveRosterAiVisionModels,
+    ROSTER_AI_VISION_FALLBACK_MODELS,
     runRosterAiVisionRequest
 } from './roster-ai-vision.mjs';
 import { ROSTER_AI_VISION_REFERENCE_BASE64 } from './roster-ai-vision-reference.mjs';
@@ -385,4 +387,142 @@ test('앱은 사진 선택 직후 AI 비전 1차 판독을 시도하고, 실패�
     assert.match(engine, /prepareRosterCanvasForOcr\("enhanced"\)/);
     assert.match(engine, /maybeRunRosterCloudOcrFallback/);
     assert.match(engine, /findRosterWorkerCellColumnSplit/);
+});
+
+// ── 2026-11-17 실측: Flash 계열 수요 폭주(503 UNAVAILABLE) 대응 ───────────────
+
+test('수요 폭주(503)는 같은 모델에 짧게 다시 걸고, 성공하면 그대로 판독한다', async () => {
+    const calls = [];
+    const result = await runRosterAiVisionRequest({
+        imageBase64: 'VEFSR0VU',
+        defaultDate: '2026-11-17',
+        env: { GEMINI_API_KEY: 'test-key', ROSTER_AI_VISION_FALLBACK_MODELS: '0' },
+        retryDelaysMs: [0],
+        fetchImpl: async (url) => {
+            calls.push(url);
+            if (calls.length === 1) {
+                return jsonResponse({ error: { status: 'UNAVAILABLE', message: 'This model is currently experiencing high demand.' } }, 503);
+            }
+            return jsonResponse(geminiResponse(PHOTO_ONE_PAYLOAD));
+        }
+    });
+    assert.equal(result.ok, true);
+    assert.equal(result.provider, 'gemini-api');
+    assert.equal(calls.length, 2);
+    assert.equal(result.attempts.length, 0);
+});
+
+test('기본 모델이 503으로 막히면 폴백 모델(3.5-flash-lite)로 넘어가 판독한다', async () => {
+    const urls = [];
+    const result = await runRosterAiVisionRequest({
+        imageBase64: 'VEFSR0VU',
+        defaultDate: '2026-11-17',
+        env: { GEMINI_API_KEY: 'test-key' },
+        retryDelaysMs: [0],
+        fetchImpl: async (url) => {
+            urls.push(url);
+            if (url.includes('gemini-3.8-flash')) {
+                return jsonResponse({ error: { status: 'UNAVAILABLE', message: 'This model is currently experiencing high demand.' } }, 503);
+            }
+            return jsonResponse(geminiResponse(PHOTO_ONE_PAYLOAD));
+        }
+    });
+    assert.equal(result.ok, true);
+    assert.equal(result.provider, 'gemini-api');
+    assert.equal(result.model, 'gemini-3.5-flash-lite');
+    assert.match(urls[urls.length - 1], /models\/gemini-3\.5-flash-lite:generateContent/);
+    // 3.8-flash 는 5xx 라 한 번 더 걸어 본 뒤 폴백으로 넘어갑니다.
+    assert.ok(urls.filter((url) => url.includes('gemini-3.8-flash')).length >= 2);
+    // 성공 응답에는 attempts 를 싣지 않으므로(finish) 호출 순서로 확인합니다.
+    assert.equal(urls[0].includes('gemini-3.8-flash'), true);
+});
+
+test('없어진 모델(404)은 다음 모델로 넘어간다 — 2.5-flash 는 신규 사용자에게 404', async () => {
+    const urls = [];
+    const result = await runRosterAiVisionRequest({
+        imageBase64: 'VEFSR0VU',
+        defaultDate: '2026-11-17',
+        env: { GEMINI_API_KEY: 'test-key', ROSTER_AI_VISION_MODEL: 'gemini-2.5-flash' },
+        retryDelaysMs: [0],
+        fetchImpl: async (url) => {
+            urls.push(url);
+            if (url.includes('gemini-2.5-flash')) {
+                return jsonResponse({ error: { status: 'NOT_FOUND', message: 'This model models/gemini-2.5-flash is no longer available to new users.' } }, 404);
+            }
+            return jsonResponse(geminiResponse(PHOTO_ONE_PAYLOAD));
+        }
+    });
+    assert.equal(result.ok, true);
+    assert.equal(urls[0].includes('gemini-2.5-flash'), true);
+    assert.equal(urls[1].includes('gemini-3.5-flash-lite'), true);
+});
+
+test('모든 모델이 503이면 transient_unavailable 로 분류하고 90초만 쉽니다', async () => {
+    const state = {};
+    const result = await runRosterAiVisionRequest({
+        imageBase64: 'VEFSR0VU',
+        env: { GEMINI_API_KEY: 'k' },
+        state,
+        retryDelaysMs: [0],
+        fetchImpl: async () => jsonResponse({ error: { status: 'UNAVAILABLE', message: 'This model is currently experiencing high demand.' } }, 503)
+    });
+    assert.equal(result.ok, false);
+    assert.equal(result.reason, 'transient_unavailable');
+    const cooldown = state.blockedUntil - Date.now();
+    assert.ok(cooldown > 60 * 1000 && cooldown <= 95 * 1000, `일시 오류 쿨다운은 90초여야 합니다: ${cooldown}`);
+    // 폭주는 몇 분이면 풀리므로 10분을 통째로 쉬지 않습니다.
+    assert.ok(cooldown < 10 * 60 * 1000);
+});
+
+test('키·권한 오류(403)는 모델을 바꿔도 같으므로 체인을 멈춘다', async () => {
+    const urls = [];
+    const result = await runRosterAiVisionRequest({
+        imageBase64: 'VEFSR0VU',
+        env: { GEMINI_API_KEY: 'k' },
+        retryDelaysMs: [0],
+        fetchImpl: async (url) => {
+            urls.push(url);
+            return jsonResponse({ error: { status: 'PERMISSION_DENIED', message: 'API key not valid' } }, 403);
+        }
+    });
+    assert.equal(result.ok, false);
+    assert.equal(result.reason, 'request_failed');
+    assert.equal(urls.length, 1, '403 뒤에는 다른 모델을 시도하지 않습니다');
+});
+
+test('모델 체인은 기본 모델 + 폴백 순서이고, 환경변수로 바꾸거나 끌 수 있다', () => {
+    const models = resolveRosterAiVisionModels({});
+    assert.equal(models[0], ROSTER_AI_VISION_DEFAULT_MODEL);
+    assert.deepEqual(models.slice(1), ROSTER_AI_VISION_FALLBACK_MODELS);
+    assert.deepEqual(resolveRosterAiVisionModels({ ROSTER_AI_VISION_MODEL: 'gemini-3.7-flash' }).slice(0, 2), ['gemini-3.7-flash', ROSTER_AI_VISION_FALLBACK_MODELS[0]]);
+    assert.deepEqual(resolveRosterAiVisionModels({ ROSTER_AI_VISION_FALLBACK_MODELS: '0' }), [ROSTER_AI_VISION_DEFAULT_MODEL]);
+    assert.deepEqual(resolveRosterAiVisionModels({ ROSTER_AI_VISION_FALLBACK_MODELS: 'gemini-3.6-flash' }), [ROSTER_AI_VISION_DEFAULT_MODEL, 'gemini-3.6-flash']);
+});
+
+test('시간 예산이 없으면 더 이상 모델을 시도하지 않는다', async () => {
+    let calls = 0;
+    const result = await runRosterAiVisionRequest({
+        imageBase64: 'VEFSR0VU',
+        env: { GEMINI_API_KEY: 'k' },
+        retryDelaysMs: [0],
+        totalBudgetMs: 1,
+        fetchImpl: async () => {
+            calls += 1;
+            return jsonResponse({ error: { status: 'UNAVAILABLE', message: 'high demand' } }, 503);
+        }
+    });
+    await new Promise((resolve) => setTimeout(resolve, 30));
+    assert.equal(result.ok, false);
+    assert.ok(calls <= 2, `예산이 끝나면 호출을 멈춥니다: ${calls}`);
+});
+
+test('서버는 1차 판독과 수동 재판독에 서로 다른 시간 예산을 주고, 폴백 체인을 광고한다', () => {
+    const server = readFileSync(new URL('../server.ts', import.meta.url), 'utf8');
+    assert.match(server, /ROSTER_AI_VISION_FIRST_PASS_BUDGET_MS = 24000/);
+    assert.match(server, /ROSTER_AI_VISION_REREAD_BUDGET_MS = 48000/);
+    assert.match(server, /totalBudgetMs: aiOnly \? ROSTER_AI_VISION_FIRST_PASS_BUDGET_MS : ROSTER_AI_VISION_REREAD_BUDGET_MS/);
+    assert.match(server, /aiVisionFallbackModels/);
+    assert.match(server, /case 'transient_unavailable': return 'ai_transient'/);
+    const vercel = JSON.parse(readFileSync(new URL('../vercel.json', import.meta.url), 'utf8'));
+    assert.equal(vercel.functions['api/[...path].ts'].maxDuration, 60);
 });

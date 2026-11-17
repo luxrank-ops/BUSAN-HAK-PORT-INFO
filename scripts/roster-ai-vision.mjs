@@ -15,9 +15,21 @@
 export const ROSTER_AI_VISION_DEFAULT_MODEL = 'gemini-3.8-flash';
 export const ROSTER_AI_VISION_GENERATIVE_ENDPOINT = 'https://generativelanguage.googleapis.com/v1beta';
 export const ROSTER_AI_VISION_VERTEX_LOCATION_DEFAULT = 'global';
-export const ROSTER_AI_VISION_TIMEOUT_MS = 25000;
+export const ROSTER_AI_VISION_TIMEOUT_MS = 40000;
+/** 한 요청(AI 1차 판독 전체)에 쓸 수 있는 시간 — Vercel 함수 상한(60초) 안에서 Vision 폴백까지 남깁니다. */
+export const ROSTER_AI_VISION_TOTAL_BUDGET_MS = 45000;
+/** 수요 폭주(503 UNAVAILABLE) 시 같은 모델에 다시 걸어 보는 간격 — Google 권고(지수 백오프)를 따릅니다. */
+export const ROSTER_AI_VISION_RETRY_DELAYS_MS = [800, 2500];
+/**
+ * 모델 폴백 체인 — 앞 모델이 5xx·404로 막히면 다음 모델로 넘어갑니다.
+ * 2026-11-17 실측: 3.8-flash·3.7-flash·3.5-flash는 503이 이어졌고, 3.5-flash-lite와
+ * 3-flash-preview는 같은 요청에 200(9.4~42초)으로 응답했습니다.
+ */
+export const ROSTER_AI_VISION_FALLBACK_MODELS = ['gemini-3.5-flash-lite', 'gemini-3-flash-preview'];
 /** AI 판독 실패(키 없음·권한 없음·타임아웃)를 같은 인스턴스에서 다시 시도하지 않는 시간 */
 export const ROSTER_AI_VISION_FAILURE_COOLDOWN_MS = 10 * 60 * 1000;
+/** 일시 오류(5xx UNAVAILABLE)만 났을 때의 짧은 쿨다운 — 폭주는 몇 분이면 풀립니다. */
+export const ROSTER_AI_VISION_TRANSIENT_COOLDOWN_MS = 90 * 1000;
 /** 무료 티어 일일 한도(429)를 만났을 때 재시도를 멈추는 시간 — 한도는 보통 하루 단위로 풀립니다. */
 export const ROSTER_AI_VISION_QUOTA_COOLDOWN_MS = 30 * 60 * 1000;
 
@@ -366,6 +378,35 @@ export function resolveRosterAiVisionModel(env = {}) {
   return String(env.ROSTER_AI_VISION_MODEL || '').trim() || ROSTER_AI_VISION_DEFAULT_MODEL;
 }
 
+/**
+ * 시도할 모델 목록(기본 모델 먼저, 그다음 폴백).
+ * `ROSTER_AI_VISION_FALLBACK_MODELS=0|none` 이면 폴백 없이 기본 모델만 씁니다.
+ */
+export function resolveRosterAiVisionModels(env = {}) {
+  const primary = resolveRosterAiVisionModel(env);
+  const raw = String(env.ROSTER_AI_VISION_FALLBACK_MODELS ?? '').trim();
+  const listed = raw
+    ? (/^(0|none|off)$/i.test(raw) ? [] : raw.split(','))
+    : ROSTER_AI_VISION_FALLBACK_MODELS;
+  return dedupe([primary, ...listed.map((item) => String(item).trim()).filter(Boolean)]);
+}
+
+function readRetryDelays(options, env) {
+  if (Array.isArray(options.retryDelaysMs)) return options.retryDelaysMs.map(Number).filter((value) => Number.isFinite(value) && value >= 0);
+  const raw = String(env.ROSTER_AI_VISION_RETRY_DELAYS_MS ?? '').trim();
+  if (!raw) return ROSTER_AI_VISION_RETRY_DELAYS_MS;
+  const parsed = raw.split(',').map((item) => Number(item.trim())).filter((value) => Number.isFinite(value) && value >= 0);
+  return parsed.length ? parsed : ROSTER_AI_VISION_RETRY_DELAYS_MS;
+}
+
+function readTotalBudgetMs(options, env) {
+  const explicit = Number(options.totalBudgetMs);
+  if (Number.isFinite(explicit) && explicit > 0) return explicit;
+  const fromEnv = Number(env.ROSTER_AI_VISION_TOTAL_BUDGET_MS);
+  if (Number.isFinite(fromEnv) && fromEnv > 0) return fromEnv;
+  return ROSTER_AI_VISION_TOTAL_BUDGET_MS;
+}
+
 function generativeEndpoint(env) {
   const base = String(env.ROSTER_AI_VISION_GENERATIVE_ENDPOINT || '').trim() || ROSTER_AI_VISION_GENERATIVE_ENDPOINT;
   return base.replace(/\/+$/, '');
@@ -390,6 +431,13 @@ function summarizeAttempt(status, body) {
  * 자격 우선순위:
  *   1) GEMINI_API_KEY (Google AI Studio 키) → generativelanguage API
  *   2) 기존 Firebase 서비스 계정 → Vertex AI (새 키를 만들지 않아도 되는 경로)
+ *
+ * 2026-11-17 실서버 실측: Flash 계열은 수요가 몰리면 HTTP 503 UNAVAILABLE
+ * ("This model is currently experiencing high demand.") 를 즉시 돌려줍니다. 한 번 실패로
+ * 10분을 쉬면 그날 AI가 계속 꺼진 것처럼 보이므로 이렇게 바꿨습니다.
+ *   ① 5xx 는 짧은 지수 백오프로 같은 모델에 다시 시도,
+ *   ② 그래도 막히면 모델 폴백 체인(기본 3.8-flash → 3.5-flash-lite → 3-flash-preview),
+ *   ③ 일시 오류(5xx) 쿨다운은 90초. 429(무료 한도)는 그대로 30분입니다.
  */
 export async function runRosterAiVisionRequest(options = {}) {
   const env = options.env || {};
@@ -397,6 +445,7 @@ export async function runRosterAiVisionRequest(options = {}) {
   const now = options.now instanceof Date ? options.now : new Date();
   const state = options.state || {};
   const model = resolveRosterAiVisionModel(env);
+  const models = resolveRosterAiVisionModels(env);
   const attempts = [];
   const imageBase64 = String(options.imageBase64 || '');
   if (!imageBase64) return { ok: false, reason: 'missing_image', model, attempts };
@@ -405,6 +454,10 @@ export async function runRosterAiVisionRequest(options = {}) {
     // 쿨다운 중에도 직전 시도의 상태 코드를 돌려줘 설정 문제를 바로 알 수 있게 합니다.
     return { ok: false, reason: 'cooldown', model, attempts: Array.isArray(state.lastAttempts) ? state.lastAttempts : [] };
   }
+
+  const retryDelays = readRetryDelays(options, env);
+  const deadline = Math.max(now.getTime(), Date.now()) + readTotalBudgetMs(options, env);
+  const remaining = () => deadline - Date.now();
 
   const body = JSON.stringify(buildRosterAiVisionRequestBody({
     ...options,
@@ -424,10 +477,14 @@ export async function runRosterAiVisionRequest(options = {}) {
     thinkingBudget: null
   }));
 
-  const call = async (url, headers, provider) => {
+  const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+  /** 한 번 주고받기 — 모델이 thinkingConfig 를 거부하면(400) 빼고 한 번만 더 보냅니다. */
+  const exchange = async (url, headers, attemptTimeoutMs) => {
     const send = async (payload) => {
       const controller = typeof AbortController === 'function' ? new AbortController() : null;
-      const timer = controller ? setTimeout(() => controller.abort(), ROSTER_AI_VISION_TIMEOUT_MS) : null;
+      const attemptTimeout = Math.max(4000, Math.min(ROSTER_AI_VISION_TIMEOUT_MS, Number(attemptTimeoutMs) || 0));
+      const timer = controller ? setTimeout(() => controller.abort(), attemptTimeout) : null;
       try {
         const response = await fetchImpl(url, {
           method: 'POST',
@@ -441,65 +498,123 @@ export async function runRosterAiVisionRequest(options = {}) {
         if (timer) clearTimeout(timer);
       }
     };
-    try {
-      let { response, data } = await send(body);
-      if (response.status === 400 && /think/i.test(String(data?.error?.message || '')) && body !== withoutThinking) {
-        const retry = await send(withoutThinking);
-        response = retry.response;
-        data = retry.data;
+    let { response, data } = await send(body);
+    // 400 은 대부분 thinkingConfig(thinkingBudget 0) 를 받지 않는 모델(예: 3.5-flash-lite)입니다.
+    // 메시지가 "Request contains an invalid argument." 처럼 뭉뚱그려 오므로, 400 이면
+    // 사고 설정을 빼고 한 번만 더 보냅니다(즉시 돌아오므로 비용이 거의 없습니다).
+    const thinkRetry = response.status === 400
+      && body !== withoutThinking
+      && !/image|inline_data|mime/i.test(String(data?.error?.message || ''));
+    if (thinkRetry) {
+      const retry = await send(withoutThinking);
+      response = retry.response;
+      data = retry.data;
+    }
+    return { response, data };
+  };
+
+  /**
+   * 한 모델에 대해 (빠른 5xx면 한 번만 백오프 재시도) 판독을 시도합니다.
+   * reserveMs 는 뒤에 남은 폴백 모델을 위해 비워 둘 시간입니다 — 앞 모델이 예산을 다 먹지 않게 합니다.
+   * 반환: { result } 성공 / { action: 'next' } 다음 모델 / { action: 'stop' } 체인 중단
+   */
+  const callModel = async (url, headers, provider, modelName, modelsLeft = 1) => {
+    // 남은 모델 수로 예산을 나눠 씁니다 — 앞 모델이 매달려도 뒤 폴백이 굶지 않게.
+    const share = () => Math.max(6000, Math.min(ROSTER_AI_VISION_TIMEOUT_MS, Math.floor(remaining() / Math.max(1, modelsLeft))));
+    for (let attemptIndex = 0; attemptIndex <= retryDelays.length; attemptIndex += 1) {
+      if (attemptIndex > 0) {
+        const delay = retryDelays[attemptIndex - 1];
+        if (remaining() < delay + 8000) return { action: 'next' };
+        await sleep(delay);
       }
+      let response;
+      let data;
+      const started = Date.now();
+      try {
+        ({ response, data } = await exchange(url, headers, share()));
+      } catch (error) {
+        attempts.push({ provider, model: modelName, status: 0, error: String(error?.message || error).slice(0, 160) });
+        // 타임아웃·네트워크 오류는 같은 모델에 다시 걸지 않고 다음 모델로 넘깁니다(예산 보존).
+        return { action: remaining() > 8000 ? 'next' : 'stop' };
+      }
+      const elapsed = Date.now() - started;
       if (!response.ok) {
-        attempts.push({ provider, status: response.status, error: summarizeAttempt(response.status, data) });
-        return null;
+        attempts.push({ provider, model: modelName, status: response.status, error: summarizeAttempt(response.status, data) });
+        const status = Number(response.status);
+        if (status >= 500) {
+          // 빨리 돌아온 5xx(수요 폭주 신호)만 같은 모델에 한 번 더 걸어 보고,
+          // 오래 매달린 끝의 실패는 다음 모델로 넘깁니다.
+          if (elapsed < 6000 && attemptIndex < retryDelays.length) continue;
+          return { action: 'next' };
+        }
+        // 404(모델이 더 이상 제공되지 않음)는 다음 모델로,
+        // 400·401·403(키·권한·요청 형식)과 429(한도)는 모델을 바꿔도 같으므로 체인을 멈춥니다.
+        return { action: status === 404 ? 'next' : 'stop' };
       }
       const text = extractRosterAiVisionText(data);
       const parsed = parseRosterAiVisionJson(text);
-      if (!parsed) attempts.push({ provider, status: response.status, error: 'empty_json' });
-      return parsed ? { parsed, provider, model } : null;
-    } catch (error) {
-      attempts.push({ provider, status: 0, error: String(error?.message || error).slice(0, 160) });
-      return null;
+      if (!parsed) {
+        attempts.push({ provider, model: modelName, status: response.status, error: 'empty_json' });
+        return { action: 'next' };
+      }
+      return { result: { parsed, provider, model: modelName } };
     }
+    return { action: 'next' };
   };
 
   const apiKey = String(env.GEMINI_API_KEY || '').trim();
   if (apiKey) {
-    const url = `${generativeEndpoint(env)}/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(apiKey)}`;
-    const result = await call(url, {}, 'gemini-api');
-    if (result) return finish(result, options);
+    for (let index = 0; index < models.length; index += 1) {
+      if (remaining() < 8000) break;
+      const candidate = models[index];
+      const url = `${generativeEndpoint(env)}/models/${encodeURIComponent(candidate)}:generateContent?key=${encodeURIComponent(apiKey)}`;
+      const outcome = await callModel(url, {}, 'gemini-api', candidate, models.length - index);
+      if (outcome.result) return finish(outcome.result, options);
+      if (outcome.action === 'stop') break;
+    }
   }
 
   const tokenProvider = options.getAccessToken;
   const vertexUrl = vertexEndpoint(env, model, options.projectId);
-  if (tokenProvider && vertexUrl) {
+  if (tokenProvider && vertexUrl && remaining() > 5000) {
     try {
       const token = await tokenProvider();
       if (token) {
-        const result = await call(vertexUrl, { Authorization: `Bearer ${token}` }, 'vertex-gemini');
-        if (result) return finish(result, options);
+        const outcome = await callModel(vertexUrl, { Authorization: `Bearer ${token}` }, 'vertex-gemini', model, 1);
+        if (outcome.result) return finish(outcome.result, options);
       } else {
-        attempts.push({ provider: 'vertex-gemini', status: 0, error: 'no_access_token' });
+        attempts.push({ provider: 'vertex-gemini', model, status: 0, error: 'no_access_token' });
       }
     } catch (error) {
-      attempts.push({ provider: 'vertex-gemini', status: 0, error: String(error?.message || error).slice(0, 160) });
+      attempts.push({ provider: 'vertex-gemini', model, status: 0, error: String(error?.message || error).slice(0, 160) });
     }
   }
 
-  // 자격은 있는데 호출이 실패하면 잠시 건너뜁니다(사진마다 25초를 버리지 않도록).
-  // 429(무료 티어 하루 한도)는 더 오래 쉽니다 — 그동안은 기존 판독으로 바로 내려갑니다.
+  // 자격은 있는데 호출이 실패하면 잠시 건너뜁니다(사진마다 수십 초를 버리지 않도록).
+  // 수요 폭주(5xx)는 90초만, 429(무료 티어 한도)는 30분, 그 밖(키·권한)은 10분 쉽니다.
   const reason = classifyRosterAiVisionFailure(attempts);
   state.lastAttempts = attempts.slice();
-  state.blockedUntil = now.getTime() + (reason === 'quota_exceeded'
+  state.blockedUntil = Date.now() + (reason === 'quota_exceeded'
     ? ROSTER_AI_VISION_QUOTA_COOLDOWN_MS
-    : ROSTER_AI_VISION_FAILURE_COOLDOWN_MS);
+    : reason === 'transient_unavailable'
+      ? ROSTER_AI_VISION_TRANSIENT_COOLDOWN_MS
+      : ROSTER_AI_VISION_FAILURE_COOLDOWN_MS);
   return { ok: false, reason, model, attempts };
 }
 
-/** 실패 원인 분류 — 429/한도 초과는 'quota_exceeded', 그 밖은 'request_failed'. */
+/**
+ * 실패 원인 분류
+ *   quota_exceeded        — 429·RESOURCE_EXHAUSTED (무료 한도) → 30분 휴식
+ *   transient_unavailable — 5xx UNAVAILABLE (수요 폭주) → 90초만 휴식
+ *   request_failed        — 그 밖(키·권한·형식) → 10분 휴식
+ */
 export function classifyRosterAiVisionFailure(attempts) {
   const list = Array.isArray(attempts) ? attempts : [];
   if (list.some((attempt) => Number(attempt?.status) === 429 || /RESOURCE_EXHAUSTED|quota|rate limit/i.test(String(attempt?.error || '')))) {
     return 'quota_exceeded';
+  }
+  if (list.some((attempt) => Number(attempt?.status) >= 500)) {
+    return 'transient_unavailable';
   }
   return 'request_failed';
 }
