@@ -2831,8 +2831,27 @@ async function runRosterCloudOcr(options) {
             try { return String(getActiveWorkLogDate() || ""); } catch (error) { return ""; }
         })();
         const defaultYear = Number(activeDate.slice(0, 4)) || new Date().getFullYear();
+        // 표 칸은 찾았지만 머리말 단어가 없어 선박 행이 하나도 안 나오면, 원문 전체를 문장 단위로
+        // 다시 해석합니다(Vision 이 표 구조와 다른 순서로 단어를 줄 때의 안전망).
+        const tableParsed = regions?.length ? parseRosterCloudTableResult(cloudResult, regions, defaultYear) : null;
+        if (tableParsed && !tableParsed.entries.length) {
+            const textParsed = parseRosterPhotoText(cloudResult.text, { defaultYear, defaultDate: activeDate });
+            if (textParsed.entries.length) {
+                textParsed.warnings.unshift("☁️ 표 칸 구조로는 선박명을 찾지 못해 원문 전체를 문장 단위로 다시 해석했습니다.");
+                rosterRuntime.recognizedText = String(cloudResult.text || "").replace(/\r\n?/g, "\n");
+                rosterRuntime.ocrAudit = { source: "cloud-text", detectedRegionCount: regions.length, confidence: cloudResult.confidence };
+                rosterRuntime.tableOcrParsed = null;
+                const textBox = rosterElement("rosterPhotoText");
+                if (textBox) textBox.value = rosterRuntime.recognizedText;
+                const textDetails = rosterElement("rosterPhotoTextDetails");
+                if (textDetails) { textDetails.classList.remove("hidden"); textDetails.open = true; }
+                beginRosterPhotoReview(textParsed, `✅ Google Cloud Vision 재판독 완료 (${textParsed.entries.length}척). 원본 사진과 검토해 주세요.`);
+                trackAppEvent?.("actions", "roster_photo_cloud_ocr_done");
+                return cloudResult;
+            }
+        }
         if (regions?.length) {
-            const parsed = parseRosterCloudTableResult(cloudResult, regions, defaultYear);
+            const parsed = tableParsed;
             rosterRuntime.recognizedText = parsed.rawText || parsed.text;
             rosterRuntime.ocrAudit = {
                 source: "cloud-table",
