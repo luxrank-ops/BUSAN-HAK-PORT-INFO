@@ -400,7 +400,8 @@ export async function runRosterAiVisionRequest(options = {}) {
   if (!imageBase64) return { ok: false, reason: 'missing_image', model, attempts };
   if (!hasRosterAiVisionCredential(env)) return { ok: false, reason: 'no_credential', model, attempts };
   if (!env.ROSTER_AI_VISION_FORCE && Number(state.blockedUntil || 0) > now.getTime()) {
-    return { ok: false, reason: 'cooldown', model, attempts };
+    // 쿨다운 중에도 직전 시도의 상태 코드를 돌려줘 설정 문제를 바로 알 수 있게 합니다.
+    return { ok: false, reason: 'cooldown', model, attempts: Array.isArray(state.lastAttempts) ? state.lastAttempts : [] };
   }
 
   const body = JSON.stringify(buildRosterAiVisionRequestBody({
@@ -483,6 +484,7 @@ export async function runRosterAiVisionRequest(options = {}) {
   }
 
   // 자격은 있는데 호출이 실패하면 잠시 건너뜁니다(사진마다 25초를 버리지 않도록).
+  state.lastAttempts = attempts.slice();
   state.blockedUntil = now.getTime() + ROSTER_AI_VISION_FAILURE_COOLDOWN_MS;
   return { ok: false, reason: 'request_failed', model, attempts };
 }
@@ -496,6 +498,7 @@ function finish(result, options) {
     entries: normalized.entries,
     warnings: normalized.warnings,
     workerCount: normalized.workerCount,
-    text: normalized.text
+    text: normalized.text,
+    attempts: []
   };
 }
