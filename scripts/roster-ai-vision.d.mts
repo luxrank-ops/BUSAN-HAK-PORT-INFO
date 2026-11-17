@@ -58,6 +58,8 @@ export const ROSTER_AI_VISION_GENERATIVE_ENDPOINT: string;
 export const ROSTER_AI_VISION_VERTEX_LOCATION_DEFAULT: string;
 export const ROSTER_AI_VISION_TIMEOUT_MS: number;
 export const ROSTER_AI_VISION_FAILURE_COOLDOWN_MS: number;
+export const ROSTER_AI_VISION_QUOTA_COOLDOWN_MS: number;
+export function classifyRosterAiVisionFailure(attempts: RosterAiVisionAttempt[]): 'quota_exceeded' | 'request_failed';
 export const ROSTER_AI_VISION_RESPONSE_SCHEMA: Record<string, unknown>;
 
 export function buildRosterAiVisionInstruction(options?: { defaultDate?: string; defaultYear?: number }): string;

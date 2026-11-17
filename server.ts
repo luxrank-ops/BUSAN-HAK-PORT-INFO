@@ -3174,6 +3174,21 @@ async function getRosterVertexAccessToken(): Promise<string | null> {
 
 // (레퍼런스 이미지·모델 안내는 아래 config 응답에서 함께 내려 줍니다.)
 
+/**
+ * AI 비전이 왜 넘어갔는지 클라이언트에 알려 주는 코드.
+ * 클라이언트는 이 값으로 안내 문구만 바꾸고, 팝업·재시도 없이 기존 판독 결과를 그대로 씁니다.
+ */
+function rosterAiFallbackReason(reason: string): string {
+  switch (reason) {
+    case 'quota_exceeded': return 'ai_quota_exceeded';
+    case 'not_configured': return 'ai_not_configured';
+    case 'cooldown': return 'ai_cooldown';
+    case 'no_vessels': return 'ai_no_vessels';
+    case '': return '';
+    default: return 'ai_unavailable';
+  }
+}
+
 /** 클라이언트가 보낸 기준 날짜(근무일지 날짜) — MM/DD 연도 판단에만 씁니다. */
 function readRosterOcrDefaultDate(req: any): string {
   const raw = String(req.get('X-Roster-Ocr-Date') || '').trim();
@@ -3339,13 +3354,23 @@ async function handleRosterCloudOcr(req: any, res: any) {
   } else {
     aiFailureReason = 'not_configured';
   }
+  // AI 를 못 쓰면 여기서부터는 기존 판독으로 조용히 내려갑니다(클라이언트 팝업 없음).
+  const fallbackReason = rosterAiFallbackReason(aiFailureReason);
   if (aiOnly) {
     // 1차 판독 단계에서는 Vision 까지 쓰지 않고 바로 기기 판독으로 넘깁니다(지연·비용 절약).
-    res.json({ ok: true, provider: 'none', entries: [], warnings: [], aiVision: { used: false, reason: aiFailureReason, attempts: aiAttempts } });
+    res.json({
+      ok: true,
+      provider: 'none',
+      entries: [],
+      warnings: [],
+      fallbackReason,
+      fallbackProvider: 'device-tesseract',
+      aiVision: { used: false, reason: aiFailureReason, attempts: aiAttempts }
+    });
     return;
   }
   if (!isRosterGoogleVisionEnabled()) {
-    res.status(503).json({ ok: false, error: 'cloud_ocr_not_configured', aiVision: aiFailureReason });
+    res.status(503).json({ ok: false, error: 'cloud_ocr_not_configured', fallbackReason, aiVision: aiFailureReason });
     return;
   }
   try {
@@ -3369,14 +3394,21 @@ async function handleRosterCloudOcr(req: any, res: any) {
     });
     if (!visionResponse.ok) {
       console.warn(`[roster] Google Cloud Vision returned HTTP ${visionResponse.status}`);
-      res.status(502).json({ ok: false, error: 'cloud_ocr_provider_error' });
+      res.status(502).json({ ok: false, error: 'cloud_ocr_provider_error', fallbackReason, aiVision: aiFailureReason });
       return;
     }
     const result = normalizeGoogleVisionOcrResult(await visionResponse.json());
-    res.json({ ok: true, provider: 'google-cloud-vision', aiVision: aiFailureReason, ...result });
+    res.json({
+      ok: true,
+      provider: 'google-cloud-vision',
+      fallbackReason,
+      fallbackProvider: 'google-cloud-vision',
+      aiVision: aiFailureReason,
+      ...result
+    });
   } catch (error: any) {
     console.warn('[roster] Google Cloud Vision OCR unavailable:', error?.message || 'unknown error');
-    res.status(502).json({ ok: false, error: 'cloud_ocr_unavailable' });
+    res.status(502).json({ ok: false, error: 'cloud_ocr_unavailable', fallbackReason, aiVision: aiFailureReason });
   }
 }
 
