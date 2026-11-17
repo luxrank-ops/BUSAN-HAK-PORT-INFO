@@ -709,9 +709,6 @@
         min-width: 0;
         gap: var(--sp-4);
     }
-    /* 제목 아래 간격은 flex gap 하나로만 둡니다(총 근무시간 라벨과 같은 간격).
-       → 1~4번 블록 4개의 높이 합이 총 근무시간 정사각형 높이와 정확히 같아집니다. */
-    .wage-vessel-hours > strong { margin-bottom: 0; }
     .wage-vessel-hours > strong,
     .wage-hours-total > label {
         display: block;
@@ -724,6 +721,9 @@
         overflow: hidden;
         text-overflow: ellipsis;
     }
+    /* 제목 아래 간격은 flex gap 하나로만 둡니다(총 근무시간 라벨과 같은 간격).
+       → 1~4번 블록 4개의 높이 합이 총 근무시간 정사각형 높이와 정확히 같아집니다. */
+    .wage-vessel-hours > strong { margin-bottom: 0; }
     /* 1~4번 선박을 위아래로 배치.
        노출된 블록 높이의 합 = 총 근무시간 정사각형 높이( --wage-total-side ) 이고,
        보이는 블록끼리 균등하게 나눠 가집니다 (2개 → 1/2, 4개 → 1/4). */

@@ -2749,7 +2749,11 @@ function toggleDashItem(id) {
         } else if (id === "ship-card" || id === "wage-card") {
             syncWorkLogExtraUnlockUI();
             if (id === "wage-card") {
-                if (typeof syncWageHoursBlockSize === "function") {
+                // 카드를 펼치면 1~4번 선박 블록의 빈 칸 표시·높이를 바로 다시 맞춥니다.
+                if (typeof updateWageHoursBreakdown === "function") {
+                    updateWageHoursBreakdown();
+                    setTimeout(updateWageHoursBreakdown, 40);
+                } else if (typeof syncWageHoursBlockSize === "function") {
                     syncWageHoursBlockSize();
                     setTimeout(syncWageHoursBlockSize, 40);
                 }
@@ -11062,7 +11066,7 @@ window.onload = async () => {
     initTodayVisitorBadge();
     ensureTodayUpdateNotice();
     subscribeEmergencyNotice();
-    try { const now = new Date(); now.setMinutes(now.getMinutes() - now.getTimezoneOffset()); const todayStr = now.toISOString().split('T')[0]; const sDate = document.getElementById('wageStartDate'); const eDate = document.getElementById('wageEndDate'); if(sDate) sDate.value = todayStr; if(eDate) eDate.value = todayStr; if (typeof syncWageHourlyYearLabel === 'function') syncWageHourlyYearLabel(todayStr); const initMonth = parseInt(todayStr.split('-')[1], 10) || (now.getMonth() + 1); highlightSeasonRow(initMonth); applySeasonDefaultHours(initMonth, true); if (typeof syncWageHoursBlockSize === 'function') syncWageHoursBlockSize(); if (typeof loadWageScheduledShipsForDate === 'function') loadWageScheduledShipsForDate(todayStr, false); } catch(e) { console.error("날짜 초기화 오류", e); } 
+    try { const now = new Date(); now.setMinutes(now.getMinutes() - now.getTimezoneOffset()); const todayStr = now.toISOString().split('T')[0]; const sDate = document.getElementById('wageStartDate'); const eDate = document.getElementById('wageEndDate'); if(sDate) sDate.value = todayStr; if(eDate) eDate.value = todayStr; if (typeof syncWageHourlyYearLabel === 'function') syncWageHourlyYearLabel(todayStr); const initMonth = parseInt(todayStr.split('-')[1], 10) || (now.getMonth() + 1); highlightSeasonRow(initMonth); applySeasonDefaultHours(initMonth, true); if (typeof updateWageHoursBreakdown === 'function') updateWageHoursBreakdown(); else if (typeof syncWageHoursBlockSize === 'function') syncWageHoursBlockSize(); if (typeof loadWageScheduledShipsForDate === 'function') loadWageScheduledShipsForDate(todayStr, false); } catch(e) { console.error("날짜 초기화 오류", e); } 
     loadBanner(); 
     try { 
         db.collection("notices").orderBy("timestamp","desc").onSnapshot(s => { const openIds = Array.from(document.querySelectorAll("#noticeList .board-content-row.show")).map(el => el.id); window.allNoticesCache = []; const badge = document.getElementById("noticeBadge"); const subMeta = document.getElementById("noticeCardSubMeta"); if (subMeta) subMeta.innerText = s.empty ? "운영 안내 및 주요 소식" : `등록된 공지 ${s.size}건`; if (s.empty) { renderNoticePage(1); if(badge) badge.classList.add("hidden"); return; } let isNew = false; const now = new Date(); const sortedNotices = []; s.forEach(d => { const item = { ...(d.data() || {}), id: d.id }; if (item.timestamp && item.timestamp.toDate) { if (now.getTime() - item.timestamp.toDate().getTime() < 24 * 60 * 60 * 1000) isNew = true; } sortedNotices.push(item); }); sortedNotices.sort((a, b) => { const pA = a.isPriority ? 1 : 0; const pB = b.isPriority ? 1 : 0; if (pA !== pB) return pB - pA; const tA = a.timestamp && a.timestamp.toMillis ? a.timestamp.toMillis() : 0; const tB = b.timestamp && b.timestamp.toMillis ? b.timestamp.toMillis() : 0; return tB - tA; }); window.allNoticesCache = sortedNotices; const maxPage = Math.max(1, Math.ceil(sortedNotices.length / postsPerPage)); renderNoticePage(Math.min(currentNoticePage || 1, maxPage)); openIds.forEach(rid => document.getElementById(rid)?.classList.add("show")); if(badge) { if(isNew) badge.classList.remove("hidden"); else badge.classList.add("hidden"); } }, err => { console.warn("공지사항 구독 오류:", err); }); 
