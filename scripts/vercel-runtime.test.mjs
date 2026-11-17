@@ -211,3 +211,26 @@ test('주기 작업 트리거는 단일 세그먼트 별칭 경로도 함께 등
     assert.match(serverCode, new RegExp(`app\\.get\\('${p}'`), `별칭 경로 ${p} 가 필요합니다`);
   }
 });
+
+test('일일 점검은 서버리스 번들에 없는 배포 설정 파일을 오탐 FAIL 로 처리하지 않는다', () => {
+  // 회귀 배경(2026-11-18): 매일 04:04 메일에 firebase.json·vercel.json·firestore.rules·server.ts
+  // "없음" FAIL 4건이 반복됐다. 실제로는 저장소에 모두 있고, Vercel 서버리스 번들(node-file-trace)이
+  // 배포 설정과 TS 원본을 포함하지 않기 때문이다. 상시 서버·GitHub Actions(전체 체크아웃)에서는 계속 검사한다.
+  assert.match(
+    serverCode,
+    /const deployConfigFiles = \['\.firebaserc', 'firebase\.json', 'vercel\.json', 'firestore\.rules', 'server\.ts'\]/,
+    '배포 설정 파일 목록이 필요합니다'
+  );
+  assert.match(
+    serverCode,
+    /if \(IS_VERCEL && deployConfigFiles\.includes\(f\)\) \{/,
+    '서버리스에서는 배포 설정·원본 소스 존재 검사를 건너뛰어야 합니다'
+  );
+  assert.match(serverCode, /서버리스 번들 외부\(정상\)/, '오탐 대신 정상 사유를 표기해야 합니다');
+  assert.match(
+    serverCode,
+    /else if \(IS_VERCEL\) add\('자동화', name, 'PASS'/,
+    '자동화 실행 기록은 서버리스에서 프로세스 간 공유되지 않으므로 WARN 대신 PASS 로 안내해야 합니다'
+  );
+  assert.match(serverCode, /const runtimeFiles = \['package\.json', 'public\/index\.html', 'public\/css\/app\.css', 'public\/js\/app\.js'\]/);
+});
