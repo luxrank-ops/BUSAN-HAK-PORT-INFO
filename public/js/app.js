@@ -3830,16 +3830,31 @@ function syncWageHoursBlockSize() {
 
     // 정사각형의 최소 한 변: 날짜칸 높이 2개 + 선박 블록 사이 간격
     const minimumSide = rowHeight * 2 + 4;
+    // 1~4번 선박 블록을 항상 4칸으로 보여 주므로, 4칸이 읽을 만한 높이를 확보합니다.
+    // (4칸 합산 높이 = 총 근무시간 정사각형 한 변)
+    const slotGap = 4;
+    const slotMinHeight = 34;
+    const fourSlotSide = MAX_WORK_VESSELS * slotMinHeight + (MAX_WORK_VESSELS - 1) * slotGap;
     const available = grid.getBoundingClientRect?.().width ||
         grid.parentElement?.getBoundingClientRect?.().width ||
         grid.closest?.(".dash-content")?.getBoundingClientRect?.().width ||
         grid.closest?.(".calc-layout")?.getBoundingClientRect?.().width ||
         refWidth + minimumSide + 6;
 
-    // 기본은 가로폭의 30%. 좁으면 날짜칸 기준 최소 높이를 우선
-    const side = Math.max(minimumSide, (available - 6) * 0.3);
+    // 기본은 가로폭의 30%. 좁으면 날짜칸 기준 최소 높이·4칸 최소 높이를 우선하되,
+    // 총 근무시간 칸이 화면 폭을 지나치게 차지하지 않도록 가로폭의 55%를 상한으로 둡니다.
+    const widthBudget = Math.max(fourSlotSide, (available - 6) * 0.55);
+    const side = Math.min(
+        Math.max(minimumSide, (available - 6) * 0.3, fourSlotSide),
+        widthBudget
+    );
     grid.style?.setProperty("--wage-date-height", `${rowHeight}px`);
     grid.style?.setProperty("--wage-total-side", `${side}px`);
+
+    // 4칸이 낮으면 한 줄 컴팩트 배치, 높으면 두 줄 배치로 전환합니다.
+    const slotHeight = (side - (MAX_WORK_VESSELS - 1) * slotGap) / MAX_WORK_VESSELS;
+    const pair = document.getElementById("wageHoursBreakdown");
+    if (pair && pair.classList) pair.classList.toggle("is-compact", slotHeight < 52);
 
     const timeButton = document.querySelector("#wage-card .calc-left .action-btn") || document.querySelector("#wage-card .wage-action-grid .action-btn");
     if (timeButton && typeof getComputedStyle === "function") {
@@ -3852,19 +3867,20 @@ if (typeof window !== "undefined" && typeof window.addEventListener === "functio
 }
 
 /**
- * 선박별 자동계산 블록(1~4번) 노출 제어.
- * 평소에는 1·2번만 보이고, 선박을 3척 또는 4척 선택하면 3·4번 블록이 나타납니다.
- * 보이는 블록은 CSS(grid-auto-rows:1fr + 고정 높이)로 총 근무시간 정사각형 높이를 균등 분할합니다.
+ * 선박별 자동계산 블록(1~4번) 배치 제어.
+ * 2026-11-17부터 1~4번 블록을 항상 표시합니다(4척 지원이 화면에서 바로 보이도록).
+ * 선택하지 않은 블록은 is-empty로 흐리게 두고, 4개 블록 높이의 합은
+ * CSS(grid-auto-rows:1fr + 고정 높이)로 총 근무시간 정사각형 높이를 균등 분할합니다.
  */
 function syncWageVesselSlotVisibility(selectedCount) {
-    const visible = Math.max(2, Math.min(MAX_WORK_VESSELS, Number(selectedCount) || 0));
+    const count = Math.max(0, Math.min(MAX_WORK_VESSELS, Number(selectedCount) || 0));
     for (let slot = 1; slot <= MAX_WORK_VESSELS; slot++) {
         const card = document.getElementById(`wageVessel${slot}Card`);
-        if (card && card.classList) card.classList.toggle("is-slot-hidden", slot > visible);
+        if (!card || !card.classList) continue;
+        card.classList.remove("is-slot-hidden");
+        card.classList.toggle("is-empty", slot > count);
     }
-    const pair = document.getElementById("wageHoursBreakdown");
-    if (pair && pair.classList) pair.classList.toggle("is-compact", visible > 2);
-    return visible;
+    return MAX_WORK_VESSELS;
 }
 
 /** 선택된 선박(최대 4척)의 화면 표기용 이름·시간 목록 */
@@ -5263,7 +5279,8 @@ function updateWorklogDoubleOrderStatus() {
     if (names.length === 0) {
         text = `🔀 멀티오더: 입·출항 선박을 2~${MAX_WORK_VESSELS}척 선택하면 작업 내용에 입·출항 시각과 근무시간이 자동 입력됩니다.`;
     } else if (names.length === 1) {
-        text = `🔀 더블오더 선택 1/2 · ${names[0]} · 한 척 더 선택해 주세요.`;
+        // 2026-11-17: 2척 고정 문구를 최대 4척(더블·트리플·쿼드오더) 기준으로 바꿈
+        text = `🔀 멀티오더 선택 1/${MAX_WORK_VESSELS} · ${names[0]} · 최대 ${MAX_WORK_VESSELS}척(더블·트리플·쿼드오더)까지 선택할 수 있습니다.`;
     } else if (names.length <= MAX_WORK_VESSELS) {
         text = `🔀 ${getMultiOrderLabel(names.length)} 선택 ${names.length}/${names.length} · ${names.join(" · ")} · 작업 내용 자동 입력됨`;
     } else {

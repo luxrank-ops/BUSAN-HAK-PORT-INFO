@@ -198,16 +198,22 @@ test('2. wage hours grid includes 7:3 per-vessel breakdown cards and square tota
     assert.match(appJs, /function syncWageHoursBlockSize\(\)/);
 });
 
-// 선박별 자동계산 블록은 1~4번 4칸이며, 3·4번은 기본 숨김이고
-// 보이는 칸은 총근무시간(정사각형) 높이를 균등 분할한다.
+// 선박별 자동계산 블록은 1~4번 4칸이며, 4칸 모두 기본 표시(2026-11-17)이고
+// 4칸의 높이 합은 총근무시간(정사각형) 높이를 균등 분할한다.
 test('2-1. per-vessel cards are 4 equal slots that match the total-hours block height', () => {
     for (let slot = 1; slot <= 4; slot++) {
         assert.match(html, new RegExp(`id="wageVessel${slot}Card" data-vessel-slot="${slot}"`));
         assert.match(html, new RegExp(`id="wageVessel${slot}Name"`));
         assert.match(html, new RegExp(`id="wageVessel${slot}Hours"`));
     }
-    assert.match(html, /id="wageVessel3Card"[^>]*class=|class="wage-vessel-hours-card is-slot-hidden" id="wageVessel3Card"/);
-    assert.match(html, /class="wage-vessel-hours-card is-slot-hidden" id="wageVessel4Card"/);
+    // 3·4번 블록도 기본 화면에서 바로 보입니다(숨김 클래스 없음).
+    assert.match(html, /class="wage-vessel-hours-card" id="wageVessel3Card"/);
+    assert.match(html, /class="wage-vessel-hours-card" id="wageVessel4Card"/);
+    assert.doesNotMatch(html, /is-slot-hidden" id="wageVessel3Card"/);
+    assert.doesNotMatch(html, /is-slot-hidden" id="wageVessel4Card"/);
+    // 4칸이 읽을 만한 높이를 확보하고, 총근무시간 칸이 폭을 지나치게 차지하지 않도록 JS가 계산한다.
+    assert.match(appJs, /const fourSlotSide = MAX_WORK_VESSELS \* slotMinHeight \+ \(MAX_WORK_VESSELS - 1\) \* slotGap;/);
+    assert.match(appJs, /pair\.classList\.toggle\("is-compact", slotHeight < 52\)/);
     // 균등 분할 + 총근무시간 블록과 같은 높이
     assert.match(css, /\.wage-vessel-hours-pair\s*\{[^}]*grid-auto-rows:\s*minmax\(0,\s*1fr\)/);
     assert.match(css, /\.wage-vessel-hours-pair\s*\{[^}]*height:\s*var\(--wage-total-side\)/);
@@ -232,9 +238,11 @@ test('3. selecting up to 2 vessels auto-checks double order, sums hours, and cal
     assert.equal(String(elements.wageTotalHours.value), '5');
     assert.equal(elements.wageTotalHours.readOnly, true);
 
-    // 2척까지는 3·4번 선박 블록이 숨겨져 있다.
-    assert.equal(elements.wageVessel3Card.classList.contains('is-slot-hidden'), true);
-    assert.equal(elements.wageVessel4Card.classList.contains('is-slot-hidden'), true);
+    // 2척만 골라도 3·4번 블록은 보이고, 빈 칸은 is-empty로 흐리게 표시된다.
+    assert.equal(elements.wageVessel3Card.classList.contains('is-slot-hidden'), false);
+    assert.equal(elements.wageVessel4Card.classList.contains('is-slot-hidden'), false);
+    assert.equal(elements.wageVessel3Card.classList.contains('is-empty'), true);
+    assert.equal(elements.wageVessel4Card.classList.contains('is-empty'), true);
 
     // Calculate multi-vessel wage
     context.calculateWage();
@@ -313,16 +321,16 @@ test('4. selecting 3 or 4 vessels sums all hours, reveals slots 3·4 and fills l
     assert.equal(elements.wageDoubleOrder.checked, true);
     assert.equal(String(elements.wageTotalHours.value), '7');
     assert.match(messages.at(-1), /트리플오더 3척 선택/);
-    assert.equal(elements.wageVessel3Card.classList.contains('is-slot-hidden'), false);
-    assert.equal(elements.wageVessel4Card.classList.contains('is-slot-hidden'), true);
+    assert.equal(elements.wageVessel3Card.classList.contains('is-empty'), false);
+    assert.equal(elements.wageVessel4Card.classList.contains('is-empty'), true);
     assert.equal(elements.wageVessel3Name.textContent, 'SHIP GAMMA');
     assert.equal(elements.wageVessel3Hours.textContent, '2시간');
-    assert.equal(elements.wageHoursBreakdown.classList.contains('is-compact'), true);
 
     context.applyWageScheduleShip(scheduleVessels[3], '2026-10-08', 'hjnc'); // 1H → 합계 8H
     assert.equal(String(elements.wageTotalHours.value), '8');
     assert.match(messages.at(-1), /쿼드오더 4척 선택/);
     assert.equal(elements.wageVessel4Card.classList.contains('is-slot-hidden'), false);
+    assert.equal(elements.wageVessel4Card.classList.contains('is-empty'), false);
     assert.equal(elements.wageVessel4Name.textContent, 'SHIP DELTA');
     assert.equal(elements.wageVessel4Hours.textContent, '1시간');
 
@@ -355,8 +363,8 @@ test('4. selecting 3 or 4 vessels sums all hours, reveals slots 3·4 and fills l
     assert.match(elements.logMemo.value, /\[쿼드오더 · 임금 4 · SHIP DELTA\]/);
 });
 
-// 선택을 해제하면 숨김 상태와 임금칸이 원래대로 돌아간다.
-test('5. deselecting vessels hides slots 3·4 again', () => {
+// 선택을 해제해도 1~4번 블록은 그대로 보이고, 3·4번 내용만 비워진다.
+test('5. deselecting vessels clears slots 3·4 but keeps all four blocks visible', () => {
     const { context, elements, scheduleVessels } = setup();
     [0, 1, 2, 3].forEach(i => context.applyWageScheduleShip(scheduleVessels[i], '2026-10-08', 'hjnc'));
     assert.equal(elements.wageVessel4Card.classList.contains('is-slot-hidden'), false);
@@ -364,9 +372,43 @@ test('5. deselecting vessels hides slots 3·4 again', () => {
     context.applyWageScheduleShip(scheduleVessels[3], '2026-10-08', 'hjnc'); // 해제
     context.applyWageScheduleShip(scheduleVessels[2], '2026-10-08', 'hjnc'); // 해제
     assert.equal(elements.wageShipName.value, 'SHIP ALPHA / SHIP BETA');
-    assert.equal(elements.wageVessel3Card.classList.contains('is-slot-hidden'), true);
-    assert.equal(elements.wageVessel4Card.classList.contains('is-slot-hidden'), true);
-    assert.equal(elements.wageHoursBreakdown.classList.contains('is-compact'), false);
+    assert.equal(elements.wageVessel3Card.classList.contains('is-slot-hidden'), false);
+    assert.equal(elements.wageVessel4Card.classList.contains('is-slot-hidden'), false);
+    assert.equal(elements.wageVessel3Card.classList.contains('is-empty'), true);
+    assert.equal(elements.wageVessel4Card.classList.contains('is-empty'), true);
+    assert.equal(elements.wageVessel3Name.textContent, '미선택');
+    assert.equal(elements.wageVessel4Hours.textContent, '-');
+});
+
+// 4척 각각의 주·야간 분할과 총근무시간·총액 합산이 선박별 계산 규칙대로 유지되는지 확인한다.
+test('5-1. four vessels each keep their own day/night split and the sums add up', () => {
+    const { context, elements, scheduleVessels } = setup();
+    // 10월 기준 주간 07~17시: ALPHA 2H(주간) · BETA 3H(주간) · GAMMA 2H(야간) · DELTA 1H(야간)
+    [0, 1, 2, 3].forEach(i => context.applyWageScheduleShip(scheduleVessels[i], '2026-10-08', 'hjnc'));
+    assert.equal(String(elements.wageTotalHours.value), '8');
+
+    context.calculateWage();
+    const calc = vm.runInContext('lastCalculatedWageData', context);
+    assert.equal(calc.segments.length, 4);
+    assert.equal(calc.segments.map(s => s.hours).join(','), '2,3,2,1');
+    assert.equal(calc.segments.map(s => s.dayHours).join(','), '2,3,0,0');
+    assert.equal(calc.segments.map(s => s.nightHours).join(','), '0,0,2,1');
+    assert.equal(calc.totalHours, 8);
+    // 총액은 선박별 소계의 합과 같다(야간 1.5배 할증도 선박별로 적용).
+    assert.equal(calc.totalPay, calc.segments.reduce((sum, s) => sum + s.totalPay, 0));
+    const nightAmt = calc.segments.reduce((sum, s) => sum + s.nightAmt, 0);
+    assert.equal(nightAmt, 3 * 10320 * 1.5);
+    // 내역서에는 4척 소계가 모두 표시된다.
+    assert.match(elements.wageSpecBody.innerHTML, /선박 4 \(임금 4\): SHIP DELTA/);
+});
+
+test('5-2. the work-log save payload keeps wage 3·4 and sums all four slots', () => {
+    const saveFn = extractFunction(appJs, 'saveWorkLog');
+    assert.match(saveFn, /const w3 = parseFloat\(document\.getElementById\('logWage3'\)\?\.value\)/);
+    assert.match(saveFn, /const w4 = parseFloat\(document\.getElementById\('logWage4'\)\?\.value\)/);
+    assert.match(saveFn, /const pay = w1 \+ w2 \+ w3 \+ w4;/);
+    assert.match(saveFn, /wage3: w3,/);
+    assert.match(saveFn, /wage4: w4,/);
 });
 
 test('6. ensureTodayUpdateNotice includes auto-input time standard notice and overwrites r1', async () => {
