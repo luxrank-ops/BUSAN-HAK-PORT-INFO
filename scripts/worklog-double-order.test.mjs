@@ -249,7 +249,9 @@ test('touching a vessel selects it, a second touch makes a double order and fill
     context.toggleWorklogVesselPick(0);
     assert.equal(elements.logShipName.value, 'SHIP ALPHA');
     assert.equal(elements.logMemo.value, '오늘 메모', 'a single vessel does not touch the work content');
-    assert.match(elements.worklogDoubleOrderStatus.textContent, /1\/2/);
+    // 2026-11-17: 2척 고정 문구 → 최대 4척 기준(1/4 · 더블·트리플·쿼드오더)
+    assert.match(elements.worklogDoubleOrderStatus.textContent, /1\/4/);
+    assert.match(elements.worklogDoubleOrderStatus.textContent, /더블·트리플·쿼드오더/);
 
     context.toggleWorklogVesselPick(1);
     assert.equal(elements.logShipName.value, 'SHIP ALPHA / SHIP BETA');

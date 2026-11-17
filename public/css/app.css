@@ -721,6 +721,9 @@
         overflow: hidden;
         text-overflow: ellipsis;
     }
+    /* 제목 아래 간격은 flex gap 하나로만 둡니다(총 근무시간 라벨과 같은 간격).
+       → 1~4번 블록 4개의 높이 합이 총 근무시간 정사각형 높이와 정확히 같아집니다. */
+    .wage-vessel-hours > strong { margin-bottom: 0; }
     /* 1~4번 선박을 위아래로 배치.
        노출된 블록 높이의 합 = 총 근무시간 정사각형 높이( --wage-total-side ) 이고,
        보이는 블록끼리 균등하게 나눠 가집니다 (2개 → 1/2, 4개 → 1/4). */
@@ -732,8 +735,16 @@
         height: var(--wage-total-side);
         min-height: var(--wage-total-side);
     }
-    /* 선박 3·4번 블록은 3척 이상 선택 시에만 나타납니다 */
+    /* 1~4번 블록은 항상 보입니다(과거 숨김 규칙은 호환용으로 남겨 둡니다) */
     .wage-vessel-hours-card.is-slot-hidden { display: none; }
+    /* 선택하지 않은 블록: 테두리·글자를 흐리게 해서 선택된 선박이 눈에 띄게 */
+    .wage-vessel-hours-card.is-empty {
+        border-style: dashed;
+        border-color: var(--n-200);
+        background: transparent;
+        opacity: 0.55;
+    }
+    body.dark-mode .wage-vessel-hours-card.is-empty { background: transparent; }
     .wage-vessel-hours-card {
         box-sizing: border-box;
         display: grid;
