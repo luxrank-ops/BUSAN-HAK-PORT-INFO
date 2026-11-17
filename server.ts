@@ -3290,6 +3290,8 @@ async function handleRosterCloudOcr(req: any, res: any) {
         defaultDate: readRosterOcrDefaultDate(req),
         env: process.env as Record<string, string | undefined>,
         getAccessToken: getRosterVertexAccessToken,
+        // Vertex AI URL 에 쓰는 프로젝트 ID — Firebase 초기화와 같은 기본값을 씁니다.
+        projectId: process.env.FIREBASE_PROJECT_ID || 'busan-hak-port',
         state: rosterAiVisionState
       });
       if (aiResult.ok && aiResult.entries.length) {

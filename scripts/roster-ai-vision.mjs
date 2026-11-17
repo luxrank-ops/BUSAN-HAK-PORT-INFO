@@ -369,8 +369,8 @@ function generativeEndpoint(env) {
   return base.replace(/\/+$/, '');
 }
 
-function vertexEndpoint(env, model) {
-  const project = String(env.FIREBASE_PROJECT_ID || env.GOOGLE_CLOUD_PROJECT || '').trim();
+function vertexEndpoint(env, model, projectId) {
+  const project = String(projectId || env.FIREBASE_PROJECT_ID || env.GOOGLE_CLOUD_PROJECT || '').trim();
   if (!project) return '';
   const location = String(env.ROSTER_AI_VISION_VERTEX_LOCATION || '').trim() || ROSTER_AI_VISION_VERTEX_LOCATION_DEFAULT;
   const host = location === 'global' ? 'aiplatform.googleapis.com' : `${location}-aiplatform.googleapis.com`;
@@ -468,7 +468,7 @@ export async function runRosterAiVisionRequest(options = {}) {
   }
 
   const tokenProvider = options.getAccessToken;
-  const vertexUrl = vertexEndpoint(env, model);
+  const vertexUrl = vertexEndpoint(env, model, options.projectId);
   if (tokenProvider && vertexUrl) {
     try {
       const token = await tokenProvider();

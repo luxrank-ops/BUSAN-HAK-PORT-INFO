@@ -273,6 +273,34 @@ test('모델이 사고 토큰 0 을 거부하면 thinkingConfig 없이 한 번 �
     assert.equal('thinkingConfig' in bodies[1].generationConfig, false);
 });
 
+test('프로젝트 ID 를 인자로 받으면 Vertex URL 을 만들고, 없으면 시도하지 않는다', async () => {
+    const urls = [];
+    const withProject = await runRosterAiVisionRequest({
+        imageBase64: 'VEFSR0VU',
+        projectId: 'busan-hak-port',
+        env: { FIREBASE_SERVICE_ACCOUNT_KEY: '{"project_id":"x"}' },
+        getAccessToken: async () => 'ya29-token',
+        fetchImpl: async (url) => {
+            urls.push(url);
+            return jsonResponse({ error: { message: 'Vertex AI API has not been used in project' } }, 403);
+        }
+    });
+    assert.equal(withProject.ok, false);
+    assert.match(urls[0], /projects\/busan-hak-port\/locations\/global/);
+    assert.deepEqual(withProject.attempts.map((attempt) => `${attempt.provider}:${attempt.status}`), ['vertex-gemini:403']);
+
+    // 프로젝트 ID 를 모르면 호출 없이 실패로 남고, 사진마다 빈 요청을 보내지 않습니다.
+    const noProject = await runRosterAiVisionRequest({
+        imageBase64: 'VEFSR0VU',
+        env: { FIREBASE_SERVICE_ACCOUNT_KEY: '{"project_id":"x"}' },
+        getAccessToken: async () => 'ya29-token',
+        fetchImpl: async () => jsonResponse({}, 200),
+        state: {}
+    });
+    assert.equal(noProject.ok, false);
+    assert.deepEqual(noProject.attempts, []);
+});
+
 test('자격이 없거나 호출이 실패하면 예외 없이 실패 이유를 돌려주고 잠시 재시도를 멈춘다', async () => {
     const noCredential = await runRosterAiVisionRequest({ imageBase64: 'VEFSR0VU', env: {} });
     assert.equal(noCredential.ok, false);
