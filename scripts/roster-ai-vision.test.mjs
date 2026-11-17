@@ -338,7 +338,8 @@ test('서버는 AI 비전 → Google Cloud Vision → 기기 판독 순서로 �
     assert.match(server, /ROSTER_AI_VISION_REFERENCE_BASE64/);
     assert.match(server, /X-Roster-Ocr-Mode/);
     assert.match(server, /getRosterVertexAccessToken/);
-    assert.match(server, /aiVision: isRosterAiVisionEnabled\(\)/);
+    assert.match(server, /aiVision: advertised/);
+    assert.match(server, /ROSTER_AI_VISION_ADVERTISE_MS/);
     assert.match(server, /vision\.googleapis\.com\/v1\/images:annotate/);
     assert.doesNotMatch(server, /console\.(?:log|info)\([^\n]*(?:image\.toString|imageBase64)/i);
     // 화면 잠금·인증·앱 이름·식단 업로드 경로는 그대로 유지됩니다.
