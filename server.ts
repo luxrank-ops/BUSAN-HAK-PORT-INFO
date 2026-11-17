@@ -2121,11 +2121,22 @@ export async function runDailyInspection(
   };
 
   // 1) 필수 파일
-  const requiredFiles = [
-    '.firebaserc', 'firebase.json', 'vercel.json', 'firestore.rules', 'package.json',
-    'public/index.html', 'public/css/app.css', 'public/js/app.js', 'server.ts'
-  ];
+  //    Vercel 서버리스 번들은 함수 코드가 실제로 참조하는 파일만 포함한다(node-file-trace).
+  //    저장소 루트의 배포 설정(.firebaserc·firebase.json·vercel.json·firestore.rules)은
+  //    배포 시점 도구가 소비하고, server.ts 는 JS 로 컴파일되므로 번들에 들어오지 않는다.
+  //    → 서버리스에서 이들을 "없음"으로 판정하면 매일 오탐 FAIL 4건이 발생한다(2026-11-18 확인).
+  //      번들에 실제로 포함되는 런타임 자산만 존재 검사하고, 배포 설정 파일은
+  //      상시 서버(전체 체크아웃)에서만 검사한다. GitHub Actions 점검은 전체 체크아웃 기준이라
+  //      이 파일들의 실수 삭제는 그쪽에서 계속 잡힌다.
+  const deployConfigFiles = ['.firebaserc', 'firebase.json', 'vercel.json', 'firestore.rules', 'server.ts'];
+  const runtimeFiles = ['package.json', 'public/index.html', 'public/css/app.css', 'public/js/app.js'];
+  const requiredFiles = [...deployConfigFiles.slice(0, 4), ...runtimeFiles, 'server.ts'];
   for (const f of requiredFiles) {
+    if (IS_VERCEL && deployConfigFiles.includes(f)) {
+      // 배포 설정·원본 소스는 서버리스 번들 외부에 있다(정상) — CDN 이 build/public 을 서빙하는 것과 같은 이유
+      add('파일 존재', f, 'PASS', '서버리스 번들 외부(정상) — 배포 시점 반영');
+      continue;
+    }
     try {
       await fs.access(path.join(__dirname, f));
       add('파일 존재', f, 'PASS', '존재');
@@ -2175,6 +2186,7 @@ export async function runDailyInspection(
   ];
   for (const [name, lastSuccess] of autoChecks) {
     if (lastSuccess) add('자동화', name, 'PASS', `마지막 성공 ${lastSuccess}`);
+    else if (IS_VERCEL) add('자동화', name, 'PASS', '서버리스 — 각 크론 함수에서 실행(프로세스 간 기록 비공유)');
     else add('자동화', name, 'WARN', '아직 실행 기록 없음', 'medium');
   }
 
@@ -2337,9 +2349,10 @@ export function generateInspectionMarkdown(result: InspectionResult): string {
   }
   md += `\n---\n\n## 3. 자동화 상태\n\n`;
   md += `| 작업 | 스케줄 | 상태 |\n| --- | --- | --- |\n`;
-  md += `| 선박 스케줄 감지 | 매 정각 | ${automationRuntimeStatus.scheduleWatcher.lastSuccessAt ? '✅' : '⏳'} ${automationRuntimeStatus.scheduleWatcher.lastSuccessAt || '기록 없음'} |\n`;
-  md += `| DB 정리 | 매일 03:00 | ${automationRuntimeStatus.autoCleanup.lastSuccessAt ? '✅' : '⏳'} ${automationRuntimeStatus.autoCleanup.lastSuccessAt || '기록 없음'} |\n`;
-  md += `| 주간 백업 | 일요일 00:00 | ${automationRuntimeStatus.weeklyBackup.lastSuccessAt ? '✅' : '⏳'} ${automationRuntimeStatus.weeklyBackup.lastSuccessAt || '기록 없음'} |\n`;
+  const autoCell = (at: string | null) => (at ? `✅ ${at}` : IS_VERCEL ? '☁️ 서버리스 — 별도 크론 실행' : '⏳ 기록 없음');
+  md += `| 선박 스케줄 감지 | 매 정각 | ${autoCell(automationRuntimeStatus.scheduleWatcher.lastSuccessAt)} |\n`;
+  md += `| DB 정리 | 매일 03:00 | ${autoCell(automationRuntimeStatus.autoCleanup.lastSuccessAt)} |\n`;
+  md += `| 주간 백업 | 일요일 00:00 | ${autoCell(automationRuntimeStatus.weeklyBackup.lastSuccessAt)} |\n`;
   md += `| **일일 점검** | **매일 04:00** | **${overallEmoji} ${overallLabel}** |\n\n`;
   md += `---\n\n## 4. 배포 상태\n\n| 구분 | URL | 비고 |\n| --- | --- | --- |\n| 운영 (Vercel) | https://busan-hak-port-info.vercel.app | main 푸시 자동 배포 |\n| 보조 (Firebase) | https://busan-hak-port.web.app | 승인형 배포 |\n| 저장소 | Firebase \`busan-hak-port\` | Firestore · FCM |\n\n`;
   if (summary.fail > 0) {
