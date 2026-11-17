@@ -20,6 +20,13 @@ import { getMessaging } from 'firebase-admin/messaging';
 import { getStorage } from 'firebase-admin/storage';
 import { GoogleAuth } from 'google-auth-library';
 import { normalizeGoogleVisionOcrResult } from './scripts/roster-cloud-ocr.mjs';
+// 근무배치(종이오더) AI 비전 판독 — 예시 이미지(색 테두리) Few-shot + JSON 스키마 (scripts/roster-ai-vision.mjs)
+import {
+  hasRosterAiVisionCredential,
+  resolveRosterAiVisionModel,
+  runRosterAiVisionRequest
+} from './scripts/roster-ai-vision.mjs';
+import { ROSTER_AI_VISION_REFERENCE_BASE64, ROSTER_AI_VISION_REFERENCE_MIME } from './scripts/roster-ai-vision-reference.mjs';
 import cron from 'node-cron';
 // 일일 점검 보고서 메일 발송기 (scripts/daily-report-mailer.mjs — 타입은 .d.mts 에 선언)
 import { sendInspectionReportEmail, resolveMailTransport, DEFAULT_REPORT_EMAIL_TO } from './scripts/daily-report-mailer.mjs';
@@ -3100,7 +3107,7 @@ app.use('/api', (req, res, next) => {
     res.setHeader('Access-Control-Allow-Origin', origin);
     res.setHeader('Vary', 'Origin');
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Roster-Ocr-Consent');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Roster-Ocr-Consent, X-Roster-Ocr-Mode, X-Roster-Ocr-Date');
   }
   if (req.method === 'OPTIONS') {
     res.status(204).end();
@@ -3115,9 +3122,46 @@ app.use('/api', express.json({ limit: '4kb' }));
 const GOOGLE_CLOUD_VISION_SCOPE = 'https://www.googleapis.com/auth/cloud-platform';
 let rosterVisionAuth: GoogleAuth | null = null;
 
+// ── 근무배치 AI 비전 판독 (2026-11-17) ──────────────────────────────────────
+// 예시 이미지(사용자가 색 테두리로 규칙을 표시한 사진)를 함께 보내는 Few-shot 판독입니다.
+// 자격: GEMINI_API_KEY(AI Studio) 또는 기존 Firebase 서비스 계정(Vertex AI) — 둘 다 없으면
+// 호출하지 않고 기존 Google Cloud Vision·기기 판독으로 내려갑니다.
+const rosterAiVisionState: { blockedUntil: number } = { blockedUntil: 0 };
+
+function isRosterAiVisionEnabled(): boolean {
+  return hasRosterAiVisionCredential(process.env as Record<string, string | undefined>);
+}
+
+function hasRosterServiceAccount(): boolean {
+  return Boolean(process.env.FIREBASE_SERVICE_ACCOUNT_KEY || process.env.GOOGLE_APPLICATION_CREDENTIALS);
+}
+
 function isRosterCloudOcrEnabled(): boolean {
   return process.env.ROSTER_CLOUD_OCR_ENABLED === '1'
-    && Boolean(process.env.FIREBASE_SERVICE_ACCOUNT_KEY || process.env.GOOGLE_APPLICATION_CREDENTIALS);
+    && (hasRosterServiceAccount() || Boolean(String(process.env.GEMINI_API_KEY || '').trim()));
+}
+
+function isRosterGoogleVisionEnabled(): boolean {
+  return process.env.ROSTER_CLOUD_OCR_ENABLED === '1' && hasRosterServiceAccount();
+}
+
+/** Vertex AI(Gemini)용 OAuth 토큰 — 기존 서비스 계정을 그대로 씁니다(새 키 발급 없음). */
+async function getRosterVertexAccessToken(): Promise<string | null> {
+  if (!hasRosterServiceAccount()) return null;
+  try {
+    const client = await getRosterVisionAuth().getClient();
+    const token = await client.getAccessToken();
+    return token?.token || null;
+  } catch (error: any) {
+    console.warn('[roster] Vertex AI 토큰 발급 실패:', error?.message || 'unknown error');
+    return null;
+  }
+}
+
+/** 클라이언트가 보낸 기준 날짜(근무일지 날짜) — MM/DD 연도 판단에만 씁니다. */
+function readRosterOcrDefaultDate(req: any): string {
+  const raw = String(req.get('X-Roster-Ocr-Date') || '').trim();
+  return /^\d{4}-\d{2}-\d{2}$/.test(raw) ? raw : '';
 }
 
 /**
@@ -3171,18 +3215,23 @@ function getRosterVisionAuth(): GoogleAuth {
   return rosterVisionAuth;
 }
 
-app.get('/api/roster-ocr/config', (_req, res) => {
+function sendRosterOcrConfig(_req: any, res: any) {
   res.setHeader('Cache-Control', 'no-store');
-  res.json({ enabled: isRosterCloudOcrEnabled(), provider: 'google-cloud-vision' });
-});
+  res.json({
+    enabled: isRosterCloudOcrEnabled(),
+    provider: isRosterAiVisionEnabled() ? 'gemini-vision' : 'google-cloud-vision',
+    // 클라이언트는 이 값이 true 일 때만 사진 선택 직후 AI 1차 판독을 시도합니다.
+    aiVision: isRosterAiVisionEnabled(),
+    aiVisionModel: isRosterAiVisionEnabled() ? resolveRosterAiVisionModel(process.env as Record<string, string | undefined>) : ''
+  });
+}
+
+app.get('/api/roster-ocr/config', sendRosterOcrConfig);
 
 // Vercel 의 catch-all 함수(api/[...path].ts)는 1세그먼트 경로만 매칭합니다.
 // 그래서 브라우저가 /api/roster-ocr/config 를 부르면 플랫폼 라우터가 404(NOT_FOUND)를 돌려주고,
 // 클라이언트는 온라인 OCR 버튼을 영원히 숨깁니다. 앱은 이 단일 세그먼트 별칭을 먼저 조회합니다.
-app.get('/api/roster-ocr-config', (_req, res) => {
-  res.setHeader('Cache-Control', 'no-store');
-  res.json({ enabled: isRosterCloudOcrEnabled(), provider: 'google-cloud-vision' });
-});
+app.get('/api/roster-ocr-config', sendRosterOcrConfig);
 
 // Google Cloud Vision is an explicit, user-requested fallback only. Raw image bytes are
 // processed in memory and never written to logs, Firestore, or local storage.
@@ -3223,6 +3272,58 @@ async function handleRosterCloudOcr(req: any, res: any) {
     res.status(400).json({ ok: false, error: 'invalid_jpeg' });
     return;
   }
+
+  // ── 1) AI 비전(예시 테두리 학습) 1차 판독 ──────────────────────────────
+  // X-Roster-Ocr-Mode: ai  → 사진 선택 직후의 1차 판독. AI 만 시도하고 없으면 바로 기기 판독으로 돌려보냅니다.
+  // 그 외(수동 온라인 재판독·자동 폴백) → AI → Google Cloud Vision 순서로 내려갑니다.
+  const aiOnly = String(req.get('X-Roster-Ocr-Mode') || '').toLowerCase() === 'ai';
+  let aiFailureReason = '';
+  if (isRosterAiVisionEnabled()) {
+    try {
+      const aiResult = await runRosterAiVisionRequest({
+        imageBase64: image.toString('base64'),
+        imageMimeType: 'image/jpeg',
+        referenceBase64: ROSTER_AI_VISION_REFERENCE_BASE64,
+        referenceMimeType: ROSTER_AI_VISION_REFERENCE_MIME,
+        defaultDate: readRosterOcrDefaultDate(req),
+        env: process.env as Record<string, string | undefined>,
+        getAccessToken: getRosterVertexAccessToken,
+        state: rosterAiVisionState
+      });
+      if (aiResult.ok && aiResult.entries.length) {
+        res.json({
+          ok: true,
+          provider: aiResult.provider,
+          model: aiResult.model,
+          entries: aiResult.entries,
+          warnings: aiResult.warnings,
+          workerCount: aiResult.workerCount,
+          text: aiResult.text,
+          confidence: null
+        });
+        return;
+      }
+      aiFailureReason = aiResult.ok ? 'no_vessels' : aiResult.reason;
+      if (!aiResult.ok) {
+        console.warn(`[roster] AI 비전 판독 건너뜀 (${aiResult.reason})`,
+          (aiResult.attempts || []).map((attempt) => `${attempt.provider}:${attempt.error}`).join(' / '));
+      }
+    } catch (error: any) {
+      aiFailureReason = 'exception';
+      console.warn('[roster] AI 비전 판독 오류:', error?.message || 'unknown error');
+    }
+  } else {
+    aiFailureReason = 'not_configured';
+  }
+  if (aiOnly) {
+    // 1차 판독 단계에서는 Vision 까지 쓰지 않고 바로 기기 판독으로 넘깁니다(지연·비용 절약).
+    res.json({ ok: true, provider: 'none', entries: [], warnings: [], aiVision: { used: false, reason: aiFailureReason } });
+    return;
+  }
+  if (!isRosterGoogleVisionEnabled()) {
+    res.status(503).json({ ok: false, error: 'cloud_ocr_not_configured', aiVision: aiFailureReason });
+    return;
+  }
   try {
     const googleAuth = getRosterVisionAuth();
     const client = await googleAuth.getClient();
@@ -3248,7 +3349,7 @@ async function handleRosterCloudOcr(req: any, res: any) {
       return;
     }
     const result = normalizeGoogleVisionOcrResult(await visionResponse.json());
-    res.json({ ok: true, provider: 'google-cloud-vision', ...result });
+    res.json({ ok: true, provider: 'google-cloud-vision', aiVision: aiFailureReason, ...result });
   } catch (error: any) {
     console.warn('[roster] Google Cloud Vision OCR unavailable:', error?.message || 'unknown error');
     res.status(502).json({ ok: false, error: 'cloud_ocr_unavailable' });

@@ -2367,6 +2367,19 @@
     }
     .roster-photo-source-text strong { color: var(--text-main); font-weight: var(--fw-black); }
     body.dark-mode .roster-photo-source-text { background: var(--surface-dark); }
+    /* AI 비전이 읽은 원본 메모(예: 05:00추가, DGT 지원) — 이름과 섞지 않고 따로 보여 줍니다. */
+    .roster-photo-row-note {
+        margin-top: var(--sp-2);
+        padding: var(--sp-3) var(--sp-4);
+        border-radius: var(--radius-sm);
+        background: var(--n-050);
+        color: var(--text-sub);
+        font-size: var(--fs-2);
+        line-height: var(--lh-3);
+        white-space: pre-wrap;
+        overflow-wrap: anywhere;
+    }
+    body.dark-mode .roster-photo-row-note { background: var(--surface-dark); }
     .roster-photo-row-grid {
         display: grid;
         grid-template-columns: repeat(2, minmax(0, 1fr));

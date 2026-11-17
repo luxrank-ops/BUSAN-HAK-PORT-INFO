@@ -46,6 +46,9 @@ const rosterRuntime = {
     finderResults: [],
     activeImageUrl: "",
     cloudOcrEnabled: false,
+    // 서버에 예시 이미지 학습형 AI 비전(Gemini)이 설정돼 있는지 — 사진 선택 직후 1차 판독에 씁니다.
+    aiVisionEnabled: false,
+    aiVisionModel: "",
     // 사용자가 이 탭에서 온라인 전송에 한 번 동의했는지 — 자동 폴백의 전제입니다.
     cloudOcrConsent: false,
     recognizedText: "",
@@ -1143,8 +1146,12 @@ async function refreshRosterCloudOcrButton() {
         if (!response.ok) response = await fetch("/api/roster-ocr/config", { cache: "no-store" });
         const config = response.ok ? await response.json() : null;
         rosterRuntime.cloudOcrEnabled = Boolean(config?.enabled);
+        rosterRuntime.aiVisionEnabled = Boolean(config?.enabled && config?.aiVision);
+        rosterRuntime.aiVisionModel = String(config?.aiVisionModel || "");
         button.classList.toggle("hidden", !rosterRuntime.cloudOcrEnabled);
         button.disabled = !rosterRuntime.cloudOcrEnabled || !rosterRuntime.activeImageUrl;
+        // 서버에 AI 비전이 설정돼 있으면 버튼 이름이 실제 동작(예시 학습 판독)을 말하게 합니다.
+        if (rosterRuntime.aiVisionEnabled) button.textContent = "🤖 AI 비전으로 다시 읽기 (사진 전송)";
         return rosterRuntime.cloudOcrEnabled;
     } catch (error) {
         return false;
@@ -2418,6 +2425,94 @@ function rosterRegionMeanLuminance(imageData, region) {
     return count ? sum / count : 0;
 }
 
+/**
+ * 한 선박의 작업자 칸은 이름이 2열로 인쇄됩니다(원문자 ①·②가 열 머리에 붙습니다).
+ * 칸을 통째로 읽으면 두 열이 한 줄로 섞여 이름 순서가 뒤바뀌고 일부를 잃을 수 있어,
+ * 글자가 거의 없는 세로 여백을 찾아 좌·우 열을 따로 읽습니다. 찾지 못하면 -1.
+ */
+function findRosterWorkerCellColumnSplit(canvas) {
+    const context = canvas?.getContext?.("2d");
+    const width = Math.floor(Number(canvas?.width) || 0);
+    const height = Math.floor(Number(canvas?.height) || 0);
+    if (!context || !width || !height) return -1;
+    let pixels;
+    try {
+        pixels = context.getImageData(0, 0, width, height);
+    } catch (error) {
+        return -1;
+    }
+    const ink = new Array(width).fill(0);
+    const step = Math.max(1, Math.round(height / 400));
+    let sampled = 0;
+    for (let y = 0; y < height; y += step) {
+        sampled += 1;
+        const rowStart = y * width * 4;
+        for (let x = 0; x < width; x += 1) {
+            if (pixels.data[rowStart + x * 4] <= 110) ink[x] += 1;
+        }
+    }
+    if (!sampled) return -1;
+    // 칸 전체 평균 잉크 밀도 — 열 사이 여백은 이보다 훨씬 비어 있어야 합니다.
+    let totalInk = 0;
+    for (let x = 0; x < width; x += 1) totalInk += ink[x];
+    const meanInk = totalInk / width;
+    if (!(meanInk > 0)) return -1;
+    // 표의 가운데 부근에서 가장 길게 이어지는 빈 세로 띠를 찾습니다(양 끝 잉크가 섞이는 것을 피해 띠의 가운데를 씁니다).
+    const from = Math.max(2, Math.round(width * 0.36));
+    const to = Math.min(width - 3, Math.round(width * 0.64));
+    const emptyLimit = meanInk * 1.5;
+    let best = null;
+    let runStart = -1;
+    for (let x = from; x <= to; x += 1) {
+        const band = (ink[x - 2] || 0) + (ink[x - 1] || 0) + ink[x] + (ink[x + 1] || 0) + (ink[x + 2] || 0);
+        const empty = band <= emptyLimit;
+        if (empty && runStart < 0) runStart = x;
+        if (runStart >= 0 && (!empty || x === to)) {
+            const end = empty ? x : x - 1;
+            if (!best || end - runStart > best.end - best.start) best = { start: runStart, end };
+            runStart = -1;
+        }
+    }
+    if (!best) return -1;
+    const bestX = Math.round((best.start + best.end) / 2);
+    let leftInk = 0;
+    let rightInk = 0;
+    for (let x = 0; x < bestX - 4; x += 1) leftInk += ink[x];
+    for (let x = bestX + 4; x < width; x += 1) rightInk += ink[x];
+    // 양쪽 모두 이름 글자가 있어야 2열 표입니다.
+    if (leftInk < sampled * 2 || rightInk < sampled * 2) return -1;
+    return bestX;
+}
+
+/** 이미 키운 작업자 칸 캔버스의 일부(한 열)를 다시 확대해 이름만 읽습니다. */
+async function readRosterWorkerColumnNames(worker, sourceCanvas, x, width, zoom = 1.5) {
+    const sourceWidth = Math.max(1, Math.round(Number(width) || 0));
+    if (!worker?.recognize || !sourceCanvas?.width || sourceWidth < 8) return [];
+    const slice = document.createElement("canvas");
+    slice.width = Math.max(1, Math.round(sourceWidth * zoom));
+    slice.height = Math.max(1, Math.round(sourceCanvas.height * zoom));
+    const context = slice.getContext("2d");
+    if (!context) return [];
+    context.imageSmoothingEnabled = true;
+    if ("imageSmoothingQuality" in context) context.imageSmoothingQuality = "high";
+    context.drawImage(sourceCanvas, x, 0, sourceWidth, sourceCanvas.height, 0, 0, slice.width, slice.height);
+    const result = await worker.recognize(slice.toDataURL("image/png"));
+    const data = result?.data || {};
+    return Array.isArray(data.words) && data.words.length
+        ? collectRosterWorkerCellNames(data.words)
+        : readRosterWorkerCellNames(data.text);
+}
+
+function dedupeRosterWorkerNames(names) {
+    const seen = new Set();
+    return (names || []).filter((name) => {
+        const key = String(name || "").trim();
+        if (!key || seen.has(key)) return false;
+        seen.add(key);
+        return true;
+    });
+}
+
 async function readRosterTableWorkerCells(worker, sourceCanvas, regions, headers, imageData) {
     const results = [];
     // 종이 크롭으로 이미 키운 캔버스를 1배로 쓰면 작은 이름 글자가 뭉개지고(실측 8/16),
@@ -2454,6 +2549,24 @@ async function readRosterTableWorkerCells(worker, sourceCanvas, regions, headers
                 if (retryNames.length > names.length) {
                     names = retryNames;
                     data = { ...data, text: `${data.text || ""}\n${retryData.text || ""}` };
+                }
+            }
+            // 두 열을 통째로 읽어 이름이 적게 나왔을 때만 열을 나눠 다시 읽습니다.
+            // (한 열짜리 표·이미 충분한 판독에서는 시간을 쓰지 않고 기존 결과를 유지합니다.)
+            if (names.length < 12) {
+                try {
+                    const splitX = findRosterWorkerCellColumnSplit(cropCanvas);
+                    if (splitX > 0) {
+                        const left = await readRosterWorkerColumnNames(worker, cropCanvas, 0, splitX);
+                        const right = await readRosterWorkerColumnNames(worker, cropCanvas, splitX, cropCanvas.width - splitX);
+                        const columnNames = dedupeRosterWorkerNames([...left, ...right]);
+                        if (columnNames.length > names.length) {
+                            names = columnNames;
+                            data = { ...data, text: `${data.text || ""}\n${[...left, ...right].join("\n")}` };
+                        }
+                    }
+                } catch (error) {
+                    console.warn("[roster] worker column split unavailable", error);
                 }
             }
             cell = { names, ...readRosterWorkerCellMeta(data.text) };
@@ -2531,6 +2644,9 @@ async function runRosterPhotoOcr() {
         return result?.data || {};
     };
     try {
+        // 서버에 예시 이미지 학습형 AI 비전이 설정돼 있으면 기기 판독보다 먼저 선박 블록을 읽습니다.
+        // (1척 이상 읽혔을 때만 채택하고, 아니면 아래 기기 Tesseract 판독을 그대로 이어 갑니다.)
+        if (await maybeRunRosterAiVisionFirst()) return true;
         const [engine, enhancedCanvas] = await Promise.all([getRosterOcrEngine(), prepareRosterCanvasForOcr("enhanced")]);
         worker = await engine.createWorker("kor+eng", 1, {
             logger: (progress) => {
@@ -2747,6 +2863,94 @@ function countRosterParsedWorkers(parsed) {
 }
 
 /**
+ * AI 비전(예시 이미지 학습) 판독 결과를 검토표·원문 상자에 반영합니다.
+ * 서버가 이미 날짜·선박명·시간·회사명·이름을 행 단위로 나눠 주므로 표 칸 좌표 해석 없이 바로 씁니다.
+ */
+function applyRosterAiVisionResult(result) {
+    const entries = (Array.isArray(result?.entries) ? result.entries : []).map((row) => ({
+        ...row,
+        workers: Array.isArray(row?.workers) ? [...row.workers] : []
+    }));
+    if (!entries.length) return [];
+    rosterRuntime.recognizedText = String(result?.text || "");
+    rosterRuntime.ocrAudit = { source: "ai-vision", detectedRegionCount: entries.length, confidence: null };
+    rosterRuntime.tableOcrParsed = {
+        entries,
+        warnings: Array.isArray(result?.warnings) ? [...result.warnings] : [],
+        unassignedWorkerCellCount: 0
+    };
+    const box = rosterElement("rosterPhotoText");
+    if (box) box.value = rosterRuntime.recognizedText;
+    const details = rosterElement("rosterPhotoTextDetails");
+    if (details) { details.classList.remove("hidden"); details.open = true; }
+    const workerCount = Number(result?.workerCount) || countRosterParsedWorkers(rosterRuntime.tableOcrParsed);
+    const engineLabel = String(result?.provider || "").startsWith("vertex") ? "Vertex AI 비전" : "Gemini 비전";
+    beginRosterPhotoReview(rosterRuntime.tableOcrParsed, `🤖 ${engineLabel} 판독 완료 (${entries.length}척 · 이름 ${workerCount}명). 원본 사진과 대조해 주세요.`);
+    trackAppEvent?.("actions", "roster_photo_ai_vision_done");
+    return entries;
+}
+
+/** 온라인 OCR 인증용 사용자 토큰 — 앱 익명 로그인으로도 동작합니다. */
+async function getRosterCloudOcrIdToken() {
+    let current = null;
+    try { current = typeof auth !== "undefined" ? auth?.currentUser || null : null; } catch (error) { current = null; }
+    if (!current && typeof ensureAnonymousAuth === "function") current = await ensureAnonymousAuth();
+    if (!current?.getIdToken) return "";
+    try { return await current.getIdToken(); } catch (error) { return ""; }
+}
+
+/**
+ * 사진 선택 직후 AI 비전 1차 판독 (예시 테두리 학습).
+ * 성공하면 검토표를 열고 true, 아니면 false 를 돌려 기기 Tesseract 판독을 이어 갑니다.
+ * 사진 전송은 이 탭에서 이미 동의한 경우에만 묻지 않고, 처음에는 한 번 확인합니다.
+ */
+async function maybeRunRosterAiVisionFirst() {
+    if (!rosterRuntime.cloudOcrEnabled || !rosterRuntime.aiVisionEnabled) return false;
+    if (!rosterRuntime.activeImageUrl) return false;
+    if (!rosterRuntime.cloudOcrConsent) {
+        const approved = window.confirm("🤖 예시 이미지로 학습한 AI 비전이 선박 블록·날짜·선박명·시간·회사명·작업자 이름을 읽습니다.\n사진을 서버로 전송할까요?\n\n취소를 누르면 이 기기 안에서만 읽습니다.");
+        if (!approved) return false;
+        rosterRuntime.cloudOcrConsent = true;
+    }
+    try {
+        setRosterPhotoStatus("🤖 예시 이미지로 학습한 AI 비전이 선박 블록을 읽는 중…");
+        const cloudImage = await prepareRosterCloudCanvas();
+        const idToken = await getRosterCloudOcrIdToken();
+        if (!idToken) return false;
+        const jpeg = await new Promise((resolve, reject) => {
+            cloudImage.canvas.toBlob((blob) => blob ? resolve(blob) : reject(new Error("사진을 AI 판독용으로 준비하지 못했습니다.")), "image/jpeg", 0.9);
+        });
+        if (!jpeg || jpeg.size > 4 * 1024 * 1024) return false;
+        const activeDate = (() => {
+            try { return String(getActiveWorkLogDate() || ""); } catch (error) { return ""; }
+        })();
+        const post = (path) => fetch(path, {
+            method: "POST",
+            headers: {
+                "Content-Type": "image/jpeg",
+                Authorization: `Bearer ${idToken}`,
+                "X-Roster-Ocr-Consent": "1",
+                // ai = AI 비전만 시도(실패하면 서버가 바로 빈 결과를 돌려주고 기기 판독으로 진행)
+                "X-Roster-Ocr-Mode": "ai",
+                ...(activeDate ? { "X-Roster-Ocr-Date": activeDate } : {})
+            },
+            body: jpeg,
+            cache: "no-store"
+        });
+        let response = await post("/api/roster-ocr-run");
+        if (response.status === 404) response = await post("/api/roster-ocr");
+        if (!response.ok) return false;
+        const result = await response.json().catch(() => null);
+        if (!result?.ok || !Array.isArray(result.entries) || !result.entries.length) return false;
+        applyRosterAiVisionResult(result);
+        return true;
+    } catch (error) {
+        console.warn("[roster] ai vision first pass unavailable", error);
+        return false;
+    }
+}
+
+/**
  * 이 기기 판독이 부족할 때 Google Cloud Vision으로 한 번 더 읽습니다.
  * 사진 전송은 사용자가 동의한 경우에만 하고, 동의 전에는 버튼을 안내합니다.
  */
@@ -2823,6 +3027,12 @@ async function runRosterCloudOcr(options) {
                 cloud_ocr_unavailable: "온라인 OCR 서비스에 연결하지 못했습니다."
             };
             throw new Error(messages[cloudResult?.error] || "온라인 재판독에 실패했습니다.");
+        }
+        // AI 비전(예시 학습)이 선박 블록을 읽었으면 표 칸 좌표 해석 없이 그 결과를 그대로 씁니다.
+        if (Array.isArray(cloudResult.entries) && cloudResult.entries.length) {
+            rosterRuntime.ocrAudit = null;
+            applyRosterAiVisionResult(cloudResult);
+            return cloudResult;
         }
         const imageData = engineCanvas.getContext("2d")?.getImageData(0, 0, engineCanvas.width, engineCanvas.height);
         // 표 영역은 분석용 캔버스에서 찾고, Vision 이 돌려준 단어 좌표는 전송한 사진 배율에 맞춥니다.
@@ -3174,6 +3384,7 @@ function renderRosterPhotoRows() {
         </div>
         ${rosterPhotoVerificationHtml(rosterRuntime.reviewVerifications[index], index)}
         <label class="roster-photo-row-workers">${rosterPhotoWorkerCountLabel(row)}<textarea rows="2" onchange="updateRosterPhotoRow(${index}, 'workers', this.value)">${escapeShipCommentHtml(row.workers.join(", "))}</textarea></label>
+        ${row.note ? `<div class="roster-photo-row-note">📝 원본 메모: ${escapeShipCommentHtml(row.note)}</div>` : ""}
         <button type="button" class="roster-photo-row-del" onclick="removeRosterPhotoRow(${index})">이 줄 삭제</button>
     </div>`;
     }).join("");

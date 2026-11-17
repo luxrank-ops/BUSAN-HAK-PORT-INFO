@@ -1,0 +1,2 @@
+export const ROSTER_AI_VISION_REFERENCE_MIME: string;
+export const ROSTER_AI_VISION_REFERENCE_BASE64: string;
