@@ -148,8 +148,9 @@ const ADMIN_UID_WHITELIST = [
 const ADMIN_EMAIL_WHITELIST = [
     "luxrank@gmail.com"
 ];
-// 노출된 구 비밀번호(0346) 차단 및 SHA-256 해시 검증 상수
-const DEFAULT_ADMIN_PW_HASH = "6cda3286b168d396ec539b002b14f58a6aebd453b6e5bc146c2d82dfd2614bc3";
+// 관리자·식단 업로드 비밀번호 SHA-256 해시 상수 (평문은 코드에 두지 않음)
+// 2026-11-17: 현장 요청으로 식단 업로드(전체 터미널) 비밀번호를 9363 으로 변경 — 구 0346 해시는 더 이상 기본값이 아닙니다.
+const DEFAULT_ADMIN_PW_HASH = "d1943935713b9c4a85942510d3385cfadac4202ba70ab7d9df889b139de86e69";
 const FALLBACK_PRODUCTION_API_ORIGIN = "https://busan-hak-port-info.vercel.app";
 const ADMIN_SESSION_TOKEN_KEY = "busanPortAdminToken";
 const ADMIN_SESSION_EXPIRY_KEY = "busanPortAdminTokenExpiresAt";
@@ -3543,6 +3544,7 @@ function openHjncMealModal(terminalId = "hjnc", label = "한진 식단") {
     trackAppEvent('actions', 'meal_view');
     trackAppEvent('terminals', terminalId);
     document.getElementById("hjncMealTitle").innerText = `🍱 ${label}`;
+    resetHjncMealUploadSelection("");
     document.getElementById("hjncMealModal").style.display = "flex";
     loadHjncMealImage();
 }
@@ -3569,34 +3571,112 @@ async function loadHjncMealImage() {
         console.error("터미널 식단 불러오기 오류:", error);
     }
 }
-async function requestHjncMealUpload() {
-    if (!(await verifyAdmin())) return;
+/* ── 식단 업로드 (전체 터미널 공용) : 찾기 → 업로드 2버튼 방식 ──
+   · 찾기  : 파일 선택창을 열어 사진을 고르고 파일명·크기를 표시합니다(저장 없음).
+   · 업로드: 비밀번호(9363) 확인 → 선택한 사진 검증·Storage 저장 → settings 문서 갱신. */
+let mealSelectedFile = null;
+let mealUploadBusy = false;
+
+function formatMealFileSize(bytes) {
+    const size = Number(bytes) || 0;
+    if (size >= 1024 * 1024) return `${(size / (1024 * 1024)).toFixed(1)}MB`;
+    if (size >= 1024) return `${Math.round(size / 1024)}KB`;
+    return `${size}B`;
+}
+function syncHjncMealUploadUI(message) {
+    const pickBtn = document.getElementById("hjncMealPickBtn");
+    const uploadBtn = document.getElementById("hjncMealUploadBtn");
+    const nameEl = document.getElementById("hjncMealFileName");
+    const status = document.getElementById("hjncMealStatus");
+    if (pickBtn) {
+        pickBtn.disabled = Boolean(mealUploadBusy);
+        pickBtn.style.opacity = mealUploadBusy ? "0.6" : "1";
+    }
+    if (uploadBtn) {
+        const disabled = Boolean(mealUploadBusy) || !mealSelectedFile;
+        uploadBtn.disabled = disabled;
+        uploadBtn.style.opacity = disabled ? "0.6" : "1";
+        uploadBtn.innerText = mealUploadBusy ? "⏳ 업로드 중..." : "⬆️ 업로드";
+    }
+    if (nameEl) {
+        nameEl.innerText = mealSelectedFile
+            ? `📎 선택한 파일: ${mealSelectedFile.name} (${formatMealFileSize(mealSelectedFile.size)})`
+            : "선택한 파일이 없습니다. '찾기'로 사진을 고르세요.";
+        nameEl.style.color = mealSelectedFile ? "var(--primary)" : "var(--text-sub)";
+    }
+    if (message && status) status.innerText = message;
+}
+function resetHjncMealUploadSelection(message = "") {
+    mealSelectedFile = null;
     const input = document.getElementById("hjncMealFileInput");
+    if (input) input.value = "";
+    syncHjncMealUploadUI(message);
+}
+function pickHjncMealFile() {
+    if (mealUploadBusy) return;
+    const input = document.getElementById("hjncMealFileInput");
+    if (!input) return;
     input.value = "";
     input.click();
 }
-async function uploadHjncMealImage(input) {
-    const file = input.files && input.files[0];
-    if (!file) return;
+function handleHjncMealFileSelected(input) {
+    const file = input && input.files && input.files[0];
+    if (!file) {
+        resetHjncMealUploadSelection("선택한 파일이 없습니다. '찾기'로 사진을 고르세요.");
+        return;
+    }
+    const isImage = /^image\//i.test(String(file.type || "")) || /\.(jpe?g|png|gif|webp|bmp|heic|heif)$/i.test(String(file.name || ""));
+    if (!isImage) {
+        resetHjncMealUploadSelection("이미지 파일만 업로드할 수 있습니다. (JPG·PNG 등)");
+        alert("이미지 파일만 업로드할 수 있습니다. (JPG·PNG 등)");
+        return;
+    }
+    mealSelectedFile = file;
+    syncHjncMealUploadUI("사진을 선택했습니다. '업로드' 버튼을 누르면 저장됩니다.");
+}
+async function submitHjncMealUpload() {
+    if (mealUploadBusy) return;
     const status = document.getElementById("hjncMealStatus");
-    status.innerText = "이미지 업로드 중...";
+    if (!mealSelectedFile) {
+        if (status) status.innerText = "'찾기'로 업로드할 사진을 먼저 선택해 주세요.";
+        return;
+    }
+    const file = mealSelectedFile;
+    const terminalId = currentMealTerminalId;
+    if (!(await verifyAdmin())) return;
+    mealUploadBusy = true;
+    syncHjncMealUploadUI("이미지 업로드 중...");
     try {
-        const safeFileName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
-        const storagePath = currentMealTerminalId === "hjnc" ? "hjnc-meals" : `terminal-meals/${currentMealTerminalId}`;
-        const upload = await storage.ref(`${storagePath}/${Date.now()}_${safeFileName}`).put(file);
-        const imageUrl = await upload.ref.getDownloadURL();
-        await db.collection("settings").doc(getTerminalMealDocumentId(currentMealTerminalId)).set({ imageUrl, updatedAt: firebase.firestore.FieldValue.serverTimestamp() });
-        const image = document.getElementById("hjncMealImage");
-        image.src = imageUrl;
-        image.style.display = "block";
-        status.innerText = "식단 이미지가 업데이트되었습니다.";
+        const safeFileName = String(file.name || "meal.jpg").replace(/[^a-zA-Z0-9._-]/g, "_");
+        const storagePath = terminalId === "hjnc" ? "hjnc-meals" : `terminal-meals/${terminalId}`;
+        const snapshot = await new Promise((resolve, reject) => {
+            const task = storage.ref(`${storagePath}/${Date.now()}_${safeFileName}`).put(file);
+            task.on("state_changed", (snap) => {
+                const total = snap && snap.totalBytes ? snap.totalBytes : 0;
+                const pct = total ? Math.round((snap.bytesTransferred / total) * 100) : 0;
+                const el = document.getElementById("hjncMealStatus");
+                if (el) el.innerText = `이미지 업로드 중... ${pct}%`;
+            }, reject, () => resolve(task.snapshot));
+        });
+        const imageUrl = await snapshot.ref.getDownloadURL();
+        await db.collection("settings").doc(getTerminalMealDocumentId(terminalId)).set({ imageUrl, updatedAt: firebase.firestore.FieldValue.serverTimestamp() });
+        mealUploadBusy = false;
+        resetHjncMealUploadSelection("✅ 식단 이미지가 업데이트되었습니다.");
+        if (currentMealTerminalId === terminalId) {
+            const image = document.getElementById("hjncMealImage");
+            image.src = imageUrl;
+            image.style.display = "block";
+        }
+        showToast("🍱 식단 이미지가 업로드되었습니다.");
     } catch (error) {
-        status.innerText = "이미지 업로드에 실패했습니다.";
-        alert("식단 이미지 업로드 실패: " + error.message);
-    } finally {
-        input.value = "";
+        mealUploadBusy = false;
+        syncHjncMealUploadUI("❌ 이미지 업로드에 실패했습니다. 다시 시도해 주세요.");
+        alert("식단 이미지 업로드 실패: " + (error && error.message ? error.message : error));
     }
 }
+/* 구 버전 index.html(서비스워커 캐시) 호환 별칭 */
+function requestHjncMealUpload() { pickHjncMealFile(); }
+function uploadHjncMealImage(input) { handleHjncMealFileSelected(input); }
 async function deleteTickerMsg(type, index){ if(!confirm("삭제하시겠습니까?")) return; if(type === 'admin') { delete globalTickerData.adminMessage; await db.collection('settings').doc('banner').update({ adminMessage: firebase.firestore.FieldValue.delete() }); } else { globalTickerData.userMessages.splice(index, 1); await db.collection('settings').doc('banner').update({ userMessages: globalTickerData.userMessages }); } renderTickerList(); showToast("삭제되었습니다."); }
 function downloadWorkLogsExcel() { if (!currentWorkerId || Object.keys(adminWorkLogs).length === 0) { return alert("다운로드할 근무 기록 데이터가 없습니다."); } trackAppEvent('actions', 'excel_dl'); let csvContent = "\uFEFF날짜,배 이름,임금 1,임금 2,임금 3,임금 4,총임금,근무자,메모\n"; const sortedDates = Object.keys(adminWorkLogs).sort(); sortedDates.forEach(date => { const d = adminWorkLogs[date]; const ship = d.shipName || ""; const w1 = d.wage1 || 0; const w2 = d.wage2 || 0; const w3 = d.wage3 || 0; const w4 = d.wage4 || 0; const total = d.totalPay || (Number(w1) + Number(w2) + Number(w3) + Number(w4)); const workers = (d.coworkers || "").replace(/,/g, " "); const memo = (d.memo || "").replace(/\n/g, " ").replace(/,/g, " "); csvContent += `${date},${ship},${w1},${w2},${w3},${w4},${total},${workers},${memo}\n`; }); const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' }); const url = URL.createObjectURL(blob); const link = document.createElement("a"); const monthTitle = document.getElementById('calMonthYear').innerText; link.href = url; link.download = `${currentWorkerId}_${monthTitle}_근무기록.csv`; document.body.appendChild(link); link.click(); document.body.removeChild(link); showToast("📊 엑셀 파일이 다운로드 폴더에 저장되었습니다!"); }
 let latestMonthlyStatsCache = { total: 0, w1Sum: 0, w2Sum: 0, w3Sum: 0, w4Sum: 0, days: 0, avg: 0 };
