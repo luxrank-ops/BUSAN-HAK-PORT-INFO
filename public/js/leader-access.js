@@ -4,11 +4,14 @@
 // 역분석·디컴파일을 할 수 없습니다. 자세한 내용은 저장소의 LICENSE 파일을 참고하세요.
 // ============================================================================
 
+// 조장 접근 비밀번호 SHA-256 해시 (평문은 코드에 두지 않습니다 — 2026-11-17)
+const LEADER_ACCESS_PW_HASH = "d1943935713b9c4a85942510d3385cfadac4202ba70ab7d9df889b139de86e69";
+
 /**
  * 조장 근무일 접근 권한 검증 모듈
  * @param {Event} event - 클릭 이벤트 객체
  */
-function verifyLeaderAccess(event) {
+async function verifyLeaderAccess(event) {
     try {
         // 1. 기본 이벤트 전파 차단
         if (event) {
@@ -24,8 +27,9 @@ function verifyLeaderAccess(event) {
             return false;
         }
 
-        // 4. 비밀번호 확인 (9363)
-        if (userPassword.trim() === "9363") {
+        // 4. 비밀번호 확인 (SHA-256 해시 비교)
+        const enteredHash = String(await sha256Hex(userPassword.trim()) || "").toLowerCase();
+        if (enteredHash && enteredHash === LEADER_ACCESS_PW_HASH) {
             alert("인증되었습니다.");
             
             // 5. 원래 실행되어야 할 함수가 있다면 안전하게 호출, 없으면 관리자 페이지 등으로 연결

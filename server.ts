@@ -225,7 +225,8 @@ export function issueScreenUnlockToken(): { token: string; expiresAt: number } {
 
 // --- 🔐 운영 관리자 인증 및 무상태(Stateless) HMAC 관리자 토큰 ---
 // 클라이언트 verifyAdmin() 과 동일한 관리자 해시(SHA-256) 및 Firestore settings/admin 문서를 검증합니다.
-export const DEFAULT_ADMIN_PW_HASH = '6cda3286b168d396ec539b002b14f58a6aebd453b6e5bc146c2d82dfd2614bc3';
+// 2026-11-17: 식단 업로드(전체 터미널) 비밀번호를 9363 으로 변경 — 구 0346 해시는 기본값에서 제거했습니다.
+export const DEFAULT_ADMIN_PW_HASH = 'd1943935713b9c4a85942510d3385cfadac4202ba70ab7d9df889b139de86e69';
 export const ADMIN_CUSTOM_TOKEN_UID = 'admin_luxrank';
 
 export function issueAdminSessionToken(nowMs: number = Date.now()): { token: string; expiresAt: number } {
