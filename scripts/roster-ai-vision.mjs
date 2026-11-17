@@ -491,6 +491,8 @@ export async function runRosterAiVisionRequest(options = {}) {
 
 function finish(result, options) {
   const normalized = normalizeRosterAiVisionResult(result.parsed, options);
+  // 성공 시각을 남겨, 서버가 "AI 비전이 실제로 동작한다"를 광고(클라이언트 1차 판독 사용)할 수 있게 합니다.
+  if (normalized.entries.length && options.state) options.state.lastSuccessAt = Date.now();
   return {
     ok: true,
     provider: result.provider,

@@ -3126,10 +3126,24 @@ let rosterVisionAuth: GoogleAuth | null = null;
 // 예시 이미지(사용자가 색 테두리로 규칙을 표시한 사진)를 함께 보내는 Few-shot 판독입니다.
 // 자격: GEMINI_API_KEY(AI Studio) 또는 기존 Firebase 서비스 계정(Vertex AI) — 둘 다 없으면
 // 호출하지 않고 기존 Google Cloud Vision·기기 판독으로 내려갑니다.
-const rosterAiVisionState: { blockedUntil: number } = { blockedUntil: 0 };
+const rosterAiVisionState: { blockedUntil: number; lastSuccessAt?: number; lastAttempts?: Array<{ provider: string; status: number; error: string }> } = { blockedUntil: 0 };
 
 function isRosterAiVisionEnabled(): boolean {
   return hasRosterAiVisionCredential(process.env as Record<string, string | undefined>);
+}
+
+/**
+ * 클라이언트에 "AI 비전 1차 판독을 써도 된다"고 알릴지 결정합니다.
+ *
+ * 서비스 계정만 있는 환경(Vertex 경로)은 아직 API·권한이 없을 수 있어, 자격 존재만으로
+ * 사진마다 확인창·대기를 시키지 않습니다. GEMINI_API_KEY 가 있거나, 최근 1시간 안에
+ * AI 판독이 실제로 성공했을 때만 광고합니다(수동 재판독 성공 시 자동으로 켜짐).
+ */
+const ROSTER_AI_VISION_ADVERTISE_MS = 60 * 60 * 1000;
+function isRosterAiVisionAdvertised(): boolean {
+  if (!isRosterAiVisionEnabled()) return false;
+  if (String(process.env.GEMINI_API_KEY || '').trim()) return true;
+  return Number(rosterAiVisionState.lastSuccessAt || 0) > Date.now() - ROSTER_AI_VISION_ADVERTISE_MS;
 }
 
 function hasRosterServiceAccount(): boolean {
@@ -3157,6 +3171,8 @@ async function getRosterVertexAccessToken(): Promise<string | null> {
     return null;
   }
 }
+
+// (레퍼런스 이미지·모델 안내는 아래 config 응답에서 함께 내려 줍니다.)
 
 /** 클라이언트가 보낸 기준 날짜(근무일지 날짜) — MM/DD 연도 판단에만 씁니다. */
 function readRosterOcrDefaultDate(req: any): string {
@@ -3217,12 +3233,15 @@ function getRosterVisionAuth(): GoogleAuth {
 
 function sendRosterOcrConfig(_req: any, res: any) {
   res.setHeader('Cache-Control', 'no-store');
+  const advertised = isRosterAiVisionAdvertised();
   res.json({
     enabled: isRosterCloudOcrEnabled(),
-    provider: isRosterAiVisionEnabled() ? 'gemini-vision' : 'google-cloud-vision',
+    provider: advertised ? 'gemini-vision' : 'google-cloud-vision',
     // 클라이언트는 이 값이 true 일 때만 사진 선택 직후 AI 1차 판독을 시도합니다.
-    aiVision: isRosterAiVisionEnabled(),
-    aiVisionModel: isRosterAiVisionEnabled() ? resolveRosterAiVisionModel(process.env as Record<string, string | undefined>) : ''
+    aiVision: advertised,
+    // 자격은 있지만 광고 전(Vertex API·권한 미비)인 상태도 구분해 둡니다.
+    aiVisionCredential: isRosterAiVisionEnabled(),
+    aiVisionModel: advertised ? resolveRosterAiVisionModel(process.env as Record<string, string | undefined>) : ''
   });
 }
 
