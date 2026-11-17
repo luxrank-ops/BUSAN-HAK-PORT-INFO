@@ -48,6 +48,7 @@ export interface RosterAiVisionRequestOptions {
     env?: Record<string, string | undefined>;
     fetchImpl?: (url: string, init: any) => Promise<any>;
     getAccessToken?: () => Promise<string | null | undefined>;
+    projectId?: string;
     now?: Date;
     state?: { blockedUntil?: number };
 }
