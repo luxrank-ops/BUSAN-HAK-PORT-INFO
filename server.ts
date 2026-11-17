@@ -3278,6 +3278,8 @@ async function handleRosterCloudOcr(req: any, res: any) {
   // 그 외(수동 온라인 재판독·자동 폴백) → AI → Google Cloud Vision 순서로 내려갑니다.
   const aiOnly = String(req.get('X-Roster-Ocr-Mode') || '').toLowerCase() === 'ai';
   let aiFailureReason = '';
+  // 실패 원인을 운영자가 바로 알 수 있도록 "제공자:HTTP상태" 만 남깁니다(응답 본문·키·사진은 담지 않음).
+  let aiAttempts: string[] = [];
   if (isRosterAiVisionEnabled()) {
     try {
       const aiResult = await runRosterAiVisionRequest({
@@ -3304,6 +3306,7 @@ async function handleRosterCloudOcr(req: any, res: any) {
         return;
       }
       aiFailureReason = aiResult.ok ? 'no_vessels' : aiResult.reason;
+      aiAttempts = (aiResult.attempts || []).map((attempt) => `${attempt.provider}:${attempt.status}`);
       if (!aiResult.ok) {
         console.warn(`[roster] AI 비전 판독 건너뜀 (${aiResult.reason})`,
           (aiResult.attempts || []).map((attempt) => `${attempt.provider}:${attempt.error}`).join(' / '));
@@ -3317,7 +3320,7 @@ async function handleRosterCloudOcr(req: any, res: any) {
   }
   if (aiOnly) {
     // 1차 판독 단계에서는 Vision 까지 쓰지 않고 바로 기기 판독으로 넘깁니다(지연·비용 절약).
-    res.json({ ok: true, provider: 'none', entries: [], warnings: [], aiVision: { used: false, reason: aiFailureReason } });
+    res.json({ ok: true, provider: 'none', entries: [], warnings: [], aiVision: { used: false, reason: aiFailureReason, attempts: aiAttempts } });
     return;
   }
   if (!isRosterGoogleVisionEnabled()) {

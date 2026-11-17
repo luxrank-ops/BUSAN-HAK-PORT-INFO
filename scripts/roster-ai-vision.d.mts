@@ -27,6 +27,7 @@ export interface RosterAiVisionSuccess {
     warnings: string[];
     workerCount: number;
     text: string;
+    attempts: RosterAiVisionAttempt[];
 }
 
 export interface RosterAiVisionFailure {

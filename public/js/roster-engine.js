@@ -2941,7 +2941,13 @@ async function maybeRunRosterAiVisionFirst() {
         if (response.status === 404) response = await post("/api/roster-ocr");
         if (!response.ok) return false;
         const result = await response.json().catch(() => null);
-        if (!result?.ok || !Array.isArray(result.entries) || !result.entries.length) return false;
+        if (!result?.ok || !Array.isArray(result.entries) || !result.entries.length) {
+            // 서버가 AI 판독을 못 하면(키 미설정·권한·모델 오류) 이 탭에서는 다시 시도하지 않고
+            // 사진마다 확인창·지연을 반복하지 않도록 기기 판독으로 바로 진행합니다.
+            if (result?.aiVision?.used === false) rosterRuntime.aiVisionEnabled = false;
+            setRosterPhotoStatus("🔍 이 기기에서 글자를 읽는 중… (사진은 기기 밖으로 전송되지 않았습니다)");
+            return false;
+        }
         applyRosterAiVisionResult(result);
         return true;
     } catch (error) {
