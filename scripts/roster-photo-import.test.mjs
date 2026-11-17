@@ -642,6 +642,9 @@ test('사진 선택은 기기 내 OCR만 시작하고, 온라인 전송은 확�
     assert.ok(cloudRoutine.includes('window.confirm'));
     assert.ok(cloudRoutine.includes('X-Roster-Ocr-Consent'));
     assert.ok(cloudRoutine.includes('/api/roster-ocr'));
+    // Vercel catch-all 은 1세그먼트 경로만 처리하므로 앱은 단일 세그먼트 별칭을 먼저 부릅니다.
+    assert.ok(cloudRoutine.includes('/api/roster-ocr-run'));
+    assert.ok(cloudRoutine.indexOf('/api/roster-ocr-run') < cloudRoutine.indexOf('requestCloudOcr("/api/roster-ocr")'));
 });
 
 test('사진을 고르면 명단 읽기를 자동으로 시작하고 필요하면 다시 읽을 수 있다', () => {
@@ -700,9 +703,9 @@ test('화면은 카메라·갤러리·수정·기기저장 UI와 검토 후 적�
     assert.match(engine, /function buildRosterTableOcrEntries\(regions, headers, assignedWords, cellNames\)/);
     assert.match(engine, /function findRosterColumnSplits\(imageData, width, height\)/);
     assert.match(engine, /async function recognizeRosterPhotoColumns\(recognize, sourceCanvas, splits\)/);
-    assert.match(engine, /async function readRosterTableWorkerCells\(worker, sourceCanvas, regions, headers\)/);
+    assert.match(engine, /async function readRosterTableWorkerCells\(worker, sourceCanvas, regions, headers, imageData\)/);
     assert.match(engine, /function parseRosterCloudTableResult\(result, regions, defaultYear\)/);
-    assert.match(engine, /async function runRosterCloudOcr\(\)/);
+    assert.match(engine, /async function runRosterCloudOcr\(options\)/);
     assert.match(engine, /X-Roster-Ocr-Consent/);
     assert.ok(html.includes('Google Cloud Vision'));
     assert.match(engine, /function collectRosterTableWorkers\(words, region\)/);
