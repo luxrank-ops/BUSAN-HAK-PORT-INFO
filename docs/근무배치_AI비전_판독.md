@@ -61,8 +61,11 @@ Spikes in demand are usually temporary. Please try again later."
    (`ROSTER_AI_VISION_FALLBACK_MODELS` 로 교체, `0` 이면 폴백 없음).
    400(모델이 thinkingBudget 0 을 거부)은 thinkingConfig 를 빼고 한 번 더 시도합니다.
 3. **시간 예산 분배** — 요청 전체 예산(`ROSTER_AI_VISION_TOTAL_BUDGET_MS`)을 남은 모델 수로 나눠
-   써서, 앞 모델이 매달려도 뒤 폴백이 굶지 않습니다. 사진 선택 직후 1차 판독은 **24초**,
+   써서, 앞 모델이 매달려도 뒤 폴백이 굶지 않습니다. 사진 선택 직후 1차 판독은 **45초**,
    `온라인 OCR 재판독` 은 **48초**(Vercel 함수 `maxDuration: 60`).
+   - 2026-11-18: 1차가 24초일 때는 3개 모델이 예산을 8초씩 나눠 써서, 20~24초 걸리는 성공 응답이
+     잘리고 수동 재판독을 다시 눌러야 했습니다. 1차를 45초로 올려(상한 60초에 여유 15초) 폴백 모델이
+     각각 14~22초를 쓸 수 있게 했습니다.
 4. **일시 오류는 90초만 쿨다운** — 10분을 통째로 쉬면 폭주가 풀려도 그날 AI 가 꺼진 것처럼 보입니다.
    429(무료 한도)는 그대로 30분, 키·권한 오류는 10분입니다.
 
@@ -78,7 +81,7 @@ Spikes in demand are usually temporary. Please try again later."
 | `FIREBASE_SERVICE_ACCOUNT_KEY` | 이미 설정됨 | `GEMINI_API_KEY` 가 없을 때 Vertex AI(Gemini) 경로로 시도합니다. Vertex AI API 사용 설정 + 서비스 계정 `aiplatform.user` 역할 필요. |
 | `ROSTER_AI_VISION_MODEL` | 선택 | 기본 `gemini-3.8-flash` |
 | `ROSTER_AI_VISION_FALLBACK_MODELS` | 선택 | 기본 `gemini-3.5-flash-lite,gemini-3-flash-preview`. `0` 이면 폴백 없음 |
-| `ROSTER_AI_VISION_TOTAL_BUDGET_MS` | 선택 | 기본 45000. 1차 판독 24초·재판독 48초는 코드 상수 |
+| `ROSTER_AI_VISION_TOTAL_BUDGET_MS` | 선택 | 기본 45000. 1차 판독 45초·재판독 48초는 코드 상수 |
 | `ROSTER_AI_VISION_RETRY_DELAYS_MS` | 선택 | 5xx 재시도 간격(기본 `800,2500`) |
 | `ROSTER_AI_VISION=0` | 선택 | AI 경로만 끄기(기존 Vision·기기 판독 유지) |
 | `ROSTER_AI_VISION_THINKING_BUDGET` | 선택 | 기본 0(사고 토큰 끔). 모델이 0 을 거부하면 자동으로 thinkingConfig 없이 재시도합니다. |
