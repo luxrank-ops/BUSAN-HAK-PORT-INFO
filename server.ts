@@ -20,6 +20,8 @@ import { getMessaging } from 'firebase-admin/messaging';
 import { getStorage } from 'firebase-admin/storage';
 import { GoogleAuth } from 'google-auth-library';
 import { normalizeGoogleVisionOcrResult } from './scripts/roster-cloud-ocr.mjs';
+// 근무일지(work_logs) 필수 필드 점검 — 읽기 전용 순수 함수 (scripts/work-log-schema.mjs)
+import { summarizeWorkLogCoverage, describeWorkLogMissingFields } from './scripts/work-log-schema.mjs';
 // 근무배치(종이오더) AI 비전 판독 — 예시 이미지(색 테두리) Few-shot + JSON 스키마 (scripts/roster-ai-vision.mjs)
 import {
   hasRosterAiVisionCredential,
@@ -2644,24 +2646,31 @@ export function buildServerSelfCheckProbes(now: Date = new Date()): SelfCheckPro
       } catch {
         cacheCount = null;
       }
-      const docs = logsSnap.docs.map((d) => d.data() || {});
-      if (!docs.length) {
+      // 필수 필드는 앱이 실제로 쓰고 읽는 date·workerId 두 개뿐입니다(scripts/work-log-schema.mjs 참고).
+      // 2026-11-16 FAIL 1건은 근무일지에 없는 필드(terminal)를 요구한 점검 쪽 오탐이었습니다.
+      const coverage = summarizeWorkLogCoverage(logsSnap.docs.map((d) => ({ id: d.id, data: d.data() || {} })));
+      if (!coverage.total) {
         return { status: 'PASS', detail: `work_logs 표본 없음(신규 배포) · 스케줄 캐시 ${cacheCount ?? '—'}건` };
       }
-      let missing = 0;
-      for (const doc of docs) {
-        const hasDate = Boolean(doc.date || doc.dateKey || doc.workDate || doc.createdAt);
-        const hasTerminal = Boolean(doc.terminal || doc.TERMINAL);
-        if (!hasDate || !hasTerminal) missing += 1;
+      const fields = describeWorkLogMissingFields(coverage) || 'date·workerId';
+      const viaIdNote = coverage.viaDocId.date || coverage.viaDocId.workerId
+        ? ` (문서 ID 로 보완: 날짜 ${coverage.viaDocId.date}·작성자 ${coverage.viaDocId.workerId})`
+        : '';
+      if (coverage.ratio > 0.5) {
+        return {
+          status: 'FAIL',
+          code: 'db.schema_drift',
+          detail: `work_logs 표본 ${coverage.total}건 중 ${coverage.missingCount}건 필수 필드 누락(${fields}) · 스케줄 캐시 ${cacheCount ?? '—'}건${viaIdNote}(읽기 전용 점검 — 원본은 수정하지 않음)`
+        };
       }
-      const ratio = missing / docs.length;
-      if (ratio > 0.5) {
-        return { status: 'FAIL', code: 'db.schema_drift', detail: `work_logs 표본 ${docs.length}건 중 ${missing}건 필수 필드 누락(읽기 전용 점검 — 원본은 수정하지 않음)` };
+      if (coverage.ratio > 0) {
+        return {
+          status: 'WARN',
+          code: 'db.partial_fields',
+          detail: `work_logs 표본 ${coverage.total}건 중 ${coverage.missingCount}건 필드 누락(${fields}) · 캐시 ${cacheCount ?? '—'}건${viaIdNote}`
+        };
       }
-      if (ratio > 0) {
-        return { status: 'WARN', code: 'db.partial_fields', detail: `work_logs ${docs.length}건 중 ${missing}건 필드 누락 · 캐시 ${cacheCount ?? '—'}건` };
-      }
-      return { status: 'PASS', detail: `work_logs ${docs.length}건 정상 · 스케줄 캐시 ${cacheCount ?? '—'}건` };
+      return { status: 'PASS', detail: `work_logs 표본 ${coverage.total}건 필수 필드(date·workerId) 정상 · 스케줄 캐시 ${cacheCount ?? '—'}건${viaIdNote}` };
     }
   });
 
@@ -3142,8 +3151,11 @@ let rosterVisionAuth: GoogleAuth | null = null;
 // 호출하지 않고 기존 Google Cloud Vision·기기 판독으로 내려갑니다.
 const rosterAiVisionState: { blockedUntil: number; lastSuccessAt?: number; lastAttempts?: Array<{ provider: string; model?: string; status: number; error: string }> } = { blockedUntil: 0 };
 
-/** AI 비전 1차 판독에 쓸 수 있는 시간 — 사진 선택 직후(1차)는 짧게, 수동 재판독은 넉넉하게. */
-const ROSTER_AI_VISION_FIRST_PASS_BUDGET_MS = 24000;
+/** AI 비전 1차 판독에 쓸 수 있는 시간 — 사진 선택 직후(1차)는 45초, 수동 재판독은 48초. */
+// 2026-11-18: 1차가 24초로 짧아 모델 폴백(3.8-flash 503 → 3.5-flash-lite → 3-flash-preview)이
+// 예산을 나누어 쓰는 과정에서 20~24초 걸리는 성공 응답이 잘렸습니다(실측 11-17).
+// Vercel 함수 상한(maxDuration 60초) 안에서 여유 15초를 남기고 45초로 올려 1차 성공률을 높입니다.
+const ROSTER_AI_VISION_FIRST_PASS_BUDGET_MS = 45000;
 const ROSTER_AI_VISION_REREAD_BUDGET_MS = 48000;
 
 function isRosterAiVisionEnabled(): boolean {
@@ -3343,7 +3355,7 @@ async function handleRosterCloudOcr(req: any, res: any) {
         referenceBase64: ROSTER_AI_VISION_REFERENCE_BASE64,
         referenceMimeType: ROSTER_AI_VISION_REFERENCE_MIME,
         defaultDate: readRosterOcrDefaultDate(req),
-        // 1차 판독(사진 선택 직후)은 짧게 끝내고 곧바로 기기 판독으로 넘깁니다.
+        // 1차 판독(사진 선택 직후)은 45초까지 기다려 1차 성공률을 높입니다(실패하면 곧바로 기기 판독).
         totalBudgetMs: aiOnly ? ROSTER_AI_VISION_FIRST_PASS_BUDGET_MS : ROSTER_AI_VISION_REREAD_BUDGET_MS,
         env: process.env as Record<string, string | undefined>,
         getAccessToken: getRosterVertexAccessToken,

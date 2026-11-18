@@ -518,11 +518,25 @@ test('시간 예산이 없으면 더 이상 모델을 시도하지 않는다', a
 
 test('서버는 1차 판독과 수동 재판독에 서로 다른 시간 예산을 주고, 폴백 체인을 광고한다', () => {
     const server = readFileSync(new URL('../server.ts', import.meta.url), 'utf8');
-    assert.match(server, /ROSTER_AI_VISION_FIRST_PASS_BUDGET_MS = 24000/);
+    assert.match(server, /ROSTER_AI_VISION_FIRST_PASS_BUDGET_MS = 45000/);
     assert.match(server, /ROSTER_AI_VISION_REREAD_BUDGET_MS = 48000/);
     assert.match(server, /totalBudgetMs: aiOnly \? ROSTER_AI_VISION_FIRST_PASS_BUDGET_MS : ROSTER_AI_VISION_REREAD_BUDGET_MS/);
     assert.match(server, /aiVisionFallbackModels/);
     assert.match(server, /case 'transient_unavailable': return 'ai_transient'/);
     const vercel = JSON.parse(readFileSync(new URL('../vercel.json', import.meta.url), 'utf8'));
     assert.equal(vercel.functions['api/[...path].ts'].maxDuration, 60);
+});
+
+test('AI 시간 예산은 Vercel 함수 상한(60초) 안에서 여유를 남긴다', () => {
+    const server = readFileSync(new URL('../server.ts', import.meta.url), 'utf8');
+    const first = Number((server.match(/ROSTER_AI_VISION_FIRST_PASS_BUDGET_MS = (\d+)/) || [])[1]);
+    const reread = Number((server.match(/ROSTER_AI_VISION_REREAD_BUDGET_MS = (\d+)/) || [])[1]);
+    const maxDurationMs = JSON.parse(readFileSync(new URL('../vercel.json', import.meta.url), 'utf8')).functions['api/[...path].ts'].maxDuration * 1000;
+    assert.ok(first >= 40000, `1차 판독은 40초 이상이어야 합니다(현재 ${first}ms)`);
+    assert.ok(first <= 45000, `1차 판독은 45초를 넘기지 않습니다(현재 ${first}ms)`);
+    // 토큰 검증·이미지 처리·응답 정규화에 15초 이상을 비워 둡니다.
+    assert.ok(maxDurationMs - first >= 15000, `1차 판독 예산이 상한에 너무 가깝습니다: ${first}ms / ${maxDurationMs}ms`);
+    // 수동 재판독은 뒤이어 Google Cloud Vision 호출이 붙으므로 1차보다 넉넉하되 상한 안이어야 합니다.
+    assert.ok(reread >= first, `재판독 예산이 1차보다 짧습니다: ${reread}ms`);
+    assert.ok(maxDurationMs - reread >= 8000, `재판독 예산이 상한에 너무 가깝습니다: ${reread}ms / ${maxDurationMs}ms`);
 });
