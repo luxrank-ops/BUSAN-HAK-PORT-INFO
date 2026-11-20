@@ -783,10 +783,12 @@ function registerRosterResultToWorkLog(index) {
     if (!item) return;
     ensureDashboardCardOpen("log-card");
     jumpToLogDate(item.assignment.date);
-    if (attachRosterResultToOpenLog(item)) {
-        showToast(`📅 ${item.assignment.date} 근무일지에 ${item.assignment.vessel}을(를) 넣었습니다. 저장을 눌러 기록하세요.`);
-    }
+    const attached = attachRosterResultToOpenLog(item);
     rosterElement("dailyLogForm")?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    if (attached) {
+        showToast(`📅 ${item.assignment.date} 근무일지에 ${item.assignment.vessel}을(를) 넣었습니다. 저장을 눌러 기록하세요.`);
+        if (typeof scrollToWorkLogSaveButton === "function") scrollToWorkLogSaveButton();
+    }
 }
 
 async function registerAllRosterResults() {
