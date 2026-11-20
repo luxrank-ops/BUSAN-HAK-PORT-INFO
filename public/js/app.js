@@ -6985,6 +6985,14 @@ function autoGrowWorkLogMemo(el) {
 }
 function clickDate(dStr){ document.getElementById('selectedDateText').innerText = dStr; document.getElementById('dailyLogForm').classList.remove('hidden'); document.getElementById('dailyLogForm').setAttribute('data-date', dStr); const d = adminWorkLogs[dStr]; document.getElementById('logShipName').value = d ? (d.shipName || '') : ''; document.getElementById('logWage1').value = d ? (d.wage1 || '') : ''; document.getElementById('logWage2').value = d ? (d.wage2 || '') : ''; const logWage3El = document.getElementById('logWage3'); if (logWage3El) logWage3El.value = d ? (d.wage3 || '') : ''; const logWage4El = document.getElementById('logWage4'); if (logWage4El) logWage4El.value = d ? (d.wage4 || '') : ''; document.getElementById('logCoworkers').value = d ? (d.coworkers || '') : ''; document.getElementById('logMemo').value = d ? d.memo : ''; autoGrowWorkLogMemo(document.getElementById('logMemo')); const img = document.getElementById('logImagePreview'); if(d && d.imageUrl){ img.src = d.imageUrl; img.style.display = 'block'; } else { img.style.display = 'none'; img.src = ""; } document.getElementById('logImageInput').value = ''; setWorklogScheduleDateInput(dStr); updateWorklogDoubleOrderStatus(); renderWorkLogQuickChips(dStr); }
 function trySaveWorkLog(){ if(currentWorkerId) saveWorkLog(); else document.getElementById('loginModal').style.display = 'flex'; }
+
+// 저장 안내가 뜨면 길게 이어지는 입력 폼의 하단 저장 버튼을 바로 찾을 수 있게 합니다.
+function scrollToWorkLogSaveButton() {
+    const saveButton = document.getElementById('saveLogBtn');
+    if (saveButton && typeof saveButton.scrollIntoView === 'function') {
+        saveButton.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
+    }
+}
 async function confirmLoginAndSave(evt) {
     const nick = document.getElementById('loginNick').value.trim();
     const pw = document.getElementById('loginPw').value.trim();
@@ -7730,6 +7738,7 @@ async function sendCalculatedWageToLog() {
             if (typeof refreshWorklogVesselList === "function") refreshWorklogVesselList(); trackAppEvent("actions", "wage_to_log");
             const skippedNotice = slotPlan.skippedCount ? ` (중복·최대 초과 ${slotPlan.skippedCount}척 제외)` : "";
             showToast(`📅 ${orderLabel} 선박 ${slotPlan.assignments.length}척의 금액을 기존 선박 순서에 맞춰 입력했습니다. 저장을 눌러 기록하세요.${skippedNotice}`);
+            if (typeof scrollToWorkLogSaveButton === 'function') scrollToWorkLogSaveButton();
             return;
         }
 
@@ -7777,6 +7786,7 @@ async function sendCalculatedWageToLog() {
             : (shipName
                 ? `📅 ${shipName} 선박명과 계산 임금을 근무일지에 입력했습니다. 저장을 눌러 기록하세요.`
                 : "📅 계산 임금을 근무일지에 입력했습니다. 저장을 눌러 기록하세요."));
+        if (typeof scrollToWorkLogSaveButton === 'function') scrollToWorkLogSaveButton();
     } catch (error) {
         console.error("근무일지 불러오기 실패:", error);
         showToast("⚠️ 기존 근무일지를 불러오지 못했습니다. 다시 시도해 주세요.");
