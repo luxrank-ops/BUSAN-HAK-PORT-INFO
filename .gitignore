@@ -4,3 +4,9 @@ backups/
 .env
 .DS_Store
 build/
+
+# Cloudflare Workers 로컬 개발/배포 산출물
+.cf-worker/
+.dev.vars
+.cfbuild/
+.wrangler/
