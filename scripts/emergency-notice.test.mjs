@@ -254,7 +254,12 @@ test('긴급 공지용 HMAC 토큰은 유효기간·서명을 검증한다', asy
     const { token, expiresAt } = sandbox.module.exports.issueEmergencyUnlockToken();
     assert.equal(sandbox.module.exports.verifyEmergencyUnlockToken(`Bearer ${token}`), true);
     assert.equal(sandbox.module.exports.verifyEmergencyUnlockToken(token, expiresAt), false, '만료 시각부터는 거부해야 합니다');
-    assert.equal(sandbox.module.exports.verifyEmergencyUnlockToken(`${token.slice(0, -1)}0`), false, '서명 변조를 거부해야 합니다');
+    // 마지막 16진수 문자를 '0' 으로 덮으면 서명이 이미 0 으로 끝날 때(1/16 확률)
+    // 토큰이 그대로여서 거짓 실패합니다. 반드시 원본과 달라지는 값으로 뒤집습니다.
+    const tamperLastHex = (value) => `${value.slice(0, -1)}${value.endsWith('0') ? '1' : '0'}`;
+    const tamperedToken = tamperLastHex(token);
+    assert.notEqual(tamperedToken, token, '변조 토큰은 원본과 달라야 합니다');
+    assert.equal(sandbox.module.exports.verifyEmergencyUnlockToken(tamperedToken), false, '서명 변조를 거부해야 합니다');
 });
 
 test('긴급 공지는 인증된 revision 기반으로 사용자별 알림센터·FCM에 중복 없이 전달된다', () => {
