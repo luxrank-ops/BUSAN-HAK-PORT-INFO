@@ -1,0 +1,39 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  // 학포트 — Cloudflare Workers 배포 설정 (Vercel 무중단 병행 운영 후 전환)
+  //   Worker : .cf-worker/index.js — scripts/build-worker.mjs 가 만든 번들
+  //            (worker/index.ts → server.ts 의 Express 앱 + Firestore REST 어댑터)
+  //   Assets : build/public (scripts/build-obfuscate.mjs 산출물)
+  //   주소   : https://busan-hak-port-info.luxrank.workers.dev
+  "name": "busan-hak-port-info",
+  "main": ".cf-worker/index.js",
+  "no_bundle": true,
+  "compatibility_date": "2026-11-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "assets": {
+    "directory": "./build/public",
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application",
+    "run_worker_first": ["/api/*"]
+  },
+  "observability": {
+    "enabled": true
+  },
+  // Vercel Cron(UTC) 과 동일한 주기 — scheduled 핸들러가 /api/cron/* 를 호출합니다.
+  "triggers": {
+    "crons": ["0 3 * * *", "0 0 * * SUN", "0 19 * * *", "0 20 * * SUN"]
+  },
+  "vars": {
+    "NODE_ENV": "production",
+    "CLOUDFLARE_WORKER": "1",
+    "FIREBASE_PROJECT_ID": "busan-hak-port",
+    "FIREBASE_STORAGE_BUCKET": "busan-hak-port.firebasestorage.app",
+    "ROSTER_CLOUD_OCR_ENABLED": "1",
+    "REPORT_EMAIL_ENABLED": "1",
+    "SELF_CHECK_EMAIL_ENABLED": "1",
+    "GOOGLE_CLIENT_ID": "616469111502-hu26glhq2bji6vhr60h8ag6kca9jsaub.apps.googleusercontent.com",
+    "REPORT_EMAIL_TO": "luxrank@gmail.com",
+    "SELF_CHECK_EMAIL_TO": "luxrank@gmail.com",
+    "ALLOWED_ORIGINS": "https://busan-hak-port-info.luxrank.workers.dev"
+  }
+}
