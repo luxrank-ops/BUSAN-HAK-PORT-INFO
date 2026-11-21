@@ -166,7 +166,8 @@ const JS_LOAD_ORDER = [
   'js/ships-board.js',
   'js/tab-views.js',
   'js/kkung-relay.js',
-  'js/want-board.js'
+  'js/want-board.js',
+  'js/domain-migration.js'
 ];
 
 /**
