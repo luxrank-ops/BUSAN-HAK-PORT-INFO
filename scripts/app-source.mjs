@@ -24,11 +24,12 @@ export const APP_JS_FILES = [
     'public/js/ships-board.js',
     'public/js/tab-views.js',
     'public/js/kkung-relay.js',
-    'public/js/want-board.js'
+    'public/js/want-board.js',
+    'public/js/domain-migration.js'
 ];
 
 /** A-1 분리 버전 — index.html 의 ?v= 파라미터 · service-worker 캐시 버전을 함께 올려야 합니다. */
-export const APP_ASSET_VERSION = '2027.76';
+export const APP_ASSET_VERSION = '2027.77';
 
 export function readAppFile(relativePath) {
     return readFileSync(new URL(`./${relativePath}`, ROOT), 'utf8');
