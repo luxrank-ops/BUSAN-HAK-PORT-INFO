@@ -41,6 +41,20 @@ Workers 에는 gRPC(TCP·HTTP/2)가 없고 문자열 코드 생성(`new Function
 | `GET /api/cron/daily-inspection` | 200 · 29/29 PASS, 메일 발송(gmail-api) |
 | 없는 `/api/*` | 404 JSON |
 
+## 배포 방법 (재배포 시)
+
+```bash
+# 최초 1회: 로그인 또는 토큰
+export CLOUDFLARE_API_TOKEN=...        # 계정 b95a6c54… (Workers 편집 권한)
+
+# 정적 자산은 SCREEN_LOCK_PIN 을 포함해 빌드해야 클라이언트 폴백 해시가 운영 PIN 과 일치합니다.
+SCREEN_LOCK_PIN=900754 npm run deploy:cf
+```
+
+Worker Secret(Variables and Secrets): `FIREBASE_SERVICE_ACCOUNT_KEY`, `CRON_SECRET`,
+`GOOGLE_CLIENT_SECRET`, `GOOGLE_REFRESH_TOKEN`, `VAPID_KEY`, `UNLOCK_TOKEN_SECRET`,
+`SCREEN_LOCK_PIN` — 나머지 일반 값은 `wrangler.jsonc` 의 `vars`.
+
 ## 남은 것 (이 PR 범위 밖, 배포 시 수동)
 
 1. `GEMINI_API_KEY` — Vercel 이 Secret 타입이라 값을 읽을 수 없어 Worker 에 아직 없습니다. 현재 OCR 은 Google Cloud Vision 경로로 동작하고, AI 비전(Gemini)은 키 등록 후 활성화됩니다. (`busan-hak-port` 프로젝트에 Gemini API 는 사용 설정됨)
