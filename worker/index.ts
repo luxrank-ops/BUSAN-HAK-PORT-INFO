@@ -28,8 +28,13 @@ function isApiPath(pathname: string): boolean {
   return pathname === '/api' || pathname.startsWith('/api/');
 }
 
-/** Vercel Cron(UTC)과 동일한 주기 → 호출할 엔드포인트 */
+/**
+ * Cron Trigger 문자열(UTC) → 호출할 엔드포인트.
+ * wrangler.jsonc 의 triggers.crons 와 정확히 같은 문자열이어야 합니다(그대로 전달됨).
+ *   '5 * * * *' : 매시간 선박 스케줄 변경 감시(주 경로 — GitHub Actions 예약은 보조)
+ */
 const CRON_TASKS: Record<string, string> = {
+  '5 * * * *': '/api/cron/schedule-watch',
   '0 3 * * *': '/api/cron/daily-cleanup',
   '0 0 * * SUN': '/api/cron/weekly-backup',
   '0 19 * * *': '/api/cron/daily-inspection',

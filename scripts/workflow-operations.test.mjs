@@ -40,11 +40,11 @@ test('일일 품질 검사와 보고서 푸시 실패는 Actions 결과에 반�
   assert.doesNotMatch(reportCommit.run, /git push\s*\|\|/, '보고서 푸시 실패를 성공처럼 숨기면 안 됩니다');
 });
 
-test('SEO 대표 URL과 사이트맵은 공식 Vercel 도메인을 사용한다', () => {
+test('SEO 대표 URL과 사이트맵은 공식 workers.dev 도메인을 사용한다', () => {
   const html = readFileSync(new URL('../public/index.html', import.meta.url), 'utf8');
   const robots = readFileSync(new URL('../public/robots.txt', import.meta.url), 'utf8');
   const sitemap = readFileSync(new URL('../public/sitemap.xml', import.meta.url), 'utf8');
-  const official = 'https://busan-hak-port-info.vercel.app';
+  const official = 'https://busan-hak-port-info.luxrank.workers.dev';
 
   assert.ok(html.includes(`<meta property="og:url" content="${official}/">`));
   assert.ok(html.includes(`<link rel="canonical" href="${official}/">`));
