@@ -42,7 +42,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const ROOT = path.resolve(__dirname, '..');
 
-const DEFAULT_BASE_URL = String(process.env.SELF_CHECK_BASE_URL || 'https://busan-hak-port-info.vercel.app').replace(/\/+$/, '');
+const DEFAULT_BASE_URL = String(process.env.SELF_CHECK_BASE_URL || 'https://busan-hak-port-info.luxrank.workers.dev').replace(/\/+$/, '');
 const BASELINE_PATH = path.join(ROOT, 'reports', 'self-check', 'baseline.json');
 const TERMINALS = ['hjnc', 'bnct', 'dgt', 'pnc', 'hpnt', 'pnit', 'bptc', 'hbct'];
 const CORE_FIELDS = ['VSL_NM', 'ETB', 'ATD'];

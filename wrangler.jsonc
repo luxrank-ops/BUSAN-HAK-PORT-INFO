@@ -19,9 +19,12 @@
   "observability": {
     "enabled": true
   },
-  // Vercel Cron(UTC) 과 동일한 주기 — scheduled 핸들러가 /api/cron/* 를 호출합니다.
+  // Vercel Cron(UTC) 과 동일한 주기 + 매시간 선박 스케줄 감시.
+  //   '5 * * * *' 는 GitHub Actions 예약 실행이 2026-08-27 이후 '느린 레인'으로 밀려
+  //   7~8시간 간격으로만 돌던 문제를 없애기 위한 주 경로입니다(Cloudflare 크론은 분 단위 정시 실행).
+  //   scheduled 핸들러(worker/index.ts)가 해당 크론 문자열을 /api/cron/* 로 매핑합니다.
   "triggers": {
-    "crons": ["0 3 * * *", "0 0 * * SUN", "0 19 * * *", "0 20 * * SUN"]
+    "crons": ["5 * * * *", "0 3 * * *", "0 0 * * SUN", "0 19 * * *", "0 20 * * SUN"]
   },
   "vars": {
     "NODE_ENV": "production",

@@ -522,7 +522,7 @@ export function generateMarkdownReport(result) {
   md += `## 3. 자동화 상태\n\n`;
   md += `| 작업 | 스케줄 | 트리거 | 상태 |\n`;
   md += `| --- | --- | --- | --- |\n`;
-  md += `| 선박 스케줄 변경 감지 | 매 정각 (0 * * * *) | GitHub Actions / node-cron | ${checks.find(c => c.name === '스케줄 감시 (매 정각)')?.status === 'PASS' ? '✅ 정상' : '❌ 확인 필요'} |\n`;
+  md += `| 선박 스케줄 변경 감지 | 매시간 (5 * * * *) | Cloudflare Cron Triggers / GitHub Actions(보조) / node-cron | ${checks.find(c => c.name === '스케줄 감시 (매 정각)')?.status === 'PASS' ? '✅ 정상' : '❌ 확인 필요'} |\n`;
   md += `| DB 자가 정리 | 매일 03:00 (0 3 * * *) | Vercel Cron / node-cron | ${checks.find(c => c.name === 'DB 정리 (매일 03시)')?.status === 'PASS' ? '✅ 정상' : '❌ 확인 필요'} |\n`;
   md += `| 주간 백업 | 매주 일요일 00:00 (0 0 * * 0) | Vercel Cron / node-cron | ${checks.find(c => c.name === '주간 백업 (일요일 00시)')?.status === 'PASS' ? '✅ 정상' : '❌ 확인 필요'} |\n`;
   md += `| **일일 기능 점검** | **매일 04:00 (0 4 * * *)** | **GitHub Actions + Vercel Cron + node-cron** | **${checks.find(c => c.name === '일일 점검 (매일 04시)')?.status === 'PASS' ? '✅ 정상' : '⚠️ 등록 확인'}** |\n\n`;
@@ -531,7 +531,7 @@ export function generateMarkdownReport(result) {
   md += `## 4. 배포 상태\n\n`;
   md += `| 구분 | URL | 상태 |\n`;
   md += `| --- | --- | --- |\n`;
-  md += `| 운영 (Vercel) | https://busan-hak-port-info.vercel.app | 자동 배포 (main 푸시) |\n`;
+  md += `| 운영 (Cloudflare Workers) | https://busan-hak-port-info.luxrank.workers.dev | main 푸시 후 수동 배포 · Cron Triggers |\n`;\n  md += `| 병행 (Vercel) | https://busan-hak-port-info.vercel.app | 2026-12-20까지 병행 |\n`;
   md += `| 보조 (Firebase Hosting) | https://busan-hak-port.web.app | 승인형 배포 |\n`;
   md += `| 데이터 저장소 | Firebase 프로젝트 \`busan-hak-port\` | Firestore · Storage · FCM |\n\n`;
 
