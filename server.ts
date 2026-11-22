@@ -15,7 +15,7 @@ import { existsSync } from 'node:fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { initializeApp, cert, getApps } from 'firebase-admin/app';
-import { getFirestore, FieldValue } from 'firebase-admin/firestore';
+import { getFirestore, FieldValue, initializeFirestore } from 'firebase-admin/firestore';
 import { getMessaging } from 'firebase-admin/messaging';
 import { getStorage } from 'firebase-admin/storage';
 import { GoogleAuth } from 'google-auth-library';
@@ -71,7 +71,11 @@ const PORT = Number(process.env.PORT) || 3000;
 // (vercel.json 의 outputDirectory 설정). 서버리스는 응답 후 프로세스가 동결되므로
 // app.listen() 과 node-cron 타이머가 동작하지 않습니다 — Vercel 에서는 이들을 비활성화하고,
 // 주기 작업은 Vercel Cron 과 GitHub Actions 가 /api/cron/* 엔드포인트를 호출해 대신 실행합니다.
-export const IS_VERCEL = Boolean(process.env.VERCEL);
+// Cloudflare Workers(worker/index.ts)에서도 요청 단위 실행·읽기 전용 파일시스템이라는
+// Vercel 과 같은 서버리스 제약이 적용되므로, 기존 서버리스 분기를 그대로 공유합니다.
+export const IS_CLOUDFLARE = String(process.env.CLOUDFLARE_WORKER || '') === '1';
+export const IS_VERCEL = Boolean(process.env.VERCEL) || IS_CLOUDFLARE;
+export const PLATFORM_LABEL = IS_CLOUDFLARE ? 'cloudflare-workers' : IS_VERCEL ? 'vercel-serverless' : 'node-server';
 
 if (IS_VERCEL) {
   // Vercel 엣지 프록시가 x-forwarded-for 의 마지막에 실제 클라이언트 IP 를 추가합니다.
@@ -441,10 +445,19 @@ function initFirebaseAdmin(): boolean {
           privateKey: String(serviceAccount.private_key)
         };
       }
-      initializeApp({
+      const firebaseApp = initializeApp({
         credential: cert(serviceAccount),
         storageBucket: process.env.FIREBASE_STORAGE_BUCKET || undefined
       });
+      // Cloudflare Workers 에는 gRPC(TCP·HTTP/2) 가 없으므로 Firestore 를 REST 전송으로
+      // 초기화합니다. 이렇게 해야 Admin SDK 가 REST API 로 읽기·쓰기를 수행합니다.
+      if (IS_CLOUDFLARE) {
+        try {
+          initializeFirestore(firebaseApp, { preferRest: true });
+        } catch (e: any) {
+          console.log('Firestore REST mode init warning:', e?.message || e);
+        }
+      }
       console.log('Firebase Admin initialized with service account key.');
       return true;
     }
@@ -1979,11 +1992,8 @@ export async function runWeeklyFirestoreBackup(targetDir: string = path.join(__d
       counts[colName] = docs.length;
     }
 
-    await fs.mkdir(targetDir, { recursive: true });
     const now = new Date();
     const dateTag = `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, '0')}-${String(now.getUTCDate()).padStart(2, '0')}`;
-    backupFilePath = path.join(targetDir, `firestore-backup-${dateTag}.json`);
-
     const payload = JSON.stringify({
       backedUpAt: now.toISOString(),
       projectId: process.env.FIREBASE_PROJECT_ID || 'busan-hak-port',
@@ -1991,7 +2001,12 @@ export async function runWeeklyFirestoreBackup(targetDir: string = path.join(__d
       collections: dumpData
     }, null, 2);
 
-    await fs.writeFile(backupFilePath, payload, 'utf-8');
+    // Cloudflare Workers 는 쓰기 가능한 파일시스템이 없으므로 로컬 사본 단계를 건너뜁니다.
+    if (!IS_CLOUDFLARE) {
+      await fs.mkdir(targetDir, { recursive: true });
+      backupFilePath = path.join(targetDir, `firestore-backup-${dateTag}.json`);
+      await fs.writeFile(backupFilePath, payload, 'utf-8');
+    }
 
     // Vercel /tmp 는 함수 종료 후 사라집니다. 운영 백업은 별도 비공개 GCS 버킷에 저장해야 합니다.
     const bucketName = String(process.env.FIRESTORE_BACKUP_BUCKET || '').trim();
@@ -2006,14 +2021,16 @@ export async function runWeeklyFirestoreBackup(targetDir: string = path.join(__d
       });
     }
 
-    // 최근 8개 백업 파일만 유지하고 오래된 로컬 파일을 정리합니다.
-    const files = (await fs.readdir(targetDir))
-      .filter((f) => /^firestore-backup-\d{4}-\d{2}-\d{2}\.json$/.test(f))
-      .sort();
-    while (files.length > 8) {
-      const oldest = files.shift();
-      if (oldest) {
-        await fs.unlink(path.join(targetDir, oldest)).catch(() => {});
+    // 최근 8개 백업 파일만 유지하고 오래된 로컬 파일을 정리합니다. (상시 서버 전용)
+    if (!IS_CLOUDFLARE) {
+      const files = (await fs.readdir(targetDir))
+        .filter((f) => /^firestore-backup-\d{4}-\d{2}-\d{2}\.json$/.test(f))
+        .sort();
+      while (files.length > 8) {
+        const oldest = files.shift();
+        if (oldest) {
+          await fs.unlink(path.join(targetDir, oldest)).catch(() => {});
+        }
       }
     }
 
@@ -2139,6 +2156,12 @@ export async function runDailyInspection(
       add('파일 존재', f, 'PASS', '서버리스 번들 외부(정상) — 배포 시점 반영');
       continue;
     }
+    if (IS_CLOUDFLARE && runtimeFiles.includes(f)) {
+      // Cloudflare Workers 는 읽기 전용 FS 라 런타임 파일 검사가 불가능합니다.
+      // 정적 자산은 Workers Assets 가 build/public 에서 서빙하고, package.json 은 빌드 입력으로만 쓰입니다.
+      add('파일 존재', f, 'PASS', 'Cloudflare Assets 서빙(빌드 시점 반영)');
+      continue;
+    }
     try {
       await fs.access(path.join(__dirname, f));
       add('파일 존재', f, 'PASS', '존재');
@@ -2198,7 +2221,7 @@ export async function runDailyInspection(
   add('보안', 'Firebase Admin', getApps().length > 0 ? 'PASS' : 'WARN', getApps().length > 0 ? '초기화됨' : '미초기화 — Firestore 폴백 불가', 'medium');
 
   // 6) 배포 설정
-  add('배포', '플랫폼', IS_VERCEL ? 'PASS' : 'PASS', IS_VERCEL ? 'vercel-serverless' : 'node-server');
+  add('배포', '플랫폼', IS_VERCEL ? 'PASS' : 'PASS', PLATFORM_LABEL);
   add('배포', 'TTL 정책', 'PASS', `캐시 ${SCHEDULE_CACHE_TTL_DAYS}일 / 알림 ${READ_NOTIFICATION_TTL_DAYS}일`);
 
   // 7) 스케줄 감지 함수
@@ -2236,7 +2259,9 @@ export async function runDailyInspection(
     const altDocsDir = path.join(__dirname, 'docs', 'inspections');
 
     const candidates: string[] = [];
-    if (!IS_VERCEL) {
+    if (IS_CLOUDFLARE) {
+      // Workers 는 쓰기 가능한 파일시스템이 없습니다 — 보고서는 응답 본문·메일 첨부로만 전달합니다.
+    } else if (!IS_VERCEL) {
       // local: ensure reports at repo root
       const repoRoot = path.resolve(__dirname);
       // __dirname is repo root when run via tsx server.ts
@@ -2956,7 +2981,7 @@ export async function runServerWeeklySelfCheck(
       baseline,
       actions: buildServerSelfCheckRepairActions(now),
       saveBaseline: saveSelfCheckBaseline,
-      platform: IS_VERCEL ? 'vercel-serverless' : 'node-server',
+      platform: PLATFORM_LABEL,
       logger: console
     });
   } catch (err: any) {
@@ -3099,7 +3124,9 @@ if (process.env.NODE_ENV !== 'test' && !IS_VERCEL) {
 
 // --- Express 라우트 ---
 // ⚡ A-7: 텍스트 응답 gzip 압축 (index.html 820KB → 약 175KB)
-app.use(compression());
+// Cloudflare Workers 의 HTTP 계층이 이미 Accept-Encoding 협상·압축을 처리하므로,
+// Express compression() 을 그대로 두면 응답이 두 번 압축되어 브라우저가 디코딩하지 못합니다.
+if (!IS_CLOUDFLARE) app.use(compression());
 
 // 🔐 D-6: API 는 자사 도메인에서만 호출하도록 허용 출처를 제한합니다.
 // (ALLOWED_ORIGINS 환경변수로 추가 지정 가능 — 쉼표 구분)
@@ -3549,7 +3576,7 @@ app.get('/api/health', (_req, res) => {
   res.json({
     ok: true,
     status: isolatedCount === terminals.length ? 'degraded' : 'healthy',
-    platform: IS_VERCEL ? 'vercel-serverless' : 'node-server',
+    platform: PLATFORM_LABEL,
     uptimeSec: Math.round(process.uptime()),
     firebaseAdminInitialized: getApps().length > 0,
     scheduleDiffThresholdMinutes: SCHEDULE_DIFF_THRESHOLD_MINUTES,
