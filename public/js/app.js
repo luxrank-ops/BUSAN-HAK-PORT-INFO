@@ -5698,6 +5698,56 @@ function toggleWageLayoutMode() {
         btn.style.background = isWide ? '#dbeafe' : '#eff6ff';
     }
 }
+/** 2026-11-22 · 설명서 카드 펼치고 그 자리로 이동 (홈 상단 '처음이세요?' 칩) */
+function openHakportManual() {
+    const card = document.getElementById('main-manual-card');
+    if (!card) return;
+    if (!card.classList.contains('expanded')) toggleDashItem('main-manual-card');
+    window.setTimeout(function () {
+        try { card.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch (e) { card.scrollIntoView(); }
+    }, 120);
+}
+
+/** 2026-11-22 · 새 주소 복사 (설명서 주소 상자) */
+function copyHakportAddress(button) {
+    const url = 'https://busan-hak-port-info.luxrank.workers.dev/';
+    const label = button ? button.textContent : '';
+    const restore = function (message) {
+        if (!button) return;
+        button.textContent = message;
+        button.classList.add('is-done');
+        window.setTimeout(function () {
+            button.textContent = label;
+            button.classList.remove('is-done');
+        }, 1800);
+    };
+    const legacyCopy = function () {
+        try {
+            const area = document.createElement('textarea');
+            area.value = url;
+            area.setAttribute('readonly', '');
+            area.style.position = 'fixed';
+            area.style.top = '-1000px';
+            area.style.opacity = '0';
+            document.body.appendChild(area);
+            area.select();
+            area.setSelectionRange(0, url.length);
+            const ok = document.execCommand('copy');
+            document.body.removeChild(area);
+            return ok;
+        } catch (e) { return false; }
+    };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(url).then(function () { restore('복사됨 ✓'); }, function () {
+            if (legacyCopy()) restore('복사됨 ✓'); else restore('길게 눌러 복사');
+        });
+    } else if (legacyCopy()) {
+        restore('복사됨 ✓');
+    } else {
+        restore('길게 눌러 복사');
+    }
+}
+
 async function shareOrCopyAppPromo() {
     trackAppEvent('actions', 'promo_share');
     const promoText = [
@@ -5710,11 +5760,12 @@ async function shareOrCopyAppPromo() {
         "✅ 신항·북항 실시간 풍속·날씨 및 도선 현황까지!",
         "",
         "👇 아래 주소 누르셔서 바로 써보세요!",
-        "https://busan-hak-port-info.vercel.app",
+        "https://busan-hak-port-info.luxrank.workers.dev",
         "",
         "💡 [휴대폰 바탕화면에 아이콘 만드는 법]",
         "• 갤럭시: 주소 접속 후 우측 메뉴(⋮ 또는 ≡) → [홈 화면에 추가]",
         "• 아이폰: 사파리(Safari)로 접속 후 하단 공유 버튼(📤) → [홈 화면에 추가]",
+        "• 설치 이름: 부산 HAK 포트 (HAK 아이콘)",
         "",
         "(운영관리자: 이춘학 / 문의: 010-2846-8906)"
     ].join("\n");
@@ -5723,7 +5774,7 @@ async function shareOrCopyAppPromo() {
             await navigator.share({
                 title: "부산학 라이싱 작업 가이드 (BUSAN HAK PORT)",
                 text: promoText,
-                url: "https://busan-hak-port-info.vercel.app"
+                url: "https://busan-hak-port-info.luxrank.workers.dev"
             });
             return;
         }

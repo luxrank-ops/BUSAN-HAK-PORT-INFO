@@ -4051,6 +4051,35 @@ body.dark-mode .want-board-textarea { background: var(--surface-dark); }
 .manual-contact a { color: var(--blue-700); font-weight: var(--fw-extrabold); text-decoration: underline; }
 .manual-note { font-size: var(--fs-fluid-5); font-weight: var(--fw-semibold); color: var(--text-sub); }
 .manual-foot { margin: var(--sp-14) 0 0; padding-top: var(--sp-10); border-top: 1px dashed var(--border); font-size: var(--fs-fluid-5); font-weight: var(--fw-semibold); color: var(--text-sub); text-align: center; line-height: var(--lh-8); word-break: keep-all; }
+
+/* 2026-11-22 · 새 주소(workers.dev)·홈 화면 추가(부산 HAK 포트)·5탭 한눈 요약 */
+.manual-addr-box { margin-top: var(--sp-12); padding: var(--sp-12); border: 1.5px solid var(--blue-300); border-radius: var(--radius-lg); background: var(--blue-50); }
+.manual-addr-label { font-size: var(--fs-fluid-5); font-weight: var(--fw-black); color: var(--blue-800); }
+.manual-addr-main { display: block; margin-top: var(--sp-4); color: var(--blue-700); font-size: var(--fs-fluid-4); font-weight: var(--fw-black); text-decoration: underline; word-break: break-all; line-height: var(--lh-7); }
+.manual-addr-actions { display: flex; flex-wrap: wrap; gap: var(--sp-6); margin-top: var(--sp-8); }
+.manual-addr-copy, .manual-addr-open { display: inline-flex; align-items: center; justify-content: center; min-height: 40px; padding: var(--sp-6) var(--sp-12); border-radius: var(--radius-md); font-size: var(--fs-fluid-5); font-weight: var(--fw-black); text-decoration: none; cursor: pointer; }
+.manual-addr-copy { border: none; background: var(--blue-700); color: var(--n-000); }
+.manual-addr-copy.is-done { background: var(--emerald-600); }
+.manual-addr-open { border: 1.5px solid var(--blue-400); background: var(--card-bg); color: var(--blue-800); }
+.manual-addr-note { margin: var(--sp-8) 0 0; font-size: var(--fs-fluid-5); font-weight: var(--fw-semibold); color: var(--text-main); line-height: var(--lh-8); word-break: keep-all; }
+.manual-tab-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--sp-8); margin-top: var(--sp-12); }
+.manual-tab-item { padding: var(--sp-10) var(--sp-12); border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--surface-muted); color: var(--text-sub); font-size: var(--fs-fluid-5); font-weight: var(--fw-semibold); line-height: var(--lh-8); word-break: keep-all; }
+.manual-tab-item b { display: block; margin-bottom: var(--sp-2); color: var(--blue-800); font-size: var(--fs-fluid-4); font-weight: var(--fw-black); }
+.manual-callout { display: flex; flex-direction: column; gap: var(--sp-4); margin-top: var(--sp-10); padding: var(--sp-10) var(--sp-12); border: 1px solid var(--emerald-300); border-left: 4px solid var(--emerald-500); border-radius: var(--radius-md); background: var(--emerald-50); color: var(--text-main); font-size: var(--fs-fluid-5); font-weight: var(--fw-medium); line-height: var(--lh-8); word-break: keep-all; }
+.manual-callout b { color: var(--emerald-700); font-weight: var(--fw-black); }
+
+/* 홈 상단 '처음이세요?' 설명서 바로가기 */
+.newbie-guide-chip { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-8); width: 100%; margin: 0 0 var(--sp-10); padding: var(--sp-10) var(--sp-12); border: 1.5px solid var(--amber-300); border-radius: var(--radius-lg); background: var(--amber-50); color: var(--amber-800); font-size: var(--fs-fluid-5); font-weight: var(--fw-extrabold); text-align: left; line-height: var(--lh-7); cursor: pointer; }
+.newbie-guide-chip .newbie-guide-go { flex: 0 0 auto; color: var(--amber-700); font-weight: var(--fw-black); }
+body[data-app-view="tab"] .newbie-guide-chip { display: none; }
+
+body.dark-mode .manual-addr-box { background: rgba(37, 99, 235, 0.14); border-color: var(--blue-500); }
+body.dark-mode .manual-addr-open { background: rgba(15, 23, 42, 0.55); border-color: var(--blue-500); color: var(--blue-200); }
+body.dark-mode .manual-tab-item { background: rgba(255, 255, 255, 0.04); border-color: var(--border-dark); }
+body.dark-mode .manual-tab-item b { color: var(--blue-200); }
+body.dark-mode .manual-callout { background: rgba(16, 185, 129, 0.12); border-color: var(--emerald-500); }
+body.dark-mode .newbie-guide-chip { background: rgba(245, 158, 11, 0.12); border-color: var(--amber-500); color: var(--amber-200); }
+@media (max-width: 420px) { .manual-tab-grid { grid-template-columns: 1fr; } }
 @media (max-width: 480px) {
     .manual-content { padding: var(--sp-12) var(--sp-10); }
     .manual-body { padding: var(--sp-12) var(--sp-10); }
