@@ -1,7 +1,7 @@
 {
   "version": 1,
   "createdAt": "2026-10-23T07:39:53.245Z",
-  "updatedAt": "2026-11-15T23:38:27.958Z",
+  "updatedAt": "2026-11-23T00:32:12.360Z",
   "terminals": {
     "hjnc": {
       "count": 34,
@@ -14,13 +14,13 @@
         "PTNR_CODE": 1,
         "VOY_NO": 1,
         "ATA": 1,
-        "ATW": 0.4556,
-        "ATC": 0.3695,
+        "ATW": 0.4247,
+        "ATC": 0.3211,
         "STATUS": 1
       },
-      "samples": 4,
-      "updatedAt": "2026-11-15T23:38:27.958Z",
-      "lastObservedCount": 34,
+      "samples": 5,
+      "updatedAt": "2026-11-23T00:32:12.360Z",
+      "lastObservedCount": 33,
       "history": [
         {
           "at": "2026-10-23T07:39:53.245Z",
@@ -37,11 +37,15 @@
         {
           "at": "2026-11-15T23:38:27.958Z",
           "count": 34
+        },
+        {
+          "at": "2026-11-23T00:32:12.360Z",
+          "count": 33
         }
       ]
     },
     "bnct": {
-      "count": 23,
+      "count": 24,
       "fieldCoverage": {
         "VSL_NM": 1,
         "ETB": 1,
@@ -51,13 +55,13 @@
         "PTNR_CODE": 1,
         "VOY_NO": 1,
         "ATA": 1,
-        "ATW": 0.527,
+        "ATW": 0.4435,
         "ATC": 1,
         "STATUS": 0
       },
-      "samples": 4,
-      "updatedAt": "2026-11-15T23:38:27.958Z",
-      "lastObservedCount": 22,
+      "samples": 5,
+      "updatedAt": "2026-11-23T00:32:12.360Z",
+      "lastObservedCount": 25,
       "history": [
         {
           "at": "2026-10-23T07:39:53.245Z",
@@ -74,11 +78,15 @@
         {
           "at": "2026-11-15T23:38:27.958Z",
           "count": 22
+        },
+        {
+          "at": "2026-11-23T00:32:12.360Z",
+          "count": 25
         }
       ]
     },
     "dgt": {
-      "count": 33,
+      "count": 34,
       "fieldCoverage": {
         "VSL_NM": 1,
         "ETB": 1,
@@ -88,13 +96,13 @@
         "PTNR_CODE": 1,
         "VOY_NO": 1,
         "ATA": 1,
-        "ATW": 0.5221,
-        "ATC": 0.4438,
+        "ATW": 0.4228,
+        "ATC": 0.3542,
         "STATUS": 1
       },
-      "samples": 4,
-      "updatedAt": "2026-11-15T23:38:27.958Z",
-      "lastObservedCount": 31,
+      "samples": 5,
+      "updatedAt": "2026-11-23T00:32:12.360Z",
+      "lastObservedCount": 34,
       "history": [
         {
           "at": "2026-10-23T07:39:53.245Z",
@@ -111,6 +119,10 @@
         {
           "at": "2026-11-15T23:38:27.958Z",
           "count": 31
+        },
+        {
+          "at": "2026-11-23T00:32:12.360Z",
+          "count": 34
         }
       ]
     },
@@ -128,9 +140,9 @@
         "ATW": 1,
         "ATC": 1
       },
-      "samples": 4,
-      "updatedAt": "2026-11-15T23:38:27.958Z",
-      "lastObservedCount": 31,
+      "samples": 5,
+      "updatedAt": "2026-11-23T00:32:12.360Z",
+      "lastObservedCount": 32,
       "history": [
         {
           "at": "2026-10-23T07:39:53.245Z",
@@ -147,11 +159,15 @@
         {
           "at": "2026-11-15T23:38:27.958Z",
           "count": 31
+        },
+        {
+          "at": "2026-11-23T00:32:12.360Z",
+          "count": 32
         }
       ]
     },
     "hpnt": {
-      "count": 25,
+      "count": 26,
       "fieldCoverage": {
         "VSL_NM": 1,
         "ETB": 1,
@@ -164,9 +180,9 @@
         "ATW": 1,
         "ATC": 1
       },
-      "samples": 4,
-      "updatedAt": "2026-11-15T23:38:27.958Z",
-      "lastObservedCount": 26,
+      "samples": 5,
+      "updatedAt": "2026-11-23T00:32:12.360Z",
+      "lastObservedCount": 27,
       "history": [
         {
           "at": "2026-10-23T07:39:53.245Z",
@@ -183,11 +199,15 @@
         {
           "at": "2026-11-15T23:38:27.958Z",
           "count": 26
+        },
+        {
+          "at": "2026-11-23T00:32:12.360Z",
+          "count": 27
         }
       ]
     },
     "pnit": {
-      "count": 22,
+      "count": 21,
       "fieldCoverage": {
         "VSL_NM": 1,
         "ETB": 1,
@@ -200,9 +220,9 @@
         "ATW": 1,
         "ATC": 1
       },
-      "samples": 4,
-      "updatedAt": "2026-11-15T23:38:27.958Z",
-      "lastObservedCount": 19,
+      "samples": 5,
+      "updatedAt": "2026-11-23T00:32:12.360Z",
+      "lastObservedCount": 20,
       "history": [
         {
           "at": "2026-10-23T07:39:53.245Z",
@@ -219,11 +239,15 @@
         {
           "at": "2026-11-15T23:38:27.958Z",
           "count": 19
+        },
+        {
+          "at": "2026-11-23T00:32:12.360Z",
+          "count": 20
         }
       ]
     },
     "bptc": {
-      "count": 107,
+      "count": 112,
       "fieldCoverage": {
         "VSL_NM": 1,
         "ETB": 1,
@@ -234,11 +258,11 @@
         "VOY_NO": 1,
         "ATA": 1,
         "ATW": 1,
-        "ATC": 0.3345
+        "ATC": 0.2783
       },
-      "samples": 4,
-      "updatedAt": "2026-11-15T23:38:27.958Z",
-      "lastObservedCount": 107,
+      "samples": 5,
+      "updatedAt": "2026-11-23T00:32:12.360Z",
+      "lastObservedCount": 117,
       "history": [
         {
           "at": "2026-10-23T07:39:53.245Z",
@@ -255,6 +279,10 @@
         {
           "at": "2026-11-15T23:38:27.958Z",
           "count": 107
+        },
+        {
+          "at": "2026-11-23T00:32:12.360Z",
+          "count": 117
         }
       ]
     },
@@ -272,8 +300,8 @@
         "ATW": 1,
         "ATC": 1
       },
-      "samples": 4,
-      "updatedAt": "2026-11-15T23:38:27.958Z",
+      "samples": 5,
+      "updatedAt": "2026-11-23T00:32:12.360Z",
       "lastObservedCount": 60,
       "history": [
         {
@@ -291,13 +319,17 @@
         {
           "at": "2026-11-15T23:38:27.958Z",
           "count": 60
+        },
+        {
+          "at": "2026-11-23T00:32:12.360Z",
+          "count": 60
         }
       ]
     }
   },
   "runs": [],
   "lastRun": {
-    "at": "2026-11-15T23:38:27.958Z",
+    "at": "2026-11-23T00:32:12.360Z",
     "overall": "WARN",
     "pass": 15,
     "warn": 1,
