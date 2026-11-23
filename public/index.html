@@ -37,9 +37,9 @@
     <link rel="icon" href="./favicon.ico">
     <link rel="stylesheet" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.8/dist/web/static/pretendard.css" />
     <link rel="manifest" href="./manifest.json">
-    <link rel="stylesheet" href="./css/app.css?v=2027.82">
+    <link rel="stylesheet" href="./css/app.css?v=2027.83">
     <link rel="apple-touch-icon" href="./icon-192.png">
-<script src="./js/notifications.js?v=2027.82"></script></head>
+<script src="./js/notifications.js?v=2027.83"></script></head>
 <body data-app-view="legacy">
 <header>
     <div class="today-visitor-badge-slot" aria-hidden="true"></div>
@@ -837,9 +837,12 @@
     </div>
 
     <div id="ship-card" class="dash-card card" data-view-group="ships" style="margin-bottom: 20px; border: none; box-shadow: none; background: transparent;">
-        <div class="section-header tap-effect port-banner-ship" onclick="toggleDashItem('ship-card')" style="border-radius: 10px; padding: 14px 15px; gap: 8px; flex-wrap: wrap; justify-content: center !important; text-align: center !important;">
-            <span class="section-title" style="font-size: 1.05rem; font-weight: 900; text-align: center; line-height: 1.35;">🚢 작업 선박 정보<br><span style="font-size: 0.92rem;">(안전수칙/작업 정보 등록및검색) ▼</span></span>
-            <div class="port-chip-group" style="margin-left: 0 !important; justify-content: center;">
+        <div class="section-header tap-effect port-banner-ship ship-card-header" onclick="toggleDashItem('ship-card')" style="border-radius: 10px; padding: 11px 10px 9px; gap: 5px; flex-direction: column; align-items: center; justify-content: center; text-align: center !important;">
+            <span class="section-title ship-card-title" style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; width: 100%; max-width: 100%; min-width: 0; text-align: center; line-height: 1.16;">
+                <span class="ship-card-title-main" style="display: block; font-size: clamp(1.2rem, 5.75vw, 1.7rem); font-weight: 900; letter-spacing: -0.6px; white-space: nowrap;">🚢 라이싱 작업선박 정보</span>
+                <span class="ship-card-title-sub" style="display: block; font-size: clamp(0.86rem, 4.1vw, 1.16rem); font-weight: 800; letter-spacing: -0.2px; white-space: nowrap; opacity: 0.94;">(본선/육상/기능공) ▼</span>
+            </span>
+            <div class="port-chip-group" style="margin-left: 0 !important; justify-content: center; gap: 5px;">
                 <span id="shipCardSubMeta" class="port-mini-chip">난이도 · 필수 장비 도감</span>
                 <span id="shipBadge" class="badge-new hidden">NEW</span>
             </div>
@@ -1500,7 +1503,7 @@
                         <ul style="padding-left: 20px; margin: 0;">
                             <li style="margin-bottom: 6px;"><b>데이터 암호화:</b> 모든 근무일지 및 게시판 데이터는 구글 파이어베이스(Firebase)의 강력한 글로벌 보안망을 통해 암호화되어 전송 및 저장됩니다.</li>
                             <li style="margin-bottom: 6px;"><b>로컬 스토리지 보관:</b> 로그인 상태는 사용자의 스마트폰 기기 내부(Local Storage)에만 안전하게 암호화 보관됩니다.</li>
-                            <li><span style="color:var(--primary); font-weight:bold;">비밀번호 단방향 암호화(SHA-256):</span> 관리자·근무일지 계정·게시글·댓글·작업 선박 정보 비밀번호는 평문(원문)으로 저장되지 않고 <b>SHA-256 해시 알고리즘</b>으로 암호화되어 저장되며, 관리자는 Firebase Auth 인증 및 UID 화이트리스트 검증으로 이중 보호됩니다.</li>
+                            <li><span style="color:var(--primary); font-weight:bold;">비밀번호 단방향 암호화(SHA-256):</span> 관리자·근무일지 계정·게시글·댓글·라이싱 작업선박 정보 비밀번호는 평문(원문)으로 저장되지 않고 <b>SHA-256 해시 알고리즘</b>으로 암호화되어 저장되며, 관리자는 Firebase Auth 인증 및 UID 화이트리스트 검증으로 이중 보호됩니다.</li>
                         </ul>
                     </div>
                 </div>
@@ -1561,7 +1564,7 @@
 
             <section class="manual-hero" aria-label="학포트 한눈 요약">
                 <h3>🚢 학포트는 부산항 현장 작업을 돕는 웹앱입니다</h3>
-                <p>부산항 신항·북항에서 일하는 본선·기능공·육상 근로자를 위해 <b>임금 계산</b>·<b>근무일지</b>·<b>오더 종이 자동 인식</b>·<b>터미널 선박 스케줄</b>·<b>작업 선박 도감</b>·<b>현장 소식</b>을 한곳에 모았습니다. 설치 없이 주소로 접속하고, 홈 화면에 추가하면 앱처럼 씁니다.</p>
+                <p>부산항 신항·북항에서 일하는 본선·기능공·육상 근로자를 위해 <b>임금 계산</b>·<b>근무일지</b>·<b>오더 종이 자동 인식</b>·<b>터미널 선박 스케줄</b>·<b>라이싱 작업선박 정보</b>·<b>현장 소식</b>을 한곳에 모았습니다. 설치 없이 주소로 접속하고, 홈 화면에 추가하면 앱처럼 씁니다.</p>
 
                 <div class="manual-addr-box">
                     <div class="manual-addr-label">✅ 지금 쓰는 새 주소</div>
@@ -1692,7 +1695,7 @@
                     <h4 class="manual-sub">⭐ 단골 터미널 빠른 실행 바</h4>
                     <p class="manual-plain">자주 가는 터미널의 <b>별표(⭐)</b>를 누르면 화면 맨 위에 그 터미널의 스케줄·차트·현황·베이·셔틀·식단 버튼이 생깁니다. 별표를 다시 누르면 해제됩니다.</p>
 
-                    <h4 class="manual-sub">🚢 작업 선박 정보 — 안전수칙·장비·작업 메모 도감</h4>
+                    <h4 class="manual-sub">🚢 라이싱 작업선박 정보(본선/육상/기능공) — 안전수칙·장비·작업 메모 도감</h4>
                     <p class="manual-plain">지금 <b>등록 선박 122척</b>(2026년 11월 기준)의 작업 난이도·필수 장비·주의사항을 모아 둔 도감입니다.</p>
                     <ol class="manual-steps">
                         <li><b>검색</b> — 선박명, 초성(예: ㅎㅁ), 태그(예: #오토콘)로 찾습니다.</li>
@@ -2247,19 +2250,19 @@
     </div>
 </div>
 
-<script src="./js/app.js?v=2027.82"></script>
-<script src="./js/roster-engine.js?v=2027.82"></script>
+<script src="./js/app.js?v=2027.83"></script>
+<script src="./js/roster-engine.js?v=2027.83"></script>
   
     <!-- [여기서부터 복사] 조장 근무일 비밀번호 검증 스크립트 -->
 <!-- [추가할 보안 및 실행 스크립트] -->
-<script src="./js/leader-access.js?v=2027.82"></script>
+<script src="./js/leader-access.js?v=2027.83"></script>
   <!-- [프로덕션 수준] 파이어베이스 'ships' 컬렉션 전체 데이터 조회 및 검색 모듈 -->
-<script src="./js/ships-board.js?v=2027.82"></script>
+<script src="./js/ships-board.js?v=2027.83"></script>
 
-<script src="./js/tab-views.js?v=2027.82"></script>
-<script src="./js/kkung-relay.js?v=2027.82"></script>
-<script src="./js/want-board.js?v=2027.82"></script>
-<script src="./js/domain-migration.js?v=2027.82"></script>
+<script src="./js/tab-views.js?v=2027.83"></script>
+<script src="./js/kkung-relay.js?v=2027.83"></script>
+<script src="./js/want-board.js?v=2027.83"></script>
+<script src="./js/domain-migration.js?v=2027.83"></script>
 </body>
 </html>
 
