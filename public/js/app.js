@@ -151,7 +151,9 @@ const ADMIN_EMAIL_WHITELIST = [
 // 관리자·식단 업로드 비밀번호 SHA-256 해시 상수 (평문은 코드에 두지 않음)
 // 2026-11-17: 현장 요청으로 식단 업로드(전체 터미널) 비밀번호를 9363 으로 변경 — 구 0346 해시는 더 이상 기본값이 아닙니다.
 const DEFAULT_ADMIN_PW_HASH = "d1943935713b9c4a85942510d3385cfadac4202ba70ab7d9df889b139de86e69";
-const FALLBACK_PRODUCTION_API_ORIGIN = "https://busan-hak-port-info.vercel.app";
+// 2026-11-23 workers.dev 전환 — 정적 호스팅(GitHub Pages 등)에서 호출할 운영 API 주소.
+// 기존 vercel.app 은 2026-12-20 종료되므로 새 주소를 기본값으로 둡니다.
+const FALLBACK_PRODUCTION_API_ORIGIN = "https://busan-hak-port-info.luxrank.workers.dev";
 const ADMIN_SESSION_TOKEN_KEY = "busanPortAdminToken";
 const ADMIN_SESSION_EXPIRY_KEY = "busanPortAdminTokenExpiresAt";
 const ANON_CLIENT_ID_KEY = "busanHakPortClientId";

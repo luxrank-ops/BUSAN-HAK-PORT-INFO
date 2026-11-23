@@ -49,6 +49,13 @@ test('선박 스케줄 감시 워크플로는 대상 URL 을 저장소 variable 
     'SCHEDULE_WATCH_URL variable 로 대상 URL 을 바꿀 수 있어야 합니다');
 });
 
+test('정적 호스팅 클라이언트의 폴백 API 주소도 workers.dev 를 가리킨다', () => {
+  // GitHub Pages 등 정적 호스팅에서 앱을 열면 이 주소로 API 를 호출합니다.
+  // vercel.app 이 2026-12-20 종료되므로 폴백이 옛 주소를 가리키면 그때부터 로그인·기록이 끊깁니다.
+  const appJs = read('public/js/app.js');
+  assert.match(appJs, /const FALLBACK_PRODUCTION_API_ORIGIN = "https:\/\/busan-hak-port-info\.luxrank\.workers\.dev";/);
+});
+
 test('주간 자가 점검 워크플로도 대상 URL 을 variable 로 덮어쓸 수 있다', () => {
   const workflow = read('.github/workflows/weekly-self-check.yml');
   assert.match(workflow, /SELF_CHECK_BASE_URL: \$\{\{ vars\.SELF_CHECK_BASE_URL \|\| 'https:\/\/busan-hak-port-info\.vercel\.app' \}\}/);
