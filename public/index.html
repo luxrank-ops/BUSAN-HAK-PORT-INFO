@@ -37,9 +37,9 @@
     <link rel="icon" href="./favicon.ico">
     <link rel="stylesheet" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.8/dist/web/static/pretendard.css" />
     <link rel="manifest" href="./manifest.json">
-    <link rel="stylesheet" href="./css/app.css?v=2027.83">
+    <link rel="stylesheet" href="./css/app.css?v=2027.84">
     <link rel="apple-touch-icon" href="./icon-192.png">
-<script src="./js/notifications.js?v=2027.83"></script></head>
+<script src="./js/notifications.js?v=2027.84"></script></head>
 <body data-app-view="legacy">
 <header>
     <div class="today-visitor-badge-slot" aria-hidden="true"></div>
@@ -794,13 +794,16 @@
                         </div>
                         <div style="grid-column: 1 / -1; margin-top: 5px;">
                             <button onclick="openHjncMealModal()" class="terminal-btn hjnc-meal-button">✨ 한진 식단 ✨</button>
+                        <div style="grid-column: 1 / -1; margin-top: 5px;">
+                            <button type="button" class="terminal-btn" style="width: 100%; margin: 0; background: linear-gradient(135deg, #fff7ed, #fde68a); border: 2px solid #f39c12; color: #92400e; font-weight: 800;" onclick="openBusSchedule('hjnc')">🚌 셔틀버스 시간표</button>
+                        </div>
                         </div>
                     </div>
                 </div>
             </div>                 
-            <div class="terminal-block term-theme-bnct"><div class="terminal-header tap-effect" onclick="toggleContent('term-bnct')">부산신항컨테이너터미널 (BNCT) ▼</div><div id="term-bnct" class="terminal-body"><div class="terminal-actions"><a href="https://info.bnctkorea.com/esvc/vessel/berthScheduleT" target="_blank" class="terminal-btn">스케줄</a><a href="https://info.bnctkorea.com/esvc/vessel/berthScheduleG" target="_blank" class="terminal-btn">차트</a><a href="https://info.bnctkorea.com/esvc/vessel/vesselStatus" target="_blank" class="terminal-btn">현황</a></div></div></div>
-            <div class="terminal-block term-theme-dgt"><div class="terminal-header tap-effect" onclick="toggleContent('term-dgt')">동원글로벌터미널부산 (DGT) ▼</div><div id="term-dgt" class="terminal-body"><div class="terminal-actions"><a href="https://www.dgtbusan.com/DGT/esvc/vessel/berthScheduleT" target="_blank" class="terminal-btn">스케줄</a><a href="https://www.dgtbusan.com/DGT/esvc/vessel/berthScheduleG" target="_blank" class="terminal-btn">차트</a><a href="https://www.dgtbusan.com/DGT/esvc/vessel/vesselStatus" target="_blank" class="terminal-btn">현황</a></div></div></div>
-            <div class="terminal-block term-theme-bct"><div class="terminal-header tap-effect" onclick="toggleContent('term-bct')">부산컨테이너터미널 (BCT) ▼</div><div id="term-bct" class="terminal-body"><div class="terminal-actions"><a href="https://info.bct2-4.com/infoservice/index.html" target="_blank" class="terminal-btn">스케줄</a><a href="https://info.bct2-4.com/infoservice/index.html" target="_blank" class="terminal-btn">차트</a><a href="https://info.bct2-4.com/infoservice/index.html" target="_blank" class="terminal-btn">현황</a></div></div></div>
+            <div class="terminal-block term-theme-bnct"><div class="terminal-header tap-effect" onclick="toggleContent('term-bnct')">부산신항컨테이너터미널 (BNCT) ▼</div><div id="term-bnct" class="terminal-body"><div class="terminal-actions"><a href="https://info.bnctkorea.com/esvc/vessel/berthScheduleT" target="_blank" class="terminal-btn">스케줄</a><a href="https://info.bnctkorea.com/esvc/vessel/berthScheduleG" target="_blank" class="terminal-btn">차트</a><a href="https://info.bnctkorea.com/esvc/vessel/vesselStatus" target="_blank" class="terminal-btn">현황</a></div><button class="action-btn" style="background:#f39c12; margin-top:8px; padding:10px;" onclick="openBusSchedule('bnct')">🚌 셔틀버스 시간표</button></div></div>
+            <div class="terminal-block term-theme-dgt"><div class="terminal-header tap-effect" onclick="toggleContent('term-dgt')">동원글로벌터미널부산 (DGT) ▼</div><div id="term-dgt" class="terminal-body"><div class="terminal-actions"><a href="https://www.dgtbusan.com/DGT/esvc/vessel/berthScheduleT" target="_blank" class="terminal-btn">스케줄</a><a href="https://www.dgtbusan.com/DGT/esvc/vessel/berthScheduleG" target="_blank" class="terminal-btn">차트</a><a href="https://www.dgtbusan.com/DGT/esvc/vessel/vesselStatus" target="_blank" class="terminal-btn">현황</a></div><button class="action-btn" style="background:#f39c12; margin-top:8px; padding:10px;" onclick="openBusSchedule('dgt')">🚌 셔틀버스 시간표</button></div></div>
+            <div class="terminal-block term-theme-bct"><div class="terminal-header tap-effect" onclick="toggleContent('term-bct')">부산컨테이너터미널 (BCT) ▼</div><div id="term-bct" class="terminal-body"><div class="terminal-actions"><a href="https://info.bct2-4.com/infoservice/index.html" target="_blank" class="terminal-btn">스케줄</a><a href="https://info.bct2-4.com/infoservice/index.html" target="_blank" class="terminal-btn">차트</a><a href="https://info.bct2-4.com/infoservice/index.html" target="_blank" class="terminal-btn">현황</a></div><button class="action-btn" style="background:#f39c12; margin-top:8px; padding:10px;" onclick="openBusSchedule('bct')">🚌 셔틀버스 시간표</button></div></div>
         </div> 
     </div>
 
@@ -816,8 +819,8 @@
         <div id="t2-content" class="collapsible-content collapsed" style="background: white; border: 1px solid var(--border); border-radius: 8px; margin-top: 4px;">
             <div class="terminal-ticker"><div class="terminal-ticker-wrap"><div id="t2TickerText" class="terminal-ticker-item">2항업 티커를 불러오는 중...</div></div><button class="terminal-ticker-admin" type="button" title="2항업 티커 관리" onclick="openSectionTickerManager('t2')">관리</button></div>
             <div class="terminal-block"><div class="terminal-header tap-effect" onclick="toggleContent('term-pnc')">부산신항만 (PNC) ▼</div><div id="term-pnc" class="terminal-body"><div class="terminal-actions"><a href="https://svc.pncport.com/info/CMS/Ship/Info.pnc?mCode=MN014" target="_blank" rel="noopener noreferrer" class="terminal-btn">스케줄</a><a href="https://svc.pncport.com/info/CMS/Ship/ShipBerthC.pnc?mCode=MN019" target="_blank" rel="noopener noreferrer" class="terminal-btn">차트</a><a href="https://svc.pncport.com/info/CMS/Ship/ShipVslStatus.pnc?mCode=MN020" target="_blank" rel="noopener noreferrer" class="terminal-btn">현황</a></div><button class="action-btn" style="background:#f39c12; margin-top:8px; padding:10px;" onclick="openBusSchedule()">🚌 셔틀버스 시간표</button></div></div>
-            <div class="terminal-block"><div class="terminal-header tap-effect" onclick="toggleContent('term-hpnt')">HMM (HPNT) ▼</div><div id="term-hpnt" class="terminal-body"><div class="terminal-actions"><a href="https://www.hpnt.co.kr/infoservice/vessel/vslScheduleList.jsp" target="_blank" class="terminal-btn">스케줄</a><a href="https://www.hpnt.co.kr/infoservice/vessel/vslScheduleChart.jsp" target="_blank" class="terminal-btn">차트</a><a href="https://www.hpnt.co.kr/infoservice/vessel/vslWorkStatus.jsp" target="_blank" class="terminal-btn">현황</a></div></div></div>
-            <div class="terminal-block"><div class="terminal-header tap-effect" onclick="toggleContent('term-pnit')">신항국제 (PNIT) ▼</div><div id="term-pnit" class="terminal-body"><div class="terminal-actions"><a href="https://www.pnitl.com/infoservice/vessel/vslScheduleList.jsp" target="_blank" class="terminal-btn">스케줄</a><a href="https://www.pnitl.com/infoservice/vessel/vslScheduleChart.jsp" target="_blank" class="terminal-btn">차트</a><a href="https://www.pnitl.com/infoservice/vessel/vslWorkStatus.jsp" target="_blank" class="terminal-btn">현황</a></div></div></div>
+            <div class="terminal-block"><div class="terminal-header tap-effect" onclick="toggleContent('term-hpnt')">HMM (HPNT) ▼</div><div id="term-hpnt" class="terminal-body"><div class="terminal-actions"><a href="https://www.hpnt.co.kr/infoservice/vessel/vslScheduleList.jsp" target="_blank" class="terminal-btn">스케줄</a><a href="https://www.hpnt.co.kr/infoservice/vessel/vslScheduleChart.jsp" target="_blank" class="terminal-btn">차트</a><a href="https://www.hpnt.co.kr/infoservice/vessel/vslWorkStatus.jsp" target="_blank" class="terminal-btn">현황</a></div><button class="action-btn" style="background:#f39c12; margin-top:8px; padding:10px;" onclick="openBusSchedule('hpnt')">🚌 셔틀버스 시간표</button></div></div>
+            <div class="terminal-block"><div class="terminal-header tap-effect" onclick="toggleContent('term-pnit')">신항국제 (PNIT) ▼</div><div id="term-pnit" class="terminal-body"><div class="terminal-actions"><a href="https://www.pnitl.com/infoservice/vessel/vslScheduleList.jsp" target="_blank" class="terminal-btn">스케줄</a><a href="https://www.pnitl.com/infoservice/vessel/vslScheduleChart.jsp" target="_blank" class="terminal-btn">차트</a><a href="https://www.pnitl.com/infoservice/vessel/vslWorkStatus.jsp" target="_blank" class="terminal-btn">현황</a></div><button class="action-btn" style="background:#f39c12; margin-top:8px; padding:10px;" onclick="openBusSchedule('pnit')">🚌 셔틀버스 시간표</button></div></div>
         </div>
     </div>
 
@@ -831,8 +834,8 @@
         </div>
         <div id="t1-content" class="collapsible-content collapsed" style="background: white; border: 1px solid var(--border); border-radius: 8px; margin-top: 4px;">
             <div class="terminal-ticker"><div class="terminal-ticker-wrap"><div id="t1TickerText" class="terminal-ticker-item">1항업 티커를 불러오는 중...</div></div><button class="terminal-ticker-admin" type="button" title="1항업 티커 관리" onclick="openSectionTickerManager('t1')">관리</button></div>
-            <div class="terminal-block"><div class="terminal-header tap-effect" onclick="toggleContent('term-bptc')">북항 통합 (BPTC) ▼</div><div id="term-bptc" class="terminal-body"><div class="terminal-actions"><a href="http://info.bptc.co.kr:9084/content/sw/frame/berth_status_text_frame_sw_kr.jsp?p_id=BETX_SH_KR&snb_num=2&snb_div=service" target="_blank" class="terminal-btn">스케줄</a><a href="http://info.bptc.co.kr:9084/content/sw/frame/berth_status_text_frame_sw_kr.jsp?p_id=BETX_SH_KR&snb_num=2&snb_div=service" target="_blank" class="terminal-btn">차트</a><a href="http://info.bptc.co.kr:9084/content/index.jsp#03" target="_blank" class="terminal-btn">현황</a></div></div></div>
-            <div class="terminal-block"><div class="terminal-header tap-effect" onclick="toggleContent('term-hbct')">허치슨 (HBCT/자성대) ▼</div><div id="term-hbct" class="terminal-body"><div class="terminal-actions"><a href="https://custom.hktl.com/jsp/T01/sunsuk.jsp" target="_blank" class="terminal-btn">스케줄</a><a href="https://custom.hktl.com/jsp/T01/sunsuk.jsp" target="_blank" class="terminal-btn">차트</a><a href="https://custom.hktl.com/jsp/T03/bonsun.jsp" target="_blank" class="terminal-btn">현황</a></div></div></div>
+            <div class="terminal-block"><div class="terminal-header tap-effect" onclick="toggleContent('term-bptc')">북항 통합 (BPTC) ▼</div><div id="term-bptc" class="terminal-body"><div class="terminal-actions"><a href="http://info.bptc.co.kr:9084/content/sw/frame/berth_status_text_frame_sw_kr.jsp?p_id=BETX_SH_KR&snb_num=2&snb_div=service" target="_blank" class="terminal-btn">스케줄</a><a href="http://info.bptc.co.kr:9084/content/sw/frame/berth_status_text_frame_sw_kr.jsp?p_id=BETX_SH_KR&snb_num=2&snb_div=service" target="_blank" class="terminal-btn">차트</a><a href="http://info.bptc.co.kr:9084/content/index.jsp#03" target="_blank" class="terminal-btn">현황</a></div><button class="action-btn" style="background:#f39c12; margin-top:8px; padding:10px;" onclick="openBusSchedule('bptc')">🚌 셔틀버스 시간표</button></div></div>
+            <div class="terminal-block"><div class="terminal-header tap-effect" onclick="toggleContent('term-hbct')">허치슨 (HBCT/자성대) ▼</div><div id="term-hbct" class="terminal-body"><div class="terminal-actions"><a href="https://custom.hktl.com/jsp/T01/sunsuk.jsp" target="_blank" class="terminal-btn">스케줄</a><a href="https://custom.hktl.com/jsp/T01/sunsuk.jsp" target="_blank" class="terminal-btn">차트</a><a href="https://custom.hktl.com/jsp/T03/bonsun.jsp" target="_blank" class="terminal-btn">현황</a></div><button class="action-btn" style="background:#f39c12; margin-top:8px; padding:10px;" onclick="openBusSchedule('hbct')">🚌 셔틀버스 시간표</button></div></div>
         </div>
     </div>
 
@@ -2250,19 +2253,19 @@
     </div>
 </div>
 
-<script src="./js/app.js?v=2027.83"></script>
-<script src="./js/roster-engine.js?v=2027.83"></script>
+<script src="./js/app.js?v=2027.84"></script>
+<script src="./js/roster-engine.js?v=2027.84"></script>
   
     <!-- [여기서부터 복사] 조장 근무일 비밀번호 검증 스크립트 -->
 <!-- [추가할 보안 및 실행 스크립트] -->
-<script src="./js/leader-access.js?v=2027.83"></script>
+<script src="./js/leader-access.js?v=2027.84"></script>
   <!-- [프로덕션 수준] 파이어베이스 'ships' 컬렉션 전체 데이터 조회 및 검색 모듈 -->
-<script src="./js/ships-board.js?v=2027.83"></script>
+<script src="./js/ships-board.js?v=2027.84"></script>
 
-<script src="./js/tab-views.js?v=2027.83"></script>
-<script src="./js/kkung-relay.js?v=2027.83"></script>
-<script src="./js/want-board.js?v=2027.83"></script>
-<script src="./js/domain-migration.js?v=2027.83"></script>
+<script src="./js/tab-views.js?v=2027.84"></script>
+<script src="./js/kkung-relay.js?v=2027.84"></script>
+<script src="./js/want-board.js?v=2027.84"></script>
+<script src="./js/domain-migration.js?v=2027.84"></script>
 </body>
 </html>
 

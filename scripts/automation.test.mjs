@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
 import * as esbuild from 'esbuild';
-import { readAppJs, extractFunction, extractDeclaration } from './app-source.mjs';
+import { readAppJs, readAppHtml, extractFunction, extractDeclaration } from './app-source.mjs';
 
 // A-1 (2026-10-17): 커뮤니티 검증 로직은 인라인 스크립트 → public/js/app.js 로 이동.
 // 라이브 소스에서 필요한 함수·상태만 추출해 샌드박스에 실행합니다.
@@ -767,7 +767,12 @@ test('PNC 점검 2: 프론트엔드 PNC 실시간 활성화(live: true), 셔틀�
 
   const busCode = [
     extractDeclaration(appJs, 'DEFAULT_PNC_BUS_IMAGE_URL'),
+    extractDeclaration(appJs, 'BUS_SCHEDULE_TERMINAL_IDS'),
+    extractDeclaration(appJs, 'BUS_SCHEDULE_EMPTY_NOTICE'),
     extractDeclaration(appJs, 'isPncBusModalActive'),
+    extractDeclaration(appJs, 'currentBusTerminalId'),
+    extractFunction(appJs, 'normalizeBusTerminalId'),
+    extractFunction(appJs, 'getBusTerminalName'),
     extractFunction(appJs, 'resetPncBusModalState'),
     extractFunction(appJs, 'openBusSchedule'),
     extractFunction(appJs, 'closeImageModal')
@@ -814,6 +819,155 @@ test('PNC 점검 2: 프론트엔드 PNC 실시간 활성화(live: true), 셔틀�
   for (const name of fs.readdirSync(iconsDir)) {
     const stat = fs.statSync(new URL(name, iconsDir));
     assert.ok(stat.size > 100, `icons/${name} 파일이 손상되었습니다 (${stat.size} bytes)`);
+  }
+});
+
+test('셔틀 시간표 1·2·3항업 9개 터미널 전체 지원: 블록 버튼·단골 빠른 바·미등록 안내·터미널별 업로드 대상', async () => {
+  const BUS_IDS = ['hjnc', 'bnct', 'dgt', 'bct', 'pnc', 'hpnt', 'pnit', 'bptc', 'hbct'];
+  const html = readAppHtml();
+
+  // (1) 각 터미널 블록 안에 셔틀버스 시간표 버튼이 있다 (PNC 는 인자 없는 기존 호출 유지)
+  for (const id of BUS_IDS) {
+    const blockMatch = html.match(new RegExp(`<div id="term-${id}" class="terminal-body">[\\s\\S]*?</div>\\s*</div>`));
+    assert.ok(blockMatch, `term-${id} 블록을 찾을 수 없습니다`);
+    const block = blockMatch[0];
+    assert.match(block, /🚌 셔틀버스 시간표/, `term-${id} 블록에 셔틀버스 시간표 버튼이 없습니다`);
+    if (id === 'pnc') {
+      assert.match(block, /onclick="openBusSchedule\(\)"/, 'PNC 버튼은 기존 인자 없는 호출을 유지해야 합니다');
+    } else {
+      assert.ok(block.includes(`openBusSchedule('${id}')`), `term-${id} 버튼이 openBusSchedule('${id}') 를 호출해야 합니다`);
+    }
+  }
+
+  // (2) 단골 터미널 빠른 실행 바: 모든 터미널 bus: true + 자기 id 로 호출
+  const quickConfigCode = extractDeclaration(appJs, 'terminalQuickConfig');
+  const configCtx = vm.createContext({});
+  vm.runInContext(`${quickConfigCode}\nglobalThis.cfg = terminalQuickConfig;`, configCtx);
+  for (const id of BUS_IDS) {
+    assert.equal(configCtx.cfg[id]?.bus, true, `terminalQuickConfig.${id}.bus 가 true 여야 합니다`);
+  }
+  const quickBarCode = extractFunction(appJs, 'renderFavoriteQuickBar');
+  assert.ok(quickBarCode.includes("openBusSchedule('") && quickBarCode.includes('${id}'), '빠른 실행 바는 열린 터미널 id 로 셔틀 시간표를 열어야 합니다');
+
+  // (3) 공용 샌드박스: 터미널별 문서·표시 분기 검증
+  const events = [];
+  const makeElements = () => ({
+    imageModal: { style: { display: 'none' }, classList: { add() {}, remove() {} } },
+    modalImage: { src: '', style: { display: 'none' }, onload: null, onerror: null },
+    modalImageTitle: { textContent: '', classList: { hidden: true, add() { this.hidden = true; }, remove() { this.hidden = false; } } },
+    modalImageStatus: { textContent: '', classList: { hidden: true, add() { this.hidden = true; }, remove() { this.hidden = false; } } },
+    pncBusAdminBtn: { classList: { hidden: true, add() { this.hidden = true; }, remove() { this.hidden = false; } } }
+  });
+  const docs = {};
+  const createSandbox = (elements, docStore) => {
+    const code = [
+      extractDeclaration(appJs, 'DEFAULT_PNC_BUS_IMAGE_URL'),
+      extractDeclaration(appJs, 'BUS_SCHEDULE_TERMINAL_IDS'),
+      extractDeclaration(appJs, 'BUS_SCHEDULE_EMPTY_NOTICE'),
+      extractDeclaration(appJs, 'isPncBusModalActive'),
+      extractDeclaration(appJs, 'currentBusTerminalId'),
+      extractDeclaration(appJs, 'officialTerminalNames'),
+      extractFunction(appJs, 'normalizeBusTerminalId'),
+      extractFunction(appJs, 'getBusTerminalName'),
+      extractFunction(appJs, 'resetPncBusModalState'),
+      extractFunction(appJs, 'openBusSchedule'),
+      extractFunction(appJs, 'requestPncBusUpload'),
+      extractFunction(appJs, 'uploadPncBusImage'),
+      extractFunction(appJs, 'closeImageModal')
+    ].join('\n');
+    const sandbox = vm.createContext({
+      document: {
+        getElementById: (id) => {
+          if (id === 'pncBusFileInput') return elements.pncBusFileInput;
+          return elements[id] || null;
+        }
+      },
+      trackAppEvent: (cat, act) => events.push(`${cat}:${act}`),
+      scheduleAppHistoryRecord: () => {},
+      showToast: (msg) => events.push(`toast:${msg}`),
+      verifyAdmin: async () => true,
+      compressImageForUpload: async (file) => file,
+      Date,
+      String,
+      console,
+      db: {
+        collection: () => ({
+          doc: (id) => ({
+            get: async () => ({
+              exists: Boolean(docStore[id]),
+              data: () => docStore[id] || {}
+            }),
+            set: async (payload) => { docStore[id] = { ...payload, __written: true }; }
+          })
+        })
+      },
+      storage: {
+        ref: (storagePath) => ({
+          put: async () => ({ ref: { getDownloadURL: async () => `https://files.example.com/${storagePath}` } })
+        })
+      },
+      firebase: { firestore: { FieldValue: { serverTimestamp: () => 'SERVER_TS' } } }
+    });
+    vm.runInContext(code, sandbox);
+    return sandbox;
+  };
+
+  // 3-1) 미등록 터미널(HJNC): 이미지 숨김 + 안내 문구 + 관리자 버튼 노출 + 통계 이벤트
+  {
+    const elements = makeElements();
+    elements.pncBusFileInput = { value: '', click() {}, files: null };
+    const sandbox = createSandbox(elements, docs);
+    await sandbox.openBusSchedule('hjnc');
+    assert.equal(elements.imageModal.style.display, 'flex');
+    assert.equal(elements.modalImageTitle.textContent, '🚌 한진부산컨테이너터미널(HJNC) 셔틀버스 시간표');
+    assert.equal(elements.modalImage.style.display, 'none', '미등록 터미널은 이미지 영역을 숨겨야 합니다');
+    assert.match(elements.modalImageStatus.textContent, /아직 등록된 셔틀버스 시간표가 없습니다/, '미등록 안내 문구가 보여야 합니다');
+    assert.equal(elements.modalImageStatus.classList.hidden, false);
+    assert.equal(elements.pncBusAdminBtn.classList.hidden, false, '관리자 변경 버튼이 보여야 합니다');
+    assert.ok(events.includes('actions:bus_view'), 'bus_view 통계 이벤트');
+    assert.ok(events.includes('terminals:hjnc'), '터미널별 통계 이벤트');
+    sandbox.closeImageModal();
+  }
+
+  // 3-2) 등록된 터미널(DGT): settings/dgt_bus 이미지 표시
+  docs.dgt_bus = { imageUrl: 'https://files.example.com/dgt-schedule.jpg' };
+  {
+    const elements = makeElements();
+    elements.pncBusFileInput = { value: '', click() {}, files: null };
+    const sandbox = createSandbox(elements, docs);
+    await sandbox.openBusSchedule('dgt');
+    assert.equal(elements.modalImageTitle.textContent, '🚌 동원글로벌터미널부산(DGT) 셔틀버스 시간표');
+    assert.equal(elements.modalImage.style.display, 'block');
+    assert.equal(elements.modalImage.src, 'https://files.example.com/dgt-schedule.jpg');
+    sandbox.closeImageModal();
+  }
+
+  // 3-3) PNC 하위 호환: 인자 없음/알 수 없는 id 모두 PNC 기본 이미지
+  for (const callArg of ['none', 'unknown-terminal']) {
+    const elements = makeElements();
+    elements.pncBusFileInput = { value: '', click() {}, files: null };
+    const sandbox = createSandbox(elements, docs);
+    await (callArg === 'none' ? sandbox.openBusSchedule() : sandbox.openBusSchedule('unknown-terminal'));
+    assert.equal(elements.modalImageTitle.textContent, '🚌 부산신항만(PNC) 셔틀버스 시간표');
+    assert.match(elements.modalImage.src, /KakaoTalk_20260129_001114789\.jpg/);
+    sandbox.closeImageModal();
+  }
+
+  // 3-4) 업로드 대상 분기: 모달을 연 터미널의 문서·Storage 경로로 저장
+  {
+    docs.bnct_bus = undefined;
+    const elements = makeElements();
+    elements.pncBusFileInput = { value: '', click() {}, files: null };
+    const sandbox = createSandbox(elements, docs);
+    await sandbox.openBusSchedule('bnct');
+    await sandbox.uploadPncBusImage({ files: [{ name: 'bnct bus.png' }] });
+    assert.ok(docs.bnct_bus, 'settings/bnct_bus 문서에 저장되어야 합니다');
+    assert.equal(docs.bnct_bus.terminalId, 'bnct');
+    assert.match(docs.bnct_bus.imageUrl, /^https:\/\/files\.example\.com\/terminal-bus\/bnct_\d+_bnct_bus\.png$/, 'Storage 경로는 terminal-bus/<터미널>_<시각>_<파일명> 이어야 합니다');
+    assert.equal(docs.bnct_bus.updatedAt, 'SERVER_TS');
+    assert.equal(elements.modalImage.src, docs.bnct_bus.imageUrl);
+    assert.ok(events.some((e) => e.includes('부산신항컨테이너터미널(BNCT) 셔틀버스 시간표 이미지가 변경되었습니다')), '터미널 이름이 담긴 토스트');
+    sandbox.closeImageModal();
   }
 });
 

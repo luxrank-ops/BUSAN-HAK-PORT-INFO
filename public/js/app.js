@@ -3377,28 +3377,32 @@ const terminalQuickConfig = {
         chart: "https://www.hjnc.co.kr/esvc/vessel/berthScheduleG",
         status: "https://www.hjnc.co.kr/esvc/vessel/vesselStatus",
         mealLabel: "한진 식단",
-        bayplan: "http://bayplan.hjnc.co.kr"
+        bayplan: "http://bayplan.hjnc.co.kr",
+        bus: true
     },
     bnct: {
         short: "고려(BNCT)",
         schedule: "https://info.bnctkorea.com/esvc/vessel/berthScheduleT",
         chart: "https://info.bnctkorea.com/esvc/vessel/berthScheduleG",
         status: "https://info.bnctkorea.com/esvc/vessel/vesselStatus",
-        mealLabel: "부산신항컨테이너터미널(BNCT) 식단"
+        mealLabel: "부산신항컨테이너터미널(BNCT) 식단",
+        bus: true
     },
     dgt: {
         short: "동원(DGT)",
         schedule: "https://www.dgtbusan.com/DGT/esvc/vessel/berthScheduleT",
         chart: "https://www.dgtbusan.com/DGT/esvc/vessel/berthScheduleG",
         status: "https://www.dgtbusan.com/DGT/esvc/vessel/vesselStatus",
-        mealLabel: "동원글로벌터미널부산(DGT) 식단"
+        mealLabel: "동원글로벌터미널부산(DGT) 식단",
+        bus: true
     },
     bct: {
         short: "BCT",
         schedule: "https://info.bct2-4.com/infoservice/index.html",
         chart: "https://info.bct2-4.com/infoservice/index.html",
         status: "https://info.bct2-4.com/infoservice/index.html",
-        mealLabel: "부산컨테이너터미널(BCT) 식단"
+        mealLabel: "부산컨테이너터미널(BCT) 식단",
+        bus: true
     },
     pnc: {
         short: "PNC(부산신항만)",
@@ -3413,28 +3417,32 @@ const terminalQuickConfig = {
         schedule: "https://www.hpnt.co.kr/infoservice/vessel/vslScheduleList.jsp",
         chart: "https://www.hpnt.co.kr/infoservice/vessel/vslScheduleChart.jsp",
         status: "https://www.hpnt.co.kr/infoservice/vessel/vslWorkStatus.jsp",
-        mealLabel: "HMM PSA 신항만(HPNT) 식단"
+        mealLabel: "HMM PSA 신항만(HPNT) 식단",
+        bus: true
     },
     pnit: {
         short: "신항국제(PNIT)",
         schedule: "https://www.pnitl.com/infoservice/vessel/vslScheduleList.jsp",
         chart: "https://www.pnitl.com/infoservice/vessel/vslScheduleChart.jsp",
         status: "https://www.pnitl.com/infoservice/vessel/vslWorkStatus.jsp",
-        mealLabel: "부산신항국제터미널(PNIT) 식단"
+        mealLabel: "부산신항국제터미널(PNIT) 식단",
+        bus: true
     },
     bptc: {
         short: "신선대감만(BPTC)",
         schedule: "http://info.bptc.co.kr:9084/content/sw/frame/berth_status_text_frame_sw_kr.jsp?p_id=BETX_SH_KR&snb_num=2&snb_div=service",
         chart: "http://info.bptc.co.kr:9084/content/sw/frame/berth_status_text_frame_sw_kr.jsp?p_id=BETX_SH_KR&snb_num=2&snb_div=service",
         status: "http://info.bptc.co.kr:9084/content/index.jsp#03",
-        mealLabel: "신선대감만터미널(BPTC) 식단"
+        mealLabel: "신선대감만터미널(BPTC) 식단",
+        bus: true
     },
     hbct: {
         short: "허치슨(HBCT)",
         schedule: "https://custom.hktl.com/jsp/T01/sunsuk.jsp",
         chart: "https://custom.hktl.com/jsp/T01/sunsuk.jsp",
         status: "https://custom.hktl.com/jsp/T03/bonsun.jsp",
-        mealLabel: "허치슨포트부산(HBCT) 식단"
+        mealLabel: "허치슨포트부산(HBCT) 식단",
+        bus: true
     }
 };
 let favoriteTerminals = [];
@@ -3480,7 +3488,7 @@ function renderFavoriteQuickBar() {
             extraBtns.push(`<a href="${cfg.bayplan}" target="_blank" rel="noopener noreferrer" class="fav-quick-btn extra">🧩 베이</a>`);
         }
         if (cfg.bus) {
-            extraBtns.push(`<button type="button" class="fav-quick-btn extra" onclick="openBusSchedule()">🚌 셔틀</button>`);
+            extraBtns.push(`<button type="button" class="fav-quick-btn extra" onclick="openBusSchedule('${id}')">🚌 셔틀</button>`);
         }
         const nameMatch = cfg.short.match(/^(.+?)(\(.+\))$/);
         const nameHtml = nameMatch
@@ -10093,7 +10101,23 @@ function renderPagination(curr) { const total = Math.ceil(allPostsData.length / 
 function loadComments(pid){if(commentUnsubscribes[pid]) commentUnsubscribes[pid](); commentUnsubscribes[pid]=db.collection('posts').doc(pid).collection('comments').orderBy('timestamp','asc').onSnapshot(s=>{const el=document.getElementById(`cmt-list-${pid}`); const badgeEl=document.getElementById(`cmt-badge-${pid}`); const visibleComments=[]; s.forEach(d=>{const c=d.data()||{}; if(isDeletedRecord(c)) return; visibleComments.push(d);}); if(badgeEl){ if(visibleComments.length>0){ badgeEl.innerText=`💬 ${visibleComments.length}`; badgeEl.classList.remove('hidden'); } else { badgeEl.classList.add('hidden'); } } if(!el) return; boardCommentsById[pid]=[]; const items=[]; s.forEach(d=>{const c=d.data()||{}; if(isDeletedRecord(c)) return; boardCommentsById[pid].push({...c, id:d.id}); const isHidden=Boolean(c.hidden); const safeName=escapeShipCommentHtml(c.name||"익명"); const safeText=isHidden ? `🔒 자동 블라인드 처리된 댓글입니다. (${escapeShipCommentHtml(c.blindReason||'금칙어/도배 감지')})` : escapeShipCommentHtml(c.text||""); const safePw=String(c.password||"").replace(/\\/g,"\\\\").replace(/'/g,"\\'").replace(/"/g,"&quot;"); const imgHtml=(!isHidden && c.imageUrl) ? `<div style="margin-top:4px;"><img src="${escapeShipCommentHtml(c.imageUrl)}" loading="lazy" alt="댓글 첨부 이미지" class="comment-img-thumb" onclick="document.getElementById('imageModal').style.display='flex'; document.getElementById('modalImage').src=this.src;" title="클릭하여 원본 확대 보기"></div>` : ""; items.push(`<div class="comment-item"><div style="flex:1; min-width:0; padding-right:6px;"><div><span class="comment-meta">${safeName}:</span> <span class="comment-text" style="white-space:pre-wrap; ${isHidden ? 'color:var(--text-sub); font-style:italic;' : ''}">${safeText}</span></div>${imgHtml}</div><div style="display:flex; gap:3px; flex-shrink:0;"><button class="mini-btn" style="padding:2px 8px; font-size:0.75rem; border-radius:4px;" onclick="editComment('${pid}','${d.id}')">수정</button><button class="mini-btn btn-del" style="padding:2px 8px; font-size:0.75rem; border-radius:4px;" onclick="deleteComment('${pid}','${d.id}','${safePw}')">삭제</button></div></div>`);}); el.innerHTML=items.join("");}, err=>{console.warn("댓글 로드 오류:",err);});} 
 
 const DEFAULT_PNC_BUS_IMAGE_URL = "https://firebasestorage.googleapis.com/v0/b/busan-hak-port.firebasestorage.app/o/KakaoTalk_20260129_001114789.jpg?alt=media";
+// 셔틀버스 시간표를 열 수 있는 터미널 = 3항업(신항 남측) 4곳 + 2항업(신항 북측) 3곳 + 1항업(북항) 2곳
+const BUS_SCHEDULE_TERMINAL_IDS = ["hjnc", "bnct", "dgt", "bct", "pnc", "hpnt", "pnit", "bptc", "hbct"];
+const BUS_SCHEDULE_EMPTY_NOTICE = "아직 등록된 셔틀버스 시간표가 없습니다. 관리자가 아래 버튼으로 이미지를 등록·업데이트할 수 있습니다.";
 let isPncBusModalActive = false;
+// 관리자 업로드 대상 터미널 (모달을 연 터미널 기준)
+let currentBusTerminalId = "pnc";
+
+function normalizeBusTerminalId(terminalId) {
+    const id = String(terminalId == null ? "" : terminalId).trim().toLowerCase();
+    return BUS_SCHEDULE_TERMINAL_IDS.includes(id) ? id : "pnc";
+}
+
+function getBusTerminalName(terminalId) {
+    const id = normalizeBusTerminalId(terminalId);
+    const official = (typeof officialTerminalNames !== "undefined" && officialTerminalNames) ? officialTerminalNames[id] : "";
+    return official || id.toUpperCase();
+}
 
 function resetPncBusModalState() {
     isPncBusModalActive = false;
@@ -10114,9 +10138,13 @@ function resetPncBusModalState() {
     }
 }
 
-async function openBusSchedule() {
+async function openBusSchedule(terminalId = "pnc") {
+    // 인자 없이 호출하면 기존과 동일하게 PNC(부산신항만) 시간표를 엽니다.
+    const busTerminalId = normalizeBusTerminalId(terminalId);
+    const hasDefaultImage = busTerminalId === "pnc";
+    currentBusTerminalId = busTerminalId;
     trackAppEvent("actions", "bus_view");
-    trackAppEvent("terminals", "pnc");
+    trackAppEvent("terminals", busTerminalId);
     isPncBusModalActive = true;
 
     const modal = document.getElementById("imageModal");
@@ -10126,55 +10154,77 @@ async function openBusSchedule() {
     const adminBtn = document.getElementById("pncBusAdminBtn");
     if (!modal || !imgEl) return;
 
+    const showStatus = (text) => {
+        if (!statusEl) return;
+        statusEl.textContent = text;
+        statusEl.classList.remove("hidden");
+    };
+    const hideStatus = () => {
+        if (!statusEl) return;
+        statusEl.textContent = "";
+        statusEl.classList.add("hidden");
+    };
+
     if (titleEl) {
-        titleEl.textContent = "🚌 부산신항만(PNC) 셔틀버스 시간표";
+        titleEl.textContent = `🚌 ${getBusTerminalName(busTerminalId)} 셔틀버스 시간표`;
         titleEl.classList.remove("hidden");
     }
-    if (statusEl) {
-        statusEl.textContent = "셔틀버스 시간표를 불러오는 중...";
-        statusEl.classList.remove("hidden");
-    }
+    showStatus("셔틀버스 시간표를 불러오는 중...");
     if (adminBtn) adminBtn.classList.remove("hidden");
 
     const applyBusImageUrl = (targetUrl, allowDefaultFallback) => {
         imgEl.onload = () => {
             if (!isPncBusModalActive) return;
             imgEl.style.display = "block";
-            if (statusEl) {
-                statusEl.textContent = "";
-                statusEl.classList.add("hidden");
-            }
+            hideStatus();
         };
         imgEl.onerror = () => {
             if (!isPncBusModalActive) return;
-            if (allowDefaultFallback && targetUrl !== DEFAULT_PNC_BUS_IMAGE_URL) {
+            if (allowDefaultFallback && hasDefaultImage && targetUrl !== DEFAULT_PNC_BUS_IMAGE_URL) {
                 applyBusImageUrl(DEFAULT_PNC_BUS_IMAGE_URL, false);
                 return;
             }
             imgEl.style.display = "none";
-            if (statusEl) {
-                statusEl.textContent = "⚠️ 셔틀버스 시간표 이미지를 불러오지 못했습니다. 네트워크 연결을 확인해 주세요.";
-                statusEl.classList.remove("hidden");
-            }
+            showStatus("⚠️ 셔틀버스 시간표 이미지를 불러오지 못했습니다. 네트워크 연결을 확인해 주세요.");
         };
         imgEl.style.display = "block";
         imgEl.src = targetUrl;
     };
 
-    applyBusImageUrl(DEFAULT_PNC_BUS_IMAGE_URL, false);
+    if (hasDefaultImage) {
+        // PNC는 등록 전에도 기본 시간표 이미지가 바로 보입니다.
+        applyBusImageUrl(DEFAULT_PNC_BUS_IMAGE_URL, false);
+    } else {
+        // 나머지 터미널은 관리자가 등록한 이미지가 있을 때만 표시합니다.
+        imgEl.style.display = "none";
+        imgEl.onload = null;
+        imgEl.onerror = null;
+    }
     modal.style.display = "flex";
     scheduleAppHistoryRecord();
 
+    const showEmptyNotice = () => {
+        imgEl.style.display = "none";
+        showStatus(BUS_SCHEDULE_EMPTY_NOTICE);
+    };
+
     try {
         if (typeof db !== "undefined" && db) {
-            const snap = await db.collection("settings").doc("pnc_bus").get();
+            const snap = await db.collection("settings").doc(`${busTerminalId}_bus`).get();
+            // 조회 중 다른 터미널 모달로 바뀌었으면 이 응답은 버립니다.
+            if (!isPncBusModalActive || currentBusTerminalId !== busTerminalId) return;
             const customUrl = snap && snap.exists ? String((snap.data() || {}).imageUrl || "").trim() : "";
-            if (isPncBusModalActive && customUrl && customUrl !== DEFAULT_PNC_BUS_IMAGE_URL) {
-                applyBusImageUrl(customUrl, true);
+            if (customUrl && customUrl !== DEFAULT_PNC_BUS_IMAGE_URL) {
+                applyBusImageUrl(customUrl, hasDefaultImage);
+            } else if (!hasDefaultImage) {
+                showEmptyNotice();
             }
+        } else if (!hasDefaultImage) {
+            showEmptyNotice();
         }
     } catch (err) {
-        console.warn("PNC 셔틀 시간표 설정 조회 확인:", err);
+        console.warn("셔틀버스 시간표 설정 조회 확인:", err);
+        if (isPncBusModalActive && !hasDefaultImage) showEmptyNotice();
     }
 }
 
@@ -10189,6 +10239,8 @@ async function requestPncBusUpload() {
 async function uploadPncBusImage(input) {
     const file = input && input.files && input.files[0];
     if (!file) return;
+    const busTerminalId = normalizeBusTerminalId(currentBusTerminalId);
+    const busTerminalName = getBusTerminalName(busTerminalId);
     const statusEl = document.getElementById("modalImageStatus");
     const imgEl = document.getElementById("modalImage");
     if (statusEl) {
@@ -10198,10 +10250,11 @@ async function uploadPncBusImage(input) {
     try {
         const compressed = typeof compressImageForUpload === "function" ? await compressImageForUpload(file) : file;
         const safeFileName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
-        const upload = await storage.ref(`terminal-bus/pnc_${Date.now()}_${safeFileName}`).put(compressed);
+        const upload = await storage.ref(`terminal-bus/${busTerminalId}_${Date.now()}_${safeFileName}`).put(compressed);
         const imageUrl = await upload.ref.getDownloadURL();
-        await db.collection("settings").doc("pnc_bus").set({
+        await db.collection("settings").doc(`${busTerminalId}_bus`).set({
             imageUrl,
+            terminalId: busTerminalId,
             updatedAt: firebase.firestore.FieldValue.serverTimestamp()
         });
         if (imgEl) {
@@ -10212,7 +10265,7 @@ async function uploadPncBusImage(input) {
             statusEl.textContent = "✅ 셔틀버스 시간표 이미지가 업데이트되었습니다.";
             statusEl.classList.remove("hidden");
         }
-        showToast("🚌 PNC 셔틀버스 시간표 이미지가 변경되었습니다.");
+        showToast(`🚌 ${busTerminalName} 셔틀버스 시간표 이미지가 변경되었습니다.`);
     } catch (error) {
         if (statusEl) {
             statusEl.textContent = "이미지 업로드에 실패했습니다.";
