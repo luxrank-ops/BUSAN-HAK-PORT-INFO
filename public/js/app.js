@@ -49,6 +49,7 @@ function isDeletedRecord(data) {
 /* 🔎 근무일지 조회 (D-1·A-8): 본인 workerId 로 좁혀 읽어 개인정보·읽기 비용을 줄입니다.
    복합 인덱스가 아직 배포되지 않은 환경에서는 기존 방식으로 자동 대체됩니다. */
 let workLogScopedQueryUnavailable = false;
+let workerReauthNoticeShown = false;
 async function queryWorkLogsByDateRange(startDate, endDate, limitCount = 500) {
     await ensureAnonymousAuth();
     const buildQuery = (withDateRange) => {
@@ -60,10 +61,29 @@ async function queryWorkLogsByDateRange(startDate, endDate, limitCount = 500) {
         }
         return q.limit(limitCount);
     };
+    const tryRestoreIfDenied = async (err) => {
+        if (String((err && err.code) || "") !== "permission-denied") return false;
+        if (typeof restoreWorkerAuthSession === "function") {
+            const restored = await restoreWorkerAuthSession();
+            if (restored) return true;
+        }
+        if (currentWorkerId && !workerReauthNoticeShown && typeof document !== "undefined") {
+            workerReauthNoticeShown = true;
+            const nickEl = document.getElementById("loginNick");
+            if (nickEl && !nickEl.value) nickEl.value = currentWorkerId;
+            if (typeof showToast === "function") {
+                showToast("🔐 보안이 강화되어 비밀번호를 한 번만 다시 로그인해 주세요.");
+            }
+        }
+        return false;
+    };
     if (!workLogScopedQueryUnavailable) {
         try {
             return await buildQuery(true).get();
         } catch (e) {
+            if (await tryRestoreIfDenied(e)) {
+                try { return await buildQuery(true).get(); } catch (_) {}
+            }
             const errCode = String((e && e.code) || "");
             if (errCode !== "permission-denied") {
                 workLogScopedQueryUnavailable = true;
@@ -156,8 +176,78 @@ const DEFAULT_ADMIN_PW_HASH = "d1943935713b9c4a85942510d3385cfadac4202ba70ab7d9d
 const FALLBACK_PRODUCTION_API_ORIGIN = "https://busan-hak-port-info.luxrank.workers.dev";
 const ADMIN_SESSION_TOKEN_KEY = "busanPortAdminToken";
 const ADMIN_SESSION_EXPIRY_KEY = "busanPortAdminTokenExpiresAt";
+const WORKER_SESSION_TOKEN_KEY = "busanPortWorkerToken";
+const WORKER_SESSION_EXPIRY_KEY = "busanPortWorkerTokenExpiresAt";
 const ANON_CLIENT_ID_KEY = "busanHakPortClientId";
 let isAdminSessionVerified = sessionStorage.getItem("busanPortAdminVerified") === "1";
+
+/** 링크(href)·이미지(src)에 javascript:/data: 등 위험 스킴이 주입되는 Stored XSS 를 차단합니다. */
+function sanitizeSafeHttpUrl(rawUrl) {
+    const trimmed = String(rawUrl || "").trim();
+    if (!trimmed) return "#";
+    if (/^https?:\/\//i.test(trimmed)) return trimmed;
+    if (trimmed.startsWith("/") && !trimmed.startsWith("//")) return trimmed;
+    return "#";
+}
+
+function getStoredWorkerSessionToken() {
+    try {
+        const token = localStorage.getItem(WORKER_SESSION_TOKEN_KEY) || "";
+        const expRaw = Number(localStorage.getItem(WORKER_SESSION_EXPIRY_KEY) || "0");
+        if (!token) return "";
+        if (expRaw > 0 && Date.now() >= expRaw) {
+            localStorage.removeItem(WORKER_SESSION_TOKEN_KEY);
+            localStorage.removeItem(WORKER_SESSION_EXPIRY_KEY);
+            return "";
+        }
+        return token;
+    } catch (e) {
+        return "";
+    }
+}
+
+function saveWorkerSessionToken(token, expiresAt) {
+    try {
+        if (token) {
+            localStorage.setItem(WORKER_SESSION_TOKEN_KEY, String(token));
+            if (expiresAt) localStorage.setItem(WORKER_SESSION_EXPIRY_KEY, String(expiresAt));
+        }
+    } catch (e) {}
+}
+
+function clearWorkerSessionToken() {
+    try {
+        localStorage.removeItem(WORKER_SESSION_TOKEN_KEY);
+        localStorage.removeItem(WORKER_SESSION_EXPIRY_KEY);
+    } catch (e) {}
+}
+
+async function restoreWorkerAuthSession() {
+    const savedWorker = (() => {
+        try { return localStorage.getItem("myWorkerId") || ""; } catch (e) { return ""; }
+    })();
+    const token = getStoredWorkerSessionToken();
+    if (!savedWorker || !token || !auth || typeof auth.signInWithCustomToken !== "function") return false;
+    try {
+        const res = await fetchPortApiJson("/api/auth-session", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ mode: "worker-refresh", token })
+        });
+        if (res && res.status === 200 && res.data && res.data.ok && res.data.customToken) {
+            const cred = await auth.signInWithCustomToken(res.data.customToken);
+            if (cred && cred.user) currentAuthUser = cred.user;
+            if (res.data.token) saveWorkerSessionToken(res.data.token, res.data.expiresAt);
+            return true;
+        }
+        if (res && res.status === 401) {
+            clearWorkerSessionToken();
+        }
+    } catch (e) {
+        // 오프라인 시 기존 캐시 유지
+    }
+    return false;
+}
 
 function getOrCreateClientDeviceId() {
     try {
@@ -228,11 +318,13 @@ async function fetchPortApiJson(apiPath, initOptions = {}) {
     }
 
     if (primary && !primary.nonJson && !primary.networkError) {
-        // 명시적 인증·입력·속도제한 응답(400/401/429)이나 정상(200)은 즉시 반환합니다.
+        // 명시적 인증·입력·미존재·충돌·속도제한 응답(400/401/404/409/429)이나 정상(200)은 즉시 반환합니다.
         if (
             primary.status === 200 ||
             primary.status === 400 ||
             primary.status === 401 ||
+            primary.status === 404 ||
+            primary.status === 409 ||
             primary.status === 429
         ) {
             return primary;
@@ -487,7 +579,7 @@ async function verifyAdmin(forcePrompt = false) {
         // Firestore 규칙에 의해 settings/admin 읽기가 차단된 경우 targetHash(SHA-256)로 검증
     }
 
-    if (inputHash === targetHash || inputHash === DEFAULT_ADMIN_PW_HASH) {
+    if (inputHash === targetHash) {
         isAdminSessionVerified = true;
         try { sessionStorage.setItem("busanPortAdminVerified", "1"); } catch (e) {}
         return true;
@@ -2227,8 +2319,7 @@ function renderAdminWorkLogDetail() {
         } else {
             workerTopEl.innerHTML = topWorkers.map(([wid, st], i) => {
                 const safeWid = escapeShipCommentHtml(wid);
-                const jsWid = wid.replace(/\\/g, "\\\\").replace(/'/g, "\\'");
-                return `<div style="display:flex; justify-content:space-between; gap:4px; cursor:pointer; padding:1px 0;" onclick="filterAdminWorkLogByWorker('${jsWid}')">
+                return `<div style="display:flex; justify-content:space-between; gap:4px; cursor:pointer; padding:1px 0;" data-worker-id="${safeWid}" onclick="filterAdminWorkLogByWorker(this.dataset.workerId)">
                     <span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${i + 1}. <b style="color:var(--primary); text-decoration:underline;">${safeWid}</b></span>
                     <span style="color:#047857; font-weight:800; flex-shrink:0;">${st.count}건 · ${(st.pay / 10000).toFixed(0)}만</span>
                 </div>`;
@@ -2246,8 +2337,7 @@ function renderAdminWorkLogDetail() {
         } else {
             shipTopEl.innerHTML = topShips.map(([sname, st], i) => {
                 const safeShip = escapeShipCommentHtml(sname);
-                const jsShip = sname.replace(/\\/g, "\\\\").replace(/'/g, "\\'");
-                return `<div style="display:flex; justify-content:space-between; gap:4px; cursor:pointer; padding:1px 0;" onclick="filterAdminWorkLogByKeyword('${jsShip}')">
+                return `<div style="display:flex; justify-content:space-between; gap:4px; cursor:pointer; padding:1px 0;" data-keyword="${safeShip}" onclick="filterAdminWorkLogByKeyword(this.dataset.keyword)">
                     <span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${i + 1}. <b style="color:#1d4ed8; text-decoration:underline;">${safeShip}</b></span>
                     <span style="color:#c2410c; font-weight:800; flex-shrink:0;">${st.count}회</span>
                 </div>`;
@@ -2262,25 +2352,24 @@ function renderAdminWorkLogDetail() {
         } else {
             const rowsHtml = filtered.map((item, idx) => {
                 const safeWid = escapeShipCommentHtml(item.workerId);
-                const jsWid = item.workerId.replace(/\\/g, "\\\\").replace(/'/g, "\\'");
                 const safeDate = escapeShipCommentHtml(item.date);
                 const safeShip = escapeShipCommentHtml(item.shipName || "선박 미입력");
                 const safeCw = escapeShipCommentHtml(item.coworkers || "");
                 const safeMemo = escapeShipCommentHtml(item.memo || "");
                 const safeSaved = escapeShipCommentHtml(item.savedStr);
-                const jsImg = item.imageUrl ? item.imageUrl.replace(/\\/g, "\\\\").replace(/'/g, "\\'") : "";
+                const safeImgUrl = item.imageUrl ? escapeShipCommentHtml(sanitizeSafeHttpUrl(item.imageUrl)) : "";
                 return `<tr>
                     <td style="text-align:center; font-weight:800; color:var(--text-sub); width:34px;">${idx + 1}</td>
                     <td style="white-space:nowrap;">
                         <div style="font-weight:900; color:var(--primary);">${safeDate}</div>
-                        <span class="awl-worker-chip" onclick="filterAdminWorkLogByWorker('${jsWid}')" title="이 근로자만 필터">👤 ${safeWid}</span>
+                        <span class="awl-worker-chip" data-worker-id="${safeWid}" onclick="filterAdminWorkLogByWorker(this.dataset.workerId)" title="이 근로자만 필터">👤 ${safeWid}</span>
                         <div style="font-size:0.64rem; color:var(--text-sub); margin-top:2px;">저장: ${safeSaved}</div>
                     </td>
                     <td>
                         <div style="font-weight:900; color:#1d4ed8;">🚢 ${safeShip}</div>
                         ${safeCw ? `<div style="font-size:0.71rem; color:#047857; font-weight:800; margin-top:2px;">👥 동료: ${safeCw}</div>` : ""}
                         ${safeMemo ? `<div style="font-size:0.71rem; color:var(--text-main); margin-top:2px; white-space:pre-wrap; word-break:break-word;">📝 ${safeMemo}</div>` : ""}
-                        ${item.imageUrl ? `<span class="awl-photo-badge" onclick="document.getElementById('imageModal').style.display='flex'; document.getElementById('modalImage').src='${jsImg}';">📷 현장사진 보기</span>` : ""}
+                        ${safeImgUrl && safeImgUrl !== "#" ? `<span class="awl-photo-badge" data-image-url="${safeImgUrl}" onclick="document.getElementById('imageModal').style.display='flex'; document.getElementById('modalImage').src=this.dataset.imageUrl;">📷 현장사진 보기</span>` : ""}
                     </td>
                     <td style="text-align:right; white-space:nowrap; font-variant-numeric:tabular-nums;">
                         <div style="font-weight:900; color:#c2410c; font-size:0.8rem;">${item.totalPay.toLocaleString()}원</div>
@@ -2618,7 +2707,8 @@ const WAGE_HOURLY_BY_YEAR = {
     2023: 9620,
     2024: 9860,
     2025: 10030,
-    2026: 10320
+    2026: 10320,
+    2027: 10700
 };
 
 function syncWageHourlyYearLabel(dateStr) {
@@ -4630,13 +4720,20 @@ async function fetchHjncScheduleForMonth(yearMonth, forceRefresh = false, termin
     // 백그라운드 또는 강제 새로고침 시 실시간 /api/terminal-schedule 동기화
     const syncFromLiveApi = async () => {
         try {
+            const scheduleQueryPath = `/api/terminal-schedule?terminal=${encodeURIComponent(tid)}&startDate=${encodeURIComponent(startDate)}&endDate=${encodeURIComponent(endDate)}`;
             const controller = new AbortController();
             const timer = setTimeout(() => controller.abort(), 8500);
-            const res = await fetch(`/api/terminal-schedule?terminal=${encodeURIComponent(tid)}&startDate=${encodeURIComponent(startDate)}&endDate=${encodeURIComponent(endDate)}`, {
+            let res = await fetch(scheduleQueryPath, {
                 signal: controller.signal
             });
+            let contentType = res.headers.get("content-type") || "";
+            if ((!res.ok || !contentType.includes("application/json")) && typeof window !== "undefined" && window.location && window.location.origin !== FALLBACK_PRODUCTION_API_ORIGIN) {
+                res = await fetch(`${FALLBACK_PRODUCTION_API_ORIGIN}${scheduleQueryPath}`, {
+                    signal: controller.signal
+                });
+                contentType = res.headers.get("content-type") || "";
+            }
             clearTimeout(timer);
-            const contentType = res.headers.get("content-type") || "";
             if (res.ok && contentType.includes("application/json")) {
                 const json = await res.json();
                 if (json && Array.isArray(json.vessels) && json.vessels.length > 0) {
@@ -6243,8 +6340,8 @@ function renderCalendar(y, m){
 let latestWorkTimeReportText = "";
 let showAllWorkTimeMonths = false;
 function extractWorkLogTimeAndWageMetrics(log) {
-    const HOLIDAYS = new Set(["2025-01-01","2025-01-28","2025-01-29","2025-01-30","2025-03-01","2025-03-03","2025-05-05","2025-05-06","2025-06-06","2025-08-15","2025-10-03","2025-10-05","2025-10-06","2025-10-07","2025-10-08","2025-10-09","2025-12-25","2026-01-01","2026-02-16","2026-02-17","2026-02-18","2026-03-01","2026-03-02","2026-05-05","2026-05-24","2026-05-25","2026-06-06","2026-08-15","2026-08-17","2026-09-24","2026-09-25","2026-09-26","2026-09-28","2026-10-03","2026-10-05","2026-10-09","2026-12-25","2027-01-01","2027-02-06","2027-02-08","2027-02-09","2027-03-01","2027-05-05","2027-05-13","2027-06-06","2027-08-15","2027-08-16","2027-09-14","2027-09-15","2027-09-16","2027-10-03","2027-10-04","2027-10-09","2027-10-11","2027-12-25"]);
-    const RATE_BY_YEAR = { 2020: 8590, 2021: 8720, 2022: 9160, 2023: 9620, 2024: 9860, 2025: 10030, 2026: 10320 };
+    const HOLIDAYS = new Set(["2025-01-01","2025-01-28","2025-01-29","2025-01-30","2025-03-01","2025-03-03","2025-05-05","2025-05-06","2025-06-06","2025-08-15","2025-10-03","2025-10-05","2025-10-06","2025-10-07","2025-10-08","2025-10-09","2025-12-25","2026-01-01","2026-02-16","2026-02-17","2026-02-18","2026-03-01","2026-03-02","2026-05-01","2026-05-05","2026-05-24","2026-05-25","2026-06-03","2026-06-06","2026-07-17","2026-08-15","2026-08-17","2026-09-24","2026-09-25","2026-09-26","2026-10-03","2026-10-05","2026-10-09","2026-12-25","2027-01-01","2027-02-06","2027-02-07","2027-02-08","2027-02-09","2027-03-01","2027-05-01","2027-05-03","2027-05-05","2027-05-13","2027-06-06","2027-07-17","2027-07-19","2027-08-15","2027-08-16","2027-09-14","2027-09-15","2027-09-16","2027-10-03","2027-10-04","2027-10-09","2027-10-11","2027-12-25","2027-12-27"]);
+    const RATE_BY_YEAR = { 2020: 8590, 2021: 8720, 2022: 9160, 2023: 9620, 2024: 9860, 2025: 10030, 2026: 10320, 2027: 10700 };
     const seasonFor = (month) => {
         const m = Number(month) || 1;
         if (m >= 4 && m <= 9) return { dayStart: 6, dayEnd: 19 };
@@ -7069,48 +7166,100 @@ async function confirmLoginAndSave(evt) {
     btn.innerText = "연결 시도 중...";
 
     try {
-        await ensureAnonymousAuth();
-        const pwHash = await sha256Hex(pw);
-        // 네트워크 상태와 상관없이 Firestore 참조를 명확히 가져옴
-        const userRef = db.collection('user_profiles').doc(nick);
-        
-        // 데이터 가져오기 (get) 시도
-        const doc = await userRef.get().catch(e => {
-            throw new Error("서버 연결 실패 (네트워크를 확인하세요)");
-        });
-
-        if (doc.exists) {
-            const savedPw = doc.data().password || "";
-            const isMatched = await verifyPasswordMatch(pw, savedPw);
-            if (!isMatched) {
+        // 1순위: 서버 인증 API(/api/auth-session mode:'worker')로 비밀번호 검증·가입 및 workerId 클레임 Custom Token 발급
+        let serverAuthenticated = false;
+        let serverHandled = false;
+        try {
+            let authRes = await fetchPortApiJson("/api/auth-session", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ mode: "worker", action: "login", nick, password: pw })
+            });
+            if (authRes && authRes.status === 404 && authRes.data && authRes.data.error === "user_not_found") {
+                if (!confirm("새로운 닉네임입니다. 가입하시겠습니까?")) {
+                    btn.disabled = false;
+                    btn.innerText = "확인 및 저장";
+                    return;
+                }
+                authRes = await fetchPortApiJson("/api/auth-session", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ mode: "worker", action: "register", nick, password: pw })
+                });
+            }
+            if (authRes && authRes.status === 429) {
+                alert("⚠️ 시도 횟수가 초과되었습니다. 잠시 후 다시 시도해 주세요.");
+                btn.disabled = false;
+                btn.innerText = "확인 및 저장";
+                return;
+            }
+            if (authRes && authRes.status === 401) {
                 alert("비밀번호가 일치하지 않습니다.");
                 btn.disabled = false;
                 btn.innerText = "확인 및 저장";
                 return;
             }
-            // 기존 평문 비밀번호였던 경우 자동으로 SHA-256 해시로 업그레이드
-            if (savedPw !== pwHash) {
-                await userRef.set({ password: pwHash }, { merge: true }).catch(() => {});
-            }
-        } else {
-            if(!confirm("새로운 닉네임입니다. 가입하시겠습니까?")) {
+            if (authRes && authRes.status === 400) {
+                alert("⚠️ 닉네임은 한글·영문·숫자·밑줄(_)·하이픈(-)·점(.)만 사용할 수 있습니다.");
                 btn.disabled = false;
                 btn.innerText = "확인 및 저장";
                 return;
             }
-            await userRef.set({ 
-                password: pwHash, 
-                createdAt: firebase.firestore.FieldValue.serverTimestamp() 
+            if (authRes && authRes.status === 200 && authRes.data && authRes.data.ok) {
+                serverHandled = true;
+                if (authRes.data.token) {
+                    saveWorkerSessionToken(authRes.data.token, authRes.data.expiresAt);
+                }
+                if (authRes.data.customToken && auth && typeof auth.signInWithCustomToken === "function") {
+                    const cred = await auth.signInWithCustomToken(authRes.data.customToken);
+                    if (cred && cred.user) currentAuthUser = cred.user;
+                }
+                serverAuthenticated = true;
+            }
+        } catch (serverErr) {
+            // 오프라인·로컬 개발 환경에서는 아래 기존 Firestore 폴백으로 안전하게 전환
+        }
+
+        // 2순위(폴백): 서버 API 미연결·오프라인 로컬 개발 환경 대비
+        if (!serverHandled && !serverAuthenticated) {
+            await ensureAnonymousAuth();
+            const pwHash = await sha256Hex(pw);
+            const userRef = db.collection('user_profiles').doc(nick);
+            const doc = await userRef.get().catch(() => {
+                throw new Error("서버 연결 실패 (네트워크를 확인하세요)");
             });
+            if (doc.exists) {
+                const savedPw = doc.data().password || "";
+                const isMatched = await verifyPasswordMatch(pw, savedPw);
+                if (!isMatched) {
+                    alert("비밀번호가 일치하지 않습니다.");
+                    btn.disabled = false;
+                    btn.innerText = "확인 및 저장";
+                    return;
+                }
+                if (savedPw !== pwHash) {
+                    await userRef.set({ password: pwHash }, { merge: true }).catch(() => {});
+                }
+            } else {
+                if (!confirm("새로운 닉네임입니다. 가입하시겠습니까?")) {
+                    btn.disabled = false;
+                    btn.innerText = "확인 및 저장";
+                    return;
+                }
+                await userRef.set({
+                    password: pwHash,
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+            }
         }
 
         // 로그인 직후에도 알림 구독을 바로 시작합니다. 새로고침 전에는 리스너가 없던 문제를 막습니다.
         loginSuccess(nick);
-        
+
         // 모달 닫고 저장 실행
         closeLoginModal();
-        saveWorkLog(); 
-        
+        saveWorkLog();
+
         showToast("🔓 로그인 및 저장 성공!");
 
     } catch (err) {
@@ -7253,7 +7402,7 @@ function saveWorkLog(){
 function loginSuccess(name) { currentWorkerId = name; localStorage.setItem('myWorkerId', currentWorkerId); updateUserBar(); renderCalendar(currentDate.getFullYear(), currentDate.getMonth()); if(typeof initNotifications === 'function') initNotifications(currentWorkerId); if(typeof initMessagingPush === 'function' && typeof Notification !== 'undefined' && Notification.permission === 'granted') initMessagingPush(currentWorkerId); }
 function closeLoginModal(){ document.getElementById('loginModal').style.display = 'none'; }
 function updateUserBar() { document.getElementById('userProfileBar').style.display = currentWorkerId ? 'flex' : 'none'; if(currentWorkerId) document.getElementById('currentUserDisplay').innerText = `👤 ${currentWorkerId}`; }
-function logoutWorker() { if(confirm("로그아웃하시겠습니까?")) { if(typeof stopNotifications === 'function') stopNotifications(); currentWorkerId = null; localStorage.removeItem('myWorkerId'); updateUserBar(); renderCalendar(currentDate.getFullYear(), currentDate.getMonth()); document.getElementById('dailyLogForm').classList.add('hidden'); } }
+function logoutWorker() { if(confirm("로그아웃하시겠습니까?")) { if(typeof stopNotifications === 'function') stopNotifications(); clearWorkerSessionToken(); currentWorkerId = null; localStorage.removeItem('myWorkerId'); updateUserBar(); renderCalendar(currentDate.getFullYear(), currentDate.getMonth()); document.getElementById('dailyLogForm').classList.add('hidden'); } }
 function deleteWorkLog(){ if(!currentWorkerId) return; if(!confirm("정말 삭제하시겠습니까?")) return; const dStr = document.getElementById('dailyLogForm').getAttribute('data-date'); db.collection('work_logs').doc(`${currentWorkerId}_${dStr}`).update(softDeletePayload()).then(()=>{ showToast("삭제되었습니다."); document.getElementById('logShipName').value=''; document.getElementById('logWage1').value=''; document.getElementById('logWage2').value=''; const delWage3 = document.getElementById('logWage3'); if (delWage3) delWage3.value=''; const delWage4 = document.getElementById('logWage4'); if (delWage4) delWage4.value=''; if (typeof syncWorklogWageSlotVisibility === 'function') syncWorklogWageSlotVisibility(0); document.getElementById('logCoworkers').value=''; document.getElementById('logMemo').value=''; autoGrowWorkLogMemo(document.getElementById('logMemo')); document.getElementById('logImageInput').value = ''; const imgPreview = document.getElementById('logImagePreview'); if(imgPreview) { imgPreview.src = ''; imgPreview.style.display = 'none'; } renderCalendar(currentDate.getFullYear(), currentDate.getMonth()); }).catch(err => alert("삭제 실패: " + err.message)); }
 /* 근무일지 입력 폼 초기화: 임금계산기 초기화(resetWageForm)와 같은 역할.
    저장된 기록은 건드리지 않고, 선택한 날짜 폼의 입력 내용(배 이름·임금·근무자·작업 내용·사진)만 비운다. */
@@ -7280,13 +7429,13 @@ function resetWorkLogForm() {
     if (typeof updateWorklogDoubleOrderStatus === 'function') updateWorklogDoubleOrderStatus();
     showToast("🔄 근무일지 입력 내용이 초기화되었습니다. 저장된 기록은 날짜를 다시 누르면 불러올 수 있습니다.");
 }
-function changeMonth(s){ currentDate.setMonth(currentDate.getMonth()+s); renderCalendar(currentDate.getFullYear(), currentDate.getMonth()); }
+function changeMonth(s){ currentDate = new Date(currentDate.getFullYear(), currentDate.getMonth() + s, 1); renderCalendar(currentDate.getFullYear(), currentDate.getMonth()); }
 function previewLogImage(input){ if(input.files&&input.files[0]){ const r=new FileReader(); r.onload=e=>{const i=document.getElementById('logImagePreview'); i.src=e.target.result; i.style.display='block';}; r.readAsDataURL(input.files[0]); } }
 function renderRow(label, amt, color = "inherit") { return `<tr><td style="padding: 8px 0; color: var(--text-sub); font-weight:700;">${label}</td><td style="text-align: right; font-weight: 900; color: ${color};">${amt.toLocaleString()}원</td></tr>`; }
 const publicHolidays = [
     '2025-01-01', '2025-01-28', '2025-01-29', '2025-01-30', '2025-03-01', '2025-03-03', '2025-05-05', '2025-05-06', '2025-06-06', '2025-08-15', '2025-10-03', '2025-10-05', '2025-10-06', '2025-10-07', '2025-10-08', '2025-10-09', '2025-12-25',
-    '2026-01-01', '2026-02-16', '2026-02-17', '2026-02-18', '2026-03-01', '2026-03-02', '2026-05-05', '2026-05-24', '2026-05-25', '2026-06-06', '2026-08-15', '2026-08-17', '2026-09-24', '2026-09-25', '2026-09-26', '2026-09-28', '2026-10-03', '2026-10-05', '2026-10-09', '2026-12-25',
-    '2027-01-01', '2027-02-06', '2027-02-07', '2027-02-08', '2027-02-09', '2027-03-01', '2027-05-05', '2027-05-13', '2027-06-06', '2027-08-15', '2027-08-16', '2027-09-14', '2027-09-15', '2027-09-16', '2027-10-03', '2027-10-04', '2027-10-09', '2027-10-11', '2027-12-25'
+    '2026-01-01', '2026-02-16', '2026-02-17', '2026-02-18', '2026-03-01', '2026-03-02', '2026-05-01', '2026-05-05', '2026-05-24', '2026-05-25', '2026-06-03', '2026-06-06', '2026-07-17', '2026-08-15', '2026-08-17', '2026-09-24', '2026-09-25', '2026-09-26', '2026-10-03', '2026-10-05', '2026-10-09', '2026-12-25',
+    '2027-01-01', '2027-02-06', '2027-02-07', '2027-02-08', '2027-02-09', '2027-03-01', '2027-05-01', '2027-05-03', '2027-05-05', '2027-05-13', '2027-06-06', '2027-07-17', '2027-07-19', '2027-08-15', '2027-08-16', '2027-09-14', '2027-09-15', '2027-09-16', '2027-10-03', '2027-10-04', '2027-10-09', '2027-10-11', '2027-12-25', '2027-12-27'
 ];
 let lastCalculatedWageData = null;
 function getSeasonScheduleByMonth(month) {
@@ -7400,12 +7549,15 @@ function autoFillWeekendHoliday(startDateObj, totalHoursArg) {
 
         let weekendHolidayHours = 0;
         if (hours > 0) {
-            for (let i = 0; i < hours; i++) {
-                const slotDate = new Date(startD.getTime() + i * 60 * 60 * 1000);
+            const totalMinutes = Math.max(0, Math.round(hours * 60));
+            let weekendMinutes = 0;
+            for (let m = 0; m < totalMinutes; m++) {
+                const slotDate = new Date(startD.getTime() + m * 60 * 1000);
                 if (isWeekendOrPublicHolidayDate(slotDate)) {
-                    weekendHolidayHours++;
+                    weekendMinutes++;
                 }
             }
+            weekendHolidayHours = Math.round((weekendMinutes / 60) * 100) / 100;
         }
 
         const weekendEl = document.getElementById('wageWeekend');
@@ -7474,22 +7626,28 @@ function calculateWageSegment(period, options) {
     const SKILLED_NIGHT_ADD = 3836;
     const startD = new Date(`${startDate}T${String(startHour).padStart(2, "0")}:00:00`);
 
-    let dayHours = 0;
-    let nightHours = 0;
-    let autoWeekendHolidayHours = 0;
+    const totalMinutes = Math.max(0, Math.round((Number(hours) || 0) * 60));
+    let dayMinutes = 0;
+    let nightMinutes = 0;
+    let autoWeekendMinutes = 0;
 
-    for (let i = 0; i < hours; i++) {
-        const slotDate = new Date(startD.getTime() + i * 60 * 60 * 1000);
+    for (let m = 0; m < totalMinutes; m++) {
+        const slotDate = new Date(startD.getTime() + m * 60 * 1000);
         const slotMonth = slotDate.getMonth() + 1;
         const { dayStart, dayEnd } = getSeasonScheduleByMonth(slotMonth);
         const currentHour = slotDate.getHours();
-        if (currentHour >= dayStart && currentHour < dayEnd) dayHours++;
-        else nightHours++;
+        if (currentHour >= dayStart && currentHour < dayEnd) dayMinutes++;
+        else nightMinutes++;
 
         if (isWeekendOrPublicHolidayDate(slotDate)) {
-            autoWeekendHolidayHours++;
+            autoWeekendMinutes++;
         }
     }
+
+    const roundHours2 = (mins) => Math.round((mins / 60) * 100) / 100;
+    const dayHours = roundHours2(dayMinutes);
+    const nightHours = roundHours2(nightMinutes);
+    const autoWeekendHolidayHours = roundHours2(autoWeekendMinutes);
 
     const effectiveWeekendH = (weekendH !== null && weekendH !== undefined && !isNaN(Number(weekendH)))
         ? Number(weekendH)
@@ -7596,7 +7754,8 @@ function calculateWage() {
         const roleLabel = isSkilled ? '기능공' : (document.getElementById('role-onshore')?.checked ? '육상' : '본선');
         const weekendInputEl = document.getElementById('wageWeekend');
         const manualWeekendH = parseFloat(weekendInputEl?.value);
-        const baseRate = parseFloat(document.getElementById('wageHourly')?.value) || 10320;
+        const calcYearNum = parseInt(String(sd || "").slice(0, 4), 10) || 2026;
+        const baseRate = parseFloat(document.getElementById('wageHourly')?.value) || WAGE_HOURLY_BY_YEAR[calcYearNum] || 10320;
 
         const month = parseInt(sd.split('-')[1], 10) || (new Date(sd).getMonth() + 1);
         highlightSeasonRow(month);
@@ -8434,6 +8593,8 @@ async function addPost() {
                 btnEl.disabled = false;
             });
         } else {
+            const creatorUid = (auth && auth.currentUser && auth.currentUser.uid) || (currentAuthUser && currentAuthUser.uid) || null;
+            if (creatorUid) postData.authorUid = creatorUid;
             db.collection("posts").add(postData).then(() => {
                 resetBoardForm();
                 showToast(modResult.hidden ? "⚠️ 금칙어/도배 감지: 게시글이 자동 블라인드 처리되었습니다." : "게시글이 등록되었습니다.");
@@ -8681,6 +8842,9 @@ async function addComment(pid){
             blindReason: modResult.reason || null,
             timestamp: firebase.firestore.FieldValue.serverTimestamp()
         };
+        if (!isEditing && auth?.currentUser?.uid) {
+            commentData.authorUid = auth.currentUser.uid;
+        }
         if (modResult.hidden) {
             notifyAdminAutoBlind({
                 category: "게시판 댓글",
@@ -9336,6 +9500,10 @@ async function addShipInfo() {
             timestamp: firebase.firestore.FieldValue.serverTimestamp()
         };
         if (url) shipData.imageUrl = url;
+        if (!currentEditShipId) {
+            const creatorUid = (auth && auth.currentUser && auth.currentUser.uid) || (currentAuthUser && currentAuthUser.uid) || null;
+            if (creatorUid) shipData.authorUid = creatorUid;
+        }
         let task = currentEditShipId ? db.collection("ships").doc(currentEditShipId).update(shipData) : db.collection("ships").add(shipData);
         task.then(() => {
             const linkedRegistration = pendingShipInfoRegistration;
@@ -9706,6 +9874,10 @@ async function addArchive() {
             password: pwHash,
             timestamp: firebase.firestore.FieldValue.serverTimestamp()
         };
+        if (!isEdit) {
+            const creatorUid = (auth && auth.currentUser && auth.currentUser.uid) || (currentAuthUser && currentAuthUser.uid) || null;
+            if (creatorUid) archiveData.authorUid = creatorUid;
+        }
         const req = isEdit
             ? db.collection("archives").doc(currentEditArchiveId).update(archiveData)
             : db.collection("archives").add(archiveData);
@@ -9766,14 +9938,17 @@ async function delArchive(id,e){
     const isAdmin = isAdminSessionVerified || (inputHash === DEFAULT_ADMIN_PW_HASH);
     if (isAuthor || isAdmin) {
         if (!confirm("이 자료를 삭제하시겠습니까?")) return;
-        db.collection("archives").doc(id).delete().then(() => showToast("자료가 삭제되었습니다.")).catch(err => alert("삭제 실패: " + err.message));
+        const delReq = hasServerBackedAdminAccess()
+            ? db.collection("archives").doc(id).delete()
+            : db.collection("archives").doc(id).update(softDeletePayload());
+        delReq.then(() => showToast("자료가 삭제되었습니다.")).catch(err => alert("삭제 실패: " + err.message));
     } else {
         alert("⚠️ 비밀번호가 일치하지 않습니다.");
     }
 } 
 
 let currentBoardPage = 1;
-function renderBoardPage(p){ currentBoardPage = p; const l = document.getElementById("boardList"); Object.values(commentUnsubscribes).forEach(unsub => { if (typeof unsub === "function") unsub(); }); commentUnsubscribes = {}; boardCommentsById = {}; editingBoardComment = null; l.innerHTML = ""; const start = (p-1) * postsPerPage; const end = start + postsPerPage; const pageData = allPostsData.slice(start, end); if(pageData.length === 0) { l.innerHTML = "<tr><td colspan='4' style='text-align:center; padding:20px; color:var(--text-sub); font-weight:700;'>게시글이 없습니다.</td></tr>"; document.getElementById("pagination").innerHTML = ""; return; } const rowsHtml = []; const nowMs = Date.now(); pageData.forEach((x, i) => { let dateStr = ""; let isRowNew = false; if(x.timestamp) { const d = x.timestamp.toDate(); const month = String(d.getMonth() + 1).padStart(2, '0'); const day = String(d.getDate()).padStart(2, '0'); const hour = String(d.getHours()).padStart(2, '0'); const min = String(d.getMinutes()).padStart(2, '0'); dateStr = `${month}/${day} ${hour}:${min}`; if (nowMs - d.getTime() < 24 * 60 * 60 * 1000) isRowNew = true; } const newRowBadge = isRowNew ? `<span class="badge-new">NEW</span>` : ""; const rowId = `p-${x.id}`; const authorName = escapeShipCommentHtml(x.nick || '익명'); const postNum = allPostsData.length - ((currentBoardPage - 1) * postsPerPage) - i; const isHidden = Boolean(x.hidden); const safeTitleHtml = isHidden ? `🔒 자동 블라인드 처리된 게시글입니다.` : escapeShipCommentHtml(x.title || ''); const safeContentHtml = isHidden ? `🔒 커뮤니티 건전성 보호를 위해 자동 블라인드 처리된 게시글입니다. (${escapeShipCommentHtml(x.blindReason || '금칙어/도배 감지')})` : escapeShipCommentHtml(x.content || ''); const viewCnt = Math.max(0, Number(x.views) || 0); const viewBadgeHtml = `<span id="view-badge-p-${x.id}" class="view-count-pill" title="조회수 ${viewCnt.toLocaleString()}회 (중복 조회 포함)">👁️ ${viewCnt.toLocaleString()}</span>`; let attachmentsList = []; if (!isHidden) { if (Array.isArray(x.attachments) && x.attachments.length > 0) { attachmentsList = x.attachments.filter(item => item && item.url); } else if (Array.isArray(x.imageUrls) && x.imageUrls.length > 0) { attachmentsList = x.imageUrls.filter(Boolean).map((u, idx) => ({ url: u, name: `첨부 이미지 ${idx + 1}`, type: 'image/jpeg', isImage: true })); } else { const rawFileUrl = x.fileUrl || x.imageUrl || ''; if (rawFileUrl) { const isImg = Boolean(x.imageUrl || (x.fileType && String(x.fileType).startsWith('image/')) || /\.(jpg|jpeg|png|gif|webp|bmp|svg|heic|heif)(\?|$)/i.test(rawFileUrl)); attachmentsList = [{ url: rawFileUrl, name: x.fileName || (isImg ? '첨부 이미지' : '첨부파일 열기/다운로드'), type: x.fileType || '', isImage: isImg }]; } } } const imageAttachments = attachmentsList.filter(att => Boolean(att.isImage || (att.type && String(att.type).startsWith('image/')) || /\.(jpg|jpeg|png|gif|webp|bmp|svg|heic|heif)(\?|$)/i.test(att.url || ''))); const hasAnyAttachment = attachmentsList.length > 0; const attachIconHtml = hasAnyAttachment ? `<span title="첨부파일 ${attachmentsList.length}개 포함" style="margin-left:3px; font-size:0.82rem; font-weight:800; color:var(--primary);">${imageAttachments.length > 0 ? '🖼️' : '📎'}${attachmentsList.length > 1 ? `<span style="font-size:0.7rem; margin-left:1px;">+${attachmentsList.length}</span>` : ''}</span>` : ''; let attachmentBoxHtml = ''; if (hasAnyAttachment) { const imagesHtml = imageAttachments.map((imgAtt, idx) => { const safeImgUrl = escapeShipCommentHtml(imgAtt.url); return `<div style="margin-bottom:8px;"><img src="${safeImgUrl}" loading="lazy" alt="게시글 첨부 이미지 ${idx + 1}" style="max-width:100%; border-radius:8px; border:1px solid var(--border); cursor:pointer; display:block;" onclick="document.getElementById('imageModal').style.display='flex'; document.getElementById('modalImage').src=this.src;"></div>`; }).join(''); const downloadLinksHtml = attachmentsList.map((att, idx) => { const safeUrl = escapeShipCommentHtml(att.url); const safeName = escapeShipCommentHtml(att.name || `첨부파일 ${idx + 1}`); return `<a href="${safeUrl}" target="_blank" rel="noopener noreferrer" style="display:inline-flex; align-items:center; gap:5px; padding:5px 10px; background:rgba(59,130,246,0.08); border:1px solid rgba(59,130,246,0.25); border-radius:6px; color:var(--primary); font-size:0.78rem; font-weight:800; text-decoration:none;">📎 ${safeName}</a>`; }).join(''); attachmentBoxHtml = `<div style="margin-bottom:12px;">${imagesHtml}<div style="display:flex; flex-wrap:wrap; gap:6px; margin-top:4px;">${downloadLinksHtml}</div></div>`; } rowsHtml.push(`<tr onclick="toggleBoardRow('${rowId}')" style="cursor:pointer;"> <td class="board-no">${postNum}</td> <td class="board-title" style="${isHidden ? 'color:var(--text-sub); font-style:italic;' : ''}">${safeTitleHtml}${attachIconHtml}${newRowBadge}${viewBadgeHtml} <span id="cmt-badge-${x.id}" class="cmt-count-pill hidden"></span> <span style="font-size:0.75rem; color:var(--primary); margin-left:4px;">▼</span></td> <td class="board-date">${dateStr}</td> <td class="board-nick">${authorName}</td> </tr> <tr id="${rowId}" class="board-content-row"> <td colspan="4" class="board-content-box"> <div style="margin-bottom:12px; font-weight:600; background:var(--card-bg); padding:12px; border-radius:8px; border:1px solid var(--border); white-space:pre-wrap; ${isHidden ? 'color:var(--text-sub); font-style:italic;' : ''}">${safeContentHtml}</div> ${attachmentBoxHtml} <div style="display:flex; justify-content:space-between; align-items:center; gap:6px; flex-wrap:wrap; border-bottom:1px dashed var(--border); padding-bottom:10px; margin-bottom:10px;"> <span id="view-detail-p-${x.id}" style="font-size:0.76rem; color:var(--text-sub); font-weight:800;">👁️ 조회수 ${viewCnt.toLocaleString()}회</span> <div style="display:flex; gap:5px; margin-left:auto;"> <button class="mini-btn" style="background:var(--primary-light) !important; color:white !important;" onclick="tryEditPost('${x.id}', '', '', '', '', event)">✏️ 수정</button> <button class="mini-btn btn-del" onclick="deletePost('${x.id}','',event)">🗑️ 삭제</button> </div> </div> <div id="cmt-list-${x.id}" class="comment-section"></div> <div class="comment-form"> <div class="comment-form-row"> <input id="cmt-name-${x.id}" class="comment-input-sm board-comment-nickname" placeholder="항만용어 닉네임" aria-label="댓글 닉네임 (직접 수정 가능)" maxlength="50"> <input id="cmt-pw-${x.id}" class="comment-input-sm" type="password" placeholder="비밀번호" aria-label="비밀번호" maxlength="30"> </div> <div id="cmt-preview-${x.id}" class="comment-preview-box" style="display:none;"></div> <div class="comment-form-row"> <input id="cmt-txt-${x.id}" class="comment-input-main" placeholder="따뜻한 댓글을 남겨주세요..." onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();addComment('${x.id}');}"> <label for="cmt-file-${x.id}" id="cmt-file-label-${x.id}" class="comment-attach-btn" title="사진 첨부">📷</label> <input type="file" id="cmt-file-${x.id}" accept="image/*" style="display:none;" onchange="handleCommentFileChange('${x.id}', this)"> <button id="cmt-submit-${x.id}" class="comment-submit" onclick="addComment('${x.id}')">등록</button> <button id="cmt-cancel-${x.id}" type="button" class="mini-btn btn-del" style="display:none; height:32px; padding:0 8px; border-radius:6px; font-size:0.8rem; margin:0; line-height:30px;" onclick="cancelBoardCommentEdit('${x.id}')">취소</button> </div> </div> </td> </tr>`); }); l.innerHTML = rowsHtml.join(""); pageData.forEach(x => { const nicknameInput = document.getElementById(`cmt-name-${x.id}`); if (nicknameInput && !nicknameInput.value.trim()) nicknameInput.value = getPortNickname(); loadComments(x.id); }); renderPagination(p); } 
+function renderBoardPage(p){ currentBoardPage = p; const l = document.getElementById("boardList"); Object.values(commentUnsubscribes).forEach(unsub => { if (typeof unsub === "function") unsub(); }); commentUnsubscribes = {}; boardCommentsById = {}; editingBoardComment = null; l.innerHTML = ""; const start = (p-1) * postsPerPage; const end = start + postsPerPage; const pageData = allPostsData.slice(start, end); if(pageData.length === 0) { l.innerHTML = "<tr><td colspan='4' style='text-align:center; padding:20px; color:var(--text-sub); font-weight:700;'>게시글이 없습니다.</td></tr>"; document.getElementById("pagination").innerHTML = ""; return; } const rowsHtml = []; const nowMs = Date.now(); pageData.forEach((x, i) => { let dateStr = ""; let isRowNew = false; if(x.timestamp) { const d = x.timestamp.toDate(); const month = String(d.getMonth() + 1).padStart(2, '0'); const day = String(d.getDate()).padStart(2, '0'); const hour = String(d.getHours()).padStart(2, '0'); const min = String(d.getMinutes()).padStart(2, '0'); dateStr = `${month}/${day} ${hour}:${min}`; if (nowMs - d.getTime() < 24 * 60 * 60 * 1000) isRowNew = true; } const newRowBadge = isRowNew ? `<span class="badge-new">NEW</span>` : ""; const rowId = `p-${x.id}`; const authorName = escapeShipCommentHtml(x.nick || '익명'); const postNum = allPostsData.length - ((currentBoardPage - 1) * postsPerPage) - i; const isHidden = Boolean(x.hidden); const safeTitleHtml = isHidden ? `🔒 자동 블라인드 처리된 게시글입니다.` : escapeShipCommentHtml(x.title || ''); const safeContentHtml = isHidden ? `🔒 커뮤니티 건전성 보호를 위해 자동 블라인드 처리된 게시글입니다. (${escapeShipCommentHtml(x.blindReason || '금칙어/도배 감지')})` : escapeShipCommentHtml(x.content || ''); const viewCnt = Math.max(0, Number(x.views) || 0); const viewBadgeHtml = `<span id="view-badge-p-${x.id}" class="view-count-pill" title="조회수 ${viewCnt.toLocaleString()}회 (중복 조회 포함)">👁️ ${viewCnt.toLocaleString()}</span>`; let attachmentsList = []; if (!isHidden) { if (Array.isArray(x.attachments) && x.attachments.length > 0) { attachmentsList = x.attachments.filter(item => item && item.url); } else if (Array.isArray(x.imageUrls) && x.imageUrls.length > 0) { attachmentsList = x.imageUrls.filter(Boolean).map((u, idx) => ({ url: u, name: `첨부 이미지 ${idx + 1}`, type: 'image/jpeg', isImage: true })); } else { const rawFileUrl = x.fileUrl || x.imageUrl || ''; if (rawFileUrl) { const isImg = Boolean(x.imageUrl || (x.fileType && String(x.fileType).startsWith('image/')) || /\.(jpg|jpeg|png|gif|webp|bmp|svg|heic|heif)(\?|$)/i.test(rawFileUrl)); attachmentsList = [{ url: rawFileUrl, name: x.fileName || (isImg ? '첨부 이미지' : '첨부파일 열기/다운로드'), type: x.fileType || '', isImage: isImg }]; } } } const imageAttachments = attachmentsList.filter(att => Boolean(att.isImage || (att.type && String(att.type).startsWith('image/')) || /\.(jpg|jpeg|png|gif|webp|bmp|svg|heic|heif)(\?|$)/i.test(att.url || ''))); const hasAnyAttachment = attachmentsList.length > 0; const attachIconHtml = hasAnyAttachment ? `<span title="첨부파일 ${attachmentsList.length}개 포함" style="margin-left:3px; font-size:0.82rem; font-weight:800; color:var(--primary);">${imageAttachments.length > 0 ? '🖼️' : '📎'}${attachmentsList.length > 1 ? `<span style="font-size:0.7rem; margin-left:1px;">+${attachmentsList.length}</span>` : ''}</span>` : ''; let attachmentBoxHtml = ''; if (hasAnyAttachment) { const imagesHtml = imageAttachments.map((imgAtt, idx) => { const safeImgUrl = escapeShipCommentHtml(sanitizeSafeHttpUrl(imgAtt.url)); return `<div style="margin-bottom:8px;"><img src="${safeImgUrl}" loading="lazy" alt="게시글 첨부 이미지 ${idx + 1}" style="max-width:100%; border-radius:8px; border:1px solid var(--border); cursor:pointer; display:block;" onclick="document.getElementById('imageModal').style.display='flex'; document.getElementById('modalImage').src=this.src;"></div>`; }).join(''); const downloadLinksHtml = attachmentsList.map((att, idx) => { const safeUrl = escapeShipCommentHtml(sanitizeSafeHttpUrl(att.url)); const safeName = escapeShipCommentHtml(att.name || `첨부파일 ${idx + 1}`); return `<a href="${safeUrl}" target="_blank" rel="noopener noreferrer" style="display:inline-flex; align-items:center; gap:5px; padding:5px 10px; background:rgba(59,130,246,0.08); border:1px solid rgba(59,130,246,0.25); border-radius:6px; color:var(--primary); font-size:0.78rem; font-weight:800; text-decoration:none;">📎 ${safeName}</a>`; }).join(''); attachmentBoxHtml = `<div style="margin-bottom:12px;">${imagesHtml}<div style="display:flex; flex-wrap:wrap; gap:6px; margin-top:4px;">${downloadLinksHtml}</div></div>`; } rowsHtml.push(`<tr onclick="toggleBoardRow('${rowId}')" style="cursor:pointer;"> <td class="board-no">${postNum}</td> <td class="board-title" style="${isHidden ? 'color:var(--text-sub); font-style:italic;' : ''}">${safeTitleHtml}${attachIconHtml}${newRowBadge}${viewBadgeHtml} <span id="cmt-badge-${x.id}" class="cmt-count-pill hidden"></span> <span style="font-size:0.75rem; color:var(--primary); margin-left:4px;">▼</span></td> <td class="board-date">${dateStr}</td> <td class="board-nick">${authorName}</td> </tr> <tr id="${rowId}" class="board-content-row"> <td colspan="4" class="board-content-box"> <div style="margin-bottom:12px; font-weight:600; background:var(--card-bg); padding:12px; border-radius:8px; border:1px solid var(--border); white-space:pre-wrap; ${isHidden ? 'color:var(--text-sub); font-style:italic;' : ''}">${safeContentHtml}</div> ${attachmentBoxHtml} <div style="display:flex; justify-content:space-between; align-items:center; gap:6px; flex-wrap:wrap; border-bottom:1px dashed var(--border); padding-bottom:10px; margin-bottom:10px;"> <span id="view-detail-p-${x.id}" style="font-size:0.76rem; color:var(--text-sub); font-weight:800;">👁️ 조회수 ${viewCnt.toLocaleString()}회</span> <div style="display:flex; gap:5px; margin-left:auto;"> <button class="mini-btn" style="background:var(--primary-light) !important; color:white !important;" onclick="tryEditPost('${x.id}', '', '', '', '', event)">✏️ 수정</button> <button class="mini-btn btn-del" onclick="deletePost('${x.id}','',event)">🗑️ 삭제</button> </div> </div> <div id="cmt-list-${x.id}" class="comment-section"></div> <div class="comment-form"> <div class="comment-form-row"> <input id="cmt-name-${x.id}" class="comment-input-sm board-comment-nickname" placeholder="항만용어 닉네임" aria-label="댓글 닉네임 (직접 수정 가능)" maxlength="50"> <input id="cmt-pw-${x.id}" class="comment-input-sm" type="password" placeholder="비밀번호" aria-label="비밀번호" maxlength="30"> </div> <div id="cmt-preview-${x.id}" class="comment-preview-box" style="display:none;"></div> <div class="comment-form-row"> <input id="cmt-txt-${x.id}" class="comment-input-main" placeholder="따뜻한 댓글을 남겨주세요..." onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();addComment('${x.id}');}"> <label for="cmt-file-${x.id}" id="cmt-file-label-${x.id}" class="comment-attach-btn" title="사진 첨부">📷</label> <input type="file" id="cmt-file-${x.id}" accept="image/*" style="display:none;" onchange="handleCommentFileChange('${x.id}', this)"> <button id="cmt-submit-${x.id}" class="comment-submit" onclick="addComment('${x.id}')">등록</button> <button id="cmt-cancel-${x.id}" type="button" class="mini-btn btn-del" style="display:none; height:32px; padding:0 8px; border-radius:6px; font-size:0.8rem; margin:0; line-height:30px;" onclick="cancelBoardCommentEdit('${x.id}')">취소</button> </div> </div> </td> </tr>`); }); l.innerHTML = rowsHtml.join(""); pageData.forEach(x => { const nicknameInput = document.getElementById(`cmt-name-${x.id}`); if (nicknameInput && !nicknameInput.value.trim()) nicknameInput.value = getPortNickname(); }); renderPagination(p); } 
 function renderShipPage(p) {
     currentShipPage = p;
     const list = document.getElementById("shipList");
@@ -9913,7 +10088,9 @@ function toggleBoardRow(id) {
         incrementBoardItemViewCount("ships", shipId, "s");
         loadShipComments(shipId);
     } else if (id.startsWith("p-")) {
-        incrementBoardItemViewCount("posts", id.slice(2), "p");
+        const postId = id.slice(2);
+        incrementBoardItemViewCount("posts", postId, "p");
+        loadComments(postId);
     } else if (id.startsWith("n-")) {
         incrementBoardItemViewCount("notices", id.slice(2), "n");
     }
@@ -10063,6 +10240,9 @@ async function submitShipComment(shipId) {
             blindReason: modResult.reason || null,
             timestamp: firebase.firestore.FieldValue.serverTimestamp()
         };
+        if (!isEditing && auth?.currentUser?.uid) {
+            commentData.authorUid = auth.currentUser.uid;
+        }
         if (modResult.hidden) {
             notifyAdminAutoBlind({
                 category: "선박 댓글",
@@ -11202,17 +11382,49 @@ async function saveEmergencyNotice() {
         updatedAt: firebase.firestore.FieldValue.serverTimestamp()
     };
     try {
-        await db.collection("settings").doc(EMERGENCY_NOTICE_DOC).set(payload, { merge: true });
+        const unlockToken = readSessionValue(EMERGENCY_UNLOCK_TOKEN_SESSION_KEY) || getStoredAdminSessionToken();
+        let savedViaServer = false;
+        if (unlockToken) {
+            const saveRes = await fetchPortApiJson("/api/emergency-notifications", {
+                method: "PUT",
+                headers: { "Content-Type": "application/json", "Authorization": `Bearer ${unlockToken}` },
+                body: JSON.stringify({
+                    action: "save",
+                    enabled,
+                    title,
+                    message,
+                    level,
+                    startAt,
+                    endAt,
+                    revision: payload.revision
+                })
+            });
+            if (saveRes && saveRes.status === 200 && saveRes.data && saveRes.data.ok) {
+                savedViaServer = true;
+            } else if (saveRes && saveRes.status === 401) {
+                throw new Error("관리자 인증 토큰이 만료되었습니다. 다시 인증해 주세요.");
+            }
+        }
+        if (!savedViaServer) {
+            await db.collection("settings").doc(EMERGENCY_NOTICE_DOC).set(payload, { merge: true });
+        }
         setEmergencyDismissedRevision(0); // 새 내용은 모두에게 다시 펼쳐 보여 줍니다.
         let alertsSent = false;
-        const unlockToken = readSessionValue(EMERGENCY_UNLOCK_TOKEN_SESSION_KEY);
         if (enabled && isEmergencyNoticeActive(payload, Date.now()) && unlockToken) {
             try {
-                const response = await fetch("/api/emergency-notifications", {
+                let response = await fetch("/api/emergency-notifications", {
                     method: "POST",
                     headers: { "Content-Type": "application/json", "Authorization": `Bearer ${unlockToken}` },
                     body: JSON.stringify({ revision: payload.revision })
                 });
+                const ctype = String(response.headers.get("content-type") || "").toLowerCase();
+                if ((!response.ok || !ctype.includes("application/json")) && typeof window !== "undefined" && window.location && window.location.origin !== FALLBACK_PRODUCTION_API_ORIGIN) {
+                    response = await fetch(`${FALLBACK_PRODUCTION_API_ORIGIN}/api/emergency-notifications`, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${unlockToken}` },
+                        body: JSON.stringify({ revision: payload.revision })
+                    });
+                }
                 const deliveryResult = await response.json().catch(() => null);
                 if (response.ok && deliveryResult?.ok === true) alertsSent = true;
                 else console.warn("안전·운영 공지 알림센터 전송 확인 실패:", response.status);
@@ -11235,11 +11447,26 @@ async function stopEmergencyNotice() {
     if (!isEmergencyAuthorUnlocked) return showToast("⚠️ 관리자 인증이 필요합니다.");
     if (!confirm("긴급 공지를 지금 화면에서 내릴까요?\n\n※ 내용은 그대로 남고 게시만 중단됩니다.")) return;
     try {
-        await db.collection("settings").doc(EMERGENCY_NOTICE_DOC).set({
-            enabled: false,
-            revision: Date.now(),
-            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-        }, { merge: true });
+        const revision = Date.now();
+        const unlockToken = readSessionValue(EMERGENCY_UNLOCK_TOKEN_SESSION_KEY) || getStoredAdminSessionToken();
+        let stoppedViaServer = false;
+        if (unlockToken) {
+            const stopRes = await fetchPortApiJson("/api/emergency-notifications", {
+                method: "PUT",
+                headers: { "Content-Type": "application/json", "Authorization": `Bearer ${unlockToken}` },
+                body: JSON.stringify({ action: "stop", revision })
+            });
+            if (stopRes && stopRes.status === 200 && stopRes.data && stopRes.data.ok) {
+                stoppedViaServer = true;
+            }
+        }
+        if (!stoppedViaServer) {
+            await db.collection("settings").doc(EMERGENCY_NOTICE_DOC).set({
+                enabled: false,
+                revision,
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            }, { merge: true });
+        }
         const enabledEl = document.getElementById("emergencyNoticeEnabled");
         if (enabledEl) enabledEl.checked = false;
         updateEmergencyAdminPreview();
@@ -11257,7 +11484,8 @@ window.onload = async () => {
     applyOfficialTerminalNames();
     appendTerminalMealBlocks();
     renderTerminalScheduleTabBar();
-    await ensureAnonymousAuth();
+    const restoredWorker = await restoreWorkerAuthSession();
+    if (!restoredWorker) await ensureAnonymousAuth();
     initAppHistoryNavigation();
     ["t1", "t2", "t3"].forEach(loadSectionTicker);
     trackVisitorSession();
@@ -11267,12 +11495,12 @@ window.onload = async () => {
     try { const now = new Date(); now.setMinutes(now.getMinutes() - now.getTimezoneOffset()); const todayStr = now.toISOString().split('T')[0]; const sDate = document.getElementById('wageStartDate'); const eDate = document.getElementById('wageEndDate'); if(sDate) sDate.value = todayStr; if(eDate) eDate.value = todayStr; if (typeof syncWageHourlyYearLabel === 'function') syncWageHourlyYearLabel(todayStr); const initMonth = parseInt(todayStr.split('-')[1], 10) || (now.getMonth() + 1); highlightSeasonRow(initMonth); applySeasonDefaultHours(initMonth, true); if (typeof updateWageHoursBreakdown === 'function') updateWageHoursBreakdown(); else if (typeof syncWageHoursBlockSize === 'function') syncWageHoursBlockSize(); if (typeof loadWageScheduledShipsForDate === 'function') loadWageScheduledShipsForDate(todayStr, false); } catch(e) { console.error("날짜 초기화 오류", e); } 
     loadBanner(); 
     try { 
-        db.collection("notices").orderBy("timestamp","desc").onSnapshot(s => { const openIds = Array.from(document.querySelectorAll("#noticeList .board-content-row.show")).map(el => el.id); window.allNoticesCache = []; const badge = document.getElementById("noticeBadge"); const subMeta = document.getElementById("noticeCardSubMeta"); if (subMeta) subMeta.innerText = s.empty ? "운영 안내 및 주요 소식" : `등록된 공지 ${s.size}건`; if (s.empty) { renderNoticePage(1); if(badge) badge.classList.add("hidden"); return; } let isNew = false; const now = new Date(); const sortedNotices = []; s.forEach(d => { const item = { ...(d.data() || {}), id: d.id }; if (item.timestamp && item.timestamp.toDate) { if (now.getTime() - item.timestamp.toDate().getTime() < 24 * 60 * 60 * 1000) isNew = true; } sortedNotices.push(item); }); sortedNotices.sort((a, b) => { const pA = a.isPriority ? 1 : 0; const pB = b.isPriority ? 1 : 0; if (pA !== pB) return pB - pA; const tA = a.timestamp && a.timestamp.toMillis ? a.timestamp.toMillis() : 0; const tB = b.timestamp && b.timestamp.toMillis ? b.timestamp.toMillis() : 0; return tB - tA; }); window.allNoticesCache = sortedNotices; const maxPage = Math.max(1, Math.ceil(sortedNotices.length / postsPerPage)); renderNoticePage(Math.min(currentNoticePage || 1, maxPage)); openIds.forEach(rid => document.getElementById(rid)?.classList.add("show")); if(badge) { if(isNew) badge.classList.remove("hidden"); else badge.classList.add("hidden"); } }, err => { console.warn("공지사항 구독 오류:", err); }); 
-        db.collection("posts").orderBy("timestamp","desc").onSnapshot(s => { const openIds = Array.from(document.querySelectorAll("#boardList .board-content-row.show")).map(el => el.id); allPostsData = []; s.forEach(d => { const postData = d.data() || {}; if (isDeletedRecord(postData)) return; allPostsData.push({...postData, id:d.id}) }); const subMeta = document.getElementById("boardCardSubMeta"); if (subMeta) subMeta.innerText = allPostsData.length > 0 ? `자유 게시글 ${allPostsData.length}건` : "현장 동료 자유 소통방"; const badge = document.getElementById("boardBadge"); if (badge) { const nowMs = Date.now(); const hasNewPost = allPostsData.some(p => p.timestamp && (nowMs - p.timestamp.toDate().getTime() < 24 * 60 * 60 * 1000)); if (hasNewPost) badge.classList.remove("hidden"); else badge.classList.add("hidden"); } const maxPage = Math.max(1, Math.ceil(allPostsData.length / postsPerPage)); renderBoardPage(Math.min(currentBoardPage || 1, maxPage)); openIds.forEach(rid => document.getElementById(rid)?.classList.add("show")); }, err => { console.warn("자유게시판 구독 오류:", err); }); 
+        db.collection("notices").orderBy("timestamp","desc").limit(100).onSnapshot(s => { const openIds = Array.from(document.querySelectorAll("#noticeList .board-content-row.show")).map(el => el.id); window.allNoticesCache = []; const badge = document.getElementById("noticeBadge"); const subMeta = document.getElementById("noticeCardSubMeta"); if (subMeta) subMeta.innerText = s.empty ? "운영 안내 및 주요 소식" : `등록된 공지 ${s.size}건`; if (s.empty) { renderNoticePage(1); if(badge) badge.classList.add("hidden"); return; } let isNew = false; const now = new Date(); const sortedNotices = []; s.forEach(d => { const item = { ...(d.data() || {}), id: d.id }; if (item.timestamp && item.timestamp.toDate) { if (now.getTime() - item.timestamp.toDate().getTime() < 24 * 60 * 60 * 1000) isNew = true; } sortedNotices.push(item); }); sortedNotices.sort((a, b) => { const pA = a.isPriority ? 1 : 0; const pB = b.isPriority ? 1 : 0; if (pA !== pB) return pB - pA; const tA = a.timestamp && a.timestamp.toMillis ? a.timestamp.toMillis() : 0; const tB = b.timestamp && b.timestamp.toMillis ? b.timestamp.toMillis() : 0; return tB - tA; }); window.allNoticesCache = sortedNotices; const maxPage = Math.max(1, Math.ceil(sortedNotices.length / postsPerPage)); renderNoticePage(Math.min(currentNoticePage || 1, maxPage)); openIds.forEach(rid => document.getElementById(rid)?.classList.add("show")); if(badge) { if(isNew) badge.classList.remove("hidden"); else badge.classList.add("hidden"); } }, err => { console.warn("공지사항 구독 오류:", err); }); 
+        db.collection("posts").orderBy("timestamp","desc").limit(200).onSnapshot(s => { const openIds = Array.from(document.querySelectorAll("#boardList .board-content-row.show")).map(el => el.id); allPostsData = []; s.forEach(d => { const postData = d.data() || {}; if (isDeletedRecord(postData)) return; allPostsData.push({...postData, id:d.id}) }); const subMeta = document.getElementById("boardCardSubMeta"); if (subMeta) subMeta.innerText = allPostsData.length > 0 ? `자유 게시글 ${allPostsData.length}건` : "현장 동료 자유 소통방"; const badge = document.getElementById("boardBadge"); if (badge) { const nowMs = Date.now(); const hasNewPost = allPostsData.some(p => p.timestamp && (nowMs - p.timestamp.toDate().getTime() < 24 * 60 * 60 * 1000)); if (hasNewPost) badge.classList.remove("hidden"); else badge.classList.add("hidden"); } const maxPage = Math.max(1, Math.ceil(allPostsData.length / postsPerPage)); renderBoardPage(Math.min(currentBoardPage || 1, maxPage)); openIds.forEach(rid => { const rowEl = document.getElementById(rid); if (rowEl) { rowEl.classList.add("show"); if (rid.startsWith("p-")) loadComments(rid.slice(2)); } }); }, err => { console.warn("자유게시판 구독 오류:", err); }); 
         db.collection("ships").orderBy("timestamp","desc").onSnapshot(s => { applyShipDirectorySnapshot(s); }, err => { console.warn("선박도감 구독 오류:", err); });
-        db.collection("archives").orderBy("timestamp","desc").onSnapshot(s=>{window.allArchivesCount = s.size; window.allArchivesCache = []; const l=document.getElementById("fileList"); const archiveBadge = document.getElementById("archiveBadge"); let isArchiveNew = false; const nowMs = Date.now(); const rowsHtml=[]; s.forEach(d=>{const x=d.data()||{}; window.allArchivesCache.push({...x, id:d.id}); let isRowNew = false; if (x.timestamp) { const dt = x.timestamp.toDate(); if (nowMs - dt.getTime() < 24 * 60 * 60 * 1000) { isRowNew = true; isArchiveNew = true; } } const rowNewBadge = isRowNew ? `<span class="badge-new">NEW</span>` : ""; const safeUrl = escapeShipCommentHtml(x.url || "#"); const safeTitle = escapeShipCommentHtml(x.title || "파일"); rowsHtml.push(`<tr><td class="board-title" style="width: 68%; padding-left: 10px;"><a href="${safeUrl}" target="_blank" rel="noopener noreferrer" style="text-decoration:none; color:var(--primary); font-weight:800;">💾 ${safeTitle}</a>${rowNewBadge}</td><td style="width: 32%; text-align:center;"><div style="display:inline-flex; gap:4px; justify-content:center;"><button class="mini-btn" style="background:var(--primary-light) !important; color:white !important;" onclick="startEditArchive('${d.id}',event)">수정</button><button class="mini-btn btn-del" onclick="delArchive('${d.id}',event)">삭제</button></div></td></tr>`);}); l.innerHTML=rowsHtml.join(""); if (archiveBadge) { if (isArchiveNew) archiveBadge.classList.remove("hidden"); else archiveBadge.classList.add("hidden"); }}, err => { console.warn("자료실 구독 오류:", err); }); 
+        db.collection("archives").orderBy("timestamp","desc").limit(200).onSnapshot(s=>{window.allArchivesCache = []; const l=document.getElementById("fileList"); const archiveBadge = document.getElementById("archiveBadge"); let isArchiveNew = false; const nowMs = Date.now(); const rowsHtml=[]; s.forEach(d=>{const x=d.data()||{}; if (isDeletedRecord(x)) return; window.allArchivesCache.push({...x, id:d.id}); let isRowNew = false; if (x.timestamp) { const dt = x.timestamp.toDate(); if (nowMs - dt.getTime() < 24 * 60 * 60 * 1000) { isRowNew = true; isArchiveNew = true; } } const rowNewBadge = isRowNew ? `<span class="badge-new">NEW</span>` : ""; const safeUrl = escapeShipCommentHtml(sanitizeSafeHttpUrl(x.url || "#")); const safeTitle = escapeShipCommentHtml(x.title || "파일"); rowsHtml.push(`<tr><td class="board-title" style="width: 68%; padding-left: 10px;"><a href="${safeUrl}" target="_blank" rel="noopener noreferrer" style="text-decoration:none; color:var(--primary); font-weight:800;">💾 ${safeTitle}</a>${rowNewBadge}</td><td style="width: 32%; text-align:center;"><div style="display:inline-flex; gap:4px; justify-content:center;"><button class="mini-btn" style="background:var(--primary-light) !important; color:white !important;" onclick="startEditArchive('${d.id}',event)">수정</button><button class="mini-btn btn-del" onclick="delArchive('${d.id}',event)">삭제</button></div></td></tr>`);}); window.allArchivesCount = window.allArchivesCache.length; l.innerHTML=rowsHtml.join(""); if (archiveBadge) { if (isArchiveNew) archiveBadge.classList.remove("hidden"); else archiveBadge.classList.add("hidden"); }}, err => { console.warn("자료실 구독 오류:", err); }); 
     } catch(err) { console.warn("실시간 연결 오류:", err); } 
     if(localStorage.getItem('myWorkerId')) { currentWorkerId = localStorage.getItem('myWorkerId'); updateUserBar(); if(typeof initNotifications === 'function') initNotifications(currentWorkerId); } 
 };
 
-let leaderCurrentDate = new Date(); let leaderOverrides = []; const baseCycle = ["재경", "성철", "개굴"]; const baseAnchor = "2026-02-01"; function openLeaderSchedule() { trackAppEvent('actions', 'leader_cal'); document.getElementById('leaderCalendarModal').style.display = 'flex'; leaderCurrentDate = new Date(); renderLeaderCalendar(leaderCurrentDate.getFullYear(), leaderCurrentDate.getMonth()); } function closeLeaderCalendar() { document.getElementById('leaderCalendarModal').style.display = 'none'; } function changeLeaderMonth(s) { leaderCurrentDate.setMonth(leaderCurrentDate.getMonth() + s); renderLeaderCalendar(leaderCurrentDate.getFullYear(), leaderCurrentDate.getMonth()); } function getSlotIndex(dStr) { const target = new Date(dStr); const anchor = new Date(baseAnchor); const diffDays = Math.floor((target.getTime() - anchor.getTime()) / (1000 * 60 * 60 * 24)); return ((diffDays % 3) + 3) % 3; } function getCalculatedLeader(targetDateStr) { const targetSlot = getSlotIndex(targetDateStr); for (let i = leaderOverrides.length - 1; i >= 0; i--) { const ov = leaderOverrides[i]; if (ov.date <= targetDateStr) { if (getSlotIndex(ov.date) === targetSlot) return ov.leader; } } return baseCycle[targetSlot]; } function renderLeaderCalendar(y, m) { document.getElementById('leaderCalMonthYear').innerText = `${y}년 ${m+1}월`; const lD = new Date(y, m+1, 0).getDate(); db.collection('leader_overrides').get().then(s => { leaderOverrides = []; s.forEach(doc => { leaderOverrides.push(doc.data()); }); leaderOverrides.sort((a, b) => a.date.localeCompare(b.date)); drawLeaderGrid(y, m, lD); }).catch(err => { drawLeaderGrid(y, m, lD); }); } function drawLeaderGrid(y, m, lD) { const g = document.getElementById('leaderCalendarGrid'); const cells = []; const fD = new Date(y, m, 1).getDay(); for(let i=0; i<fD; i++) { cells.push(`<div style="background:transparent; border:none;"></div>`); } for(let d=1; d<=lD; d++) { const dStr = `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`; const isAnchor = leaderOverrides.some(ov => ov.date === dStr); const leaderName = String(getCalculatedLeader(dStr) || ""); const safeLeaderHtml = escapeShipCommentHtml(leaderName); const safeLeaderJs = leaderName.replace(/\\/g, "\\\\").replace(/'/g, "\\'").replace(/"/g, "&quot;"); let badgeClass = "leader-badge "; if (leaderName.includes("재경")) badgeClass += "leader-jaekyung"; else if (leaderName.includes("성철")) badgeClass += "leader-sungchul"; else if (leaderName.includes("개굴")) badgeClass += "leader-gaegool"; else badgeClass += "leader-jaekyung"; let customStyle = isAnchor ? "border: 2px solid #ef4444;" : ""; if (!baseCycle.includes(leaderName)) customStyle += "background-color: #8b5cf6; color: white;"; let dayColor = "var(--text-main)"; let currentDayObj = new Date(y, m, d).getDay(); if (currentDayObj === 0) dayColor = "#ef4444"; if (currentDayObj === 6) dayColor = "#3b82f6"; cells.push(`<div class="cal-day tap-effect" onclick="overrideLeader('${dStr}', '${safeLeaderJs}')" style="min-height: 65px; justify-content: flex-start; padding-top: 5px; background: white;"><span style="color: ${dayColor}; font-weight: 900; font-size: 0.95rem;">${d}</span><div class="${badgeClass}" style="${customStyle}">${safeLeaderHtml}</div></div>`); } g.innerHTML = cells.join(""); } async function overrideLeader(dStr, currentLeader) { if (!(await verifyAdmin())) return; const newLeader = prompt(`[${dStr}] 조장을 변경합니다.\n\n👉 이곳에 새 이름(예: 용병)을 넣으면 이후 3일마다 돌아오는 이 근무조의 스케줄이 모두 교체됩니다.\n\n※ 취소하려면 '초기화'를 입력하세요.`, currentLeader); if (newLeader === null) return; if (newLeader.trim() === "" || newLeader === "초기화") { db.collection('leader_overrides').doc(dStr).delete().then(() => { showToast("기존 패턴이 복구되었습니다."); renderLeaderCalendar(leaderCurrentDate.getFullYear(), leaderCurrentDate.getMonth()); }); } else { db.collection('leader_overrides').doc(dStr).set({ date: dStr, leader: newLeader.trim() }).then(() => { showToast("새 근무조가 적용되었습니다."); renderLeaderCalendar(leaderCurrentDate.getFullYear(), leaderCurrentDate.getMonth()); }); } }
+let leaderCurrentDate = new Date(); let leaderOverrides = []; const baseCycle = ["재경", "성철", "개굴"]; const baseAnchor = "2026-02-01"; function openLeaderSchedule() { trackAppEvent('actions', 'leader_cal'); document.getElementById('leaderCalendarModal').style.display = 'flex'; leaderCurrentDate = new Date(); renderLeaderCalendar(leaderCurrentDate.getFullYear(), leaderCurrentDate.getMonth()); } function closeLeaderCalendar() { document.getElementById('leaderCalendarModal').style.display = 'none'; } function changeLeaderMonth(s) { leaderCurrentDate = new Date(leaderCurrentDate.getFullYear(), leaderCurrentDate.getMonth() + s, 1); renderLeaderCalendar(leaderCurrentDate.getFullYear(), leaderCurrentDate.getMonth()); } function getSlotIndex(dStr) { const target = new Date(dStr); const anchor = new Date(baseAnchor); const diffDays = Math.floor((target.getTime() - anchor.getTime()) / (1000 * 60 * 60 * 24)); return ((diffDays % 3) + 3) % 3; } function getCalculatedLeader(targetDateStr) { const targetSlot = getSlotIndex(targetDateStr); for (let i = leaderOverrides.length - 1; i >= 0; i--) { const ov = leaderOverrides[i]; if (ov.date <= targetDateStr) { if (getSlotIndex(ov.date) === targetSlot) return ov.leader; } } return baseCycle[targetSlot]; } function renderLeaderCalendar(y, m) { document.getElementById('leaderCalMonthYear').innerText = `${y}년 ${m+1}월`; const lD = new Date(y, m+1, 0).getDate(); db.collection('leader_overrides').get().then(s => { leaderOverrides = []; s.forEach(doc => { leaderOverrides.push(doc.data()); }); leaderOverrides.sort((a, b) => a.date.localeCompare(b.date)); drawLeaderGrid(y, m, lD); }).catch(err => { drawLeaderGrid(y, m, lD); }); } function drawLeaderGrid(y, m, lD) { const g = document.getElementById('leaderCalendarGrid'); const cells = []; const fD = new Date(y, m, 1).getDay(); for(let i=0; i<fD; i++) { cells.push(`<div style="background:transparent; border:none;"></div>`); } for(let d=1; d<=lD; d++) { const dStr = `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`; const isAnchor = leaderOverrides.some(ov => ov.date === dStr); const leaderName = String(getCalculatedLeader(dStr) || ""); const safeLeaderHtml = escapeShipCommentHtml(leaderName); const safeLeaderJs = leaderName.replace(/\\/g, "\\\\").replace(/'/g, "\\'").replace(/"/g, "&quot;"); let badgeClass = "leader-badge "; if (leaderName.includes("재경")) badgeClass += "leader-jaekyung"; else if (leaderName.includes("성철")) badgeClass += "leader-sungchul"; else if (leaderName.includes("개굴")) badgeClass += "leader-gaegool"; else badgeClass += "leader-jaekyung"; let customStyle = isAnchor ? "border: 2px solid #ef4444;" : ""; if (!baseCycle.includes(leaderName)) customStyle += "background-color: #8b5cf6; color: white;"; let dayColor = "var(--text-main)"; let currentDayObj = new Date(y, m, d).getDay(); if (currentDayObj === 0) dayColor = "#ef4444"; if (currentDayObj === 6) dayColor = "#3b82f6"; cells.push(`<div class="cal-day tap-effect" onclick="overrideLeader('${dStr}', '${safeLeaderJs}')" style="min-height: 65px; justify-content: flex-start; padding-top: 5px; background: white;"><span style="color: ${dayColor}; font-weight: 900; font-size: 0.95rem;">${d}</span><div class="${badgeClass}" style="${customStyle}">${safeLeaderHtml}</div></div>`); } g.innerHTML = cells.join(""); } async function overrideLeader(dStr, currentLeader) { if (!(await verifyAdmin())) return; const newLeader = prompt(`[${dStr}] 조장을 변경합니다.\n\n👉 이곳에 새 이름(예: 용병)을 넣으면 이후 3일마다 돌아오는 이 근무조의 스케줄이 모두 교체됩니다.\n\n※ 취소하려면 '초기화'를 입력하세요.`, currentLeader); if (newLeader === null) return; if (newLeader.trim() === "" || newLeader === "초기화") { db.collection('leader_overrides').doc(dStr).delete().then(() => { showToast("기존 패턴이 복구되었습니다."); renderLeaderCalendar(leaderCurrentDate.getFullYear(), leaderCurrentDate.getMonth()); }); } else { db.collection('leader_overrides').doc(dStr).set({ date: dStr, leader: newLeader.trim() }).then(() => { showToast("새 근무조가 적용되었습니다."); renderLeaderCalendar(leaderCurrentDate.getFullYear(), leaderCurrentDate.getMonth()); }); } }

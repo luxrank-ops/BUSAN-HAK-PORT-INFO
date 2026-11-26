@@ -300,12 +300,26 @@ async function initMessagingPush(userId) {
             : await Notification.requestPermission();
         if (permission !== 'granted') return false;
 
+        const fetchConfig = async () => {
+            try {
+                const res = await fetch('/api/config');
+                if (res.ok && (res.headers.get('content-type') || '').includes('application/json')) {
+                    return await res.json();
+                }
+            } catch (_) {}
+            if (typeof FALLBACK_PRODUCTION_API_ORIGIN === 'string' && typeof window !== 'undefined' && window.location && window.location.origin !== FALLBACK_PRODUCTION_API_ORIGIN) {
+                try {
+                    const fallbackRes = await fetch(`${FALLBACK_PRODUCTION_API_ORIGIN}/api/config`);
+                    if (fallbackRes.ok && (fallbackRes.headers.get('content-type') || '').includes('application/json')) {
+                        return await fallbackRes.json();
+                    }
+                } catch (_) {}
+            }
+            return null;
+        };
+
         const [config, registration] = await Promise.all([
-            fetch('/api/config').then((res) => (
-                res.ok && (res.headers.get('content-type') || '').includes('application/json')
-                    ? res.json()
-                    : null
-            )),
+            fetchConfig(),
             registerFcmServiceWorker()
         ]);
         if (!config?.vapidKey) throw new Error('서버의 Web Push VAPID 키가 설정되지 않았습니다.');

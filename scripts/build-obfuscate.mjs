@@ -117,7 +117,7 @@ function normalizePinForHash(pin) {
   s = s.replace(/\s+/g, '');
   return s;
 }
-function transformHtml(html, screenLockPin, emergencyPin = screenLockPin, emergencyDefaultPin = '') {
+function transformHtml(html, screenLockPin, emergencyPin = screenLockPin, emergencyDefaultPin = '', screenDefaultPin = '') {
   const normScreenPin = normalizePinForHash(screenLockPin);
   const normEmergencyPin = normalizePinForHash(emergencyPin);
   const sha256 = createHash('sha256').update(normScreenPin, 'utf8').digest('hex');
@@ -126,14 +126,22 @@ function transformHtml(html, screenLockPin, emergencyPin = screenLockPin, emerge
   const fallbackSha256 = fallbackPin
     ? createHash('sha256').update(fallbackPin, 'utf8').digest('hex')
     : '';
-  // 화면 잠금 기본 백업 PIN(9445) — 운영자가 PIN을 바꿔도 기존 안내 번호로 열리도록
-  const screenDefaultSha256 = createHash('sha256').update('9445', 'utf8').digest('hex');
+  // 화면 잠금 기본 백업 PIN(9445) — SCREEN_LOCK_PIN 미설정 배포에서만 주입됩니다.
+  const normScreenDefault = normalizePinForHash(screenDefaultPin);
+  const screenDefaultSha256 = normScreenDefault
+    ? createHash('sha256').update(normScreenDefault, 'utf8').digest('hex')
+    : '';
   const configScript = [
     '<script>',
     '/* 서버 검증 실패(정적 호스팅·오프라인) 시 사용하는 화면 잠금 PIN 해시.',
     '   실제 값은 서버 환경변수 SCREEN_LOCK_PIN 으로 관리하며 소스에는 평문이 없습니다. */',
     `window.__SCREEN_LOCK_SHA256__="${sha256}";`,
-    `window.__SCREEN_LOCK_DEFAULT_SHA256__="${screenDefaultSha256}";`,
+    ...(screenDefaultSha256
+      ? [
+          '/* 화면 잠금 기본 백업 PIN 해시 — SCREEN_LOCK_PIN 미설정 배포에서만 주입됩니다. */',
+          `window.__SCREEN_LOCK_DEFAULT_SHA256__="${screenDefaultSha256}";`
+        ]
+      : []),
     '/* 🚨 긴급 플로팅 공지 작성 잠금 해시 (서버 환경변수 EMERGENCY_NOTICE_PIN). */',
     `window.__EMERGENCY_PIN_SHA256__="${emergencySha256}";`,
     ...(fallbackSha256
@@ -220,7 +228,9 @@ async function main() {
   rmSync(OUT_DIR, { recursive: true, force: true });
   mkdirSync(OUT_DIR, { recursive: true });
 
-  const pin = String(process.env.SCREEN_LOCK_PIN || DEFAULT_SCREEN_LOCK_PIN).trim() || DEFAULT_SCREEN_LOCK_PIN;
+  const explicitScreenPin = String(process.env.SCREEN_LOCK_PIN || '').trim();
+  const pin = explicitScreenPin || DEFAULT_SCREEN_LOCK_PIN;
+  const screenDefaultPin = explicitScreenPin ? '' : DEFAULT_SCREEN_LOCK_PIN;
   // 긴급 공지 작성 비밀번호: EMERGENCY_NOTICE_PIN → (미설정 시) 화면 잠금 PIN 순으로 결정합니다.
   const explicitEmergencyPin = String(process.env.EMERGENCY_NOTICE_PIN || '').trim();
   const emergencyPin = explicitEmergencyPin || pin;
@@ -266,7 +276,7 @@ async function main() {
 
     if (ext === '.html' || ext === '.htm') {
       const src = readFileSync(file, 'utf8');
-      writeFileSync(dest, transformHtml(src, pin, emergencyPin, emergencyDefaultPin), 'utf8');
+      writeFileSync(dest, transformHtml(src, pin, emergencyPin, emergencyDefaultPin, screenDefaultPin), 'utf8');
       htmlCount += 1;
       continue;
     }

@@ -56,13 +56,33 @@ async function callCronEndpoint(pathname: string, env: { CRON_SECRET?: string },
   else await work;
 }
 
+function withSecurityHeaders(res: Response): Response {
+  const headers = new Headers(res.headers);
+  if (!headers.has('X-Content-Type-Options')) headers.set('X-Content-Type-Options', 'nosniff');
+  if (!headers.has('Referrer-Policy')) headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
+  return new Response(res.body, {
+    status: res.status,
+    statusText: res.statusText,
+    headers
+  });
+}
+
 export default {
   async fetch(request: Request): Promise<Response> {
     const url = new URL(request.url);
     if (isApiPath(url.pathname)) {
-      return handleAsNodeRequest(PORT, request);
+      try {
+        const res = await handleAsNodeRequest(PORT, request);
+        return withSecurityHeaders(res);
+      } catch (err: any) {
+        console.error('[WORKER] API 요청 처리 예외:', err?.message || err);
+        return withSecurityHeaders(new Response(
+          JSON.stringify({ ok: false, error: 'internal_server_error' }),
+          { status: 500, headers: { 'Content-Type': 'application/json; charset=utf-8' } }
+        ));
+      }
     }
-    return new Response('Not Found', { status: 404 });
+    return withSecurityHeaders(new Response('Not Found', { status: 404 }));
   },
 
   async scheduled(controller: { cron: string }, env: { CRON_SECRET?: string }, ctx: { waitUntil: (p: Promise<any>) => void }): Promise<void> {

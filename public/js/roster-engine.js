@@ -1135,6 +1135,26 @@ function setRosterPhotoStatus(message) {
     if (status) status.textContent = String(message || "");
 }
 
+async function fetchRosterApi(apiPath, init) {
+    let response = null;
+    try {
+        response = await fetch(apiPath, init);
+        const ctype = String(response.headers.get("content-type") || "").toLowerCase();
+        if (response.ok && ctype.includes("application/json")) return response;
+        if (response.status !== 404 && ctype.includes("application/json")) return response;
+    } catch (_) {}
+    if (
+        typeof FALLBACK_PRODUCTION_API_ORIGIN === "string" &&
+        typeof window !== "undefined" &&
+        window.location &&
+        window.location.origin !== FALLBACK_PRODUCTION_API_ORIGIN
+    ) {
+        return fetch(`${FALLBACK_PRODUCTION_API_ORIGIN}${apiPath}`, init);
+    }
+    if (response) return response;
+    return fetch(apiPath, init);
+}
+
 async function refreshRosterCloudOcrButton() {
     const button = rosterElement("rosterPhotoCloudOcrBtn");
     if (!button) return false;
@@ -1144,8 +1164,8 @@ async function refreshRosterCloudOcrButton() {
     try {
         // Vercel catch-all 함수는 1세그먼트 경로만 처리해 /api/roster-ocr/config 는 404가 됩니다.
         // 단일 세그먼트 별칭을 먼저 쓰고, 실패했을 때만 원래 경로를 확인합니다.
-        let response = await fetch("/api/roster-ocr-config", { cache: "no-store" });
-        if (!response.ok) response = await fetch("/api/roster-ocr/config", { cache: "no-store" });
+        let response = await fetchRosterApi("/api/roster-ocr-config", { cache: "no-store" });
+        if (!response.ok) response = await fetchRosterApi("/api/roster-ocr/config", { cache: "no-store" });
         const config = response.ok ? await response.json() : null;
         rosterRuntime.cloudOcrEnabled = Boolean(config?.enabled);
         rosterRuntime.aiVisionEnabled = Boolean(config?.enabled && config?.aiVision);
@@ -2926,7 +2946,7 @@ async function maybeRunRosterAiVisionFirst() {
         const activeDate = (() => {
             try { return String(getActiveWorkLogDate() || ""); } catch (error) { return ""; }
         })();
-        const post = (path) => fetch(path, {
+        const post = (path) => fetchRosterApi(path, {
             method: "POST",
             headers: {
                 "Content-Type": "image/jpeg",
@@ -3017,7 +3037,7 @@ async function runRosterCloudOcr(options) {
         if (jpeg.size > 4 * 1024 * 1024) throw new Error("온라인 판독용 사진이 4MB를 넘습니다. 사진을 더 작게 잘라 다시 시도해 주세요.");
         // Vercel catch-all 은 1세그먼트만 처리하므로 단일 세그먼트 별칭을 먼저 부르고,
         // 실패했을 때만 원래 경로로 한 번 더 시도합니다.
-        const requestCloudOcr = (path) => fetch(path, {
+        const requestCloudOcr = (path) => fetchRosterApi(path, {
             method: "POST",
             headers: {
                 "Content-Type": "image/jpeg",

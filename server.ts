@@ -77,8 +77,8 @@ export const IS_CLOUDFLARE = String(process.env.CLOUDFLARE_WORKER || '') === '1'
 export const IS_VERCEL = Boolean(process.env.VERCEL) || IS_CLOUDFLARE;
 export const PLATFORM_LABEL = IS_CLOUDFLARE ? 'cloudflare-workers' : IS_VERCEL ? 'vercel-serverless' : 'node-server';
 
-if (IS_VERCEL) {
-  // Vercel 엣지 프록시가 x-forwarded-for 의 마지막에 실제 클라이언트 IP 를 추가합니다.
+if (IS_VERCEL || IS_CLOUDFLARE) {
+  // Vercel·Cloudflare 엣지 프록시가 x-forwarded-for 의 마지막에 실제 클라이언트 IP 를 추가합니다.
   // hop 1개만 신뢰해야 클라이언트가 헤더를 위조해 속도 제한을 우회할 수 없습니다.
   // (미설정 시 req.ip 가 프록시 IP 가 되어 모든 사용자가 속도 제한 버킷 하나를 공유하게 됩니다)
   app.set('trust proxy', 1);
@@ -88,7 +88,18 @@ export const SUPPORTED_TERMINALS = ['hjnc', 'bnct', 'dgt', 'pnc', 'hpnt', 'pnit'
 export const SCHEDULE_DIFF_THRESHOLD_MINUTES = Number(process.env.SCHEDULE_DIFF_THRESHOLD_MINUTES) || 60;
 export const SCHEDULE_CACHE_TTL_DAYS = 30;
 export const READ_NOTIFICATION_TTL_DAYS = 14;
+export const UNREAD_NOTIFICATION_TTL_DAYS = 90;
+export const VISITOR_IP_LOG_TTL_DAYS = 30;
 export const BACKUP_COLLECTIONS = ['work_logs', 'ships', 'posts'] as const;
+export const EXTENDED_BACKUP_COLLECTIONS = [
+  ...BACKUP_COLLECTIONS,
+  'user_profiles',
+  'notices',
+  'archives',
+  'want_board',
+  'leader_overrides',
+  'settings'
+] as const;
 
 // --- 정적 자산 루트: 난독화·압축 산출물(build/public) 우선, 없으면 원본(public) ---
 // scripts/build-obfuscate.mjs 가 만든 배포용 압축본이 있으면 그것을 제공하고,
@@ -107,9 +118,19 @@ export const STATIC_ROOT = resolveStaticRoot();
 // --- 화면 잠금(보안 비밀번호) 설정 ---
 // PIN 은 저장소 소스가 아니라 서버 환경변수로만 관리합니다. (기본값 9445 는 하위 호환용)
 // .env / Vercel 환경변수에 붙은 공백·줄바꿈(복사-붙여넣기 실수)으로 인증이 실패하지 않게 trim() 합니다.
+const HAS_EXPLICIT_SCREEN_LOCK_PIN = Boolean(String(process.env.SCREEN_LOCK_PIN || '').trim());
 export const SCREEN_LOCK_PIN = String(process.env.SCREEN_LOCK_PIN || '9445').trim() || '9445';
 export const SCREEN_UNLOCK_TOKEN_TTL_MS = 12 * 60 * 60 * 1000; // 12시간
-const SCREEN_UNLOCK_TOKEN_SECRET = String(process.env.UNLOCK_TOKEN_SECRET || SCREEN_LOCK_PIN).trim() || SCREEN_LOCK_PIN;
+export const WORKER_SESSION_TOKEN_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30일
+// 프로세스 단위 무작위 폴백 키: 환경변수 시크릿이 비어 있더라도 공개 기본 PIN(9445)으로
+// 토큰을 오프라인 위조할 수 없도록 절대 기본 PIN 으로 폴백하지 않습니다.
+const EPHEMERAL_RUNTIME_TOKEN_SECRET = crypto.randomBytes(32).toString('hex');
+const SCREEN_UNLOCK_TOKEN_SECRET =
+  String(process.env.UNLOCK_TOKEN_SECRET || process.env.ADMIN_SESSION_SECRET || process.env.CRON_SECRET || '').trim() ||
+  EPHEMERAL_RUNTIME_TOKEN_SECRET;
+const ADMIN_SESSION_SECRET =
+  String(process.env.ADMIN_SESSION_SECRET || process.env.UNLOCK_TOKEN_SECRET || process.env.CRON_SECRET || '').trim() ||
+  EPHEMERAL_RUNTIME_TOKEN_SECRET;
 // 무차별 대입 방지: IP 당 10분에 10회까지만 시도
 const SCREEN_UNLOCK_MAX_ATTEMPTS = 10;
 const SCREEN_UNLOCK_WINDOW_MS = 10 * 60 * 1000;
@@ -117,12 +138,12 @@ const screenUnlockAttempts = new Map<string, { count: number; resetAt: number }>
 
 /**
  * 시도 횟수 제한 — 잠금 종류(scope)별로 버킷을 분리합니다.
- * 화면 잠금에서 10회 실패해도 긴급 공지·관리자·익명 세션 인증이 함께 막히지 않도록 하기 위함입니다.
+ * 화면 잠금에서 10회 실패해도 긴급 공지·관리자·근로자·익명 세션 인증이 함께 막히지 않도록 하기 위함입니다.
  */
 function isScreenUnlockRateLimited(
   ip: string,
-  scope: 'screen' | 'emergency' | 'admin' | 'anon' | 'ocr' = 'screen',
-  maxAttempts: number = scope === 'anon' ? 120 : scope === 'ocr' ? 5 : SCREEN_UNLOCK_MAX_ATTEMPTS
+  scope: 'screen' | 'emergency' | 'admin' | 'worker' | 'anon' | 'ocr' = 'screen',
+  maxAttempts: number = scope === 'anon' ? 120 : scope === 'worker' ? 20 : scope === 'ocr' ? 5 : SCREEN_UNLOCK_MAX_ATTEMPTS
 ): boolean {
   const now = Date.now();
   const key = `${scope}:${ip}`;
@@ -140,11 +161,17 @@ function isScreenUnlockRateLimited(
   return entry.count > maxAttempts;
 }
 
-/** 허용되는 화면 잠금 PIN 목록 — 기본값 9445를 항상 백업으로 인정해 운영자 실수로 잠기는 일을 방지합니다. */
+/**
+ * 허용되는 화면 잠금 PIN 목록.
+ * - SCREEN_LOCK_PIN 을 명시 지정한 배포: 지정한 PIN 만 인정합니다(기본값 9445 폐기).
+ * - 지정하지 않은 배포: 하위 호환 기본값 9445 를 인정합니다.
+ */
 export function getAcceptedScreenLockPins(): string[] {
   const pins = new Set<string>();
   if (SCREEN_LOCK_PIN) pins.add(SCREEN_LOCK_PIN);
-  pins.add('9445');
+  if (!HAS_EXPLICIT_SCREEN_LOCK_PIN) {
+    pins.add('9445');
+  }
   return Array.from(pins);
 }
 
@@ -246,7 +273,7 @@ export const ADMIN_CUSTOM_TOKEN_UID = 'admin_luxrank';
 export function issueAdminSessionToken(nowMs: number = Date.now()): { token: string; expiresAt: number } {
   const expiresAt = nowMs + SCREEN_UNLOCK_TOKEN_TTL_MS;
   const sig = crypto
-    .createHmac('sha256', SCREEN_UNLOCK_TOKEN_SECRET)
+    .createHmac('sha256', ADMIN_SESSION_SECRET)
     .update(`admin-session:${expiresAt}`)
     .digest('hex');
   return { token: `${expiresAt}.${sig}`, expiresAt };
@@ -264,12 +291,68 @@ export function verifyAdminSessionToken(rawToken: string, nowMs: number = Date.n
     return false;
   }
   const expected = crypto
-    .createHmac('sha256', SCREEN_UNLOCK_TOKEN_SECRET)
+    .createHmac('sha256', ADMIN_SESSION_SECRET)
     .update(`admin-session:${expiresAt}`)
     .digest();
   const actual = Buffer.from(sigHex, 'hex');
   if (expected.length !== actual.length) return false;
   return crypto.timingSafeEqual(expected, actual);
+}
+
+/**
+ * 근로자 로그인 세션 HMAC 토큰 발급·검증 (30일 유효)
+ * 페이지 새로고침 시 비밀번호 재입력 없이 서버가 workerId 클레임이 포함된 Custom Token 을 재발급할 수 있게 합니다.
+ */
+export function issueWorkerSessionToken(workerId: string, nowMs: number = Date.now()): { token: string; expiresAt: number } {
+  const safeNick = String(workerId || '').trim();
+  const expiresAt = nowMs + WORKER_SESSION_TOKEN_TTL_MS;
+  const nickB64 = base64UrlEncode(safeNick);
+  const payload = `${nickB64}.${expiresAt}`;
+  const sig = crypto
+    .createHmac('sha256', ADMIN_SESSION_SECRET)
+    .update(`worker-session:${payload}`)
+    .digest('hex');
+  return { token: `${payload}.${sig}`, expiresAt };
+}
+
+export function verifyWorkerSessionToken(rawToken: string, nowMs: number = Date.now()): { workerId: string; expiresAt: number } | null {
+  const cleaned = String(rawToken || '').trim().replace(/^Bearer\s+/i, '').trim();
+  const parts = cleaned.split('.');
+  if (parts.length !== 3) return null;
+  const [nickB64, expiresStr, sigHex] = parts;
+  if (!nickB64 || !/^\d{10,16}$/.test(expiresStr) || !/^[a-fA-F0-9]{64}$/.test(sigHex)) return null;
+  const expiresAt = Number(expiresStr);
+  if (!Number.isFinite(expiresAt) || expiresAt <= nowMs || expiresAt > nowMs + WORKER_SESSION_TOKEN_TTL_MS + 60_000) {
+    return null;
+  }
+  const payload = `${nickB64}.${expiresStr}`;
+  const expected = crypto
+    .createHmac('sha256', ADMIN_SESSION_SECRET)
+    .update(`worker-session:${payload}`)
+    .digest();
+  const actual = Buffer.from(sigHex, 'hex');
+  if (expected.length !== actual.length || !crypto.timingSafeEqual(expected, actual)) return null;
+  try {
+    const padded = nickB64.replace(/-/g, '+').replace(/_/g, '/');
+    const workerId = Buffer.from(padded, 'base64').toString('utf8').trim();
+    if (!workerId || workerId.length > 64) return null;
+    return { workerId, expiresAt };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * 익명·근로자 Custom Token UID 를 일방향 HMAC 으로 파생합니다.
+ * 외부에 노출된 worker_* UID 를 역산하거나 타인 UID 를 그대로 요청해 사칭할 수 없습니다.
+ */
+export function deriveOpaqueWorkerUid(namespace: 'anon' | 'account', identifier: string): string {
+  const digest = crypto
+    .createHmac('sha256', ADMIN_SESSION_SECRET)
+    .update(`uid:${namespace}:${identifier}`)
+    .digest('hex')
+    .slice(0, 24);
+  return `worker_${digest}`;
 }
 
 let cachedServiceAccountCreds: { clientEmail: string; privateKey: string } | null = null;
@@ -283,23 +366,25 @@ function base64UrlEncode(input: Buffer | string): string {
  * 외부 JWT 패키지(firebase-admin/auth -> jsonwebtoken) 의존성 없이
  * Node 내장 crypto(RS256) 만으로 Firebase Identity Toolkit 표준 Custom Token 을 서명합니다.
  */
-function signServiceAccountCustomToken(uid: string): string | null {
+function signServiceAccountCustomToken(uid: string, claims?: Record<string, unknown>): string | null {
   initFirebaseAdmin();
   if (!cachedServiceAccountCreds?.clientEmail || !cachedServiceAccountCreds?.privateKey) {
     return null;
   }
   const nowSec = Math.floor(Date.now() / 1000);
   const headerSegment = base64UrlEncode(JSON.stringify({ alg: 'RS256', typ: 'JWT' }));
-  const payloadSegment = base64UrlEncode(
-    JSON.stringify({
-      iss: cachedServiceAccountCreds.clientEmail,
-      sub: cachedServiceAccountCreds.clientEmail,
-      aud: 'https://identitytoolkit.googleapis.com/google.identity.identitytoolkit.v1.IdentityToolkit',
-      iat: nowSec,
-      exp: nowSec + 3600,
-      uid
-    })
-  );
+  const jwtPayload: Record<string, unknown> = {
+    iss: cachedServiceAccountCreds.clientEmail,
+    sub: cachedServiceAccountCreds.clientEmail,
+    aud: 'https://identitytoolkit.googleapis.com/google.identity.identitytoolkit.v1.IdentityToolkit',
+    iat: nowSec,
+    exp: nowSec + 3600,
+    uid
+  };
+  if (claims && Object.keys(claims).length > 0) {
+    jwtPayload.claims = claims;
+  }
+  const payloadSegment = base64UrlEncode(JSON.stringify(jwtPayload));
   const signingInput = `${headerSegment}.${payloadSegment}`;
   const signer = crypto.createSign('RSA-SHA256');
   signer.update(signingInput);
@@ -310,7 +395,7 @@ function signServiceAccountCustomToken(uid: string): string | null {
 
 let firebaseBackendOverrideForTests: {
   db?: ReturnType<typeof getFirestore>;
-  auth?: { createCustomToken: (uid: string) => Promise<string> };
+  auth?: { createCustomToken: (uid: string, claims?: Record<string, unknown>) => Promise<string> };
 } | null = null;
 export function setFirebaseBackendOverrideForTests(override: { db?: any; auth?: any } | null): void {
   firebaseBackendOverrideForTests = override;
@@ -319,15 +404,15 @@ function resolveServerFirestore(): ReturnType<typeof getFirestore> | null {
   if (firebaseBackendOverrideForTests?.db) return firebaseBackendOverrideForTests.db;
   return initFirebaseAdmin() && getApps().length > 0 ? getFirestore() : null;
 }
-function resolveServerAuth(): { createCustomToken: (uid: string) => Promise<string> } | null {
+function resolveServerAuth(): { createCustomToken: (uid: string, claims?: Record<string, unknown>) => Promise<string> } | null {
   if (firebaseBackendOverrideForTests?.auth) return firebaseBackendOverrideForTests.auth;
   initFirebaseAdmin();
   if (!cachedServiceAccountCreds?.clientEmail || !cachedServiceAccountCreds?.privateKey) {
     return null;
   }
   return {
-    async createCustomToken(uid: string): Promise<string> {
-      const signed = signServiceAccountCustomToken(uid);
+    async createCustomToken(uid: string, claims?: Record<string, unknown>): Promise<string> {
+      const signed = signServiceAccountCustomToken(uid, claims);
       if (!signed) throw new Error('service_account_signing_unavailable');
       return signed;
     }
@@ -340,14 +425,14 @@ export async function verifyAdminPassword(rawPassword: string): Promise<boolean>
   if (!normalized) return false;
 
   const inputDigest = crypto.createHash('sha256').update(normalized, 'utf8').digest();
-  const candidateHexHashes = new Set<string>([DEFAULT_ADMIN_PW_HASH]);
+  const configuredHashes = new Set<string>();
 
   const envAdminPw = String(process.env.ADMIN_PASSWORD || '').trim();
   if (envAdminPw) {
     const envHex = /^[a-fA-F0-9]{64}$/.test(envAdminPw)
       ? envAdminPw.toLowerCase()
       : crypto.createHash('sha256').update(envAdminPw, 'utf8').digest('hex');
-    candidateHexHashes.add(envHex);
+    configuredHashes.add(envHex);
   }
 
   try {
@@ -357,19 +442,25 @@ export async function verifyAdminPassword(rawPassword: string): Promise<boolean>
       if (adminDoc.exists) {
         const d = adminDoc.data() || {};
         if (typeof d.passwordHash === 'string' && /^[a-fA-F0-9]{64}$/.test(d.passwordHash.trim())) {
-          candidateHexHashes.add(d.passwordHash.trim().toLowerCase());
+          configuredHashes.add(d.passwordHash.trim().toLowerCase());
         } else if (typeof d.password === 'string' && d.password.trim()) {
           const saved = d.password.trim();
           const savedHex = /^[a-fA-F0-9]{64}$/.test(saved)
             ? saved.toLowerCase()
             : crypto.createHash('sha256').update(saved, 'utf8').digest('hex');
-          candidateHexHashes.add(savedHex);
+          configuredHashes.add(savedHex);
         }
       }
     }
   } catch {
-    // settings/admin 문서 조회 실패 시 기본 해시 후보로 안전하게 폴백
+    // settings/admin 문서 조회 실패 시 환경변수 또는 기본 해시로 안전하게 폴백
   }
+
+  // 명시적 비밀번호(ADMIN_PASSWORD 또는 settings/admin)가 하나라도 설정되어 있으면
+  // 기본 관리자 비밀번호 해시를 영구 백도어로 남기지 않습니다.
+  const candidateHexHashes = configuredHashes.size > 0
+    ? configuredHashes
+    : new Set<string>([DEFAULT_ADMIN_PW_HASH]);
 
   let matched = false;
   for (const hex of candidateHexHashes) {
@@ -1639,7 +1730,24 @@ async function sendPushNotification(
     console.log(`[FCM] ${userId}에게 푸시 발송 완료`);
     return true;
   } catch (err: any) {
-    console.error(`[FCM] ${userId} 발송 실패:`, err?.message || err);
+    const errCode = String(err?.code || '');
+    const errMsg = String(err?.message || err);
+    if (
+      errCode === 'messaging/registration-token-not-registered' ||
+      errCode === 'messaging/invalid-registration-token' ||
+      /UNREGISTERED/i.test(errMsg)
+    ) {
+      try {
+        await getFirestore().collection('user_profiles').doc(userId).update({
+          fcmToken: FieldValue.delete(),
+          fcmTokenInvalidatedAt: FieldValue.serverTimestamp()
+        });
+        console.warn(`[FCM] ${userId} 만료/미등록 토큰 자동 정리 완료`);
+      } catch {
+        // 토큰 정리 실패는 전송 흐름에 영향 없음
+      }
+    }
+    console.error(`[FCM] ${userId} 발송 실패:`, errMsg);
     return false;
   }
 }
@@ -1694,23 +1802,30 @@ export async function runScheduleChangeDetection(): Promise<{ changedVessels: nu
     }
     const firestore = getFirestore();
 
-    const base = new Date();
-    const s = new Date(base.getFullYear(), base.getMonth(), base.getDate() - 1);
-    const e = new Date(base.getFullYear(), base.getMonth(), base.getDate() + 3);
-    const fmt = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    const kstBase = new Date(Date.now() + 9 * 60 * 60 * 1000);
+    const s = new Date(Date.UTC(kstBase.getUTCFullYear(), kstBase.getUTCMonth(), kstBase.getUTCDate() - 1));
+    const e = new Date(Date.UTC(kstBase.getUTCFullYear(), kstBase.getUTCMonth(), kstBase.getUTCDate() + 3));
+    const fmt = (d: Date) => `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}`;
     const startDate = fmt(s);
     const endDate = fmt(e);
 
     const allVessels: VesselScheduleItem[] = [];
     const freshTerminals = new Set<string>();
 
-    for (const term of SUPPORTED_TERMINALS) {
-      try {
-        const meta = await fetchTerminalScheduleVesselsWithMeta(term, startDate, endDate);
+    // 8개 터미널을 병렬로 수집해 서버리스 타임아웃(Vercel 60초·CF Worker) 위험을 제거합니다.
+    const terminalResults = await Promise.allSettled(
+      SUPPORTED_TERMINALS.map(async (term) => ({
+        term,
+        meta: await fetchTerminalScheduleVesselsWithMeta(term, startDate, endDate)
+      }))
+    );
+    for (const outcome of terminalResults) {
+      if (outcome.status === 'fulfilled') {
+        const { term, meta } = outcome.value;
         allVessels.push(...meta.vessels);
         if (!meta.stale && meta.vessels.length > 0) freshTerminals.add(term.toUpperCase());
-      } catch (err: any) {
-        console.error(`[CRON] ${term} 스케줄 조회 실패:`, err?.message || err);
+      } else {
+        console.error('[CRON] 터미널 스케줄 조회 실패:', outcome.reason?.message || outcome.reason);
       }
     }
 
@@ -1721,10 +1836,24 @@ export async function runScheduleChangeDetection(): Promise<{ changedVessels: nu
     // stale/실패 응답은 절대 취소로 추정하지 않습니다.
     const seenVesselIds = new Set(allVessels.map((v) => `${v.TERMINAL}_${v.VOY_NO || 'NOVOY'}_${String(v.VSL_NM || '').replace(/[\s/]+/g, '_')}`));
     const nowMs = Date.now();
+    // 터미널별로 이미 읽은 캐시 문서를 메모리 맵에 재사용해 선박당 개별 doc.get() 왕복을 없앱니다.
+    const cachedById = new Map<string, Record<string, any>>();
+    const pendingCacheWrites: Array<{ ref: any; data: Record<string, any> }> = [];
+    const flushCacheWrites = async () => {
+      for (let i = 0; i < pendingCacheWrites.length; i += 400) {
+        const slice = pendingCacheWrites.slice(i, i + 400);
+        const batch = firestore.batch();
+        for (const item of slice) batch.set(item.ref, item.data, { merge: true });
+        await batch.commit();
+      }
+      pendingCacheWrites.length = 0;
+    };
+
     for (const terminal of freshTerminals) {
       const cachedRows = await cacheRef.where('TERMINAL', '==', terminal).get();
       for (const cachedDoc of cachedRows.docs) {
         const cachedData = cachedDoc.data() || {};
+        cachedById.set(cachedDoc.id, cachedData);
         if (seenVesselIds.has(cachedDoc.id) || classifyVesselStatus(cachedData.STATUS)) continue;
         const scheduleTimes = [parseScheduleTimeMs(cachedData.ETB), parseScheduleTimeMs(cachedData.ATD)]
           .filter((time): time is number => time !== null && time >= nowMs - 24 * 60 * 60 * 1000 && time <= nowMs + 5 * 24 * 60 * 60 * 1000);
@@ -1739,7 +1868,10 @@ export async function runScheduleChangeDetection(): Promise<{ changedVessels: nu
             ATC: String(cachedData.ATC || ''), ATD: String(cachedData.ATD || ''), STATUS: 'CANCELLED'
           });
         } else if (missingCount < 1) {
-          await cachedDoc.ref.set({ missingFromScheduleCount: 1, missingFromScheduleAtMs: nowMs }, { merge: true });
+          pendingCacheWrites.push({
+            ref: cachedDoc.ref,
+            data: { missingFromScheduleCount: 1, missingFromScheduleAtMs: nowMs }
+          });
         }
       }
     }
@@ -1748,28 +1880,35 @@ export async function runScheduleChangeDetection(): Promise<{ changedVessels: nu
       if (!v.VSL_NM) continue;
       const safeName = v.VSL_NM.replace(/[\s/]+/g, '_');
       const vslId = `${v.TERMINAL}_${v.VOY_NO || 'NOVOY'}_${safeName}`;
-      const doc = await cacheRef.doc(vslId).get();
-
-      const previous = doc.exists ? (doc.data() || {}) : {};
-      const scheduleChanges = doc.exists ? detectVesselScheduleChanges(previous, v) : [];
+      let exists = cachedById.has(vslId);
+      let previous: Record<string, any> = exists ? (cachedById.get(vslId) || {}) : {};
+      if (!exists && !freshTerminals.has(String(v.TERMINAL || '').toUpperCase())) {
+        const doc = await cacheRef.doc(vslId).get();
+        exists = doc.exists;
+        previous = doc.exists ? (doc.data() || {}) : {};
+      }
+      const scheduleChanges = exists ? detectVesselScheduleChanges(previous, v) : [];
       const currentStatus = classifyVesselStatus(v.STATUS);
       const previousStatus = classifyVesselStatus(previous.STATUS);
       const statusChanged = Boolean(currentStatus && currentStatus !== previousStatus);
       if (statusChanged) scheduleChanges.push({ field: currentStatus, oldValue: previous.STATUS || '', newValue: v.STATUS, diffMinutes: null });
 
-      await cacheRef.doc(vslId).set({
-        TERMINAL: v.TERMINAL,
-        VSL_NM: v.VSL_NM,
-        BERTH_NO: v.BERTH_NO || '',
-        PTNR_CODE: v.PTNR_CODE || '',
-        VOY_NO: v.VOY_NO || '',
-        ETB: v.ETB || null,
-        ATD: v.ATD || null,
-        STATUS: v.STATUS || '',
-        missingFromScheduleCount: 0,
-        updatedAt: FieldValue.serverTimestamp(),
-        updatedAtMs: Date.now()
-      }, { merge: true });
+      pendingCacheWrites.push({
+        ref: cacheRef.doc(vslId),
+        data: {
+          TERMINAL: v.TERMINAL,
+          VSL_NM: v.VSL_NM,
+          BERTH_NO: v.BERTH_NO || '',
+          PTNR_CODE: v.PTNR_CODE || '',
+          VOY_NO: v.VOY_NO || '',
+          ETB: v.ETB || null,
+          ATD: v.ATD || null,
+          STATUS: v.STATUS || '',
+          missingFromScheduleCount: 0,
+          updatedAt: FieldValue.serverTimestamp(),
+          updatedAtMs: Date.now()
+        }
+      });
 
       if (scheduleChanges.length) {
         changedVessels += 1;
@@ -1842,6 +1981,7 @@ export async function runScheduleChangeDetection(): Promise<{ changedVessels: nu
       }
     }
 
+    await flushCacheWrites();
     try { await deliverActiveEmergencyNoticeNotifications(); } catch (noticeErr: any) { console.warn('[NOTICE] 예약 공지 알림 전달 실패:', noticeErr?.message || noticeErr); }
 
     automationRuntimeStatus.scheduleWatcher.lastSuccessAt = new Date().toISOString();
@@ -1918,26 +2058,64 @@ export async function runDatabaseAutoCleanup(nowMs: number = Date.now()): Promis
       await batch.commit();
     }
 
-    // 2) 읽은 지 14일 지난 notifications 정리
-    const readNotiSnap = await firestore.collection('notifications').where('read', '==', true).get();
+    // 2) 읽은 지 14일 지난 notifications + 미읽음 상태로 90일 경과한 오래된 notifications 정리
+    const unreadNotiCutoffMs = nowMs - UNREAD_NOTIFICATION_TTL_DAYS * 24 * 60 * 60 * 1000;
+    const [readNotiSnap, unreadNotiSnap] = await Promise.all([
+      firestore.collection('notifications').where('read', '==', true).get(),
+      firestore.collection('notifications').where('read', '==', false).get()
+    ]);
     let notiBatch = firestore.batch();
     let notiBatchCount = 0;
+    const queueNotiDelete = async (docRef: any) => {
+      notiBatch.delete(docRef);
+      notiBatchCount += 1;
+      deletedNotiDocs += 1;
+      if (notiBatchCount >= 400) {
+        await notiBatch.commit();
+        notiBatch = firestore.batch();
+        notiBatchCount = 0;
+      }
+    };
     for (const doc of readNotiSnap.docs) {
       const data = doc.data() || {};
       const readMs = extractDocTimestampMs(data, 'readAt', 'createdAt') ?? extractDocTimestampMs(data, 'createdAtMs');
       if (readMs !== null && readMs < notiCutoffMs) {
-        notiBatch.delete(doc.ref);
-        notiBatchCount += 1;
-        deletedNotiDocs += 1;
-        if (notiBatchCount >= 400) {
-          await notiBatch.commit();
-          notiBatch = firestore.batch();
-          notiBatchCount = 0;
-        }
+        await queueNotiDelete(doc.ref);
+      }
+    }
+    for (const doc of unreadNotiSnap.docs) {
+      const data = doc.data() || {};
+      const createdMs = extractDocTimestampMs(data, 'createdAt', 'createdAtMs');
+      if (createdMs !== null && createdMs < unreadNotiCutoffMs) {
+        await queueNotiDelete(doc.ref);
       }
     }
     if (notiBatchCount > 0) {
       await notiBatch.commit();
+    }
+
+    // 3) 30일 이상 경과한 방문자 IP 로그(visitor_ip_logs) 자동 파기 (PIPA 보유기간 준수)
+    try {
+      const ipLogCutoffMs = nowMs - VISITOR_IP_LOG_TTL_DAYS * 24 * 60 * 60 * 1000;
+      const ipLogSnap = await firestore.collection('visitor_ip_logs').get();
+      let ipBatch = firestore.batch();
+      let ipBatchCount = 0;
+      for (const doc of ipLogSnap.docs) {
+        const data = doc.data() || {};
+        const accessedMs = extractDocTimestampMs(data, 'accessedAtMs', 'accessedAt');
+        if (accessedMs !== null && accessedMs < ipLogCutoffMs) {
+          ipBatch.delete(doc.ref);
+          ipBatchCount += 1;
+          if (ipBatchCount >= 400) {
+            await ipBatch.commit();
+            ipBatch = firestore.batch();
+            ipBatchCount = 0;
+          }
+        }
+      }
+      if (ipBatchCount > 0) await ipBatch.commit();
+    } catch (ipErr: any) {
+      console.warn('[CLEANUP] visitor_ip_logs 정리 경고:', ipErr?.message || ipErr);
     }
 
     automationRuntimeStatus.autoCleanup.lastSuccessAt = new Date().toISOString();
@@ -1982,11 +2160,18 @@ export async function runWeeklyFirestoreBackup(targetDir: string = path.join(__d
     const firestore = getFirestore();
     const dumpData: Record<string, any[]> = {};
 
-    for (const colName of BACKUP_COLLECTIONS) {
+    for (const colName of EXTENDED_BACKUP_COLLECTIONS) {
       const snap = await firestore.collection(colName).get();
       const docs: any[] = [];
       snap.forEach((doc) => {
-        docs.push({ id: doc.id, ...doc.data() });
+        const raw = doc.data() || {};
+        // 계정·설정 백업 시 비밀번호 원문/해시/민감 크리덴셜은 제외합니다.
+        if (colName === 'user_profiles' || colName === 'settings') {
+          const { password: _pw, passwordHash: _pwh, ...safeFields } = raw;
+          docs.push({ id: doc.id, ...safeFields });
+        } else {
+          docs.push({ id: doc.id, ...raw });
+        }
       });
       dumpData[colName] = docs;
       counts[colName] = docs.length;
@@ -2034,7 +2219,7 @@ export async function runWeeklyFirestoreBackup(targetDir: string = path.join(__d
       }
     }
 
-    const persistent = Boolean(backupObjectPath) || !IS_VERCEL;
+    const persistent = Boolean(backupObjectPath) || (!IS_VERCEL && !IS_CLOUDFLARE);
     const backupStatus = automationRuntimeStatus.weeklyBackup;
     backupStatus.lastPersisted = persistent;
     backupStatus.lastBackupPath = backupFilePath;
@@ -2216,7 +2401,14 @@ export async function runDailyInspection(
   }
 
   // 5) 보안·설정
-  add('보안', 'SCREEN_LOCK_PIN', SCREEN_LOCK_PIN ? 'PASS' : 'WARN', SCREEN_LOCK_PIN ? '설정됨' : '기본값 사용');
+  const hasExplicitScreenPin = Boolean(String(process.env.SCREEN_LOCK_PIN || '').trim());
+  add(
+    '보안',
+    'SCREEN_LOCK_PIN',
+    hasExplicitScreenPin ? 'PASS' : 'WARN',
+    hasExplicitScreenPin ? '환경변수 설정됨' : '기본값 사용 — SCREEN_LOCK_PIN 설정 권장',
+    hasExplicitScreenPin ? undefined : 'medium'
+  );
   add('보안', 'CRON_SECRET', CRON_SECRET ? 'PASS' : 'WARN', CRON_SECRET ? '설정됨' : '미설정 — 외부 트리거 제한 없음', 'medium');
   add('보안', 'Firebase Admin', getApps().length > 0 ? 'PASS' : 'WARN', getApps().length > 0 ? '초기화됨' : '미초기화 — Firestore 폴백 불가', 'medium');
 
@@ -2298,7 +2490,7 @@ export async function runDailyInspection(
 
     // 점검보고서_YYYY-MM-DD.md 형식으로도 저장 (기존 운영 보고서 호환)
     try {
-      const reportAliases = IS_VERCEL ? [] : [
+      const reportAliases = (IS_VERCEL || IS_CLOUDFLARE) ? [] : [
         path.join(path.resolve(__dirname), `점검보고서_${kstDate}.md`),
         path.join(path.resolve(__dirname, '..'), `점검보고서_${kstDate}.md`),
       ];
@@ -2327,7 +2519,61 @@ export async function runDailyInspection(
     await deliverDailyInspectionEmail(result, reportMarkdown ?? generateInspectionMarkdown(result));
   }
 
+  // 서버리스(Vercel·CF Workers) 콜드스타트 이후에도 /api/inspection-report 가 최신 요약을 응답하도록 Firestore 에 영속화합니다.
+  await saveDailyInspectionSummary(result);
+
   return result;
+}
+
+const DAILY_INSPECTION_COLLECTION = 'daily_inspection_reports';
+
+async function saveDailyInspectionSummary(result: InspectionResult): Promise<void> {
+  const db = resolveServerFirestore();
+  if (!db) return;
+  try {
+    const d = automationRuntimeStatus.dailyInspection;
+    const payload = {
+      kstDate: result.kstDate,
+      kstDateTime: result.kstDateTime,
+      generatedAt: result.generatedAt,
+      summary: result.summary,
+      checks: result.checks,
+      email: {
+        to: REPORT_EMAIL_TO,
+        status: d.lastEmailStatus,
+        transport: d.lastEmailTransport,
+        reason: d.lastEmailReason,
+        sentAt: d.lastEmailAt,
+        error: d.lastEmailError
+      },
+      capturedAt: new Date().toISOString()
+    };
+    await db.collection(DAILY_INSPECTION_COLLECTION).doc('latest').set(
+      {
+        payload: JSON.stringify(payload),
+        kstDate: result.kstDate,
+        overall: result.summary.overall,
+        updatedAt: FieldValue.serverTimestamp()
+      },
+      { merge: true }
+    );
+  } catch (err: any) {
+    console.warn('[INSPECTION] Firestore 요약 저장 실패:', err?.message || err);
+  }
+}
+
+async function loadDailyInspectionSummary(): Promise<any | null> {
+  try {
+    const db = resolveServerFirestore();
+    if (!db) return null;
+    const snap = await db.collection(DAILY_INSPECTION_COLLECTION).doc('latest').get();
+    if (!snap.exists) return null;
+    const payload = (snap.data() || {}).payload;
+    if (!payload) return null;
+    return typeof payload === 'string' ? JSON.parse(payload) : payload;
+  } catch {
+    return null;
+  }
 }
 
 export function generateInspectionMarkdown(result: InspectionResult): string {
@@ -2931,6 +3177,7 @@ async function loadSelfCheckSummary(): Promise<any | null> {
  *  · 서버리스는 /tmp 만 쓰기 가능하며 인스턴스 종료 시 사라집니다(응답·메일 첨부로 전달).
  */
 async function saveWeeklySelfCheckArtifacts(result: SelfCheckResult, markdown: string, json: any): Promise<string | null> {
+  if (IS_CLOUDFLARE) return null;
   const targets = IS_VERCEL
     ? [{ dir: path.join('/tmp', 'self-check'), canonical: true }]
     : [
@@ -3131,6 +3378,7 @@ if (!IS_CLOUDFLARE) app.use(compression());
 // 🔐 D-6: API 는 자사 도메인에서만 호출하도록 허용 출처를 제한합니다.
 // (ALLOWED_ORIGINS 환경변수로 추가 지정 가능 — 쉼표 구분)
 const DEFAULT_ALLOWED_ORIGINS = [
+  'https://busan-hak-port-info.luxrank.workers.dev',
   'https://busan-hak-port-info.vercel.app',
   'https://busan-hak-port.web.app',
   'https://busan-hak-port.firebaseapp.com',
@@ -3156,7 +3404,7 @@ app.use('/api', (req, res, next) => {
   if (origin && isAllowedApiOrigin(origin)) {
     res.setHeader('Access-Control-Allow-Origin', origin);
     res.setHeader('Vary', 'Origin');
-    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Roster-Ocr-Consent, X-Roster-Ocr-Mode, X-Roster-Ocr-Date');
   }
   if (req.method === 'OPTIONS') {
@@ -3216,10 +3464,78 @@ function isRosterGoogleVisionEnabled(): boolean {
   return process.env.ROSTER_CLOUD_OCR_ENABLED === '1' && hasRosterServiceAccount();
 }
 
-/** Vertex AI(Gemini)용 OAuth 토큰 — 기존 서비스 계정을 그대로 씁니다(새 키 발급 없음). */
+const oauthTokenCache = new Map<string, { token: string; expiresAt: number }>();
+
+/**
+ * Node crypto RS256 JWT-Bearer 기반 Google OAuth2 액세스 토큰 발급.
+ * Cloudflare Workers(workerd)에서는 google-auth-library 의 gRPC/네이티브 경로가 실패할 수 있어
+ * FIREBASE_SERVICE_ACCOUNT_KEY 가 있을 때 순수 fetch + crypto 로 토큰을 직접 발급·캐시합니다.
+ */
+async function getServiceAccountAccessToken(scope: string): Promise<string | null> {
+  const now = Date.now();
+  const cached = oauthTokenCache.get(scope);
+  if (cached && cached.expiresAt - 60_000 > now) return cached.token;
+
+  initFirebaseAdmin();
+  let clientEmail = cachedServiceAccountCreds?.clientEmail || '';
+  let privateKey = cachedServiceAccountCreds?.privateKey || '';
+  if (!clientEmail || !privateKey) {
+    const rawKey = String(process.env.FIREBASE_SERVICE_ACCOUNT_KEY || '').trim();
+    if (!rawKey) return null;
+    try {
+      const decoded = rawKey.startsWith('{') ? rawKey : Buffer.from(rawKey, 'base64').toString('utf8');
+      const parsed = JSON.parse(decoded);
+      clientEmail = String(parsed?.client_email || '').trim();
+      privateKey = String(parsed?.private_key || '').trim();
+    } catch {
+      return null;
+    }
+  }
+  if (!clientEmail || !privateKey) return null;
+
+  const iat = Math.floor(now / 1000);
+  const header = base64UrlEncode(JSON.stringify({ alg: 'RS256', typ: 'JWT' }));
+  const payload = base64UrlEncode(JSON.stringify({
+    iss: clientEmail,
+    scope,
+    aud: 'https://oauth2.googleapis.com/token',
+    iat,
+    exp: iat + 3600
+  }));
+  const signingInput = `${header}.${payload}`;
+  const signer = crypto.createSign('RSA-SHA256');
+  signer.update(signingInput);
+  signer.end();
+  const signature = base64UrlEncode(signer.sign(privateKey));
+  const assertion = `${signingInput}.${signature}`;
+
+  const resp = await fetch('https://oauth2.googleapis.com/token', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({
+      grant_type: 'urn:ietf:params:oauth:grant-type:jwt-bearer',
+      assertion
+    }).toString()
+  });
+  if (!resp.ok) {
+    const text = await resp.text().catch(() => '');
+    throw new Error(`service_account_oauth_failed:${resp.status}:${text.slice(0, 160)}`);
+  }
+  const data: any = await resp.json().catch(() => ({}));
+  const token = String(data?.access_token || '').trim();
+  if (!token) return null;
+  const expiresIn = Number(data?.expires_in) || 3600;
+  oauthTokenCache.set(scope, { token, expiresAt: now + expiresIn * 1000 });
+  return token;
+}
+
+/** Vertex AI(Gemini)용 OAuth 토큰 — CF Workers 호환 JWT-Bearer 를 우선 사용하고 ADC 폴백을 지원합니다. */
 async function getRosterVertexAccessToken(): Promise<string | null> {
   if (!hasRosterServiceAccount()) return null;
   try {
+    const direct = await getServiceAccountAccessToken(GOOGLE_CLOUD_VISION_SCOPE);
+    if (direct) return direct;
+    if (IS_CLOUDFLARE) return null;
     const client = await getRosterVisionAuth().getClient();
     const token = await client.getAccessToken();
     return token?.token || null;
@@ -3438,14 +3754,18 @@ async function handleRosterCloudOcr(req: any, res: any) {
     return;
   }
   try {
-    const googleAuth = getRosterVisionAuth();
-    const client = await googleAuth.getClient();
-    const accessToken = await client.getAccessToken();
-    if (!accessToken.token) throw new Error('Google Vision access token unavailable');
+    let visionAccessToken = await getServiceAccountAccessToken(GOOGLE_CLOUD_VISION_SCOPE);
+    if (!visionAccessToken && !IS_CLOUDFLARE) {
+      const googleAuth = getRosterVisionAuth();
+      const client = await googleAuth.getClient();
+      const accessToken = await client.getAccessToken();
+      visionAccessToken = accessToken.token || null;
+    }
+    if (!visionAccessToken) throw new Error('Google Vision access token unavailable');
     const visionResponse = await fetch('https://vision.googleapis.com/v1/images:annotate', {
       method: 'POST',
       headers: {
-        Authorization: `Bearer ${accessToken.token}`,
+        Authorization: `Bearer ${visionAccessToken}`,
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
@@ -3533,10 +3853,80 @@ app.post('/api/emergency-unlock', (req, res) => {
   res.json({ ok: true, token, expiresAt });
 });
 
+// 긴급·운영 공지 저장·중단 (인증된 긴급 공지 PIN 토큰 또는 관리자 토큰으로 서버에서 직접 기록)
+// 클라이언트 익명 세션의 settings/emergency_notice 직접 쓰기를 차단한 뒤 안전한 저장 경로로 사용합니다.
+app.put('/api/emergency-notifications', async (req, res) => {
+  const token = String(req.headers.authorization || '');
+  if (!verifyEmergencyUnlockToken(token) && !verifyAdminSessionToken(token)) {
+    res.status(401).json({ ok: false, error: 'unauthorized' });
+    return;
+  }
+  try {
+    const db = resolveServerFirestore();
+    if (!db) {
+      res.status(503).json({ ok: false, error: 'firebase_unavailable' });
+      return;
+    }
+    const body = (req.body && typeof req.body === 'object' ? req.body : {}) as Record<string, unknown>;
+    const action = String(body.action || 'save').trim().toLowerCase();
+    const revision = Number.isFinite(Number(body.revision)) && Number(body.revision) > 0
+      ? Math.floor(Number(body.revision))
+      : Date.now();
+
+    if (action === 'stop') {
+      await db.collection('settings').doc('emergency_notice').set(
+        {
+          enabled: false,
+          revision,
+          updatedAt: FieldValue.serverTimestamp()
+        },
+        { merge: true }
+      );
+      res.json({ ok: true, action: 'stop', revision });
+      return;
+    }
+
+    const enabled = Boolean(body.enabled);
+    const title = String(body.title || '').trim().slice(0, 60);
+    const message = String(body.message || '').trim().slice(0, 600);
+    const levelRaw = String(body.level || 'danger').trim();
+    const level = (['danger', 'warn', 'info'] as const).includes(levelRaw as any) ? levelRaw : 'danger';
+    const startAt = Number.isFinite(Number(body.startAt)) && Number(body.startAt) > 0 ? Math.floor(Number(body.startAt)) : 0;
+    const endAt = Number.isFinite(Number(body.endAt)) && Number(body.endAt) > 0 ? Math.floor(Number(body.endAt)) : 0;
+
+    if (!message) {
+      res.status(400).json({ ok: false, error: 'missing_message' });
+      return;
+    }
+    if (startAt && endAt && endAt <= startAt) {
+      res.status(400).json({ ok: false, error: 'invalid_period' });
+      return;
+    }
+
+    await db.collection('settings').doc('emergency_notice').set(
+      {
+        enabled,
+        title,
+        message,
+        level,
+        startAt,
+        endAt,
+        revision,
+        updatedAt: FieldValue.serverTimestamp()
+      },
+      { merge: true }
+    );
+    res.json({ ok: true, action: 'save', revision });
+  } catch (err: any) {
+    console.error('[NOTICE] 긴급 공지 저장 실패:', err?.message || err);
+    res.status(500).json({ ok: false, error: 'emergency_notice_save_failed' });
+  }
+});
+
 // 긴급·운영 공지를 인증된 관리자가 게시하면 사용자별 알림센터와 FCM으로 전달합니다.
 app.post('/api/emergency-notifications', async (req, res) => {
   const token = String(req.headers.authorization || '');
-  if (!verifyEmergencyUnlockToken(token)) {
+  if (!verifyEmergencyUnlockToken(token) && !verifyAdminSessionToken(token)) {
     res.status(401).json({ ok: false, error: 'unauthorized' });
     return;
   }
@@ -3589,16 +3979,21 @@ app.get('/api/health', (_req, res) => {
   });
 });
 
-// 🔐 Firebase 세션·관리자 인증 엔드포인트
-// 1) mode='anonymous': Firebase 콘솔에서 익명 인증(signInAnonymously)이 비활성화된 환경에서도
-//    서버 Custom Token 으로 모든 방문자·근로자가 isSignedIn() 조건을 충족하도록 보장합니다.
-// 2) mode='admin': 운영 관리자 비밀번호를 상수 시간으로 검증한 뒤
+// 🔐 Firebase 세션·근로자·관리자 인증 엔드포인트
+// 1) mode='anonymous': 익명 인증 비활성 환경 폴백 — 일방향 HMAC 파생 UID 로 임의 UID 사칭을 차단합니다.
+// 2) mode='worker': 근로자 닉네임·비밀번호를 서버에서 검증·가입 처리하고
+//    { workerId: nick } 커스텀 클레임이 담긴 Firebase Custom Token + 서명 세션 토큰을 발급합니다.
+// 3) mode='worker-refresh': 저장된 서명 세션 토큰을 검증해 새 Custom Token 을 재발급합니다.
+// 4) mode='admin': 운영 관리자 비밀번호를 상수 시간으로 검증한 뒤
 //    admin_luxrank Custom Token(Firestore isAdmin() 통과) + 서명된 관리자 토큰을 발급합니다.
 app.post('/api/auth-session', async (req, res) => {
   const ip = String(req.ip || req.socket?.remoteAddress || 'unknown');
   const body = (req.body && typeof req.body === 'object' ? req.body : {}) as {
     mode?: unknown;
+    action?: unknown;
+    nick?: unknown;
     password?: unknown;
+    token?: unknown;
     clientId?: unknown;
   };
   const mode = String(body.mode || 'anonymous').trim().toLowerCase();
@@ -3639,6 +4034,111 @@ app.post('/api/auth-session', async (req, res) => {
     return;
   }
 
+  if (mode === 'worker') {
+    if (isScreenUnlockRateLimited(ip, 'worker')) {
+      res.status(429).json({ ok: false, error: 'too_many_attempts' });
+      return;
+    }
+    const db = resolveServerFirestore();
+    const serverAuth = resolveServerAuth();
+    if (!db || !serverAuth) {
+      res.status(503).json({ ok: false, error: 'firebase_admin_not_initialized' });
+      return;
+    }
+    const nick = String(body.nick ?? '').trim();
+    const rawPw = String(body.password ?? '').trim();
+    const action = String(body.action || 'login').trim().toLowerCase();
+    if (!nick || nick.length > 64 || !/^[a-zA-Z0-9_\-가-힣.]+$/.test(nick)) {
+      res.status(400).json({ ok: false, error: 'invalid_nick' });
+      return;
+    }
+    if (!rawPw || rawPw.length > 128) {
+      res.status(400).json({ ok: false, error: 'missing_password' });
+      return;
+    }
+    try {
+      const pwHash = crypto.createHash('sha256').update(rawPw, 'utf8').digest('hex');
+      const userRef = db.collection('user_profiles').doc(nick);
+      const snap = await userRef.get();
+      if (snap.exists) {
+        const savedPw = String((snap.data() || {}).password || '').trim();
+        const isSha = /^[a-fA-F0-9]{64}$/.test(savedPw);
+        const expectedBuf = isSha
+          ? Buffer.from(savedPw.toLowerCase(), 'hex')
+          : crypto.createHash('sha256').update(savedPw, 'utf8').digest();
+        const inputBuf = Buffer.from(pwHash, 'hex');
+        const matched = savedPw.length > 0 && expectedBuf.length === inputBuf.length && crypto.timingSafeEqual(expectedBuf, inputBuf);
+        if (!matched) {
+          res.status(401).json({ ok: false, error: 'invalid_password' });
+          return;
+        }
+        if (!isSha || savedPw.toLowerCase() !== pwHash) {
+          await userRef.set({ password: pwHash, updatedAt: FieldValue.serverTimestamp() }, { merge: true }).catch(() => {});
+        }
+      } else {
+        if (action !== 'register') {
+          res.status(404).json({ ok: false, error: 'user_not_found' });
+          return;
+        }
+        await userRef.set({
+          password: pwHash,
+          createdAt: FieldValue.serverTimestamp(),
+          updatedAt: FieldValue.serverTimestamp()
+        });
+      }
+      const uid = deriveOpaqueWorkerUid('account', nick);
+      const customToken = await serverAuth.createCustomToken(uid, { workerId: nick });
+      const { token, expiresAt } = issueWorkerSessionToken(nick);
+      res.json({
+        ok: true,
+        mode: 'worker',
+        nick,
+        uid,
+        customToken,
+        token,
+        expiresAt
+      });
+    } catch (err: any) {
+      res.status(500).json({ ok: false, error: err?.message || 'worker_auth_failed' });
+    }
+    return;
+  }
+
+  if (mode === 'worker-refresh') {
+    if (isScreenUnlockRateLimited(ip, 'anon')) {
+      res.status(429).json({ ok: false, error: 'too_many_attempts' });
+      return;
+    }
+    const serverAuth = resolveServerAuth();
+    if (!serverAuth) {
+      res.status(503).json({ ok: false, error: 'firebase_admin_not_initialized' });
+      return;
+    }
+    const rawToken = String(body.token || req.headers.authorization || '').trim();
+    const verified = verifyWorkerSessionToken(rawToken);
+    if (!verified) {
+      res.status(401).json({ ok: false, error: 'invalid_worker_token' });
+      return;
+    }
+    try {
+      const uid = deriveOpaqueWorkerUid('account', verified.workerId);
+      const customToken = await serverAuth.createCustomToken(uid, { workerId: verified.workerId });
+      const refreshed = issueWorkerSessionToken(verified.workerId);
+      res.json({
+        ok: true,
+        mode: 'worker-refresh',
+        nick: verified.workerId,
+        uid,
+        customToken,
+        token: refreshed.token,
+        expiresAt: refreshed.expiresAt
+      });
+    } catch (err: any) {
+      res.status(500).json({ ok: false, error: err?.message || 'worker_refresh_failed' });
+    }
+    return;
+  }
+
   if (mode === 'anonymous') {
     if (isScreenUnlockRateLimited(ip, 'anon')) {
       res.status(429).json({ ok: false, error: 'too_many_attempts' });
@@ -3652,8 +4152,9 @@ app.post('/api/auth-session', async (req, res) => {
     const rawClientId = String(body.clientId ?? '').trim();
     const safeSuffix = /^[a-zA-Z0-9_-]{6,64}$/.test(rawClientId)
       ? rawClientId
-      : crypto.randomBytes(12).toString('hex');
-    const uid = `worker_${safeSuffix}`;
+      : crypto.randomBytes(16).toString('hex');
+    // 일방향 HMAC 파생 UID: 외부에 노출된 worker_* UID 를 그대로 clientId 로 넘겨 타인을 사칭할 수 없습니다.
+    const uid = deriveOpaqueWorkerUid('anon', safeSuffix);
     try {
       const customToken = await serverAuth.createCustomToken(uid);
       res.json({ ok: true, mode: 'anonymous', uid, customToken });
@@ -3669,8 +4170,33 @@ app.get('/api/auth-session', (_req, res) => {
   res.status(405).json({ ok: false, error: 'method_not_allowed', hint: 'Use POST with {mode}' });
 });
 
-app.get('/api/analytics-summary', async (_req, res) => {
+const ANALYTICS_SUMMARY_CACHE_TTL_MS = 60 * 1000;
+let analyticsSummaryCache: { expiresAt: number; payload: Record<string, any> } | null = null;
+
+async function getFastCollectionCount(colRef: any): Promise<number> {
+  if (colRef && typeof colRef.count === 'function') {
+    try {
+      const agg = await colRef.count().get();
+      const c = agg?.data?.()?.count;
+      if (typeof c === 'number' && Number.isFinite(c)) return c;
+    } catch {
+      // 일부 테스트 목/구형 어댑터는 count() 미지원 — get().size 로 안전하게 폴백
+    }
+  }
+  const snap = await colRef.get();
+  return Number(snap?.size ?? snap?.docs?.length ?? 0);
+}
+
+app.get('/api/analytics-summary', async (req, res) => {
   try {
+    const bypassCache = process.env.NODE_ENV === 'test'
+      || (String(req.query.refresh || '') === '1' && verifyAdminSessionToken(String(req.headers.authorization || '')));
+    if (!bypassCache && analyticsSummaryCache && analyticsSummaryCache.expiresAt > Date.now()) {
+      res.setHeader('Cache-Control', 'public, max-age=30, stale-while-revalidate=60');
+      res.json(analyticsSummaryCache.payload);
+      return;
+    }
+
     const db = resolveServerFirestore();
     if (!db) {
       res.status(503).json({ ok: false, error: 'firebase_admin_not_initialized' });
@@ -3694,20 +4220,20 @@ app.get('/api/analytics-summary', async (_req, res) => {
 
     const [
       totalSnap,
-      usersSnap,
+      workersCount,
       shipsSnap,
       postsSnap,
-      noticesSnap,
-      archivesSnap,
+      noticesCount,
+      archivesCount,
       workLogsSnap,
       ...dailySnaps
     ] = await Promise.all([
       db.collection('visitor_stats').doc('total').get(),
-      db.collection('user_profiles').get(),
+      getFastCollectionCount(db.collection('user_profiles')),
       db.collection('ships').get(),
       db.collection('posts').get(),
-      db.collection('notices').get(),
-      db.collection('archives').get(),
+      getFastCollectionCount(db.collection('notices')),
+      getFastCollectionCount(db.collection('archives')),
       db.collection('work_logs').get(),
       ...dayKeys.map((dk) => db.collection('visitor_stats').doc(`daily-${dk.key}`).get())
     ]);
@@ -3745,7 +4271,7 @@ app.get('/api/analytics-summary', async (_req, res) => {
     const activePosts = postsSnap.docs.filter((doc) => !doc.data().deletedAt);
     const activeWorkLogs = workLogsSnap.docs.filter((doc) => !doc.data().deletedAt);
 
-    res.json({
+    const responsePayload = {
       ok: true,
       generatedAtKst: kstNow.toISOString().replace('Z', '+09:00'),
       summary: {
@@ -3773,15 +4299,21 @@ app.get('/api/analytics-summary', async (_req, res) => {
       todayActions: todayEntry.actions || {},
       dailyTrend,
       collections: {
-        workersCount: usersSnap.size,
+        workersCount,
         shipsCount: activeShips.length,
         postsCount: activePosts.length,
-        noticesCount: noticesSnap.size,
-        archivesCount: archivesSnap.size,
+        noticesCount,
+        archivesCount,
         workLogsCount: activeWorkLogs.length,
         totalWorkLogsRawCount: workLogsSnap.size
       }
-    });
+    };
+
+    if (process.env.NODE_ENV !== 'test') {
+      analyticsSummaryCache = { expiresAt: Date.now() + ANALYTICS_SUMMARY_CACHE_TTL_MS, payload: responsePayload };
+      res.setHeader('Cache-Control', 'public, max-age=30, stale-while-revalidate=60');
+    }
+    res.json(responsePayload);
   } catch (error: any) {
     res.status(500).json({ ok: false, error: error?.message || 'analytics_summary_failed' });
   }
@@ -3830,21 +4362,20 @@ function localizeCountry(name: string): string {
   return IP_COUNTRY_KR_MAP[name] || name;
 }
 
-/** Vercel 엣지 지역 헤더(x-vercel-ip-*) 기반 위치 — 외부 API 호출 없이 즉시 확보됩니다. */
+/** Vercel(x-vercel-ip-*) 및 Cloudflare(cf-ipcountry/cf-ipcity/cf-region) 엣지 지역 헤더 기반 위치 */
 function locationFromEdgeHeaders(
   headers?: Record<string, unknown>
 ): { country: string; region: string; city: string } | null {
   if (!headers) return null;
-  const vCountry = String(headers['x-vercel-ip-country'] || '').trim();
-  let vRegion = String(headers['x-vercel-ip-country-region'] || '').trim();
-  const vCityRaw = String(headers['x-vercel-ip-city'] || '').trim();
+  const vCountry = String(headers['x-vercel-ip-country'] || headers['cf-ipcountry'] || '').trim();
+  let vRegion = String(headers['x-vercel-ip-country-region'] || headers['cf-region'] || '').trim();
+  const vCityRaw = String(headers['x-vercel-ip-city'] || headers['cf-ipcity'] || '').trim();
   let vCity = vCityRaw;
   try {
     if (vCityRaw.includes('%')) vCity = decodeURIComponent(vCityRaw);
   } catch {}
   if (!vCountry && !vRegion && !vCity) return null;
-  // Vercel 의 region 은 '26' 같은 ISO 코드입니다. 코드만 있으면 도시명으로 대체해
-  // 화면에 '대한민국 › 26 › 부산광역시' 처럼 어색한 값이 남지 않게 합니다.
+  // Vercel/CF 의 region 이 '26' 같은 숫자·2자리 ISO 코드일 때 도시명이 있으면 어색한 표기를 방지합니다.
   if (vRegion && (/^\d{1,3}$/.test(vRegion) || /^[A-Za-z]{2}$/.test(vRegion))) {
     vRegion = vCity ? '' : vRegion;
   }
@@ -3956,9 +4487,11 @@ async function fetchIpLocation(
   return edgeResult;
 }
 
-/** 요청 소스 IP — 프록시 뒤에서도 실제 클라이언트 IP 를 최대한 정확히 고릅니다. */
+/** 요청 소스 IP — Cloudflare(cf-connecting-ip)·Vercel(x-forwarded-for) 등 프록시 뒤에서도 실제 클라이언트 IP 를 고릅니다. */
 function resolveVisitorRequestIp(req: Request): string {
   const candidates: string[] = [];
+  const cfIp = String(req.headers['cf-connecting-ip'] || '').trim();
+  if (cfIp) candidates.push(cfIp);
   const direct = String(req.ip || req.socket?.remoteAddress || '').trim();
   if (direct) candidates.push(direct);
   const xff = String(req.headers['x-forwarded-for'] || '');
@@ -4330,7 +4863,9 @@ const adminStatsHandler = async (req: Request, res: Response) => {
       const wage2 = Number(d.wage2) || 0;
       const wage3 = Number(d.wage3) || 0;
       const wage4 = Number(d.wage4) || 0;
-      const totalPay = Number(d.totalPay) || (wage1 + wage2 + wage3 + wage4);
+      const totalPay = d.totalPay != null && Number.isFinite(Number(d.totalPay))
+        ? Math.max(0, Math.round(Number(d.totalPay)))
+        : (wage1 + wage2 + wage3 + wage4);
       const tsInfo = formatKstDateTime(d.timestamp);
 
       workLogs.push({
@@ -4422,6 +4957,27 @@ const adminStatsHandler = async (req: Request, res: Response) => {
 app.get('/api/admin-stats', adminStatsHandler);
 app.post('/api/admin-stats', adminStatsHandler);
 
+function buildKstDateRange(targetDate: string, daysBefore: number, daysAfter: number): { startDate: string; endDate: string } {
+  let y: number;
+  let m: number;
+  let d: number;
+  if (targetDate && /^\d{4}-\d{2}-\d{2}$/.test(targetDate)) {
+    const parts = targetDate.split('-').map(Number);
+    y = parts[0];
+    m = parts[1] - 1;
+    d = parts[2];
+  } else {
+    const kst = new Date(Date.now() + 9 * 60 * 60 * 1000);
+    y = kst.getUTCFullYear();
+    m = kst.getUTCMonth();
+    d = kst.getUTCDate();
+  }
+  const s = new Date(Date.UTC(y, m, d - daysBefore));
+  const e = new Date(Date.UTC(y, m, d + daysAfter));
+  const fmt = (dt: Date) => `${dt.getUTCFullYear()}-${String(dt.getUTCMonth() + 1).padStart(2, '0')}-${String(dt.getUTCDate()).padStart(2, '0')}`;
+  return { startDate: fmt(s), endDate: fmt(e) };
+}
+
 app.get('/api/hjnc-schedule', async (req, res) => {
   try {
     const targetDate = String(req.query.date || '').trim();
@@ -4432,12 +4988,9 @@ app.get('/api/hjnc-schedule', async (req, res) => {
     let endDate = endDateParam;
 
     if (!startDate || !endDate) {
-      const base = targetDate && /^\d{4}-\d{2}-\d{2}$/.test(targetDate) ? new Date(`${targetDate}T00:00:00`) : new Date();
-      const s = new Date(base.getFullYear(), base.getMonth(), base.getDate() - 2);
-      const e = new Date(base.getFullYear(), base.getMonth(), base.getDate() + 2);
-      const fmt = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-      startDate = fmt(s);
-      endDate = fmt(e);
+      const range = buildKstDateRange(targetDate, 2, 2);
+      startDate = range.startDate;
+      endDate = range.endDate;
     }
 
     const result = await fetchTerminalScheduleVesselsWithMeta('hjnc', startDate, endDate);
@@ -4467,12 +5020,9 @@ app.get('/api/terminal-schedule', async (req, res) => {
     let endDate = String(req.query.endDate || '').trim();
 
     if (!startDate || !endDate) {
-      const base = targetDate && /^\d{4}-\d{2}-\d{2}$/.test(targetDate) ? new Date(`${targetDate}T00:00:00`) : new Date();
-      const s = new Date(base.getFullYear(), base.getMonth(), base.getDate() - 3);
-      const e = new Date(base.getFullYear(), base.getMonth(), base.getDate() + 5);
-      const fmt = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-      startDate = fmt(s);
-      endDate = fmt(e);
+      const range = buildKstDateRange(targetDate, 3, 5);
+      startDate = range.startDate;
+      endDate = range.endDate;
     }
 
     const result = await fetchTerminalScheduleVesselsWithMeta(terminal, startDate, endDate);
@@ -4667,9 +5217,23 @@ app.get('/api/cron/weekly-self-check', cronWeeklySelfCheckHandler);
 app.get('/api/cron-weekly-self-check', cronWeeklySelfCheckHandler);
 
 // 공개 요약 조회 — 인증 없이 최신 점검 상태 확인 (민감 정보 제외)
-app.get('/api/inspection-report', (_req, res) => {
+app.get('/api/inspection-report', async (_req, res) => {
   const d = automationRuntimeStatus.dailyInspection;
   if (!d.lastRunAt) {
+    const stored = await loadDailyInspectionSummary();
+    if (stored) {
+      res.json({
+        ok: true,
+        hasReport: true,
+        persisted: true,
+        lastRunAt: stored.generatedAt || stored.capturedAt,
+        kstDate: stored.kstDate,
+        summary: stored.summary,
+        checks: stored.checks,
+        email: stored.email || null
+      });
+      return;
+    }
     res.json({ ok: true, hasReport: false, message: '아직 점검 기록이 없습니다. 매일 04:00 KST에 자동 생성됩니다.' });
     return;
   }
@@ -4752,6 +5316,26 @@ app.use('/api', (_req, res) => {
   res.status(404).json({ ok: false, error: 'not_found' });
 });
 
+// /api 전역 JSON 오류 핸들러 — 잘못된 JSON(SyntaxError), 413 Payload Too Large, 미처리 예외가
+// Express 기본 HTML 스택 트레이스로 유출되지 않도록 일관된 JSON 응답으로 반환합니다.
+app.use('/api', (err: any, _req: Request, res: Response, _next: any) => {
+  if (res.headersSent) return;
+  const rawStatus = Number(err?.status || err?.statusCode || 500);
+  const status = rawStatus >= 400 && rawStatus < 600 ? rawStatus : 500;
+  let errorCode = 'internal_server_error';
+  if (err?.type === 'entity.too.large' || status === 413) {
+    errorCode = 'payload_too_large';
+  } else if (err?.type === 'entity.parse.failed' || (err instanceof SyntaxError && status === 400)) {
+    errorCode = 'invalid_json';
+  } else if (status < 500) {
+    errorCode = String(err?.code || 'bad_request');
+  }
+  if (status >= 500) {
+    console.error('[API ERROR]', err?.message || err);
+  }
+  res.status(status).json({ ok: false, error: errorCode });
+});
+
 // --- 정적 자산 서빙 및 SPA 폴백 (상시 프로세스 서버 전용) ---
 // Vercel 에서는 CDN 이 대신 처리합니다: build/public 정적 배포(vercel.json outputDirectory)
 // + headers(캐시·보안 헤더) + rewrites(/api/ 제외 전 경로를 index.html 로 폴백).
@@ -4767,12 +5351,19 @@ if (!IS_VERCEL) {
   app.use('/icons', express.static(path.join(__dirname, 'icons'), { maxAge: '7d' }));
   app.use(express.static(STATIC_ROOT, {
     setHeaders: (res, filePath) => {
-      if (/\.(png|jpg|jpeg|gif|ico|svg|webp)$/i.test(filePath)) {
+      const normalized = filePath.replace(/\\/g, '/');
+      // 서비스 워커·매니페스트·엔트리 HTML 은 절대 장기 캐시하면 안 됩니다(업데이트 영구 고착 방지).
+      if (/(?:^|\/)(?:service-worker\.js|firebase-messaging-sw\.js|manifest\.json|index\.html)$/i.test(normalized)) {
+        res.setHeader('Cache-Control', 'no-cache');
+        return;
+      }
+      if (/\.(png|jpg|jpeg|gif|ico|svg|webp)$/i.test(normalized)) {
         res.setHeader('Cache-Control', 'public, max-age=604800, immutable');
+        return;
       }
       // A-1 (2026-10-17): css/app.css 와 js/* 는 ?v= 버전 쿼리로 장기 캐시.
       // 버전이 바뀌면 index.html(비캐시)에서 새 URL 이 되어 새로 받아옵니다.
-      if (/\.(css|js)$/i.test(filePath)) {
+      if (/\/(?:css|js)\/.*\.(css|js)$/i.test(normalized)) {
         res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
       }
     }
