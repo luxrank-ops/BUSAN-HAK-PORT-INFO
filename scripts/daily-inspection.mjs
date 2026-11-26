@@ -187,7 +187,7 @@ export async function runInspection(now = new Date()) {
   // 4) API 라우트 정합성 — server.ts 에서 app.get / app.post 경로 추출
   try {
     const serverCode = await readFile(path.join(ROOT, 'server.ts'), 'utf8');
-    const routeRegex = /app\.(get|post|use)\(['"`]([^'"`]+)['"`]/g;
+    const routeRegex = /app\.(get|post|put|patch|delete|use)\(['"`]([^'"`]+)['"`]/g;
     const foundRoutes = new Set();
     let m;
     while ((m = routeRegex.exec(serverCode)) !== null) {
@@ -547,7 +547,8 @@ export function generateMarkdownReport(result) {
   md += `## 4. 배포 상태\n\n`;
   md += `| 구분 | URL | 상태 |\n`;
   md += `| --- | --- | --- |\n`;
-  md += `| 운영 (Cloudflare Workers) | https://busan-hak-port-info.luxrank.workers.dev | main 푸시 후 수동 배포 · Cron Triggers |\n`;\n  md += `| 병행 (Vercel) | https://busan-hak-port-info.vercel.app | 2026-12-20까지 병행 |\n`;
+  md += `| 운영 (Cloudflare Workers) | https://busan-hak-port-info.luxrank.workers.dev | main 푸시 후 수동 배포 · Cron Triggers |\n`;
+  md += `| 병행 (Vercel) | https://busan-hak-port-info.vercel.app | 2026-12-20까지 병행 |\n`;
   md += `| 보조 (Firebase Hosting) | https://busan-hak-port.web.app | 승인형 배포 |\n`;
   md += `| 데이터 저장소 | Firebase 프로젝트 \`busan-hak-port\` | Firestore · Storage · FCM |\n\n`;
 
