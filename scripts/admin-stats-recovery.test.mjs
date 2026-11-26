@@ -243,8 +243,25 @@ test('POST /api/auth-session 은 관리자 검증 시 admin_luxrank 커스텀 �
     assert.equal(anonRes.status, 200);
     const anonBody = await anonRes.json();
     assert.equal(anonBody.ok, true);
-    assert.equal(anonBody.uid, 'worker_device_busan_01');
-    assert.equal(anonBody.customToken, 'custom-jwt-for-worker_device_busan_01');
+    assert.match(anonBody.uid, /^worker_[a-f0-9]{24}$/);
+    assert.notEqual(anonBody.uid, 'worker_device_busan_01', 'raw clientId 를 그대로 UID 로 쓰면 사칭이 가능하므로 일방향 HMAC 파생 UID 를 써야 합니다');
+    assert.equal(anonBody.customToken, `custom-jwt-for-${anonBody.uid}`);
+
+    // 같은 clientId 는 동일 기기 세션을 유지하기 위해 같은 파생 UID 를 반환하되,
+    // 외부에 노출된 UID 자체를 다시 clientId 로 보내도 타인 UID 를 사칭할 수 없습니다.
+    const repeatAnon = await (await fetch(`${baseUrl}/api/auth-session`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mode: 'anonymous', clientId: 'device_busan_01' })
+    })).json();
+    assert.equal(repeatAnon.uid, anonBody.uid);
+
+    const impersonateAttempt = await (await fetch(`${baseUrl}/api/auth-session`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mode: 'anonymous', clientId: anonBody.uid.replace(/^worker_/, '') })
+    })).json();
+    assert.notEqual(impersonateAttempt.uid, anonBody.uid, '타인의 노출된 UID 접미사를 넘겨도 동일 UID 를 재발급받을 수 없어야 합니다');
 });
 
 test('/api/admin-stats 는 무인증 요청을 401로 차단하고, 유효 토큰에는 전체 근로자·활성 근무일지·방문통계를 비밀번호 유출 없이 반환한다', async () => {

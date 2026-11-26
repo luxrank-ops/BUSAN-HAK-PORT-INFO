@@ -61,10 +61,10 @@ jobs:
         run: npm ci
 
       - name: 품질 검사 (typecheck + validate + tokens:check + test)
-        continue-on-error: true
         run: npm run check
 
       - name: 주간 자가 점검 실행
+        if: always()
         id: selfcheck
         env:
           SELF_CHECK_BASE_URL: ${{ vars.SELF_CHECK_BASE_URL || 'https://busan-hak-port-info.vercel.app' }}
@@ -115,7 +115,7 @@ jobs:
             } catch (e) { console.log(''); }
           ")
           git commit -m "docs: 주간 자가 점검 보고서 ${KST_DATE} — ${SUMMARY}" || echo "커밋 실패 (변경 없음)"
-          git push || echo "::warning::푸시 실패 — 브랜치 보호 규칙을 확인하세요."
+          git push
 
       - name: 📧 보고서 메일 발송 (모든 작업 종료 후)
         if: always()

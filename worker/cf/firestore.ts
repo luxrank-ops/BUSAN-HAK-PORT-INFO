@@ -135,18 +135,27 @@ function decodeFields(fields: Json): Record<string, any> {
   return out;
 }
 
-function encodeFields(data: Record<string, any>): { fields: Json; transforms: Array<{ fieldPath: string; transform: FieldValueTransform }> } {
+function encodeFields(data: Record<string, any>): {
+  fields: Json;
+  deletePaths: string[];
+  transforms: Array<{ fieldPath: string; transform: FieldValueTransform }>;
+} {
   const fields: Json = {};
+  const deletePaths: string[] = [];
   const transforms: Array<{ fieldPath: string; transform: FieldValueTransform }> = [];
   for (const [k, v] of Object.entries(data || {})) {
     if (v === undefined) continue;
     if (isFieldValueTransform(v)) {
-      transforms.push({ fieldPath: k, transform: v });
+      if (v.kind === 'delete') {
+        deletePaths.push(k);
+      } else {
+        transforms.push({ fieldPath: k, transform: v });
+      }
       continue;
     }
     fields[k] = encodeValue(v);
   }
-  return { fields, transforms };
+  return { fields, deletePaths, transforms };
 }
 
 function transformToRest(t: { fieldPath: string; transform: FieldValueTransform }): Json | null {
@@ -214,7 +223,15 @@ export class DocumentSnapshot {
   }
   get(field: string): any {
     const data = this.data();
-    return data ? data[field] : undefined;
+    if (!data) return undefined;
+    if (Object.prototype.hasOwnProperty.call(data, field)) return data[field];
+    const parts = String(field || '').split('.').filter(Boolean);
+    let cursor: any = data;
+    for (const part of parts) {
+      if (cursor === null || cursor === undefined || typeof cursor !== 'object') return undefined;
+      cursor = cursor[part];
+    }
+    return cursor;
   }
   get createTime(): Timestamp | null {
     return this.raw?.createTime ? Timestamp.fromISOString(this.raw.createTime) : null;
@@ -280,9 +297,9 @@ export class WriteBatch {
 
 export class Transaction {
   private writes: Json[] = [];
-  constructor(private readonly db: Firestore) {}
+  constructor(private readonly db: Firestore, private readonly transactionId?: string) {}
   async get(ref: DocumentReference): Promise<DocumentSnapshot> {
-    return ref.get();
+    return ref.get(this.transactionId);
   }
   create(ref: DocumentReference, data: Record<string, any>): Transaction {
     this.writes.push(this.db.buildUpdateWrite(ref, data, { exists: false }));
@@ -310,8 +327,13 @@ export class DocumentReference {
   get id(): string {
     return this.path.split('/').pop() || '';
   }
-  async get(): Promise<DocumentSnapshot> {
-    const res = await firestoreFetch(`${documentRoot()}/${this.path}`);
+  collection(name: string): CollectionReference {
+    return new CollectionReference(this.firestore, String(name), this.path);
+  }
+  async get(transactionId?: string): Promise<DocumentSnapshot> {
+    const url = new URL(`${documentRoot()}/${this.path}`);
+    if (transactionId) url.searchParams.set('transaction', transactionId);
+    const res = await firestoreFetch(url.toString());
     if (res.status === 404) return new DocumentSnapshot(this.id, false, null, this);
     if (res.status !== 200) {
       throw new Error(`firestore_get_failed:${res.status}:${res.text.slice(0, 200)}`);
@@ -335,9 +357,14 @@ export class DocumentReference {
 export class Query {
   protected filters: Filter[] = [];
   protected orders: Array<{ field: string; direction: 'asc' | 'desc' }> = [];
+  protected selectFields: string[] | null = null;
   protected limitValue: number | null = null;
   protected offsetValue = 0;
-  constructor(protected readonly firestore: Firestore, protected readonly collectionId: string) {}
+  constructor(
+    protected readonly firestore: Firestore,
+    protected readonly collectionId: string,
+    protected readonly parentPath: string = ''
+  ) {}
 
   where(field: string, op: string, value: any): Query {
     const q = this._clone();
@@ -347,6 +374,11 @@ export class Query {
   orderBy(field: string, direction: 'asc' | 'desc' = 'asc'): Query {
     const q = this._clone();
     q.orders.push({ field, direction });
+    return q;
+  }
+  select(...fields: string[]): Query {
+    const q = this._clone();
+    q.selectFields = fields.map((f) => String(f)).filter(Boolean);
     return q;
   }
   limit(n: number): Query {
@@ -368,16 +400,26 @@ export class Query {
     };
   }
   private _clone(): Query {
-    const q = new Query(this.firestore, this.collectionId);
+    const q = new Query(this.firestore, this.collectionId, this.parentPath);
     q.filters = [...this.filters];
     q.orders = [...this.orders];
+    q.selectFields = this.selectFields ? [...this.selectFields] : null;
     q.limitValue = this.limitValue;
     q.offsetValue = this.offsetValue;
     return q;
   }
 
+  private _queryEndpoint(suffix: 'runQuery' | 'runAggregationQuery'): string {
+    return this.parentPath
+      ? `${documentRoot()}/${this.parentPath}:${suffix}`
+      : `${documentRoot()}:${suffix}`;
+  }
+
   private _structuredQuery(): Json {
     const sq: Json = { from: [{ collectionId: this.collectionId }] };
+    if (this.selectFields) {
+      sq.select = { fields: this.selectFields.map((fieldPath) => ({ fieldPath })) };
+    }
     if (this.filters.length === 1) {
       const f = this.filters[0];
       sq.where = {
@@ -417,7 +459,7 @@ export class Query {
     if (!this.filters.length && !this.orders.length && !this.offsetValue) {
       return this._listAll();
     }
-    const res = await firestoreFetch(`${documentRoot()}:runQuery`, {
+    const res = await firestoreFetch(this._queryEndpoint('runQuery'), {
       method: 'POST',
       body: JSON.stringify({ structuredQuery: this._structuredQuery() })
     });
@@ -437,9 +479,17 @@ export class Query {
   private async _listAll(): Promise<QuerySnapshot> {
     const docs: DocumentSnapshot[] = [];
     let pageToken = '';
-    for (let guard = 0; guard < 30; guard += 1) {
-      const url = new URL(`${documentRoot()}/${this.collectionId}`);
-      url.searchParams.set('pageSize', '1000');
+    const collectionPath = this.parentPath ? `${this.parentPath}/${this.collectionId}` : this.collectionId;
+    for (let guard = 0; guard < 200; guard += 1) {
+      const remaining = this.limitValue !== null ? Math.max(0, this.limitValue - docs.length) : 1000;
+      if (this.limitValue !== null && remaining <= 0) break;
+      const url = new URL(`${documentRoot()}/${collectionPath}`);
+      url.searchParams.set('pageSize', String(Math.min(1000, remaining)));
+      if (this.selectFields) {
+        for (const fieldPath of this.selectFields) {
+          url.searchParams.append('mask.fieldPaths', fieldPath);
+        }
+      }
       if (pageToken) url.searchParams.set('pageToken', pageToken);
       const res = await firestoreFetch(url.toString());
       if (res.status !== 200) {
@@ -449,6 +499,7 @@ export class Query {
         const id = String(doc.name || '').split('/').pop() || '';
         docs.push(new DocumentSnapshot(id, true, doc, new DocumentReference(this.firestore, String(doc.name).split('/documents/')[1] || '')));
       }
+      if (this.limitValue !== null && docs.length >= this.limitValue) break;
       pageToken = String(res.json?.nextPageToken || '');
       if (!pageToken) break;
     }
@@ -457,7 +508,7 @@ export class Query {
   }
 
   private async _runCount(): Promise<{ data: () => { count: number } }> {
-    const res = await firestoreFetch(`${documentRoot()}:runAggregationQuery`, {
+    const res = await firestoreFetch(this._queryEndpoint('runAggregationQuery'), {
       method: 'POST',
       body: JSON.stringify({
         structuredQuery: this._structuredQuery(),
@@ -475,15 +526,16 @@ export class Query {
 }
 
 export class CollectionReference extends Query {
-  constructor(firestore: Firestore, collectionId: string) {
-    super(firestore, collectionId);
+  constructor(firestore: Firestore, collectionId: string, parentPath: string = '') {
+    super(firestore, collectionId, parentPath);
   }
   get id(): string {
     return this.collectionId;
   }
   doc(id?: string): DocumentReference {
     const docId = id && String(id).trim() ? String(id) : generateDocId();
-    return new DocumentReference(this.firestore, `${this.collectionId}/${docId}`);
+    const fullPath = this.parentPath ? `${this.parentPath}/${this.collectionId}/${docId}` : `${this.collectionId}/${docId}`;
+    return new DocumentReference(this.firestore, fullPath);
   }
   async add(data: Record<string, any>): Promise<DocumentReference> {
     const ref = this.doc();
@@ -509,16 +561,38 @@ export class Firestore {
     return new WriteBatch(this);
   }
   async runTransaction<T>(fn: (tx: Transaction) => Promise<T>): Promise<T> {
-    // 단일 문서 선점(create) 위주로 쓰이므로, 충돌 시 재시도하는 낙관적 트랜잭션으로 처리합니다.
     let lastError: any = null;
     for (let attempt = 0; attempt < 5; attempt += 1) {
-      const tx = new Transaction(this);
+      let transactionId: string | undefined;
+      try {
+        const beginRes = await firestoreFetch(`${documentRoot()}:beginTransaction`, {
+          method: 'POST',
+          body: JSON.stringify({ options: { readWrite: {} } })
+        });
+        if (beginRes.status === 200 && beginRes.json?.transaction) {
+          transactionId = String(beginRes.json.transaction);
+        }
+      } catch {
+        // beginTransaction 실패 시 낙관적 커밋으로 안전하게 폴백
+      }
+
+      const tx = new Transaction(this, transactionId);
       try {
         const result = await fn(tx);
         const writes = tx._collect();
-        if (writes.length) await this.commitWrites(writes);
+        if (transactionId) {
+          await this.commitWrites(writes, transactionId);
+        } else if (writes.length) {
+          await this.commitWrites(writes);
+        }
         return result;
       } catch (err: any) {
+        if (transactionId) {
+          await firestoreFetch(`${documentRoot()}:rollback`, {
+            method: 'POST',
+            body: JSON.stringify({ transaction: transactionId })
+          }).catch(() => {});
+        }
         lastError = err;
         const msg = String(err?.message || err);
         if (!/ALREADY_EXISTS|ABORTED|conflict|FAILED_PRECONDITION/i.test(msg)) throw err;
@@ -528,29 +602,66 @@ export class Firestore {
   }
 
   buildSetWrite(ref: DocumentReference, data: Record<string, any>, merge: boolean): Json {
-    const { fields, transforms } = encodeFields(data);
+    const { fields, deletePaths, transforms } = encodeFields(data);
+    const restTransforms = transforms.map(transformToRest).filter(Boolean);
+    const valuePaths = Object.keys(fields);
+
+    // merge: true 인데 일반 필드·삭제 없이 transform(serverTimestamp/increment 등)만 있는 경우
+    // updateMask 에 transform 필드를 넣으면 Firestore REST 가 필드를 삭제/충돌 처리하므로 전용 transform write 를 사용합니다.
+    if (merge && !valuePaths.length && !deletePaths.length && restTransforms.length) {
+      return {
+        transform: {
+          document: fullDocumentName(ref.path),
+          fieldTransforms: restTransforms
+        }
+      };
+    }
+
     const write: Json = { update: { name: fullDocumentName(ref.path), fields } };
     if (merge) {
-      const maskPaths = Object.keys(data || {}).filter((k) => (data as any)[k] !== undefined);
-      write.updateMask = { fieldPaths: maskPaths };
+      write.updateMask = { fieldPaths: [...valuePaths, ...deletePaths] };
     }
-    if (transforms.length) {
-      write.updateTransforms = transforms.map(transformToRest).filter(Boolean);
+    if (restTransforms.length) {
+      write.updateTransforms = restTransforms;
     }
     return write;
   }
 
   buildUpdateWrite(ref: DocumentReference, data: Record<string, any>, precondition?: { exists: boolean }): Json {
-    const { fields, transforms } = encodeFields(data);
+    const { fields, deletePaths, transforms } = encodeFields(data);
+    const restTransforms = transforms.map(transformToRest).filter(Boolean);
+    const valuePaths = Object.keys(fields);
+    const effectivePrecondition = precondition ?? { exists: true };
+
+    if (!valuePaths.length && !deletePaths.length && restTransforms.length) {
+      return {
+        transform: {
+          document: fullDocumentName(ref.path),
+          fieldTransforms: restTransforms
+        },
+        currentDocument: { exists: effectivePrecondition.exists }
+      };
+    }
+
     const write: Json = { update: { name: fullDocumentName(ref.path), fields } };
-    write.updateMask = { fieldPaths: Object.keys(data || {}).filter((k) => (data as any)[k] !== undefined) };
-    if (transforms.length) write.updateTransforms = transforms.map(transformToRest).filter(Boolean);
-    if (precondition) write.currentDocument = { exists: precondition.exists };
+    write.updateMask = { fieldPaths: [...valuePaths, ...deletePaths] };
+    if (restTransforms.length) write.updateTransforms = restTransforms;
+    write.currentDocument = { exists: effectivePrecondition.exists };
     return write;
   }
 
-  async commitWrites(writes: Json[]): Promise<void> {
-    if (!writes.length) return;
+  async commitWrites(writes: Json[], transactionId?: string): Promise<void> {
+    if (!writes.length && !transactionId) return;
+    if (transactionId) {
+      const res = await firestoreFetch(`${documentRoot()}:commit`, {
+        method: 'POST',
+        body: JSON.stringify({ transaction: transactionId, writes })
+      });
+      if (res.status !== 200) {
+        throw new Error(`firestore_commit_failed:${res.status}:${res.text.slice(0, 300)}`);
+      }
+      return;
+    }
     // Firestore commit 은 한 번에 최대 500건입니다.
     for (let i = 0; i < writes.length; i += 400) {
       const chunk = writes.slice(i, i + 400);

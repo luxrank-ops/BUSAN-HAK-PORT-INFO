@@ -87,8 +87,11 @@ if (!EMULATOR_AVAILABLE) {
         if (testEnv) await testEnv.cleanup();
     });
 
-    /** 익명으로 로그인한 현장 근로자 세션 */
-    const worker = (uid = 'worker-a') => testEnv.authenticatedContext(uid).firestore();
+    /** 익명으로 로그인한 현장 근로자 세션 (workerId 지정 시 서버 발급 커스텀 클레임 포함) */
+    const worker = (uid = 'worker-a', workerId = undefined) =>
+        testEnv.authenticatedContext(uid, workerId ? { workerId } : undefined).firestore();
+    /** 관리자 세션 */
+    const admin = () => testEnv.authenticatedContext('admin_luxrank').firestore();
     /** 아직 아무 문서도 없는 새 기기 세션 */
     const stranger = () => testEnv.authenticatedContext('stranger-uid').firestore();
 
@@ -100,13 +103,14 @@ if (!EMULATOR_AVAILABLE) {
     };
 
     describe('work_logs (근무일지·임금 기록)', () => {
-        test('본인이 저장한 일지를 다시 저장할 수 있다', async () => {
+        test('본인(workerId 클레임 일치)이 저장한 일지를 다시 저장할 수 있다', async () => {
             await seed(async (db) => {
                 await setDoc(doc(db, 'work_logs/a_2026-10-01'), {
                     workerId: 'a', date: '2026-10-01', totalPay: 100000
                 });
             });
-            await ok(updateDoc(doc(worker(), 'work_logs/a_2026-10-01'), { totalPay: 120000 }));
+            await ok(updateDoc(doc(worker('worker-a', 'a'), 'work_logs/a_2026-10-01'), { totalPay: 120000 }));
+            await denied(updateDoc(doc(stranger(), 'work_logs/a_2026-10-01'), { totalPay: 999999 }));
         });
 
         test('남의 일지를 물리 삭제할 수 없다 (삭제는 관리자 전용)', async () => {
@@ -115,7 +119,7 @@ if (!EMULATOR_AVAILABLE) {
                     workerId: 'a', date: '2026-10-01', totalPay: 100000
                 });
             });
-            await denied(deleteDoc(doc(worker(), 'work_logs/a_2026-10-01')));
+            await denied(deleteDoc(doc(worker('worker-a', 'a'), 'work_logs/a_2026-10-01')));
         });
 
         test('일지의 소유자(workerId)를 바꿔치기할 수 없다', async () => {
@@ -124,7 +128,7 @@ if (!EMULATOR_AVAILABLE) {
                     workerId: 'a', date: '2026-10-01', totalPay: 100000
                 });
             });
-            await denied(updateDoc(doc(worker(), 'work_logs/a_2026-10-01'), { workerId: 'b' }));
+            await denied(updateDoc(doc(worker('worker-a', 'a'), 'work_logs/a_2026-10-01'), { workerId: 'b' }));
         });
 
         test('일지의 날짜를 바꿔 다른 날 기록으로 옮길 수 없다', async () => {
@@ -133,20 +137,21 @@ if (!EMULATOR_AVAILABLE) {
                     workerId: 'a', date: '2026-10-01', totalPay: 100000
                 });
             });
-            await denied(updateDoc(doc(worker(), 'work_logs/a_2026-10-01'), { date: '2026-10-02' }));
+            await denied(updateDoc(doc(worker('worker-a', 'a'), 'work_logs/a_2026-10-01'), { date: '2026-10-02' }));
         });
 
-        test('소프트 삭제 표시(deletedAt)는 저장할 수 있다', async () => {
+        test('본인의 소프트 삭제 표시(deletedAt)는 저장할 수 있고 타인은 거부된다', async () => {
             await seed(async (db) => {
                 await setDoc(doc(db, 'work_logs/a_2026-10-01'), {
                     workerId: 'a', date: '2026-10-01', totalPay: 100000
                 });
             });
-            await ok(updateDoc(doc(worker(), 'work_logs/a_2026-10-01'), { deletedAt: new Date() }));
+            await denied(updateDoc(doc(stranger(), 'work_logs/a_2026-10-01'), { deletedAt: new Date() }));
+            await ok(updateDoc(doc(worker('worker-a', 'a'), 'work_logs/a_2026-10-01'), { deletedAt: new Date() }));
         });
 
         test('작성자·날짜 형식이 없는 저장은 거부된다', async () => {
-            await denied(setDoc(doc(worker(), 'work_logs/broken'), { workerId: 'a', date: '2026-1-1' }));
+            await denied(setDoc(doc(worker('worker-a', 'a'), 'work_logs/broken'), { workerId: 'a', date: '2026-1-1' }));
         });
     });
 
@@ -502,12 +507,12 @@ if (!EMULATOR_AVAILABLE) {
         });
     });
 
-    describe('알려진 한계 (C-4 로그인 도입 시 함께 해결)', () => {
-        test('화면이 쓰는 조회 형태(본인 workerId + 날짜 범위)는 허용된다', async () => {
+    describe('강화된 소유권·권한 경계 (Phase 1 보안 보강)', () => {
+        test('본인 workerId 클레임이 일치하는 날짜 범위 조회는 허용된다', async () => {
             await seed(async (db) => {
                 await setDoc(doc(db, 'work_logs/a_2026-10-01'), { workerId: 'a', date: '2026-10-01' });
             });
-            await ok(stranger().collection('work_logs')
+            await ok(worker('worker-a', 'a').collection('work_logs')
                 .where('workerId', '==', 'a')
                 .where('date', '>=', '2026-10-01')
                 .where('date', '<=', '2026-10-31')
@@ -518,30 +523,73 @@ if (!EMULATOR_AVAILABLE) {
             await seed(async (db) => {
                 await setDoc(doc(db, 'work_logs/a_2026-10-01'), { workerId: 'a', date: '2026-10-01' });
             });
-            // 규칙은 필터가 아니므로, 규칙이 요구하는 조건(workerId)을 증명할 수 없는 쿼리는 거부됩니다.
-            // 그래서 인덱스가 아직 없을 때의 대체 조회도 workerId 조건을 유지하고 날짜는 화면에서 거릅니다.
-            await denied(stranger().collection('work_logs')
+            await denied(worker('worker-a', 'a').collection('work_logs')
                 .where('date', '>=', '2026-10-01')
                 .where('date', '<=', '2026-10-31')
                 .get());
         });
 
-        test('인덱스가 없을 때 쓰는 대체 조회(workerId 만)는 허용된다', async () => {
+        test('인덱스가 없을 때 쓰는 대체 조회(본인 workerId 만)는 허용된다', async () => {
             await seed(async (db) => {
                 await setDoc(doc(db, 'work_logs/a_2026-10-01'), { workerId: 'a', date: '2026-10-01' });
                 await setDoc(doc(db, 'work_logs/a_2026-09-30'), { workerId: 'a', date: '2026-09-30' });
             });
-            const snap = await ok(stranger().collection('work_logs').where('workerId', '==', 'a').get());
+            const snap = await ok(worker('worker-a', 'a').collection('work_logs').where('workerId', '==', 'a').get());
             assert.equal(snap.size, 2);
         });
 
-        test('아직은 남의 workerId 로도 조회할 수 있다 (규칙 한계 — C-4 로그인 도입 시 해결)', async () => {
+        test('타인(클레임 없음·불일치)은 남의 workerId 로도 근무일지를 조회할 수 없다', async () => {
             await seed(async (db) => {
                 await setDoc(doc(db, 'work_logs/a_2026-10-01'), { workerId: 'a', date: '2026-10-01' });
             });
-            // 화면은 본인 것만 요청하지만, 규칙은 "누구의 일지인지"까지는 막지 못합니다.
-            // 이 항목이 실패하기 시작하면 규칙이 강화된 것이므로 이 테스트를 갱신하세요.
-            await ok(stranger().collection('work_logs').where('workerId', '==', 'a').get());
+            await denied(stranger().collection('work_logs').where('workerId', '==', 'a').get());
+            await denied(worker('worker-b', 'b').collection('work_logs').where('workerId', '==', 'a').get());
+            await denied(getDoc(doc(stranger(), 'work_logs/a_2026-10-01')));
+        });
+
+        test('user_profiles: 타인은 비밀번호 해시를 읽거나 덮어쓸 수 없고 본인도 fcmToken 만 갱신 가능하다', async () => {
+            await seed(async (db) => {
+                await setDoc(doc(db, 'user_profiles/홍길동'), { password: SHA, createdAt: new Date() });
+            });
+            await denied(getDoc(doc(stranger(), 'user_profiles/홍길동')));
+            await denied(updateDoc(doc(stranger(), 'user_profiles/홍길동'), { password: OTHER_SHA }));
+            await denied(updateDoc(doc(worker('worker-h', '홍길동'), 'user_profiles/홍길동'), { password: OTHER_SHA }));
+            await ok(updateDoc(doc(worker('worker-h', '홍길동'), 'user_profiles/홍길동'), { fcmToken: 'fcm-token-ok' }));
+        });
+
+        test('settings/emergency_notice: 비관리자는 긴급 공지를 변조할 수 없고 관리자만 작성할 수 있다', async () => {
+            await seed(async () => {});
+            const validNotice = { enabled: true, title: '긴급', message: '테스트 공지', level: 'danger', revision: 1 };
+            await denied(setDoc(doc(stranger(), 'settings/emergency_notice'), validNotice));
+            await ok(setDoc(doc(admin(), 'settings/emergency_notice'), validNotice));
+        });
+
+        test('archives: javascript: 등 위험 스킴 URL 등록은 차단되고 https:// 링크만 허용된다', async () => {
+            await seed(async () => {});
+            await denied(setDoc(doc(worker(), 'archives/a1'), {
+                title: '위험 링크', url: 'javascript:alert(1)', password: SHA
+            }));
+            await ok(setDoc(doc(worker(), 'archives/a2'), {
+                title: '정상 파일', url: 'https://storage.googleapis.com/file.pdf', password: SHA
+            }));
+        });
+
+        test('notifications: 타인 알림 조회·위조 생성은 차단되고 본인 조회·읽음 처리와 ADMIN 자동 블라인드만 허용된다', async () => {
+            await seed(async (db) => {
+                await setDoc(doc(db, 'notifications/n1'), {
+                    userId: '홍길동', title: '출항 변경', body: '본문', read: false
+                });
+            });
+            await denied(getDoc(doc(stranger(), 'notifications/n1')));
+            await denied(updateDoc(doc(stranger(), 'notifications/n1'), { read: true }));
+            await denied(setDoc(doc(stranger(), 'notifications/fake1'), {
+                userId: '홍길동', title: '가짜 공지', body: '피싱'
+            }));
+            await ok(getDoc(doc(worker('worker-h', '홍길동'), 'notifications/n1')));
+            await ok(updateDoc(doc(worker('worker-h', '홍길동'), 'notifications/n1'), { read: true, readAt: new Date() }));
+            await ok(setDoc(doc(stranger(), 'notifications/blind1'), {
+                userId: 'ADMIN', type: 'AUTO_BLIND', title: '자동 블라인드', body: '금칙어 감지'
+            }));
         });
     });
 }

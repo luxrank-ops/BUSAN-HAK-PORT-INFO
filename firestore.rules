@@ -90,9 +90,48 @@ service cloud.firestore {
       );
     }
 
+    // 🔐 서버 발급 Custom Token 의 workerId 클레임으로 본인 소유권을 검증합니다.
+    function isWorkerSelf(workerId) {
+      return isSignedIn() &&
+        workerId is string &&
+        workerId.size() >= 1 &&
+        workerId.size() <= 64 &&
+        request.auth.token.workerId is string &&
+        request.auth.token.workerId == workerId;
+    }
+
+    // 작성자 UID 가 기록된 신규 문서는 본인 또는 관리자만 수정·소프트 삭제할 수 있습니다.
+    function isAuthorOrLegacy() {
+      return isAdmin() ||
+        !('authorUid' in existing()) ||
+        existing().authorUid == null ||
+        existing().authorUid == request.auth.uid;
+    }
+
+    function isValidHttpUrl(val) {
+      return val is string && val.size() >= 8 && val.size() <= 2000 && val.matches('^https?://.+');
+    }
+
+    function isValidArchiveDoc(data) {
+      return data.title is string && data.title.size() >= 1 && data.title.size() <= 200 &&
+        isValidHttpUrl(data.url) &&
+        isSha256Hash(data.password) &&
+        (!('authorUid' in data) || data.authorUid == null || data.authorUid == request.auth.uid);
+    }
+
+    function isValidScheduleCacheDoc(data) {
+      return data.keys().hasOnly(['terminal', 'yearMonth', 'vesselsJson', 'count', 'updatedAt', 'vessels']) &&
+        (!('terminal' in data) || data.terminal in ['hjnc', 'bnct', 'dgt', 'bct', 'pnc', 'hpnt', 'pnit', 'bptc', 'hbct']) &&
+        (!('yearMonth' in data) || (data.yearMonth is string && data.yearMonth.matches('^\\d{4}-\\d{2}$'))) &&
+        (!('count' in data) || (data.count is int && data.count >= 0 && data.count <= 5000)) &&
+        (!('vesselsJson' in data) || (data.vesselsJson is string && data.vesselsJson.size() <= 500000)) &&
+        (!('updatedAt' in data) || (data.updatedAt is string && data.updatedAt.size() <= 64) || data.updatedAt is timestamp);
+    }
+
     // ---------------------------------------------------------
     // 2. settings Collection
     //    - settings/admin: 클라이언트 읽기·쓰기 완전 차단 (비밀번호 유출 원천 봉쇄)
+    //    - settings/emergency_notice: 관리자(또는 서버 Admin SDK PUT /api/emergency-notifications)만 쓰기 허용
     //    - 티커 및 식단표 문서: 익명 인증 이상 조회 가능, 관리자만 수정
     // ---------------------------------------------------------
     match /settings/admin {
@@ -103,9 +142,9 @@ service cloud.firestore {
       allow get: if isSignedIn() && settingId != 'admin' && isValidId(settingId);
       allow list: if false;
       allow create, update: if isSignedIn() && settingId != 'admin' && isValidId(settingId) && (
-        isAdmin() ||
-        (settingId == 'banner' && incoming().diff(existing()).affectedKeys().hasOnly(['userMessages']) && incoming().userMessages is list && incoming().userMessages.size() <= 3) ||
-        (settingId == 'emergency_notice' && isValidEmergencyNoticeWrite())
+        (isAdmin() && settingId == 'emergency_notice' && isValidEmergencyNoticeWrite()) ||
+        (isAdmin() && settingId != 'emergency_notice') ||
+        (settingId == 'banner' && incoming().diff(existing()).affectedKeys().hasOnly(['userMessages']) && incoming().userMessages is list && incoming().userMessages.size() <= 3)
       );
       allow delete: if isAdmin() && settingId != 'admin';
     }
@@ -146,46 +185,46 @@ service cloud.firestore {
 
     // ---------------------------------------------------------
     // 5. user_profiles Collection
-    //    - 전체 목록(list) 조회 금지 (단건 get만 허용하여 계정·비번 덤프 차단)
-    //    - 생성·수정 시 SHA-256 해시(64자 hex)만 허용 (평문 저장 원천 차단)
+    //    - 가입·비밀번호 검증·비밀번호 변경은 서버 API(/api/auth-session mode:'worker') 전용
+    //    - 타인의 비밀번호 해시 읽기(get) 및 비밀번호 덮어쓰기(update) 원천 차단
+    //    - 본인 세션(workerId 클레임)은 fcmToken·updatedAt 갱신만 허용
     // ---------------------------------------------------------
     match /user_profiles/{nick} {
-      allow get: if isSignedIn() && isValidId(nick);
+      allow get: if isSignedIn() && isValidId(nick) && (isAdmin() || isWorkerSelf(nick));
       allow list: if isAdmin();
-      allow create: if isSignedIn() && isValidId(nick) && (
-        (
-          incoming().keys().hasAll(['password', 'createdAt']) &&
-          incoming().keys().hasOnly(['password', 'createdAt', 'fcmToken', 'updatedAt']) &&
-          isSha256Hash(incoming().password)
-        ) || (
-          incoming().keys().hasOnly(['fcmToken', 'updatedAt']) &&
-          incoming().fcmToken is string && incoming().fcmToken.size() <= 1024
+      allow create: if isAdmin();
+      allow update: if isSignedIn() && isValidId(nick) && (
+        isAdmin() || (
+          isWorkerSelf(nick) &&
+          incoming().diff(existing()).affectedKeys().hasOnly(['fcmToken', 'updatedAt']) &&
+          (!('fcmToken' in incoming()) || incoming().fcmToken == null || (incoming().fcmToken is string && incoming().fcmToken.size() <= 1024))
         )
       );
-      allow update: if isSignedIn() && isValidId(nick) &&
-        incoming().diff(existing()).affectedKeys().hasOnly(['password', 'fcmToken', 'updatedAt']) &&
-        (!('password' in incoming().diff(existing()).affectedKeys()) || isSha256Hash(incoming().password)) &&
-        (!('fcmToken' in incoming()) || incoming().fcmToken == null || (incoming().fcmToken is string && incoming().fcmToken.size() <= 1024));
       allow delete: if isAdmin();
     }
 
     // ---------------------------------------------------------
     // 6. work_logs Collection (근무일지)
-    //    - 인증된 사용자만 본인의 workerId 조건으로 조회/저장/삭제
+    //    - 서버 발급 workerId 클레임으로 본인 기록만 조회·저장·수정·소프트 삭제 허용
+    //    - 타 근로자의 급여·근무일지 전체 덤프 및 변조 원천 차단
     // ---------------------------------------------------------
     match /work_logs/{logId} {
-      allow get: if isSignedIn() && isValidId(logId);
-      // 목록 조회는 workerId 조건을 증명할 수 있어야 허용됩니다(규칙은 필터가 아닙니다).
-      // 화면은 본인 workerId 로만 조회하며, 실제 관리자(로그인 계정)는 전체를 볼 수 있습니다.
+      allow get: if isSignedIn() && isValidId(logId) && (
+        isAdmin() ||
+        (resource == null && request.auth.token.workerId is string) ||
+        (resource != null && isWorkerSelf(resource.data.workerId))
+      );
       allow list: if isSignedIn() && (
         isAdmin() ||
-        (resource.data.workerId is string && resource.data.workerId.size() <= 64)
+        isWorkerSelf(resource.data.workerId)
       );
       allow create: if isSignedIn() && isValidId(logId) &&
+        (isAdmin() || isWorkerSelf(incoming().workerId)) &&
         incoming().workerId is string && incoming().workerId.size() >= 1 && incoming().workerId.size() <= 64 &&
         incoming().date is string && incoming().date.size() == 10;
-      // 갱신: 소유자(workerId)·날짜를 바꿔치기할 수 없습니다 (다른 사람 일지로 옮기기 차단).
+      // 갱신: 본인 기록만 수정 가능하며 소유자(workerId)·날짜를 바꿔치기할 수 없습니다.
       allow update: if isSignedIn() && isValidId(logId) &&
+        (isAdmin() || isWorkerSelf(existing().workerId)) &&
         incoming().workerId is string && incoming().workerId.size() >= 1 && incoming().workerId.size() <= 64 &&
         incoming().date is string && incoming().date.size() == 10 &&
         incoming().workerId == existing().workerId &&
@@ -196,10 +235,11 @@ service cloud.firestore {
 
     // ---------------------------------------------------------
     // 7. hjnc_schedules Collection (터미널 선석 스케줄 캐시)
+    //    - 허용된 터미널·월별 캐시 스키마와 크기 한도만 쓰기 허용
     // ---------------------------------------------------------
     match /hjnc_schedules/{schedId} {
       allow get, list: if isSignedIn();
-      allow create, update: if isSignedIn() && isValidId(schedId);
+      allow create, update: if isSignedIn() && isValidId(schedId) && (isAdmin() || isValidScheduleCacheDoc(incoming()));
       allow delete: if isAdmin();
     }
 
@@ -223,21 +263,23 @@ service cloud.firestore {
 
     match /posts/{postId} {
       allow get, list: if isSignedIn();
-      allow create: if isSignedIn() && isValidId(postId) && isValidBoardPost(incoming());
+      allow create: if isSignedIn() && isValidId(postId) && isValidBoardPost(incoming()) &&
+        (!('authorUid' in incoming()) || incoming().authorUid == null || incoming().authorUid == request.auth.uid);
       // 내용 수정은 비밀번호를 바꾸지 못합니다(비밀번호 선점·잠금 공격 차단). 삭제는 소프트 삭제만.
       allow update: if isSignedIn() && isValidId(postId) && (
         isValidViewCountIncrement() ||
-        (isValidBoardPost(incoming()) && incoming().password == existing().password) ||
-        isValidSoftDelete()
+        (isAuthorOrLegacy() && isValidBoardPost(incoming()) && incoming().password == existing().password) ||
+        (isAuthorOrLegacy() && isValidSoftDelete())
       );
       allow delete: if isAdmin();
 
       match /comments/{commentId} {
         allow get, list: if isSignedIn();
-        allow create: if isSignedIn() && isValidId(commentId) && isValidBoardComment(incoming());
+        allow create: if isSignedIn() && isValidId(commentId) && isValidBoardComment(incoming()) &&
+          (!('authorUid' in incoming()) || incoming().authorUid == null || incoming().authorUid == request.auth.uid);
         allow update: if isSignedIn() && isValidId(commentId) && (
-          (isValidBoardComment(incoming()) && incoming().password == existing().password) ||
-          isValidSoftDelete()
+          (isAuthorOrLegacy() && isValidBoardComment(incoming()) && incoming().password == existing().password) ||
+          (isAuthorOrLegacy() && isValidSoftDelete())
         );
         allow delete: if isAdmin();
       }
@@ -247,21 +289,23 @@ service cloud.firestore {
       allow get, list: if isSignedIn();
       allow create: if isSignedIn() && isValidId(shipId) &&
         incoming().shipName is string && incoming().shipName.size() <= 120 &&
-        isSha256Hash(incoming().password);
+        isSha256Hash(incoming().password) &&
+        (!('authorUid' in incoming()) || incoming().authorUid == null || incoming().authorUid == request.auth.uid);
       allow update: if isSignedIn() && isValidId(shipId) && (
         isValidViewCountIncrement() ||
-        (incoming().shipName is string && incoming().shipName.size() <= 120 &&
+        (isAuthorOrLegacy() && incoming().shipName is string && incoming().shipName.size() <= 120 &&
           isSha256Hash(incoming().password) && incoming().password == existing().password) ||
-        isValidSoftDelete()
+        (isAuthorOrLegacy() && isValidSoftDelete())
       );
       allow delete: if isAdmin();
 
       match /comments/{commentId} {
         allow get, list: if isSignedIn();
-        allow create: if isSignedIn() && isValidId(commentId) && isValidBoardComment(incoming());
+        allow create: if isSignedIn() && isValidId(commentId) && isValidBoardComment(incoming()) &&
+          (!('authorUid' in incoming()) || incoming().authorUid == null || incoming().authorUid == request.auth.uid);
         allow update: if isSignedIn() && isValidId(commentId) && (
-          (isValidBoardComment(incoming()) && incoming().password == existing().password) ||
-          isValidSoftDelete()
+          (isAuthorOrLegacy() && isValidBoardComment(incoming()) && incoming().password == existing().password) ||
+          (isAuthorOrLegacy() && isValidSoftDelete())
         );
         allow delete: if isAdmin();
       }
@@ -269,7 +313,12 @@ service cloud.firestore {
 
     match /archives/{archiveId} {
       allow get, list: if isSignedIn();
-      allow create, update: if isSignedIn() && isValidId(archiveId);
+      allow create: if isSignedIn() && isValidId(archiveId) && (isAdmin() || isValidArchiveDoc(incoming()));
+      allow update: if isSignedIn() && isValidId(archiveId) && (
+        isAdmin() ||
+        (isAuthorOrLegacy() && isValidArchiveDoc(incoming()) && incoming().password == existing().password) ||
+        (isAuthorOrLegacy() && isValidSoftDelete())
+      );
       allow delete: if isAdmin();
     }
 
@@ -280,16 +329,27 @@ service cloud.firestore {
 
     // ---------------------------------------------------------
     // 9. notifications & vessel_schedules_cache (자동화 알림 및 스케줄 캐시)
+    //    - 알림 조회·읽음 처리는 본인(workerId 클레임) 또는 관리자만 허용
+    //    - 클라이언트 생성은 커뮤니티 자동 블라인드 관리자 경보(AUTO_BLIND → ADMIN)만 허용
     // ---------------------------------------------------------
     match /notifications/{notiId} {
-      allow get, list: if isSignedIn();
-      allow create: if isSignedIn() && isValidId(notiId) &&
-        incoming().userId is string && incoming().userId.size() <= 64 &&
-        incoming().title is string && incoming().title.size() <= 200 &&
-        incoming().body is string && incoming().body.size() <= 2000;
-      allow update: if isSignedIn() && isValidId(notiId) && (
+      allow get, list: if isSignedIn() && (
         isAdmin() ||
-        incoming().diff(existing()).affectedKeys().hasOnly(['read', 'readAt'])
+        isWorkerSelf(resource.data.userId)
+      );
+      allow create: if isSignedIn() && isValidId(notiId) && (
+        isAdmin() || (
+          incoming().userId == 'ADMIN' &&
+          incoming().type == 'AUTO_BLIND' &&
+          incoming().title is string && incoming().title.size() <= 200 &&
+          incoming().body is string && incoming().body.size() <= 2000
+        )
+      );
+      allow update: if isSignedIn() && isValidId(notiId) && (
+        isAdmin() || (
+          isWorkerSelf(existing().userId) &&
+          incoming().diff(existing()).affectedKeys().hasOnly(['read', 'readAt'])
+        )
       );
       allow delete: if isAdmin();
     }

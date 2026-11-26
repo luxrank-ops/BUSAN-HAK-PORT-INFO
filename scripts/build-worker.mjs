@@ -50,6 +50,7 @@ const result = await build({
   entryPoints: ['worker/index.ts'],
   outfile: '.cf-worker/index.js',
   bundle: true,
+  minify: true,
   format: 'esm',
   platform: 'node',
   target: 'es2022',

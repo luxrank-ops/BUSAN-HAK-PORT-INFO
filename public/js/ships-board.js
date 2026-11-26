@@ -38,6 +38,7 @@ async function loadAndSearchAllShips(searchKeyword = "") {
             }
             querySnapshot.forEach(doc => {
                 let data = doc.data();
+                if (!data || data.deletedAt) return;
                 data.id = doc.id;
                 shipList.push(data);
             });
@@ -194,6 +195,10 @@ async function openShipDetailView(docId) {
                 return;
             }
             data = docSnap.data();
+            if (data && data.deletedAt) {
+                alert("삭제된 선박 정보입니다.");
+                return;
+            }
         }
         const hasShipHelpers = typeof getShipMemoText === "function";
         const name = (hasShipHelpers ? getShipDisplayName(data) : (data.shipName || data.name)) || "선박명 없음";

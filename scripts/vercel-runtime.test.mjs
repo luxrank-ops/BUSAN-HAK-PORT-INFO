@@ -151,7 +151,7 @@ test('Vercel 주간 백업은 영구 GCS 저장을 확인할 때만 성공으로
   assert.match(serverCode, /export function buildFirestoreBackupObjectPath\(date: Date\): string/);
   assert.match(serverCode, /FIRESTORE_BACKUP_BUCKET/);
   assert.match(serverCode, /getStorage\(\)\.bucket\(bucketName\)\.file\(backupObjectPath\)\.save\(payload/);
-  assert.match(serverCode, /const persistent = Boolean\(backupObjectPath\) \|\| !IS_VERCEL/);
+  assert.match(serverCode, /const persistent = Boolean\(backupObjectPath\) \|\| \(!IS_VERCEL && !IS_CLOUDFLARE\)/);
   assert.match(serverCode, /if \(!result\.persistent \|\| result\.error\)/);
   assert.match(serverCode, /result\.error === 'persistent_backup_bucket_not_configured' \? 503 : 500/);
 });

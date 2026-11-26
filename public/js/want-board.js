@@ -9,7 +9,7 @@
  *  · 작성자는 닉네임만 입력하면 됩니다(항만용어 닉네임 자동 기입 + 자유 수정).
  *  · "작성하신 내용은 관리자만 확인할 수 있습니다" 안내를 글쓰기 전에 반드시 노출합니다.
  *  · 미리보기(Preview)를 먼저 보여주고, 확인된 내용만 제출합니다.
- *  · 열람 범위: 작성자 본인 + 관리자(비밀번호 0346)만 볼 수 있습니다.
+ *  · 열람 범위: 작성자 본인 + 관리자만 볼 수 있습니다.
  *  · 댓글(답글)은 관리자만 작성할 수 있습니다.
  *
  * 저장 구조 (firestore.rules 의 want_board 규칙과 반드시 함께 바꿔야 합니다)
@@ -628,7 +628,7 @@
             '</div>',
             '<div class="want-board-form-actions">',
             '  <button type="button" class="action-btn bg-submit" style="flex:2;" onclick="confirmWantPreview()">✓ 제출하기</button>',
-            '  <button type="button" class="action-btn bg-cancel" style="flex:1;" onclick="showWantPreview()">✏️ 수정</button>',
+            '  <button type="button" class="action-btn bg-cancel" style="flex:1;" onclick="closeWantPreview()">✏️ 수정</button>',
             '  <button type="button" class="action-btn bg-cancel" style="flex:1;" onclick="closeWantFormAndPreview()">✕ 취소</button>',
             '</div>',
             '<p class="want-board-hint">※ 제출 후에는 수정·삭제가 불가능할 수 있습니다. 내용을 잘 확인해 주세요.</p>'
@@ -879,7 +879,10 @@
         const adminBar = byId('wantBoardAdminBar');
         const writeBtn = byId('wantBoardWriteBtn');
         if (list) list.innerHTML = `<div class="want-board-empty">${escapeWantHtml(message)}</div>`;
-        if (adminBar) adminBar.classList.add('hidden');
+        if (adminBar) {
+            if (keepWriteButton) renderWantAdminBar();
+            else adminBar.classList.add('hidden');
+        }
         // 권한 오류 안내일 때는 "희망 사항 남기기" 버튼을 숨기지 않습니다.
         if (writeBtn) writeBtn.style.display = keepWriteButton ? '' : 'none';
     }
@@ -887,10 +890,9 @@
     function renderWantMyList() {
         const list = byId('wantBoardList');
         if (!list) return;
-        const adminBar = byId('wantBoardAdminBar');
         const writeBtn = byId('wantBoardWriteBtn');
         if (writeBtn) writeBtn.style.display = '';
-        if (adminBar) adminBar.classList.toggle('hidden', !adminMode);
+        renderWantAdminBar();
 
         if (adminMode) {
             renderWantAdminList();
@@ -983,7 +985,7 @@
     }
 
     /* ==================================================================
-       관리자 영역 (비밀번호 0346 — verifyAdmin() 와 동일 검증)
+       관리자 영역 (verifyAdmin() 과 동일 검증)
        ================================================================== */
 
     async function enterWantAdminMode() {
@@ -1073,7 +1075,9 @@
         const db = getFirestore();
         if (!db) return;
         const area = document.querySelector(`[data-want-reply-for="${itemId}"]`);
-        const raw = area ? area.textContent : '';
+        const raw = area
+            ? (typeof area.value === 'string' ? area.value : (typeof area.innerText === 'string' ? area.innerText : (area.textContent || '')))
+            : '';
         const validation = validateWantReply(raw);
         if (!validation.ok) {
             notifyAlert(validation.errors.join('\n'));
@@ -1081,6 +1085,8 @@
         }
         const uid = boardUid || await ensureBoardAuth();
         try {
+            const parentItem = adminItems.find((entry) => entry.id === itemId);
+            const nextReplyCount = (parentItem && Number.isFinite(parentItem.replyCount) ? parentItem.replyCount : 0) + 1;
             await db.collection(BOARD_COLLECTION).doc(itemId).collection(REPLIES_SUBCOLLECTION).add({
                 itemId,
                 authorUid: uid,
@@ -1090,7 +1096,14 @@
                 createdAtMs: Date.now(),
                 isAdminReply: true
             });
-            if (area) area.textContent = '';
+            await db.collection(BOARD_COLLECTION).doc(itemId).update({
+                status: STATUS_REPLIED,
+                replyCount: nextReplyCount
+            }).catch(() => {});
+            if (area) {
+                if (typeof area.value === 'string') area.value = '';
+                else area.textContent = '';
+            }
             notifyToast('📢 답글이 등록되었습니다.');
             await loadWantAdminItems();
         } catch (error) {
@@ -1163,6 +1176,7 @@
     global.toggleWantForm = toggleWantForm;
     global.refreshWantNick = refreshWantNick;
     global.showWantPreview = showWantPreview;
+    global.closeWantPreview = closeWantPreview;
     global.confirmWantPreview = confirmWantPreview;
     global.closeWantFormAndPreview = closeWantFormAndPreview;
     global.deleteWantItem = deleteWantItem;
