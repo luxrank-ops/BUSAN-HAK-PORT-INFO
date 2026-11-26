@@ -14,6 +14,8 @@
  *
  * 주기 작업은 Cloudflare Cron Triggers(scheduled)가 기존 /api/cron/* 엔드포인트를
  * CRON_SECRET 으로 호출합니다 — Vercel Cron 과 동일한 경로·주기입니다.
+ * 다만 일일 점검('0 19 * * *')은 이 Cloudflare 크론이 단독 실행합니다
+ * (vercel.json 에 같은 경로를 두면 점검 메일이 매일 2통 발송되므로 2026-11-27 제거).
  */
 import http from 'node:http';
 import { handleAsNodeRequest } from 'cloudflare:node';

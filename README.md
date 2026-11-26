@@ -225,6 +225,7 @@ Vercel 에서 동작하는 서버 API(로컬 `npm run dev` 와 동일한 코드�
 | 선박 스케줄 변경 감지 + FCM 푸시 | `/api/cron/schedule-watch` | GitHub Actions `cron-schedule-watch.yml` | 매시간 5분 (UTC) |
 | DB 자가 정리(30일 캐시·14일 읽은 알림 TTL) | `/api/cron/daily-cleanup` | Vercel Cron (`vercel.json` crons) | 매일 03:00 (UTC) |
 | 주간 Firestore 핵심 컬렉션 백업 (`work_logs`, `ships`, `posts`) | `/api/cron/weekly-backup` | Vercel Cron (`vercel.json` crons) | 매주 일요일 00:00 (UTC) · GCS 업로드 성공 시만 성공 |
+| **일일 기능 점검 + 보고서 메일** | **`/api/cron/daily-inspection`** | **Cloudflare Cron Triggers (`wrangler.jsonc` triggers.crons) 단독** | **매일 19:00 (UTC) = 04:00 (KST)** |
 | **주간 자가 점검 · 자가 복구** | **`/api/cron/weekly-self-check`** | **Vercel Cron + GitHub Actions `weekly-self-check.yml` + node-cron** | **매주 월요일 05:00 (KST)** |
 
 > **왜 스케줄 감시만 GitHub Actions 인가** — 운영 Vercel 프로젝트는 **Hobby(무료) 플랜**이라
@@ -258,7 +259,8 @@ Vercel 에서 동작하는 서버 API(로컬 `npm run dev` 와 동일한 코드�
 
 - **자격증명이 없으면 조용히 건너뜁니다**(`email.status: "skipped"`) — 점검 자체와 크론 응답(`ok: true`)은 그대로 유지됩니다.
 - 발송이 실패해도 점검 결과·HTTP 응답은 정상이며, `email.error` 와 `/api/inspection-report` 의 `email` 필드로 확인할 수 있습니다.
-- GitHub Actions(`scripts/daily-inspection.mjs`)는 Vercel Cron 과 같은 시각에 실행되므로 **기본적으로 발송하지 않습니다.** Vercel Cron 을 못 쓰면 저장소 variables 에 `REPORT_EMAIL_ON_CLI=1` 을 두세요(중복 수신 주의).
+- GitHub Actions(`scripts/daily-inspection.mjs`)는 Cloudflare 크론과 같은 시각에 실행되므로 **기본적으로 발송하지 않습니다.** Cloudflare 크론을 못 쓰면 저장소 variables 에 `REPORT_EMAIL_ON_CLI=1` 을 두세요(중복 수신 주의).
+- **메일은 하루 1통**: 일일 점검 크론은 Cloudflare Cron Triggers 에만 등록합니다. `vercel.json` crons 에 같은 경로를 되살리면 04:00·04:01 에 같은 보고서가 2통 발송됩니다.
 - 환경변수별 상세 설정 방법은 [`.env.example`](.env.example) 의 **"9. 일일 점검 보고서 메일"** 절을 참고하세요.
 
 ### 🛠️ 주간 자가 점검 · 자가 복구 (매주 월요일 05:00 KST)
