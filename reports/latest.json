@@ -1,10 +1,10 @@
 {
-  "kstDate": "2026-11-22",
-  "generatedAt": "2026-11-21T23:44:29.919Z",
-  "kstDateTime": "2026-11-22 (일) 08:44:29 KST",
+  "kstDate": "2026-11-27",
+  "generatedAt": "2026-11-26T22:02:59.684Z",
+  "kstDateTime": "2026-11-27 (금) 07:02:59 KST",
   "summary": {
-    "total": 101,
-    "pass": 101,
+    "total": 117,
+    "pass": 117,
     "warn": 0,
     "fail": 0,
     "overall": "PASS"
@@ -27,6 +27,13 @@
     {
       "category": "파일 존재",
       "name": "vercel.json",
+      "status": "PASS",
+      "detail": "파일 존재 확인",
+      "severity": "info"
+    },
+    {
+      "category": "파일 존재",
+      "name": "wrangler.jsonc",
       "status": "PASS",
       "detail": "파일 존재 확인",
       "severity": "info"
@@ -75,6 +82,13 @@
     },
     {
       "category": "파일 존재",
+      "name": "public/_headers",
+      "status": "PASS",
+      "detail": "파일 존재 확인",
+      "severity": "info"
+    },
+    {
+      "category": "파일 존재",
       "name": "public/service-worker.js",
       "status": "PASS",
       "detail": "파일 존재 확인",
@@ -104,6 +118,13 @@
     {
       "category": "파일 존재",
       "name": "public/js/notifications.js",
+      "status": "PASS",
+      "detail": "파일 존재 확인",
+      "severity": "info"
+    },
+    {
+      "category": "파일 존재",
+      "name": "public/js/roster-engine.js",
       "status": "PASS",
       "detail": "파일 존재 확인",
       "severity": "info"
@@ -145,7 +166,49 @@
     },
     {
       "category": "파일 존재",
+      "name": "public/js/domain-migration.js",
+      "status": "PASS",
+      "detail": "파일 존재 확인",
+      "severity": "info"
+    },
+    {
+      "category": "파일 존재",
       "name": "server.ts",
+      "status": "PASS",
+      "detail": "파일 존재 확인",
+      "severity": "info"
+    },
+    {
+      "category": "파일 존재",
+      "name": "worker/index.ts",
+      "status": "PASS",
+      "detail": "파일 존재 확인",
+      "severity": "info"
+    },
+    {
+      "category": "파일 존재",
+      "name": "worker/cf/firestore.ts",
+      "status": "PASS",
+      "detail": "파일 존재 확인",
+      "severity": "info"
+    },
+    {
+      "category": "파일 존재",
+      "name": "worker/cf/google-auth.ts",
+      "status": "PASS",
+      "detail": "파일 존재 확인",
+      "severity": "info"
+    },
+    {
+      "category": "파일 존재",
+      "name": "worker/cf/storage.ts",
+      "status": "PASS",
+      "detail": "파일 존재 확인",
+      "severity": "info"
+    },
+    {
+      "category": "파일 존재",
+      "name": "worker/cf/messaging.ts",
       "status": "PASS",
       "detail": "파일 존재 확인",
       "severity": "info"
@@ -264,7 +327,49 @@
     },
     {
       "category": "API 라우트",
+      "name": "POST /api/emergency-notifications",
+      "status": "PASS",
+      "detail": "라우트 존재",
+      "severity": "info"
+    },
+    {
+      "category": "API 라우트",
+      "name": "PUT /api/emergency-notifications",
+      "status": "PASS",
+      "detail": "라우트 존재",
+      "severity": "info"
+    },
+    {
+      "category": "API 라우트",
       "name": "POST /api/auth-session",
+      "status": "PASS",
+      "detail": "라우트 존재",
+      "severity": "info"
+    },
+    {
+      "category": "API 라우트",
+      "name": "GET /api/roster-ocr-config",
+      "status": "PASS",
+      "detail": "라우트 존재",
+      "severity": "info"
+    },
+    {
+      "category": "API 라우트",
+      "name": "POST /api/roster-ocr-run",
+      "status": "PASS",
+      "detail": "라우트 존재",
+      "severity": "info"
+    },
+    {
+      "category": "API 라우트",
+      "name": "POST /api/visitor-beacon",
+      "status": "PASS",
+      "detail": "라우트 존재",
+      "severity": "info"
+    },
+    {
+      "category": "API 라우트",
+      "name": "GET /api/visitor-logs",
       "status": "PASS",
       "detail": "라우트 존재",
       "severity": "info"
@@ -328,6 +433,13 @@
     {
       "category": "API 라우트",
       "name": "GET /api/cron/weekly-self-check",
+      "status": "PASS",
+      "detail": "라우트 존재",
+      "severity": "info"
+    },
+    {
+      "category": "API 라우트",
+      "name": "GET /api/inspection-report",
       "status": "PASS",
       "detail": "라우트 존재",
       "severity": "info"
@@ -623,7 +735,7 @@
       "category": "보안·인증",
       "name": "firestore.rules 크기",
       "status": "PASS",
-      "detail": "21KB",
+      "detail": "24KB",
       "severity": "info"
     },
     {
