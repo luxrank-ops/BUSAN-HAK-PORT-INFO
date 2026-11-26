@@ -13,7 +13,8 @@ const appJsFiles = [
   'public/js/tab-views.js',
   'public/js/kkung-relay.js',
   'public/js/want-board.js',
-  'public/js/domain-migration.js'
+  'public/js/domain-migration.js',
+  'public/js/rain-float.js'
 ];
 
 const requiredFiles = [

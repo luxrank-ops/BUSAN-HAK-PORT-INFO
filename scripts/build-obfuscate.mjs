@@ -175,7 +175,8 @@ const JS_LOAD_ORDER = [
   'js/tab-views.js',
   'js/kkung-relay.js',
   'js/want-board.js',
-  'js/domain-migration.js'
+  'js/domain-migration.js',
+  'js/rain-float.js'
 ];
 
 /**
