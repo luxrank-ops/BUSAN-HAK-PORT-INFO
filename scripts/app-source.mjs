@@ -15,7 +15,7 @@ import { readFileSync } from 'node:fs';
 
 const ROOT = new URL('..', import.meta.url);
 
-/** index.html 의 전역 스크립트 로드 순서 (notifications → app → 조장 → 선박 → 탭뷰 → 꿍꿍따 → 운영자에게 바란다) */
+/** index.html 의 전역 스크립트 로드 순서 (notifications → app → 조장 → 선박 → 탭뷰 → 꿍꿍따 → 운영자에게 바란다 → 비 예보 플로팅) */
 export const APP_JS_FILES = [
     'public/js/notifications.js',
     'public/js/app.js',
@@ -25,11 +25,12 @@ export const APP_JS_FILES = [
     'public/js/tab-views.js',
     'public/js/kkung-relay.js',
     'public/js/want-board.js',
-    'public/js/domain-migration.js'
+    'public/js/domain-migration.js',
+    'public/js/rain-float.js'
 ];
 
 /** A-1 분리 버전 — index.html 의 ?v= 파라미터 · service-worker 캐시 버전을 함께 올려야 합니다. */
-export const APP_ASSET_VERSION = '2027.85';
+export const APP_ASSET_VERSION = '2027.86';
 
 export function readAppFile(relativePath) {
     return readFileSync(new URL(`./${relativePath}`, ROOT), 'utf8');

@@ -38,7 +38,8 @@ test('전역 스크립트 파일이 모두 존재하고 HTML 에 load 순서대�
         'public/js/ships-board.js',
         'public/js/tab-views.js',
         'public/js/kkung-relay.js',
-        'public/js/domain-migration.js'
+        'public/js/domain-migration.js',
+        'public/js/rain-float.js'
     ];
     const positions = expectedOrder.map((file) => {
         const content = readFileSync(new URL(`../${file}`, import.meta.url), 'utf8');
