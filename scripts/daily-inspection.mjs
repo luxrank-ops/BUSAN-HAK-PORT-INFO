@@ -330,18 +330,46 @@ export async function runInspection(now = new Date()) {
     }
     if (vercelConfig.crons && Array.isArray(vercelConfig.crons)) {
       const cronPaths = vercelConfig.crons.map(c => c.path);
-      const expectedCrons = ['/api/cron/daily-cleanup', '/api/cron/weekly-backup', '/api/cron/daily-inspection'];
+      const expectedCrons = ['/api/cron/daily-cleanup', '/api/cron/weekly-backup'];
       for (const ec of expectedCrons) {
         if (cronPaths.includes(ec)) {
           addCheck('배포 설정', `vercel.json crons ${ec}`, 'PASS', '크론 등록됨');
-        } else if (ec === '/api/cron/daily-inspection') {
-          addCheck('배포 설정', `vercel.json crons ${ec}`, 'WARN', '일일 점검 크론 미등록 (추가 권장)', 'medium');
         } else {
           addCheck('배포 설정', `vercel.json crons ${ec}`, 'FAIL', '크론 누락', 'high');
         }
       }
+      // 2026-11-27: 일일 점검은 Cloudflare Cron Triggers 단독 실행입니다.
+      //   Vercel Cron 까지 같은 시각에 돌면 점검 메일이 매일 2통(04:00·04:01) 발송됩니다.
+      if (cronPaths.includes('/api/cron/daily-inspection')) {
+        addCheck('배포 설정', 'vercel.json crons 일일 점검', 'FAIL', '중복 등록 — Cloudflare 크론과 메일 2통 발송', 'high');
+      } else {
+        addCheck('배포 설정', 'vercel.json crons 일일 점검', 'PASS', '미등록 — Cloudflare 크론 단독 실행(메일 1통)');
+      }
     } else {
       addCheck('배포 설정', 'vercel.json crons', 'FAIL', 'crons 배열 없음', 'high');
+    }
+
+    // Cloudflare Workers Cron Triggers — 일일 점검(0 19 UTC = 04:00 KST) 주 실행 경로
+    try {
+      const wranglerRaw = await readFile(path.join(ROOT, 'wrangler.jsonc'), 'utf8');
+      // JSONC 주석(// ...·/* ... */) 제거 후 파싱 (설정 파일 한정 단순 처리)
+      const wranglerJson = JSON.parse(
+        wranglerRaw.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '')
+      );
+      const cfCrons = Array.isArray(wranglerJson.triggers?.crons) ? wranglerJson.triggers.crons : [];
+      if (cfCrons.includes('0 19 * * *')) {
+        addCheck('배포 설정', 'wrangler.jsonc crons 일일 점검', 'PASS', '0 19 * * * (04:00 KST) 등록됨');
+      } else {
+        addCheck('배포 설정', 'wrangler.jsonc crons 일일 점검', 'FAIL', '일일 점검 크론 누락 — 메일 미발송', 'high');
+      }
+      const workerEntry = await readFile(path.join(ROOT, 'worker', 'index.ts'), 'utf8');
+      if (/'0 19 \* \* \*':\s*'\/api\/cron\/daily-inspection'/.test(workerEntry)) {
+        addCheck('배포 설정', 'worker scheduled 일일 점검 매핑', 'PASS', '/api/cron/daily-inspection 매핑됨');
+      } else {
+        addCheck('배포 설정', 'worker scheduled 일일 점검 매핑', 'FAIL', 'CRON_TASKS 매핑 누락', 'high');
+      }
+    } catch (e) {
+      addCheck('배포 설정', 'wrangler.jsonc crons', 'FAIL', `파싱 실패: ${e.message}`, 'high');
     }
 
     const firebaseConfig = JSON.parse(await readFile(path.join(ROOT, 'firebase.json'), 'utf8'));
@@ -488,7 +516,7 @@ export function generateMarkdownReport(result) {
   md += `> **점검 일시**: ${kstDateTime}\n`;
   md += `> **점검 기준일**: ${kstDate} (KST)\n`;
   md += `> **생성 시각(UTC)**: ${generatedAt}\n`;
-  md += `> **점검 방식**: 자동 점검 (매일 04:00 KST · GitHub Actions + Vercel Cron + 로컬 node-cron)\n\n`;
+  md += `> **점검 방식**: 자동 점검 (매일 04:00 KST · GitHub Actions + Cloudflare Cron Triggers)\n\n`;
   md += `---\n\n`;
   md += `## 0. 점검 요약\n\n`;
   md += `| 구분 | 결과 |\n`;
@@ -541,7 +569,7 @@ export function generateMarkdownReport(result) {
   md += `| 선박 스케줄 변경 감지 | 매시간 (5 * * * *) | Cloudflare Cron Triggers / GitHub Actions(보조) / node-cron | ${checks.find(c => c.name === '스케줄 감시 (매 정각)')?.status === 'PASS' ? '✅ 정상' : '❌ 확인 필요'} |\n`;
   md += `| DB 자가 정리 | 매일 03:00 (0 3 * * *) | Vercel Cron / node-cron | ${checks.find(c => c.name === 'DB 정리 (매일 03시)')?.status === 'PASS' ? '✅ 정상' : '❌ 확인 필요'} |\n`;
   md += `| 주간 백업 | 매주 일요일 00:00 (0 0 * * 0) | Vercel Cron / node-cron | ${checks.find(c => c.name === '주간 백업 (일요일 00시)')?.status === 'PASS' ? '✅ 정상' : '❌ 확인 필요'} |\n`;
-  md += `| **일일 기능 점검** | **매일 04:00 (0 4 * * *)** | **GitHub Actions + Vercel Cron + node-cron** | **${checks.find(c => c.name === '일일 점검 (매일 04시)')?.status === 'PASS' ? '✅ 정상' : '⚠️ 등록 확인'}** |\n\n`;
+  md += `| **일일 기능 점검** | **매일 04:00 (0 19 * * * UTC)** | **GitHub Actions + Cloudflare Cron Triggers** | **${checks.find(c => c.name === '일일 점검 (매일 04시)')?.status === 'PASS' ? '✅ 정상' : '⚠️ 등록 확인'}** |\n\n`;
 
   md += `---\n\n`;
   md += `## 4. 배포 상태\n\n`;
@@ -655,9 +683,9 @@ if (isMain) {
   console.log(`[일일점검] 보고서 저장 완료: reports/daily-inspection-${result.kstDate}.md`);
 
   // 보고서 메일 발송 (기본 OFF)
-  //   · Vercel Cron(/api/cron/daily-inspection)이 같은 시각(19:00 UTC)에 이미 발송하므로
-  //     중복 수신을 막기 위해 CLI 에서는 기본적으로 보내지 않습니다.
-  //   · Vercel Cron 을 못 쓰는 플랜이면 REPORT_EMAIL_ON_CLI=1 로 이쪽에서 발송하세요.
+  //   · 일일 점검 메일은 Cloudflare Cron Triggers(/api/cron/daily-inspection, 19:00 UTC)가
+  //     발송합니다. CLI 에서도 보내면 같은 보고서가 2통 도착하므로 기본적으로 보내지 않습니다.
+  //   · Cloudflare 크론을 못 쓰는 환경이면 REPORT_EMAIL_ON_CLI=1 로 이쪽에서 발송하세요.
   //   · 발송 실패는 CI 판정(FAIL 항목 기준)에 영향을 주지 않습니다.
   if (String(process.env.REPORT_EMAIL_ON_CLI || '0').trim() === '1') {
     try {

@@ -33,6 +33,18 @@ test('기존 매일·매주 크론 4종은 그대로 유지된다', () => {
   }
 });
 
+test('일일 점검 크론은 Cloudflare 단독 — vercel.json 에 중복 등록하지 않는다', () => {
+  // 2026-11-27: vercel.json crons 와 wrangler triggers.crons 가 같은 '0 19 * * *' 로
+  //   동시에 돌면서 매일 04:00:09·04:01:02 에 같은 점검 메일이 2통 발송됐습니다.
+  const vercel = JSON.parse(read('vercel.json'));
+  const paths = (vercel.crons ?? []).map((c) => c.path);
+  assert.ok(
+    !paths.includes('/api/cron/daily-inspection'),
+    'vercel.json 에 일일 점검 크론이 있으면 Cloudflare 크론과 함께 메일이 2통 발송됩니다'
+  );
+  assert.ok(crons.includes('0 19 * * *'), 'Cloudflare 쪽 일일 점검 크론은 유지되어야 합니다');
+});
+
 test('worker scheduled 핸들러가 모든 크론을 /api/cron/* 로 매핑한다', () => {
   const table = worker.slice(worker.indexOf('const CRON_TASKS'), worker.indexOf('}', worker.indexOf('const CRON_TASKS')));
   for (const cron of crons) {

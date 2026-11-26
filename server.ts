@@ -2513,7 +2513,7 @@ export async function runDailyInspection(
     console.warn(`[INSPECTION] FAIL ${fail}건 감지 — 보고서 확인 필요`);
   }
 
-  // 보고서 메일 발송 — 매일 04:00 KST 크론(Vercel Cron · node-cron) 경유로 1회 실행됩니다.
+  // 보고서 메일 발송 — 매일 04:00 KST 크론(Cloudflare Cron Triggers) 경유로 1회 실행됩니다.
   // 자격증명 미설정이면 skipped, 발송 오류여도 점검 결과와 응답은 그대로 반환합니다.
   if (options.sendEmail !== false) {
     await deliverDailyInspectionEmail(result, reportMarkdown ?? generateInspectionMarkdown(result));
@@ -5145,7 +5145,9 @@ const cronWeeklyBackupHandler = async (req: Request, res: Response) => {
 app.get('/api/cron/weekly-backup', cronWeeklyBackupHandler);
 app.get('/api/cron-weekly-backup', cronWeeklyBackupHandler);
 
-// 4) 매일 04시(KST) 기능 점검 및 보고서 자동 생성 — Vercel Cron 매일 19:00 UTC(=04:00 KST)
+// 4) 매일 04시(KST) 기능 점검 및 보고서 자동 생성
+//    — Cloudflare Cron Triggers '0 19 * * *' (매일 19:00 UTC = 04:00 KST) 단독 실행.
+//      vercel.json crons 에 같은 경로를 두면 같은 메일이 2통 발송되므로 등록하지 않습니다.
 const cronDailyInspectionHandler = async (req: Request, res: Response) => {
   if (!authorizeCronRequest(req, res)) return;
   try {
