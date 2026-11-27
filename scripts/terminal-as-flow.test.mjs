@@ -339,10 +339,10 @@ function makeHarness({ failWrites = false, uid = 'anon-1', isAdmin = false, conf
         atob,
         FileReader: class FileReaderStub {
             readAsDataURL(file) {
-                setTimeout(() => {
+                queueMicrotask(() => {
                     this.result = `data:image/jpeg;base64,${Buffer.from(file.name || 'img').toString('base64')}`;
                     if (this.onload) this.onload();
-                }, 0);
+                });
             }
         },
         confirm: () => confirmResult,
@@ -373,7 +373,10 @@ function makeHarness({ failWrites = false, uid = 'anon-1', isAdmin = false, conf
     new vm.Script(script, { filename: 'terminal-as.js' }).runInContext(context);
 
     const el = id => elements.get(id);
-    const tick = () => new Promise(resolve => setTimeout(resolve, 10));
+    const tick = async () => {
+        await new Promise(resolve => setTimeout(resolve, 5));
+        await new Promise(resolve => setTimeout(resolve, 0));
+    };
     const submit = async () => {
         el('tasForm').dispatchEvent({ type: 'submit', preventDefault() {} });
         await tick();
