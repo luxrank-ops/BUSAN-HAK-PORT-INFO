@@ -288,6 +288,7 @@
         const commentCount = isLocal
             ? Math.max(localComments.length, Math.max(0, rawCommentCount))
             : Math.max(0, Math.min(2000, rawCommentCount));
+        const views = Math.max(0, Math.min(100000000, Math.floor(Number(d.views) || 0)));
 
         const status = STATUS_LABEL[d.status] ? d.status : 'received';
         const content = String(d.content || '').slice(0, MAX_CONTENT);
@@ -315,6 +316,7 @@
             likedBy,
             likeCount: Object.keys(likedBy).length,
             commentCount,
+            views,
             localComments,
             timestampMs: millis,
             updatedAtMs,
@@ -1073,6 +1075,47 @@
         return panel;
     }
 
+    function incrementRequestViewCount(entry) {
+        if (!entry || !entry.id) return;
+        const nextViews = Math.max(0, Math.floor(Number(entry.views) || 0)) + 1;
+
+        if (entry.local) {
+            const list = readLocalRequests().map(item => (
+                item && item.id === entry.id
+                    ? { ...item, views: nextViews }
+                    : item
+            ));
+            writeLocalRequests(list);
+            localEntries = list.map(item => normalizeRequest(item.id, item));
+            return;
+        }
+
+        feedEntries = feedEntries.map(item => (
+            item.id === entry.id ? { ...item, views: nextViews } : item
+        ));
+        headEntries = headEntries.map(item => (
+            item.id === entry.id ? { ...item, views: nextViews } : item
+        ));
+
+        const store = asFirestore();
+        if (!store) return;
+        const sendViewUpdate = () => {
+            try {
+                const inc = fieldIncrement(1);
+                void store.collection(COLLECTION).doc(entry.id).update({
+                    views: inc !== null ? inc : nextViews
+                }).catch(() => {});
+            } catch (_) {}
+        };
+        if (resolveCurrentUid()) {
+            sendViewUpdate();
+        } else {
+            void ensureAsAuth().then(user => {
+                if (user || resolveCurrentUid()) sendViewUpdate();
+            });
+        }
+    }
+
     function toggleRequestDetail(entry) {
         if (!entry || !entry.id) return;
         if (openRequestIds.has(entry.id)) {
@@ -1082,6 +1125,7 @@
         } else {
             openRequestIds.add(entry.id);
             openCommentIds.add(entry.id);
+            incrementRequestViewCount(entry);
             if (!entry.local) startCommentSubscription(entry.id);
         }
         renderFeed();
@@ -1126,15 +1170,18 @@
             card.appendChild(gallery);
         }
 
+        const now = Date.now();
         const bottom = el('div', 'tas-feed-bottom');
         bottom.appendChild(el('span', 'tas-feed-author', entry.author));
         if (entry.anonCode) bottom.appendChild(el('span', 'tas-feed-code', `#${entry.anonCode}`));
         if (entry.edited) bottom.appendChild(el('span', 'tas-feed-edited', '· 수정됨'));
         if (isDone && entry.resolvedAtMs) {
-            bottom.appendChild(el('span', 'tas-feed-resolved', `· 완료 ${formatRelativeTime(entry.resolvedAtMs, Date.now())}`));
+            bottom.appendChild(el('span', 'tas-feed-resolved', `· 완료 ${formatRelativeTime(entry.resolvedAtMs, now)}`));
         }
         if (entry.local) bottom.appendChild(el('span', 'tas-feed-local', '📴 이 기기에만 저장'));
-        bottom.appendChild(el('span', 'tas-feed-time', formatRelativeTime(entry.timestampMs, Date.now())));
+        const viewCnt = Math.max(0, Number(entry.views) || 0);
+        bottom.appendChild(el('span', 'tas-feed-views', `👁️ 조회수 ${viewCnt.toLocaleString()}회`));
+        bottom.appendChild(el('span', 'tas-feed-time', formatRelativeTime(entry.timestampMs, now)));
         card.appendChild(bottom);
 
         /* ---- 누구나 누를 수 있는 좋아요 · 댓글 · 조치 완료 + 작성자/관리자 관리 바 ---- */
@@ -1316,6 +1363,11 @@
             if (postLikes > 0) {
                 titleBtn.appendChild(el('span', 'tas-row-pill is-like', `❤️ ${postLikes}`));
             }
+            const rowViews = Math.max(0, Number(entry.views) || 0);
+            const viewPill = el('span', 'tas-row-pill is-view', `👁️ ${rowViews.toLocaleString()}`);
+            viewPill.setAttribute('title', `조회수 ${rowViews.toLocaleString()}회 (중복 조회 포함)`);
+            viewPill.setAttribute('aria-label', `조회수 ${rowViews.toLocaleString()}회`);
+            titleBtn.appendChild(viewPill);
             titleBtn.appendChild(el('span', 'tas-row-arrow', isOpen ? '▲' : '▼'));
             titleBtn.addEventListener('click', () => toggleRequestDetail(entry));
             titleTd.appendChild(titleBtn);

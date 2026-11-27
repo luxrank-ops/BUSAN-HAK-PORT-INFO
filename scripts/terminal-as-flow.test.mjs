@@ -831,3 +831,70 @@ test('카드가 접혀 있어도 새 게시물(24시간 이내)이 등록되면 
     assert.equal(collapsed.el('tasBadge').textContent, 'NEW');
 });
 
+test('요청 행을 열면 목록 배지와 상세 하단에 조회수가 표시되고 열람 시 1씩 증가한다', async () => {
+    const harness = makeHarness({ uid: 'viewer-1' });
+    await harness.tick();
+    harness.db.docs.set('req-view-1', {
+        terminalId: 'hjnc',
+        terminalLabel: '한진(HJNC)',
+        type: 'facility',
+        title: '게이트 차단기 점검',
+        content: '게이트 차단기 작동이 느립니다.',
+        author: '한진***',
+        anonCode: 'V1E9',
+        authorUid: 'writer-1',
+        status: 'received',
+        views: 2,
+        createdAtMs: Date.now()
+    });
+    harness.db.emit();
+    await harness.tick();
+
+    // 1. 초기 목록 행에는 기존 조회수(👁️ 2) 표시
+    assert.match(harness.feedText(), /👁️ 2/);
+
+    // 2. 제목 클릭으로 상세 열기 → 조회수 +1 (👁️ 3, 👁️ 조회수 3회)
+    let titleBtn = findButtons(harness.el('tasFeed'), node => node.className === 'tas-row-title-btn')[0];
+    assert.ok(titleBtn);
+    titleBtn.dispatchEvent({ type: 'click' });
+    await harness.tick();
+    assert.equal(harness.db.docs.get('req-view-1').views, 3);
+    assert.match(harness.feedText(), /👁️ 3/);
+    assert.match(harness.feedText(), /👁️ 조회수 3회/);
+
+    // 3. 다시 눌러 닫을 때는 조회수가 오르지 않음
+    titleBtn = findButtons(harness.el('tasFeed'), node => node.className === 'tas-row-title-btn')[0];
+    titleBtn.dispatchEvent({ type: 'click' });
+    await harness.tick();
+    assert.equal(harness.db.docs.get('req-view-1').views, 3);
+
+    // 4. 다시 열면 4로 증가
+    titleBtn = findButtons(harness.el('tasFeed'), node => node.className === 'tas-row-title-btn')[0];
+    titleBtn.dispatchEvent({ type: 'click' });
+    await harness.tick();
+    assert.equal(harness.db.docs.get('req-view-1').views, 4);
+    assert.match(harness.feedText(), /👁️ 조회수 4회/);
+});
+
+test('오프라인 임시 접수 글도 열람 시 조회수가 증가하고 localStorage에 보존된다', async () => {
+    const offline = makeHarness({ failWrites: true });
+    await offline.tick();
+    offline.el('tasTitle').value = '오프라인 조회수 점검';
+    offline.el('tasContent').value = '로컬 저장 요청입니다';
+    await offline.submit();
+    await offline.tick();
+
+    // 제출 직후 자동 열림 상태에서는 조회수 0 → 닫고 다시 열면 1로 증가
+    assert.match(offline.feedText(), /👁️ 조회수 0회/);
+    let titleBtn = findButtons(offline.el('tasFeed'), node => node.className === 'tas-row-title-btn')[0];
+    titleBtn.dispatchEvent({ type: 'click' });
+    await offline.tick();
+    titleBtn = findButtons(offline.el('tasFeed'), node => node.className === 'tas-row-title-btn')[0];
+    titleBtn.dispatchEvent({ type: 'click' });
+    await offline.tick();
+    assert.match(offline.feedText(), /👁️ 1/);
+    assert.match(offline.feedText(), /👁️ 조회수 1회/);
+    const saved = JSON.parse(offline.storage.get('hakportTerminalAsLocalV1') || '[]');
+    assert.equal(saved[0].views, 1);
+});
+

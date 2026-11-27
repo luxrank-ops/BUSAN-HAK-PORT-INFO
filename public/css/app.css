@@ -3839,6 +3839,12 @@
     white-space: nowrap;
 }
 .tas-row-pill.is-like { background: var(--red-50); color: var(--red-600); }
+.tas-row-pill.is-view {
+    background: var(--n-050);
+    color: var(--n-500);
+    border: 1px solid var(--n-250);
+    font-variant-numeric: tabular-nums;
+}
 .tas-row-arrow { margin-left: auto; color: var(--blue-600); font-size: var(--fs-2); font-weight: var(--fw-black); flex-shrink: 0; }
 .tas-row-date { color: var(--text-sub); font-size: var(--fs-2); font-weight: var(--fw-bold); white-space: nowrap; }
 .tas-detail-row td { padding: var(--sp-8); background: var(--surface-muted); border-bottom: 1.5px solid var(--blue-200); }
@@ -3901,7 +3907,8 @@
 .tas-feed-photo { display: block; width: 88px; height: 88px; object-fit: cover; }
 .tas-feed-bottom { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-6); }
 .tas-feed-author { color: var(--blue-900); font-size: var(--fs-3); font-weight: var(--fw-black); }
-.tas-feed-code, .tas-feed-local, .tas-feed-time { color: var(--text-sub); font-size: var(--fs-2); font-weight: var(--fw-extrabold); }
+.tas-feed-code, .tas-feed-local, .tas-feed-views, .tas-feed-time { color: var(--text-sub); font-size: var(--fs-2); font-weight: var(--fw-extrabold); }
+.tas-feed-views { font-variant-numeric: tabular-nums; }
 .tas-feed-edited { color: var(--blue-700); font-size: var(--fs-2); font-weight: var(--fw-extrabold); }
 .tas-feed-resolved { color: var(--emerald-700); font-size: var(--fs-2); font-weight: var(--fw-extrabold); }
 .tas-feed-time { margin-left: auto; }
@@ -4219,6 +4226,7 @@ body.dark-mode .tas-board-row { border-bottom-color: var(--border-dark); }
 body.dark-mode .tas-board-row:hover, body.dark-mode .tas-board-row.is-open, body.dark-mode .tas-detail-row td { background: var(--n-800); }
 body.dark-mode .tas-row-title-btn, body.dark-mode .tas-detail-title { color: var(--n-075); }
 body.dark-mode .tas-row-pill, body.dark-mode .tas-page-btn { background: var(--n-900); border-color: var(--blue-700); color: var(--blue-100); }
+body.dark-mode .tas-row-pill.is-view { background: var(--n-900); border-color: var(--n-500); color: var(--n-250); }
 body.dark-mode .tas-page-btn.is-active { background: var(--blue-600); color: var(--n-000); }
 body.dark-mode .tas-record, body.dark-mode .tas-feed-item, body.dark-mode .tas-detail-card { background: var(--n-800); border-color: var(--blue-700); }
 body.dark-mode .tas-record > span, body.dark-mode .tas-record strong, body.dark-mode .tas-feed-author { color: var(--blue-100); }
