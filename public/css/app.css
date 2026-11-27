@@ -3491,39 +3491,84 @@
 /* ============================================================
    🛠️ 터미널 시설·정비 수리 / A/S 요청 (2026-11-27)
    ------------------------------------------------------------
-   꿍꿍따 끝말잇기 릴레이를 대체합니다. 푸른색 중간톤
+   꿍꿍따 끝말잇기 릴레이를 대체합니다. 반짝이는 푸른색 중간톤
    (--blue-500 ~ --blue-700) 계열 블럭으로 터미널별 요청을 접수하고,
-   비밀번호 없이 터미널 이름 기반 익명 작성자를 자동 부여합니다.
+   사진 첨부(최대 3장)·본인 글 수정/삭제를 비밀번호 없이 지원합니다.
    ============================================================ */
-#safety-card > .dash-header {
+#safety-card {
+    position: relative;
+    overflow: hidden;
+    border-color: var(--blue-500);
+    box-shadow: 0 4px 14px rgba(37, 99, 235, 0.22), 0 0 14px rgba(59, 130, 246, 0.3);
+    animation: tasCardGlow 2.4s ease-in-out infinite;
+}
+#safety-card::after {
+    content: "";
+    position: absolute;
+    z-index: var(--z-content);
+    top: -45%;
+    left: -85%;
+    width: 38%;
+    height: 190%;
+    background: linear-gradient(
+        115deg,
+        transparent 5%,
+        rgba(255, 255, 255, 0.08) 30%,
+        rgba(255, 255, 255, 0.52) 50%,
+        rgba(255, 255, 255, 0.08) 70%,
+        transparent 95%
+    );
+    transform: skewX(-24deg);
+    pointer-events: none;
+    animation: tasCardShine 3s ease-in-out infinite;
+}
+#safety-card > .dash-header,
+#safety-card.dash-card.expanded > .dash-header {
     flex-direction: row !important;
     justify-content: flex-start !important;
     align-items: center !important;
     min-height: auto !important;
     gap: var(--sp-10) !important;
     padding: var(--sp-14) var(--sp-12) !important;
-    background: linear-gradient(135deg, var(--blue-50), var(--blue-100));
-    border-bottom: 1px solid var(--blue-200);
+    background: linear-gradient(125deg, var(--blue-500), var(--blue-600), var(--sky-600), var(--blue-500)) !important;
+    background-size: 240% 240%;
+    animation: tasBlockShimmer 3.2s ease infinite;
+    border-bottom: 1px solid var(--blue-400) !important;
+}
+#safety-card.dash-card.expanded > .dash-header::after {
+    background: var(--n-000);
+    color: var(--blue-700);
+    border: 1px solid var(--blue-200);
 }
 #safety-card .tas-card-icon {
+    position: relative;
+    z-index: var(--z-content);
     flex: 0 0 44px;
     width: 44px;
     height: 44px;
     margin: 0;
     font-size: var(--fs-16);
-    background: var(--blue-100);
-    border: 1px solid var(--blue-400);
+    background: rgba(255, 255, 255, 0.22);
+    border: 1.5px solid var(--blue-200);
+    box-shadow: 0 0 12px rgba(255, 255, 255, 0.35);
+    animation: tasIconSparkle 1.8s ease-in-out infinite;
 }
-#safety-card .tas-card-heading { flex: 1; min-width: 0; }
+#safety-card .tas-card-heading { position: relative; z-index: var(--z-content); flex: 1; min-width: 0; }
 #safety-card .tas-card-heading .dash-title {
     margin: 0;
-    color: var(--blue-900);
+    color: var(--n-000) !important;
     font-size: var(--fs-10) !important;
     font-weight: var(--fw-black);
     line-height: var(--lh-5);
     text-align: left;
+    text-shadow: 0 1px 2px rgba(10, 27, 63, 0.28);
 }
-#safety-card .tas-card-heading .dash-sub-meta { margin-top: var(--sp-3); text-align: left; }
+#safety-card .tas-card-heading .dash-sub-meta {
+    margin-top: var(--sp-3);
+    color: var(--blue-50) !important;
+    font-weight: var(--fw-bold);
+    text-align: left;
+}
 .tas-card-content { padding: var(--sp-10) !important; }
 .tas-board { display: flex; flex-direction: column; gap: var(--sp-12); color: var(--text-main); }
 .tas-hero {
@@ -3537,8 +3582,30 @@
     border: 1px solid var(--blue-600);
     border-radius: var(--radius-2xl);
     color: var(--n-000);
-    background: linear-gradient(135deg, var(--blue-500), var(--blue-700));
+    background: linear-gradient(135deg, var(--blue-500), var(--blue-600), var(--sky-600), var(--blue-700));
+    background-size: 220% 220%;
     box-shadow: var(--shadow-elev-2);
+    animation: tasBlockShimmer 3.6s ease infinite, tasHeroGlow 2.6s ease-in-out infinite;
+}
+.tas-hero::before {
+    content: "";
+    position: absolute;
+    z-index: var(--z-content);
+    top: -45%;
+    left: -85%;
+    width: 36%;
+    height: 190%;
+    background: linear-gradient(
+        115deg,
+        transparent 5%,
+        rgba(255, 255, 255, 0.08) 30%,
+        rgba(255, 255, 255, 0.45) 50%,
+        rgba(255, 255, 255, 0.08) 70%,
+        transparent 95%
+    );
+    transform: skewX(-24deg);
+    pointer-events: none;
+    animation: tasCardShine 3.4s ease-in-out infinite;
 }
 .tas-hero::after {
     position: absolute;
@@ -3591,9 +3658,38 @@
     background: var(--blue-600);
     box-shadow: var(--shadow-elev-2);
     text-align: center;
+    animation: tasIconSparkle 2s ease-in-out infinite;
 }
 .tas-hero-stamp span { font-size: var(--fs-16); line-height: var(--lh-2); }
 .tas-hero-stamp b { color: var(--blue-50); font-size: var(--fs-3); font-weight: var(--fw-black); }
+@keyframes tasBlockShimmer {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+}
+@keyframes tasCardGlow {
+    0%, 100% {
+        border-color: var(--blue-500);
+        box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2), 0 0 0 rgba(59, 130, 246, 0);
+    }
+    50% {
+        border-color: var(--sky-400);
+        box-shadow: 0 6px 18px rgba(37, 99, 235, 0.36), 0 0 22px rgba(59, 130, 246, 0.58);
+    }
+}
+@keyframes tasHeroGlow {
+    0%, 100% { box-shadow: var(--shadow-elev-2), 0 0 0 rgba(59, 130, 246, 0); }
+    50% { box-shadow: var(--shadow-elev-3), 0 0 18px rgba(96, 165, 250, 0.55); }
+}
+@keyframes tasCardShine {
+    0%, 58% { left: -85%; opacity: 0; }
+    68% { opacity: 0.92; }
+    100% { left: 145%; opacity: 0; }
+}
+@keyframes tasIconSparkle {
+    0%, 100% { transform: scale(1); filter: brightness(1); }
+    50% { transform: scale(1.09); filter: brightness(1.22); }
+}
 .tas-records { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--sp-8); }
 .tas-record {
     display: flex;
@@ -3649,9 +3745,10 @@
 .tas-feed-heading { display: flex; align-items: baseline; justify-content: space-between; gap: var(--sp-6); margin: 0 0 var(--sp-6); }
 .tas-feed-heading > span { color: var(--text-main); font-size: var(--fs-5); font-weight: var(--fw-black); }
 .tas-feed-heading small { color: var(--text-sub); font-size: var(--fs-2); font-weight: var(--fw-bold); text-align: right; }
-.tas-feed { display: flex; flex-direction: column; gap: var(--sp-8); max-height: 340px; overflow-y: auto; margin: 0 0 var(--sp-10); padding: 0; list-style: none; }
+.tas-feed { display: flex; flex-direction: column; gap: var(--sp-8); max-height: 360px; overflow-y: auto; margin: 0 0 var(--sp-10); padding: 0; list-style: none; }
 .tas-feed-item { padding: var(--sp-10) var(--sp-12); border: 1px solid var(--blue-200); border-left: 4px solid var(--blue-500); border-radius: var(--radius-md); background: var(--blue-50); }
 .tas-feed-item.is-local { border-left-color: var(--text-muted); background: var(--surface-muted); }
+.tas-feed-item.is-editing { border-color: var(--blue-600); box-shadow: var(--shadow-focus-ring); }
 .tas-feed-top { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-5); }
 .tas-terminal-badge { padding: var(--sp-3) var(--sp-8); border-radius: var(--radius-pill); color: var(--n-000); background: var(--blue-600); font-size: var(--fs-3); font-weight: var(--fw-black); white-space: nowrap; }
 .tas-type-badge { color: var(--blue-800); font-size: var(--fs-3); font-weight: var(--fw-extrabold); white-space: nowrap; }
@@ -3659,16 +3756,94 @@
 .tas-status-badge.is-processing { color: var(--orange-700); border-color: var(--orange-300); background: var(--orange-50); }
 .tas-status-badge.is-done { color: var(--emerald-700); border-color: var(--emerald-300); background: var(--emerald-50); }
 .tas-feed-content { margin: var(--sp-8) 0; color: var(--text-main); font-size: var(--fs-8); font-weight: var(--fw-bold); line-height: var(--lh-8); white-space: pre-wrap; word-break: keep-all; }
+.tas-feed-photos { display: flex; flex-wrap: wrap; gap: var(--sp-6); margin: 0 0 var(--sp-8); }
+.tas-feed-photo-btn {
+    padding: 0;
+    border: 1px solid var(--blue-300);
+    border-radius: var(--radius-md);
+    background: var(--card-bg);
+    overflow: hidden;
+    cursor: pointer;
+    touch-action: manipulation;
+    transition: transform var(--dur-fast) ease, border-color var(--dur-fast) ease;
+}
+.tas-feed-photo-btn:hover { transform: scale(1.03); border-color: var(--blue-600); }
+.tas-feed-photo { display: block; width: 88px; height: 88px; object-fit: cover; }
 .tas-feed-bottom { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-6); }
 .tas-feed-author { color: var(--blue-900); font-size: var(--fs-3); font-weight: var(--fw-black); }
 .tas-feed-code, .tas-feed-local, .tas-feed-time { color: var(--text-sub); font-size: var(--fs-2); font-weight: var(--fw-extrabold); }
+.tas-feed-edited { color: var(--blue-700); font-size: var(--fs-2); font-weight: var(--fw-extrabold); }
 .tas-feed-time { margin-left: auto; }
+.tas-item-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-end;
+    gap: var(--sp-6);
+    margin-top: var(--sp-8);
+    padding-top: var(--sp-8);
+    border-top: 1px dashed var(--blue-200);
+}
+.tas-admin-status {
+    margin-right: auto;
+    min-height: 36px;
+    padding: var(--sp-4) var(--sp-8);
+    border: 1px solid var(--blue-300);
+    border-radius: var(--radius-sm);
+    background: var(--card-bg);
+    color: var(--blue-900);
+    font-size: var(--fs-4);
+    font-weight: var(--fw-black);
+    cursor: pointer;
+}
+.tas-item-btn {
+    min-height: 36px;
+    padding: var(--sp-5) var(--sp-10);
+    border: 1px solid var(--blue-300);
+    border-radius: var(--radius-sm);
+    background: var(--n-000);
+    color: var(--blue-800);
+    font-size: var(--fs-4);
+    font-weight: var(--fw-black);
+    cursor: pointer;
+    touch-action: manipulation;
+    transition: background var(--dur-fast) ease, border-color var(--dur-fast) ease;
+}
+.tas-item-btn.is-edit:hover { background: var(--blue-100); border-color: var(--blue-500); }
+.tas-item-btn.is-delete { border-color: var(--red-300); background: var(--red-50); color: var(--red-600); }
+.tas-item-btn.is-delete:hover { background: var(--red-100); }
 .tas-feed-empty { padding: var(--sp-12); border: 1px dashed var(--blue-300); border-radius: var(--radius-md); color: var(--text-sub); background: var(--surface-muted); font-size: var(--fs-5); font-weight: var(--fw-bold); text-align: center; }
 .tas-status { margin: 0 0 var(--sp-10); padding: var(--sp-8) var(--sp-10); border-radius: var(--radius-md); font-size: var(--fs-5); font-weight: var(--fw-extrabold); line-height: var(--lh-7); word-break: keep-all; }
 .tas-status.is-neutral { color: var(--blue-800); background: var(--blue-50); }
 .tas-status.is-success { color: var(--emerald-700); background: var(--emerald-50); }
 .tas-status.is-error { color: var(--danger); background: var(--red-50); }
 .tas-composer { display: flex; flex-direction: column; gap: var(--sp-10); padding: var(--sp-12); border: 1px solid var(--blue-300); border-radius: var(--radius-lg); background: var(--blue-50); }
+.tas-edit-banner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--sp-8);
+    padding: var(--sp-8) var(--sp-10);
+    border: 1px solid var(--blue-400);
+    border-radius: var(--radius-md);
+    background: var(--blue-100);
+    color: var(--blue-900);
+    font-size: var(--fs-5);
+    font-weight: var(--fw-black);
+}
+.tas-edit-banner[hidden] { display: none; }
+.tas-cancel-edit-btn {
+    min-height: 36px;
+    padding: var(--sp-4) var(--sp-10);
+    border: 1px solid var(--blue-400);
+    border-radius: var(--radius-pill);
+    background: var(--n-000);
+    color: var(--blue-800);
+    font-size: var(--fs-4);
+    font-weight: var(--fw-black);
+    cursor: pointer;
+    touch-action: manipulation;
+}
 .tas-composer-row { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: var(--sp-8); }
 .tas-field { display: flex; flex-direction: column; gap: var(--sp-5); min-width: 0; }
 .tas-field > span { color: var(--blue-900); font-size: var(--fs-5); font-weight: var(--fw-black); }
@@ -3688,6 +3863,79 @@
 .tas-textarea { resize: vertical; min-height: 88px; }
 .tas-select:focus, .tas-textarea:focus { outline: 3px solid var(--blue-300); border-color: var(--blue-600); }
 .tas-select::placeholder, .tas-textarea::placeholder { color: var(--text-sub); font-size: var(--fs-5); font-weight: var(--fw-semibold); }
+.tas-photo-field { display: flex; flex-direction: column; gap: var(--sp-8); }
+.tas-photo-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--sp-6);
+    min-height: 44px;
+    padding: var(--sp-8) var(--sp-12);
+    border: 1.5px dashed var(--blue-400);
+    border-radius: var(--radius-md);
+    background: var(--card-bg);
+    color: var(--blue-700);
+    font-size: var(--fs-6);
+    font-weight: var(--fw-black);
+    cursor: pointer;
+    touch-action: manipulation;
+    transition: background var(--dur-fast) ease, border-color var(--dur-fast) ease;
+}
+.tas-photo-btn small { color: var(--text-sub); font-size: var(--fs-4); font-weight: var(--fw-bold); }
+.tas-photo-btn:hover { border-color: var(--blue-600); background: var(--blue-100); }
+.tas-photo-preview { display: flex; flex-wrap: wrap; gap: var(--sp-8); }
+.tas-photo-preview[hidden] { display: none; }
+.tas-photo-thumb-wrap {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--sp-3);
+    width: 84px;
+    padding: var(--sp-4);
+    border: 1px solid var(--blue-300);
+    border-radius: var(--radius-md);
+    background: var(--card-bg);
+}
+.tas-photo-thumb { width: 74px; height: 74px; object-fit: cover; border-radius: var(--radius-sm); cursor: pointer; display: block; }
+.tas-photo-placeholder {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 74px;
+    height: 74px;
+    border-radius: var(--radius-sm);
+    background: var(--blue-50);
+    font-size: var(--fs-14);
+}
+.tas-photo-tag {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--text-sub);
+    font-size: var(--fs-2);
+    font-weight: var(--fw-bold);
+}
+.tas-photo-remove {
+    position: absolute;
+    top: -6px;
+    right: -6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    padding: 0;
+    border: 1.5px solid var(--n-000);
+    border-radius: var(--radius-circle);
+    background: var(--red-600);
+    color: var(--n-000);
+    font-size: var(--fs-6);
+    font-weight: var(--fw-black);
+    line-height: var(--lh-1);
+    cursor: pointer;
+}
 .tas-composer-foot { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: var(--sp-8); }
 .tas-author-preview { margin: 0; color: var(--text-sub); font-size: var(--fs-5); font-weight: var(--fw-bold); }
 .tas-author-preview strong { color: var(--blue-900); font-size: var(--fs-9); font-weight: var(--fw-black); }
@@ -3714,15 +3962,25 @@
 .tas-footnote { margin: 0; color: var(--text-sub); font-size: var(--fs-2); font-weight: var(--fw-semibold); text-align: center; word-break: keep-all; }
 .tas-footnote b { color: var(--text-main); font-weight: var(--fw-black); }
 .tas-board button:focus-visible, .tas-board select:focus-visible, .tas-board textarea:focus-visible { outline: 3px solid var(--blue-300); outline-offset: 2px; }
-body.dark-mode #safety-card > .dash-header { background: linear-gradient(135deg, var(--blue-900), var(--navy-700)); border-bottom-color: var(--blue-700); }
-body.dark-mode #safety-card .tas-card-heading .dash-title { color: var(--blue-100); }
-body.dark-mode #safety-card .tas-card-icon { background: var(--blue-800); border-color: var(--blue-400); }
+body.dark-mode #safety-card { border-color: var(--blue-400); }
+body.dark-mode #safety-card > .dash-header,
+body.dark-mode #safety-card.dash-card.expanded > .dash-header {
+    background: linear-gradient(125deg, var(--blue-600), var(--blue-800), var(--sky-700), var(--blue-600)) !important;
+    background-size: 240% 240%;
+    border-bottom-color: var(--blue-500) !important;
+}
+body.dark-mode #safety-card .tas-card-heading .dash-title { color: var(--n-000) !important; }
+body.dark-mode #safety-card .tas-card-heading .dash-sub-meta { color: var(--blue-100) !important; }
+body.dark-mode #safety-card .tas-card-icon { background: rgba(255, 255, 255, 0.16); border-color: var(--blue-400); }
 body.dark-mode .tas-screen, body.dark-mode .tas-composer { background: var(--surface-dark); border-color: var(--border-dark); }
 body.dark-mode .tas-record, body.dark-mode .tas-feed-item { background: var(--n-800); border-color: var(--blue-700); }
 body.dark-mode .tas-record > span, body.dark-mode .tas-record strong, body.dark-mode .tas-feed-author { color: var(--blue-100); }
 body.dark-mode .tas-feed-content { color: var(--n-075); }
-body.dark-mode .tas-field > span, body.dark-mode .tas-author-preview strong { color: var(--blue-200); }
-body.dark-mode .tas-select, body.dark-mode .tas-textarea { background: var(--n-900); border-color: var(--border-dark); color: var(--n-075); }
+body.dark-mode .tas-field > span, body.dark-mode .tas-author-preview strong, body.dark-mode .tas-feed-edited { color: var(--blue-200); }
+body.dark-mode .tas-select, body.dark-mode .tas-textarea, body.dark-mode .tas-photo-btn, body.dark-mode .tas-photo-thumb-wrap, body.dark-mode .tas-admin-status { background: var(--n-900); border-color: var(--border-dark); color: var(--n-075); }
+body.dark-mode .tas-edit-banner { background: var(--blue-900); border-color: var(--blue-600); color: var(--blue-100); }
+body.dark-mode .tas-cancel-edit-btn, body.dark-mode .tas-item-btn.is-edit { background: var(--n-800); border-color: var(--blue-500); color: var(--blue-100); }
+body.dark-mode .tas-item-btn.is-delete { background: rgba(220, 38, 38, 0.18); border-color: var(--red-500); color: var(--red-300); }
 body.dark-mode .tas-status.is-neutral, body.dark-mode .tas-live-badge, body.dark-mode .tas-filter-chip { background: var(--blue-900); border-color: var(--blue-700); color: var(--blue-100); }
 body.dark-mode .tas-filter-chip.is-active { background: var(--blue-600); color: var(--n-000); }
 @media (max-width: 420px) {
@@ -3735,12 +3993,16 @@ body.dark-mode .tas-filter-chip.is-active { background: var(--blue-600); color: 
     .tas-record > span { font-size: var(--fs-3); }
     .tas-record strong { font-size: var(--fs-10); }
     .tas-feed { max-height: 260px; }
+    .tas-feed-photo { width: 72px; height: 72px; }
     .tas-composer-row { grid-template-columns: 1fr; }
     .tas-submit-button { flex: 1 1 100%; }
 }
 @media (prefers-reduced-motion: reduce) {
-    .tas-submit-button, .tas-filter-chip { transition: none; }
-    .tas-submit-button:active, .tas-filter-chip:hover { transform: none; }
+    #safety-card, #safety-card::after, #safety-card > .dash-header, #safety-card.dash-card.expanded > .dash-header,
+    #safety-card .tas-card-icon, .tas-hero, .tas-hero::before, .tas-hero-stamp { animation: none !important; }
+    #safety-card::after, .tas-hero::before { display: none; }
+    .tas-submit-button, .tas-filter-chip, .tas-feed-photo-btn { transition: none; }
+    .tas-submit-button:active, .tas-filter-chip:hover, .tas-feed-photo-btn:hover { transform: none; }
 }
 
 /* ============================================================

@@ -80,14 +80,46 @@ test('요청 검증: 터미널·종류·내용(2~500자)을 모두 확인한다'
     assert.equal(core.validateRequest(null).ok, false);
 });
 
+test('사진 검증·안전 URL 판별·중복/개수 제한이 안전하게 동작한다', () => {
+    assert.equal(core.maxPhotos, 3);
+    assert.equal(core.maxPhotoBytes, 10 * 1024 * 1024);
+    assert.equal(core.localMineKey, 'hakportTerminalAsMineV1');
+    assert.equal(core.isSafePhotoUrl('https://firebasestorage.googleapis.com/v0/b/x/o/p1.jpg'), true);
+    assert.equal(core.isSafePhotoUrl('http://localhost:9199/v0/b/x/o/p1.jpg'), true);
+    assert.equal(core.isSafePhotoUrl('javascript:alert(1)'), false);
+    assert.equal(core.isSafePhotoUrl('data:image/jpeg;base64,abc'), false);
+
+    assert.deepEqual(
+        [...core.normalizeImageUrls([
+            'https://a.com/1.jpg',
+            'javascript:alert(1)',
+            'https://a.com/1.jpg',
+            'https://a.com/2.jpg',
+            'https://a.com/3.jpg',
+            'https://a.com/4.jpg'
+        ])],
+        ['https://a.com/1.jpg', 'https://a.com/2.jpg', 'https://a.com/3.jpg']
+    );
+
+    assert.equal(core.validatePhotoFile({ type: 'image/jpeg', size: 1024 }).ok, true);
+    assert.equal(core.validatePhotoFile({ name: 'site.webp', type: '', size: 1024 }).ok, true);
+    assert.equal(core.validatePhotoFile({ type: 'application/pdf', size: 1024 }).code, 'type');
+    assert.equal(core.validatePhotoFile({ type: 'image/png', size: 11 * 1024 * 1024 }).code, 'size');
+});
+
 test('문서 정규화·터미널 필터·최신순 정렬·상대 시간이 규칙과 같은 모양으로 동작한다', () => {
     const doc = core.normalizeRequest('r1', {
         terminalId: 'dgt', type: 'repair', content: '크레인 와이어 점검 필요',
-        author: '동원***', anonCode: 'B4M8', status: 'processing', createdAtMs: 1000
+        author: '동원***', authorUid: 'uid-1', anonCode: 'B4M8', status: 'processing',
+        imageUrls: ['https://a.com/1.jpg', 'javascript:alert(1)'],
+        createdAtMs: 1000, updatedAtMs: 1500
     });
     assert.equal(doc.terminalLabel, '동원(DGT)');
     assert.equal(doc.typeLabel, '정비·수리');
     assert.equal(doc.statusLabel, '처리 중');
+    assert.equal(doc.authorUid, 'uid-1');
+    assert.deepEqual([...doc.imageUrls], ['https://a.com/1.jpg']);
+    assert.equal(doc.updatedAtMs, 1500);
     assert.equal(doc.timestampMs, 1000);
     assert.equal(doc.local, false);
 
@@ -116,16 +148,20 @@ test('문서 정규화·터미널 필터·최신순 정렬·상대 시간이 규
     assert.equal(core.formatRelativeTime(now - 2 * 86_400_000, now), '2일 전');
 });
 
-test('HTML 카드: 터미널 선택·종류·내용 입력과 익명 미리보기가 있고 비밀번호 입력이 없다', () => {
+test('HTML 카드: 터미널 선택·종류·내용·사진 첨부·수정 배너와 익명 미리보기가 있고 비밀번호 입력이 없다', () => {
     const start = html.indexOf('<div id="safety-card"');
     const end = html.indexOf('<div id="guide-card"', start);
     assert.ok(start >= 0 && end > start, 'safety-card 블록을 찾지 못했습니다');
     const card = html.slice(start, end);
     assert.match(card, /터미널 시설·정비 A\/S 요청/);
     assert.match(card, /id="terminalAsBoard"/);
+    assert.match(card, /id="tasEditBanner"/, '수정 안내 배너가 필요합니다');
+    assert.match(card, /id="tasCancelEdit"/, '수정 취소 버튼이 필요합니다');
     assert.match(card, /id="tasTerminalSelect"/, '터미널 선택이 필요합니다');
     assert.match(card, /id="tasTypeSelect"/, '요청 종류 선택이 필요합니다');
     assert.match(card, /id="tasContent"/, '요청 내용 입력이 필요합니다');
+    assert.match(card, /id="tasPhotoInput"/, '사진 첨부 입력이 필요합니다');
+    assert.match(card, /id="tasPhotoPreview"/, '사진 미리보기 영역이 필요합니다');
     assert.match(card, /id="tasAuthorPreview"/, '자동 생성 작성자 미리보기가 필요합니다');
     assert.match(card, /id="tasAnonCode"/, '랜덤 접수번호 표시가 필요합니다');
     assert.match(card, /id="tasFeed"/);
@@ -135,32 +171,47 @@ test('HTML 카드: 터미널 선택·종류·내용 입력과 익명 미리보�
     assert.doesNotMatch(card, /kkung|꿍꿍|끝말잇기|릴레이/, '옛 릴레이 문구가 남아 있으면 안 됩니다');
 });
 
-test('모듈은 Firestore terminal_as_requests 를 실시간 구독하고 익명 인증 후 같은 ID로 저장한다', () => {
+test('모듈은 Firestore terminal_as_requests 와 Storage terminal-as 를 연동하고 수정·삭제를 지원한다', () => {
     assert.equal(core.collection, 'terminal_as_requests');
     assert.match(script, /orderBy\('createdAtMs', 'desc'\)/);
     assert.match(script, /onSnapshot/);
     assert.match(script, /ensureAsAuth/);
     assert.match(script, /ensureAnonymousAuth/);
-    assert.match(script, /\.doc\(docId\)\.set\(toFirestoreDoc\(entry\)\)/);
+    assert.match(script, /\.doc\(docId\)\.set\(toFirestoreDoc\(onlineEntry\)\)/);
+    assert.match(script, /\.doc\(targetId\)\.update\(/);
+    assert.match(script, /\.doc\(entry\.id\)\.delete\(\)/);
+    assert.match(script, /terminal-as\//);
     assert.match(script, /hakportTerminalAsLocalV1/);
+    assert.match(script, /hakportTerminalAsMineV1/);
     assert.doesNotMatch(script, /kkung_chain|KkungKkungTtaCore|kkungNick|HANGUL_TRIPLE/);
 });
 
-test('블럭 색은 푸른색 중간톤 토큰만 쓰고 옛 릴레이 스타일이 남아 있지 않다', () => {
-    assert.match(css, /\.tas-hero \{[^}]*background: linear-gradient\(135deg, var\(--blue-500\), var\(--blue-700\)\)/);
+test('블럭 색은 반짝이는 푸른색 중간톤 토큰만 쓰고 옛 릴레이 스타일이 남아 있지 않다', () => {
+    assert.match(css, /#safety-card \{[^}]*animation: tasCardGlow/);
+    assert.match(css, /#safety-card::after \{[^}]*animation: tasCardShine/);
+    assert.match(css, /#safety-card > \.dash-header,[\s\S]*?linear-gradient\(125deg, var\(--blue-500\), var\(--blue-600\), var\(--sky-600\), var\(--blue-500\)\)/);
+    assert.match(css, /\.tas-hero \{[^}]*background: linear-gradient\(135deg, var\(--blue-500\), var\(--blue-600\), var\(--sky-600\), var\(--blue-700\)\)/);
+    assert.match(css, /\.tas-hero::before \{[^}]*animation: tasCardShine/);
+    assert.match(css, /@keyframes tasBlockShimmer/);
+    assert.match(css, /@keyframes tasCardGlow/);
+    assert.match(css, /@keyframes tasCardShine/);
     assert.match(css, /\.tas-submit-button \{[^}]*background: linear-gradient\(135deg, var\(--blue-600\), var\(--blue-800\)\)/);
     assert.match(css, /\.tas-terminal-badge \{[^}]*background: var\(--blue-600\)/);
     assert.doesNotMatch(css, /\.kkung-/, '옛 릴레이 CSS 선택자가 남아 있으면 안 됩니다');
     assert.doesNotMatch(css, /#safety-card \.kkung/);
 });
 
-test('Firestore 규칙: 익명 로그인 접수 + 관리자만 수정·삭제, 옛 릴레이 규칙이 없다', () => {
+test('Firestore 규칙: 익명 로그인 접수·사진 3장·본인/관리자 수정/삭제, 옛 릴레이 규칙이 없다', () => {
     assert.match(rules, /match \/terminal_as_requests\/\{requestId\} \{/);
     assert.match(rules, /allow get, list: if isSignedIn\(\);/);
     assert.match(rules, /allow create: if isSignedIn\(\) && isValidId\(requestId\) && isValidAsRequest\(incoming\(\)\)/);
-    assert.match(rules, /allow update, delete: if isAdmin\(\);/);
+    assert.match(rules, /allow update: if isSignedIn\(\) && isValidId\(requestId\) && \(\s*isAdmin\(\) \|\|\s*isValidAsAuthorUpdate\(\)\s*\);/);
+    assert.match(rules, /allow delete: if isAdmin\(\) \|\| isAsAuthor\(\);/);
+    assert.match(rules, /function isAsAuthor\(\) \{/);
     assert.match(rules, /function isValidAsTerminalId\(val\) \{/);
     assert.match(rules, /'hjnc', 'bnct', 'dgt', 'bct', 'pnc', 'hpnt', 'pnit', 'bptc', 'hbct'/);
+    assert.match(rules, /function isValidAsImageUrls\(data\) \{/);
+    assert.match(rules, /function isValidAsAuthorUpdate\(\) \{/);
     assert.match(rules, /data\.content is string && data\.content\.size\(\) >= 2 && data\.content\.size\(\) <= 500/);
     assert.match(rules, /incoming\(\)\.status == 'received'/);
     assert.doesNotMatch(rules, /match \/kkung_chain\//, '옛 릴레이 규칙이 남아 있으면 안 됩니다');

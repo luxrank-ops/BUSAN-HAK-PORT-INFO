@@ -123,21 +123,25 @@ test('규칙 파일은 기본 차단(Default Deny) 구조를 유지한다', () =
     assert.match(rules, /rules_version = '2';/);
 });
 
-test('터미널 시설·정비 A/S 요청(terminal_as_requests)은 익명 접수만 허용하고 수정·삭제는 관리자 전용이다', () => {
+test('터미널 시설·정비 A/S 요청(terminal_as_requests)은 익명 접수·사진 3장·본인 수정/삭제·관리자 상태관리를 허용한다', () => {
     const board = blockBody(rules, 'match /terminal_as_requests/{requestId}');
-    // 비밀번호·닉네임 입력 없이 자동 익명 인증(isSignedIn)만으로 접수합니다.
+    // 비밀번호·닉네임 입력 없이 자동 익명 인증(isSignedIn)만으로 접수하고, 본인 UID(isAsAuthor) 또는 관리자만 수정·삭제합니다.
     assert.match(board, /allow get, list: if isSignedIn\(\);/);
     assert.match(board, /allow create: if isSignedIn\(\) && isValidId\(requestId\) && isValidAsRequest\(incoming\(\)\)/);
     assert.match(board, /incoming\(\)\.status == 'received'/, '일반 접수는 접수 상태로만 만들 수 있어야 합니다');
-    assert.match(board, /allow update, delete: if isAdmin\(\);/, '접수 후 수정·삭제(처리 상태 변경·블라인드 정리)는 관리자만 가능해야 합니다');
+    assert.match(board, /allow update: if isSignedIn\(\) && isValidId\(requestId\) && \(\s*isAdmin\(\) \|\|\s*isValidAsAuthorUpdate\(\)\s*\);/);
+    assert.match(board, /allow delete: if isAdmin\(\) \|\| isAsAuthor\(\);/);
     assert.doesNotMatch(board, /allow create, update, delete: if isSignedIn\(\)/);
-    assert.doesNotMatch(board, /allow update: if isSignedIn\(\)/, '작성자도 접수 글을 고칠 수 없어야 합니다');
+    assert.doesNotMatch(board, /allow update: if isSignedIn\(\)\s*;/, '타인의 접수 글은 고칠 수 없어야 합니다');
 
-    // 터미널 9개·요청 종류·길이 제한이 규칙에 고정되어 임의 필드 주입을 막습니다.
+    // 터미널 9개·요청 종류·사진 3장·길이 제한·본인 수정 잠금 필드가 규칙에 고정되어 임의 필드 주입을 막습니다.
+    assert.match(rules, /function isAsAuthor\(\) \{/);
     assert.match(rules, /function isValidAsTerminalId\(val\) \{/);
     assert.match(rules, /'hjnc', 'bnct', 'dgt', 'bct', 'pnc', 'hpnt', 'pnit', 'bptc', 'hbct'/);
     assert.match(rules, /function isValidAsType\(val\) \{/);
-    assert.match(rules, /data\.keys\(\)\.hasOnly\(\['terminalId', 'terminalLabel', 'type', 'content', 'author', 'anonCode', 'status', 'createdAtMs', 'createdAt'\]\)/);
+    assert.match(rules, /function isValidAsImageUrls\(data\) \{/);
+    assert.match(rules, /function isValidAsAuthorUpdate\(\) \{/);
+    assert.match(rules, /data\.keys\(\)\.hasOnly\(\[\s*'terminalId',\s*'terminalLabel',\s*'type',\s*'content',\s*'author',\s*'anonCode',\s*'authorUid',\s*'imageUrls',\s*'status',\s*'createdAtMs',\s*'createdAt',\s*'updatedAtMs',\s*'updatedAt'\s*\]\)/);
     assert.match(rules, /data\.content is string && data\.content\.size\(\) >= 2 && data\.content\.size\(\) <= 500/);
     assert.match(rules, /data\.author is string && data\.author\.size\(\) >= 2 && data\.author\.size\(\) <= 40/);
 
