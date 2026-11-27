@@ -66,17 +66,33 @@ test('작성자는 입력 없이 터미널 이름 + 마스킹으로 자동 생�
     assert.equal(core.makeAnonCode(() => 0), 'AAAA');
 });
 
-test('요청 검증: 터미널·종류·내용(2~500자)을 모두 확인한다', () => {
-    const valid = core.validateRequest({ terminalId: 'hjnc', type: 'as', content: '  3번 게이트 조명이 꺼졌어요  ' });
+test('요청 검증: 터미널·종류·제목(2~80자)·내용(2~500자)을 확인하고 기존 글 제목 폴백을 만든다', () => {
+    const valid = core.validateRequest({
+        terminalId: 'hjnc',
+        type: 'as',
+        title: '  3번 게이트 조명 고장  ',
+        content: '  3번 게이트 조명이 꺼졌어요  '
+    });
     assert.equal(valid.ok, true);
     assert.equal(valid.terminalId, 'hjnc');
     assert.equal(valid.type, 'as');
+    assert.equal(valid.title, '3번 게이트 조명 고장');
     assert.equal(valid.content, '3번 게이트 조명이 꺼졌어요');
-    assert.equal(core.validateRequest({ terminalId: '', type: 'as', content: '내용입니다' }).code, 'terminal');
-    assert.equal(core.validateRequest({ terminalId: 'hjnc', type: 'nope', content: '내용입니다' }).code, 'type');
-    assert.equal(core.validateRequest({ terminalId: 'hjnc', type: 'as', content: '   ' }).code, 'empty');
-    assert.equal(core.validateRequest({ terminalId: 'hjnc', type: 'as', content: '가' }).code, 'short');
-    assert.equal(core.validateRequest({ terminalId: 'hjnc', type: 'as', content: '가'.repeat(501) }).code, 'long');
+
+    // title 생략 시 내용 첫 줄로 제목 자동 추출
+    const derived = core.validateRequest({ terminalId: 'hjnc', type: 'as', content: '첫 줄 제목입니다\n세부 내용입니다' });
+    assert.equal(derived.ok, true);
+    assert.equal(derived.title, '첫 줄 제목입니다');
+    assert.equal(core.deriveTitleFromContent('가'.repeat(60)), `${'가'.repeat(44)}…`);
+
+    assert.equal(core.validateRequest({ terminalId: '', type: 'as', title: '제목', content: '내용입니다' }).code, 'terminal');
+    assert.equal(core.validateRequest({ terminalId: 'hjnc', type: 'nope', title: '제목', content: '내용입니다' }).code, 'type');
+    assert.equal(core.validateRequest({ terminalId: 'hjnc', type: 'as', title: '   ', content: '내용입니다' }).code, 'title_empty');
+    assert.equal(core.validateRequest({ terminalId: 'hjnc', type: 'as', title: '가', content: '내용입니다' }).code, 'title_short');
+    assert.equal(core.validateRequest({ terminalId: 'hjnc', type: 'as', title: '가'.repeat(81), content: '내용입니다' }).code, 'title_long');
+    assert.equal(core.validateRequest({ terminalId: 'hjnc', type: 'as', title: '제목', content: '   ' }).code, 'empty');
+    assert.equal(core.validateRequest({ terminalId: 'hjnc', type: 'as', title: '제목', content: '가' }).code, 'short');
+    assert.equal(core.validateRequest({ terminalId: 'hjnc', type: 'as', title: '제목', content: '가'.repeat(501) }).code, 'long');
     assert.equal(core.validateRequest(null).ok, false);
 });
 
@@ -109,12 +125,15 @@ test('사진 검증·안전 URL 판별·중복/개수 제한이 안전하게 동
 
 test('문서 정규화·터미널 필터·최신순 정렬·상대 시간이 규칙과 같은 모양으로 동작한다', () => {
     const doc = core.normalizeRequest('r1', {
-        terminalId: 'dgt', type: 'repair', content: '크레인 와이어 점검 필요',
+        terminalId: 'dgt', type: 'repair', title: '크레인 와이어 점검', content: '크레인 와이어 점검 필요',
         author: '동원***', authorUid: 'uid-1', anonCode: 'B4M8', status: 'processing',
         imageUrls: ['https://a.com/1.jpg', 'javascript:alert(1)'],
         createdAtMs: 1000, updatedAtMs: 1500
     });
+    assert.equal(doc.terminalShort, '동원');
     assert.equal(doc.terminalLabel, '동원(DGT)');
+    assert.equal(doc.title, '크레인 와이어 점검');
+    assert.equal(doc.hasExplicitTitle, true);
     assert.equal(doc.typeLabel, '정비·수리');
     assert.equal(doc.statusLabel, '처리 중');
     assert.equal(doc.authorUid, 'uid-1');
@@ -123,13 +142,15 @@ test('문서 정규화·터미널 필터·최신순 정렬·상대 시간이 규
     assert.equal(doc.timestampMs, 1000);
     assert.equal(doc.local, false);
 
-    // Firestore Timestamp 형태(createdAt.toMillis)도 읽습니다.
+    // 제목이 없는 기존 글은 본문 첫 줄로 제목이 만들어진다.
     const legacy = core.normalizeRequest('r2', {
-        terminalId: 'hjnc', type: 'facility', content: '조명 고장', author: '한진***',
+        terminalId: 'hjnc', type: 'facility', content: '조명 고장\n2층 계단 등', author: '한진***',
         createdAt: { toMillis: () => 2000 }
     });
     assert.equal(legacy.timestampMs, 2000);
     assert.equal(legacy.status, 'received');
+    assert.equal(legacy.hasExplicitTitle, false);
+    assert.equal(legacy.title, '조명 고장');
 
     const list = [
         core.normalizeRequest('a', { terminalId: 'hjnc', type: 'as', content: '가나다', author: '한진***', createdAtMs: 10 }),
@@ -199,18 +220,22 @@ test('HTML 카드: 터미널 A/S 요청과 생활영어 한문장 배치가 서�
     const card = html.slice(safetyIdx, boardIdx);
     assert.match(card, /터미널 시설·정비 A\/S 요청/);
     assert.match(card, /id="tasBadge"/, '새 게시물 NEW 배지가 필요합니다');
-    assert.match(card, /id="tasCardSubMeta"/, '새 게시물 건수 안내 문구 영역이 필요합니다');
+    assert.doesNotMatch(card, /id="tasCardSubMeta"|사진·댓글·좋아요·조치완료 · 무비번 익명 작성/, '접힌 블럭 헤더 보조 문구는 제거되어야 합니다');
     assert.match(card, /id="terminalAsBoard"/);
+    assert.match(card, /<table class="board-table tas-board-table">[\s\S]*<th>터미널<\/th>[\s\S]*<th>제목<\/th>[\s\S]*<th>날짜<\/th>[\s\S]*<th>상태<\/th>[\s\S]*<tbody id="tasFeed"><\/tbody>/, '게시판 테이블 구조가 필요합니다');
+    assert.match(card, /id="tasPagination"/, '페이지네이션 영역이 필요합니다');
+    assert.match(card, /id="tasToggleFormBtn"/, '접기/펼치기 가능한 글쓰기 버튼이 필요합니다');
+    assert.match(card, /<form id="tasForm" class="tas-composer hidden"/, '글쓰기 폼은 기본적으로 숨김 상태여야 합니다');
     assert.match(card, /id="tasEditBanner"/, '수정 안내 배너가 필요합니다');
     assert.match(card, /id="tasCancelEdit"/, '수정 취소 버튼이 필요합니다');
     assert.match(card, /id="tasTerminalSelect"/, '터미널 선택이 필요합니다');
     assert.match(card, /id="tasTypeSelect"/, '요청 종류 선택이 필요합니다');
+    assert.match(card, /id="tasTitle"/, '요청 제목 입력이 필요합니다');
     assert.match(card, /id="tasContent"/, '요청 내용 입력이 필요합니다');
     assert.match(card, /id="tasPhotoInput"/, '사진 첨부 입력이 필요합니다');
     assert.match(card, /id="tasPhotoPreview"/, '사진 미리보기 영역이 필요합니다');
     assert.match(card, /id="tasAuthorPreview"/, '자동 생성 작성자 미리보기가 필요합니다');
     assert.match(card, /id="tasAnonCode"/, '랜덤 접수번호 표시가 필요합니다');
-    assert.match(card, /id="tasFeed"/);
     assert.match(card, /id="tasFilter"/, '터미널별 보기 칩이 필요합니다');
     assert.match(card, /비밀번호 없음|무비번 접수/);
     assert.doesNotMatch(card, /type="password"|비밀번호 입력|tasPassword/i, '비밀번호 입력이 남아 있으면 안 됩니다');
@@ -249,6 +274,14 @@ test('블럭 색은 반짝이는 푸른색 중간톤 토큰만 쓰고 옛 릴레
     assert.match(css, /\.tas-like-btn\.is-liked/);
     assert.match(css, /\.tas-comments-panel/);
     assert.match(css, /\.tas-card-new-badge/);
+    assert.match(css, /\.tas-board-table/);
+    assert.match(css, /\.tas-board-row/);
+    assert.match(css, /\.tas-detail-row/);
+    assert.match(css, /\.tas-detail-card/);
+    assert.match(css, /\.tas-write-toggle-btn/);
+    assert.match(css, /\.tas-composer\.hidden/);
+    assert.match(css, /\.tas-input/);
+    assert.match(css, /\.tas-pagination/);
     assert.match(css, /\.tas-submit-button \{[^}]*background: linear-gradient\(135deg, var\(--blue-600\), var\(--blue-800\)\)/);
     assert.match(css, /\.tas-terminal-badge \{[^}]*background: var\(--blue-600\)/);
     assert.doesNotMatch(css, /\.kkung-/, '옛 릴레이 CSS 선택자가 남아 있으면 안 됩니다');

@@ -148,7 +148,8 @@ test('터미널 시설·정비 A/S 요청(terminal_as_requests)은 익명 접수
     assert.match(rules, /function isValidAsCommentCountChange\(\) \{/);
     assert.match(rules, /function isValidAsComment\(requestId, data\) \{/);
     assert.match(rules, /function isValidAsCommentAuthorUpdate\(requestId\) \{/);
-    assert.match(rules, /data\.keys\(\)\.hasOnly\(\[\s*'terminalId',\s*'terminalLabel',\s*'type',\s*'content',\s*'author',\s*'anonCode',\s*'authorUid',\s*'imageUrls',\s*'status',\s*'resolvedAtMs',\s*'resolvedAt',\s*'likedBy',\s*'commentCount',\s*'createdAtMs',\s*'createdAt',\s*'updatedAtMs',\s*'updatedAt'\s*\]\)/);
+    assert.match(rules, /data\.keys\(\)\.hasOnly\(\[\s*'terminalId',\s*'terminalLabel',\s*'type',\s*'title',\s*'content',\s*'author',\s*'anonCode',\s*'authorUid',\s*'imageUrls',\s*'status',\s*'resolvedAtMs',\s*'resolvedAt',\s*'likedBy',\s*'commentCount',\s*'createdAtMs',\s*'createdAt',\s*'updatedAtMs',\s*'updatedAt'\s*\]\)/);
+    assert.match(rules, /\(!\('title' in data\) \|\| \(data\.title is string && data\.title\.size\(\) >= 1 && data\.title\.size\(\) <= 80\)\)/);
     assert.match(rules, /data\.content is string && data\.content\.size\(\) >= 2 && data\.content\.size\(\) <= 500/);
     assert.match(rules, /data\.author is string && data\.author\.size\(\) >= 2 && data\.author\.size\(\) <= 40/);
 

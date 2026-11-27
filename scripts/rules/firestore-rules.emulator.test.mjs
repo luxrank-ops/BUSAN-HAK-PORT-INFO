@@ -295,6 +295,7 @@ if (!EMULATOR_AVAILABLE) {
             terminalId: 'hjnc',
             terminalLabel: '한진(HJNC)',
             type: 'facility',
+            title: '3번 게이트 조명 고장',
             content: '3번 게이트 조명이 꺼졌어요',
             author: '한진***',
             authorUid: 'worker-a',
@@ -314,14 +315,16 @@ if (!EMULATOR_AVAILABLE) {
         test('로그인한 동료는 비밀번호 없이 사진 포함 익명 접수할 수 있다', async () => {
             await seed(async () => {});
             await ok(addDoc(requestList(worker()), validRequest()));
-            await ok(addDoc(requestList(stranger()), validRequest({
+            const withoutTitle = validRequest({
                 terminalId: 'dgt',
                 terminalLabel: '동원(DGT)',
                 author: '동원***',
                 authorUid: 'stranger-uid',
                 anonCode: 'B4M8',
                 imageUrls: []
-            })));
+            });
+            delete withoutTitle.title;
+            await ok(addDoc(requestList(stranger()), withoutTitle));
         });
 
         test('미인증 사용자는 접수·조회·수정·삭제 모두 거부된다', async () => {
@@ -364,12 +367,16 @@ if (!EMULATOR_AVAILABLE) {
             // 타인의 상태 되돌리기·UID 변조 거부
             await denied(updateDoc(requestDoc('r1')(stranger()), { status: 'processing' }));
             await denied(updateDoc(requestDoc('r1')(worker()), { authorUid: 'stranger-uid' }));
-            // 본인 내용·사진 수정 성공
+            // 본인 제목·내용·사진 수정 성공
             await ok(updateDoc(requestDoc('r1')(worker()), {
+                title: '3번 게이트 LED 교체 요청',
                 content: '3번 게이트 LED 교체 요청으로 수정합니다',
                 imageUrls: ['https://firebasestorage.googleapis.com/v0/b/test/o/terminal-as%2Fp2.jpg'],
                 updatedAtMs: Date.now()
             }));
+            // 제목이 80자 초과 또는 빈 문자열이면 거부
+            await denied(updateDoc(requestDoc('r1')(worker()), { title: '' }));
+            await denied(updateDoc(requestDoc('r1')(worker()), { title: '가'.repeat(81) }));
             // 누구나 게시글 좋아요(본인 UID 키만)·조치 완료 처리 가능
             await ok(updateDoc(requestDoc('r1')(stranger()), { 'likedBy.stranger-uid': true }));
             await denied(updateDoc(requestDoc('r1')(stranger()), { 'likedBy.worker-a': true }));

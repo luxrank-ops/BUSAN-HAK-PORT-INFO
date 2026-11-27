@@ -28,8 +28,10 @@
     const MINE_COMMENTS_KEY = 'hakportTerminalAsMineCommentsV1';
     const FEED_LIMIT = 80;
     const HEAD_WATCH_LIMIT = 10;
+    const PAGE_SIZE = 10;
     const NEW_POST_WINDOW_MS = 24 * 60 * 60 * 1000;
     const COMMENTS_LIMIT = 100;
+    const MAX_TITLE = 80;
     const MAX_CONTENT = 500;
     const MAX_COMMENT = 300;
     const MAX_AUTHOR = 40;
@@ -149,17 +151,44 @@
         return { ok: true };
     }
 
+    function deriveTitleFromContent(content) {
+        const firstLine = String(content == null ? '' : content)
+            .split(/\r?\n/u)
+            .map(line => line.replace(/\s+/gu, ' ').trim())
+            .find(Boolean) || '';
+        if (firstLine.length <= 44) return firstLine;
+        return firstLine.slice(0, 44).trimEnd() + '…';
+    }
+
     function validateRequest(payload) {
         const data = payload || {};
         const terminalId = String(data.terminalId || '').trim();
         const type = String(data.type || '').trim();
+        const hasTitleField = Object.prototype.hasOwnProperty.call(data, 'title') && data.title !== undefined;
+        const title = hasTitleField
+            ? String(data.title == null ? '' : data.title).replace(/\s+/gu, ' ').trim()
+            : '';
         const content = String(data.content == null ? '' : data.content)
-            .replace(/\s+/gu, ' ').trim();
+            .replace(/\r\n?/gu, '\n')
+            .replace(/[^\S\n]+/gu, ' ')
+            .replace(/\n{3,}/gu, '\n\n')
+            .trim();
         if (!terminalById(terminalId)) {
             return { ok: false, code: 'terminal', message: '요청할 터미널을 선택해 주세요.' };
         }
         if (!typeById(type)) {
             return { ok: false, code: 'type', message: '요청 종류(시설·정비·수리·A/S)를 골라 주세요.' };
+        }
+        if (hasTitleField) {
+            if (!title) {
+                return { ok: false, code: 'title_empty', message: '제목을 적어 주세요.' };
+            }
+            if (title.length < 2) {
+                return { ok: false, code: 'title_short', message: '제목은 두 글자 이상 적어 주세요.' };
+            }
+            if (title.length > MAX_TITLE) {
+                return { ok: false, code: 'title_long', message: `제목은 ${MAX_TITLE}자까지 적을 수 있어요.` };
+            }
         }
         if (!content) {
             return { ok: false, code: 'empty', message: '요청 내용을 적어 주세요.' };
@@ -170,7 +199,7 @@
         if (content.length > MAX_CONTENT) {
             return { ok: false, code: 'long', message: `요청 내용은 ${MAX_CONTENT}자까지 적을 수 있어요.` };
         }
-        return { ok: true, terminalId, type, content };
+        return { ok: true, terminalId, type, title: title || deriveTitleFromContent(content), content };
     }
 
     function validateComment(rawText) {
@@ -261,15 +290,21 @@
             : Math.max(0, Math.min(2000, rawCommentCount));
 
         const status = STATUS_LABEL[d.status] ? d.status : 'received';
+        const content = String(d.content || '').slice(0, MAX_CONTENT);
+        const explicitTitle = String(d.title || '').replace(/\s+/gu, ' ').trim().slice(0, MAX_TITLE);
+        const title = explicitTitle || deriveTitleFromContent(content) || '시설·정비 A/S 요청';
 
         return {
             id: String(id || ''),
             terminalId: terminal ? terminal.id : '',
+            terminalShort: terminal ? terminal.short : String(d.terminalLabel || '기타').slice(0, 10),
             terminalLabel: terminal ? terminal.label : String(d.terminalLabel || '기타').slice(0, 40),
             type: type ? type.id : 'other',
             typeLabel: type ? type.label : '기타',
             typeIcon: type ? type.icon : '📌',
-            content: String(d.content || '').slice(0, MAX_CONTENT),
+            title,
+            hasExplicitTitle: Boolean(explicitTitle),
+            content,
             author: String(d.author || '익명***').slice(0, MAX_AUTHOR),
             anonCode: String(d.anonCode || '').slice(0, 12),
             authorUid: String(d.authorUid || '').slice(0, 128),
@@ -401,6 +436,7 @@
             status: 'received',
             createdAtMs: entry.createdAtMs
         };
+        if (entry.title) doc.title = String(entry.title).slice(0, MAX_TITLE);
         if (entry.authorUid) doc.authorUid = String(entry.authorUid);
         const urls = normalizeImageUrls(entry.imageUrls, false);
         if (urls.length) doc.imageUrls = urls;
@@ -771,6 +807,7 @@
     let editingRequestId = null;
     let editingOriginalEntry = null;
     let editingExistingUrls = [];
+    const openRequestIds = new Set();
     const openCommentIds = new Set();
     const commentsByRequest = new Map();
     const commentUnsubscribers = new Map();
@@ -780,6 +817,8 @@
     let visibilityObserver = null;
     let boardVisible = false;
     let isSubmitting = false;
+    let isFormOpen = false;
+    let currentPage = 1;
     let activeTerminal = FILTER_ALL;
 
     function byId(id) {
@@ -928,8 +967,6 @@
         const entries = allEntries();
         const now = Date.now();
         const newCount = entries.filter(entry => isRecentPost(entry.timestampMs, now)).length;
-        const totalCount = entries.length;
-        const truncated = !feedLoaded && headEntries.length >= HEAD_WATCH_LIMIT;
 
         const badge = byId('tasBadge');
         if (badge) {
@@ -938,24 +975,26 @@
             if (newCount > 0) badge.setAttribute('aria-label', `새 게시물 ${newCount}건`);
             else badge.setAttribute('aria-label', '새 게시물');
         }
+    }
 
-        const subMeta = byId('tasCardSubMeta');
-        if (subMeta) {
-            if (newCount > 0) {
-                if (truncated) {
-                    subMeta.textContent = newCount >= HEAD_WATCH_LIMIT
-                        ? `🆕 새 게시물 ${HEAD_WATCH_LIMIT}건+`
-                        : `🆕 새 게시물 ${newCount}건`;
-                } else {
-                    subMeta.textContent = `🆕 새 게시물 ${newCount}건 · 전체 ${totalCount}건`;
-                }
-            } else if (totalCount > 0) {
-                subMeta.textContent = truncated
-                    ? `댓글·좋아요·조치완료 · 최근 ${HEAD_WATCH_LIMIT}건+`
-                    : `등록된 요청 ${totalCount}건 · 댓글·좋아요·조치완료`;
-            } else {
-                subMeta.textContent = '사진·댓글·좋아요·조치완료 · 무비번 익명 작성';
-            }
+    function setFormOpen(open, { focusTitle = false } = {}) {
+        isFormOpen = Boolean(open);
+        const form = byId('tasForm');
+        const toggleBtn = byId('tasToggleFormBtn');
+        if (form) {
+            if (isFormOpen) form.classList.remove('hidden');
+            else form.classList.add('hidden');
+        }
+        if (toggleBtn) {
+            toggleBtn.setAttribute('aria-expanded', isFormOpen ? 'true' : 'false');
+            toggleBtn.textContent = isFormOpen
+                ? (editingRequestId ? '✏️ 요청 수정 중 (접기)' : '✖️ 글쓰기 닫기')
+                : '✍️ A/S 요청 글쓰기';
+        }
+        if (isFormOpen && focusTitle) {
+            try {
+                (byId('tasTitle') || byId('tasContent'))?.focus?.();
+            } catch (_) {}
         }
     }
 
@@ -1034,6 +1073,175 @@
         return panel;
     }
 
+    function toggleRequestDetail(entry) {
+        if (!entry || !entry.id) return;
+        if (openRequestIds.has(entry.id)) {
+            openRequestIds.delete(entry.id);
+            openCommentIds.delete(entry.id);
+            stopCommentSubscription(entry.id);
+        } else {
+            openRequestIds.add(entry.id);
+            openCommentIds.add(entry.id);
+            if (!entry.local) startCommentSubscription(entry.id);
+        }
+        renderFeed();
+    }
+
+    function renderDetailCard(entry, adminActive) {
+        const isDone = entry.status === 'done';
+        const card = el('div', 'tas-detail-card'
+            + (entry.local ? ' is-local' : '')
+            + (isDone ? ' is-done' : '')
+            + (editingRequestId === entry.id ? ' is-editing' : ''));
+
+        const top = el('div', 'tas-feed-top');
+        top.appendChild(el('span', 'tas-terminal-badge', entry.terminalLabel));
+        top.appendChild(el('span', 'tas-type-badge', `${entry.typeIcon} ${entry.typeLabel}`));
+        if (isRecentPost(entry.timestampMs, Date.now())) {
+            top.appendChild(el('span', 'badge-new', 'NEW'));
+        }
+        const statusText = isDone ? '✅ 조치완료' : entry.statusLabel;
+        top.appendChild(el('span', 'tas-status-badge is-' + entry.status, statusText));
+        card.appendChild(top);
+
+        if (entry.title) {
+            card.appendChild(el('h4', 'tas-detail-title', entry.title));
+        }
+        card.appendChild(el('p', 'tas-feed-content', entry.content));
+
+        if (Array.isArray(entry.imageUrls) && entry.imageUrls.length) {
+            const gallery = el('div', 'tas-feed-photos');
+            entry.imageUrls.forEach((url, idx) => {
+                const thumbBtn = el('button', 'tas-feed-photo-btn');
+                thumbBtn.setAttribute('type', 'button');
+                thumbBtn.setAttribute('aria-label', `현장 사진 ${idx + 1} 크게 보기`);
+                const img = el('img', 'tas-feed-photo');
+                img.setAttribute('src', url);
+                img.setAttribute('loading', 'lazy');
+                img.setAttribute('alt', `${entry.terminalLabel} 현장 사진 ${idx + 1}`);
+                thumbBtn.appendChild(img);
+                thumbBtn.addEventListener('click', () => openPhotoModal(url));
+                gallery.appendChild(thumbBtn);
+            });
+            card.appendChild(gallery);
+        }
+
+        const bottom = el('div', 'tas-feed-bottom');
+        bottom.appendChild(el('span', 'tas-feed-author', entry.author));
+        if (entry.anonCode) bottom.appendChild(el('span', 'tas-feed-code', `#${entry.anonCode}`));
+        if (entry.edited) bottom.appendChild(el('span', 'tas-feed-edited', '· 수정됨'));
+        if (isDone && entry.resolvedAtMs) {
+            bottom.appendChild(el('span', 'tas-feed-resolved', `· 완료 ${formatRelativeTime(entry.resolvedAtMs, Date.now())}`));
+        }
+        if (entry.local) bottom.appendChild(el('span', 'tas-feed-local', '📴 이 기기에만 저장'));
+        bottom.appendChild(el('span', 'tas-feed-time', formatRelativeTime(entry.timestampMs, Date.now())));
+        card.appendChild(bottom);
+
+        /* ---- 누구나 누를 수 있는 좋아요 · 댓글 · 조치 완료 + 작성자/관리자 관리 바 ---- */
+        const actions = el('div', 'tas-item-actions');
+        const likeUid = activeLikeUid(entry);
+        const postLiked = isLikedByUid(entry.likedBy, likeUid);
+        const postLikes = countLikes(entry.likedBy);
+        const likeBtn = el(
+            'button',
+            'tas-like-btn' + (postLiked ? ' is-liked' : ''),
+            postLikes ? `❤️ 좋아요 ${postLikes}` : '🤍 좋아요'
+        );
+        likeBtn.setAttribute('type', 'button');
+        likeBtn.setAttribute('aria-pressed', postLiked ? 'true' : 'false');
+        likeBtn.setAttribute('aria-label', `${entry.terminalLabel} 요청 좋아요 ${postLikes}개`);
+        likeBtn.addEventListener('click', () => void togglePostLike(entry));
+        actions.appendChild(likeBtn);
+
+        const loadedComments = commentsByRequest.get(entry.id);
+        const cCount = entry.local
+            ? (entry.localComments || []).length
+            : (loadedComments ? loadedComments.length : entry.commentCount);
+        const isCommentsOpen = openCommentIds.has(entry.id);
+        const cmtBtn = el(
+            'button',
+            'tas-comment-toggle-btn' + (isCommentsOpen ? ' is-open' : ''),
+            cCount ? `💬 댓글 ${cCount}` : '💬 댓글'
+        );
+        cmtBtn.setAttribute('type', 'button');
+        cmtBtn.setAttribute('aria-expanded', isCommentsOpen ? 'true' : 'false');
+        cmtBtn.setAttribute('aria-label', `${entry.terminalLabel} 요청 댓글 ${cCount}개`);
+        cmtBtn.addEventListener('click', () => toggleComments(entry));
+        actions.appendChild(cmtBtn);
+
+        if (!isDone) {
+            const resolveBtn = el('button', 'tas-item-btn is-resolve', '✅ 조치 완료');
+            resolveBtn.setAttribute('type', 'button');
+            resolveBtn.setAttribute('aria-label', `${entry.terminalLabel} 요청 조치 완료로 표시`);
+            resolveBtn.addEventListener('click', () => void resolveAsRequest(entry));
+            actions.appendChild(resolveBtn);
+        } else {
+            const doneBadgeBtn = el('button', 'tas-item-btn is-resolved-done', '✅ 조치완료됨');
+            doneBadgeBtn.setAttribute('type', 'button');
+            doneBadgeBtn.disabled = true;
+            doneBadgeBtn.setAttribute('aria-label', '조치완료된 요청');
+            actions.appendChild(doneBadgeBtn);
+        }
+
+        if (canManageEntry(entry)) {
+            const manageGroup = el('div', 'tas-item-manage');
+            if (adminActive && !entry.local) {
+                const statusSel = el('select', 'tas-admin-status');
+                statusSel.setAttribute('aria-label', '처리 상태 변경');
+                Object.entries(STATUS_LABEL).forEach(([key, label]) => {
+                    const opt = el('option', '', label);
+                    opt.setAttribute('value', key);
+                    statusSel.appendChild(opt);
+                });
+                statusSel.value = entry.status;
+                statusSel.addEventListener('change', () => void updateAdminStatus(entry, statusSel.value));
+                manageGroup.appendChild(statusSel);
+            }
+            const editBtn = el('button', 'tas-item-btn is-edit', '✏️ 수정');
+            editBtn.setAttribute('type', 'button');
+            editBtn.setAttribute('aria-label', `${entry.terminalLabel} 요청 수정`);
+            editBtn.addEventListener('click', () => startEditRequest(entry));
+
+            const delBtn = el('button', 'tas-item-btn is-delete', '🗑️ 삭제');
+            delBtn.setAttribute('type', 'button');
+            delBtn.setAttribute('aria-label', `${entry.terminalLabel} 요청 삭제`);
+            delBtn.addEventListener('click', () => void deleteAsRequest(entry));
+
+            manageGroup.appendChild(editBtn);
+            manageGroup.appendChild(delBtn);
+            actions.appendChild(manageGroup);
+        }
+        card.appendChild(actions);
+
+        if (isCommentsOpen) {
+            card.appendChild(renderCommentsSection(entry));
+        }
+        return card;
+    }
+
+    function renderPagination(totalItems) {
+        const pager = byId('tasPagination');
+        if (!pager) return;
+        pager.textContent = '';
+        const totalPages = Math.max(1, Math.ceil(totalItems / PAGE_SIZE));
+        if (totalPages <= 1) {
+            pager.hidden = true;
+            return;
+        }
+        pager.hidden = false;
+        for (let page = 1; page <= totalPages; page += 1) {
+            const btn = el('button', 'tas-page-btn' + (page === currentPage ? ' is-active' : ''), String(page));
+            btn.setAttribute('type', 'button');
+            btn.setAttribute('aria-label', `${page}페이지`);
+            if (page === currentPage) btn.setAttribute('aria-current', 'page');
+            btn.addEventListener('click', () => {
+                currentPage = page;
+                renderFeed();
+            });
+            pager.appendChild(btn);
+        }
+    }
+
     function renderFeed() {
         const feed = byId('tasFeed');
         if (!feed) return;
@@ -1047,144 +1255,91 @@
         if (terminalTotalNode) terminalTotalNode.textContent = String(visible.length);
         if (metaNode) {
             const label = activeTerminal === FILTER_ALL ? '전체 터미널' : (terminalById(activeTerminal)?.short || '터미널');
-            metaNode.textContent = `${label} · 최근 ${visible.length}건`;
+            metaNode.textContent = `${label} · ${visible.length}건 (제목 클릭 시 열람)`;
         }
+
+        const totalPages = Math.max(1, Math.ceil(visible.length / PAGE_SIZE));
+        if (currentPage > totalPages) currentPage = totalPages;
+        if (currentPage < 1) currentPage = 1;
+        renderPagination(visible.length);
+
         if (!visible.length) {
-            const empty = el('li', 'tas-feed-empty', '아직 접수된 요청이 없어요. 첫 요청을 남겨 주세요.');
-            feed.appendChild(empty);
+            const emptyRow = el('tr', 'tas-empty-row');
+            const emptyCell = el('td', 'tas-feed-empty', '아직 접수된 요청이 없어요. 첫 요청을 남겨 주세요.');
+            emptyCell.setAttribute('colspan', '4');
+            emptyRow.appendChild(emptyCell);
+            feed.appendChild(emptyRow);
             return;
         }
+
         const adminActive = isAdminSession();
-        visible.slice(0, FEED_LIMIT).forEach(entry => {
+        const start = (currentPage - 1) * PAGE_SIZE;
+        const pageItems = visible.slice(start, start + PAGE_SIZE);
+        const now = Date.now();
+
+        pageItems.forEach(entry => {
             const isDone = entry.status === 'done';
-            const item = el('li', 'tas-feed-item'
-                + (entry.local ? ' is-local' : '')
+            const isOpen = openRequestIds.has(entry.id);
+            const row = el('tr', 'tas-board-row'
+                + (isOpen ? ' is-open' : '')
                 + (isDone ? ' is-done' : '')
-                + (editingRequestId === entry.id ? ' is-editing' : ''));
-            const top = el('div', 'tas-feed-top');
-            const badge = el('span', 'tas-terminal-badge', entry.terminalLabel);
-            const type = el('span', 'tas-type-badge', `${entry.typeIcon} ${entry.typeLabel}`);
-            const statusText = isDone ? '✅ 조치완료' : entry.statusLabel;
-            const status = el('span', 'tas-status-badge is-' + entry.status, statusText);
-            top.appendChild(badge);
-            top.appendChild(type);
-            if (isRecentPost(entry.timestampMs, Date.now())) {
-                top.appendChild(el('span', 'badge-new', 'NEW'));
-            }
-            top.appendChild(status);
-            item.appendChild(top);
+                + (entry.local ? ' is-local' : ''));
+            row.addEventListener('click', e => {
+                // 버튼 내부 클릭과 이중 발화 방지
+                if (e && e.target && e.target.closest && e.target.closest('.tas-row-title-btn')) return;
+                toggleRequestDetail(entry);
+            });
 
-            const body = el('p', 'tas-feed-content', entry.content);
-            item.appendChild(body);
+            const terminalTd = el('td', '');
+            terminalTd.appendChild(el('span', 'tas-terminal-badge tas-table-terminal', entry.terminalShort || entry.terminalLabel));
+            row.appendChild(terminalTd);
 
+            const titleTd = el('td', '');
+            const titleBtn = el('button', 'tas-row-title-btn');
+            titleBtn.setAttribute('type', 'button');
+            titleBtn.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+            titleBtn.appendChild(el('span', 'tas-row-title-text', entry.title));
             if (Array.isArray(entry.imageUrls) && entry.imageUrls.length) {
-                const gallery = el('div', 'tas-feed-photos');
-                entry.imageUrls.forEach((url, idx) => {
-                    const thumbBtn = el('button', 'tas-feed-photo-btn');
-                    thumbBtn.setAttribute('type', 'button');
-                    thumbBtn.setAttribute('aria-label', `현장 사진 ${idx + 1} 크게 보기`);
-                    const img = el('img', 'tas-feed-photo');
-                    img.setAttribute('src', url);
-                    img.setAttribute('loading', 'lazy');
-                    img.setAttribute('alt', `${entry.terminalLabel} 현장 사진 ${idx + 1}`);
-                    thumbBtn.appendChild(img);
-                    thumbBtn.addEventListener('click', () => openPhotoModal(url));
-                    gallery.appendChild(thumbBtn);
-                });
-                item.appendChild(gallery);
+                titleBtn.appendChild(el('span', 'tas-row-pill', entry.imageUrls.length > 1 ? `📷+${entry.imageUrls.length}` : '📷'));
             }
-
-            const bottom = el('div', 'tas-feed-bottom');
-            bottom.appendChild(el('span', 'tas-feed-author', entry.author));
-            if (entry.anonCode) bottom.appendChild(el('span', 'tas-feed-code', `#${entry.anonCode}`));
-            if (entry.edited) bottom.appendChild(el('span', 'tas-feed-edited', '· 수정됨'));
-            if (isDone && entry.resolvedAtMs) {
-                bottom.appendChild(el('span', 'tas-feed-resolved', `· 완료 ${formatRelativeTime(entry.resolvedAtMs, Date.now())}`));
+            if (isRecentPost(entry.timestampMs, now)) {
+                titleBtn.appendChild(el('span', 'badge-new', 'NEW'));
             }
-            if (entry.local) bottom.appendChild(el('span', 'tas-feed-local', '📴 이 기기에만 저장'));
-            bottom.appendChild(el('span', 'tas-feed-time', formatRelativeTime(entry.timestampMs, Date.now())));
-            item.appendChild(bottom);
-
-            /* ---- 누구나 누를 수 있는 좋아요 · 댓글 · 조치 완료 + 작성자/관리자 관리 바 ---- */
-            const actions = el('div', 'tas-item-actions');
-            const likeUid = activeLikeUid(entry);
-            const postLiked = isLikedByUid(entry.likedBy, likeUid);
-            const postLikes = countLikes(entry.likedBy);
-            const likeBtn = el(
-                'button',
-                'tas-like-btn' + (postLiked ? ' is-liked' : ''),
-                postLikes ? `❤️ 좋아요 ${postLikes}` : '🤍 좋아요'
-            );
-            likeBtn.setAttribute('type', 'button');
-            likeBtn.setAttribute('aria-pressed', postLiked ? 'true' : 'false');
-            likeBtn.setAttribute('aria-label', `${entry.terminalLabel} 요청 좋아요 ${postLikes}개`);
-            likeBtn.addEventListener('click', () => void togglePostLike(entry));
-            actions.appendChild(likeBtn);
-
             const loadedComments = commentsByRequest.get(entry.id);
             const cCount = entry.local
                 ? (entry.localComments || []).length
                 : (loadedComments ? loadedComments.length : entry.commentCount);
-            const isCommentsOpen = openCommentIds.has(entry.id);
-            const cmtBtn = el(
-                'button',
-                'tas-comment-toggle-btn' + (isCommentsOpen ? ' is-open' : ''),
-                cCount ? `💬 댓글 ${cCount}` : '💬 댓글'
-            );
-            cmtBtn.setAttribute('type', 'button');
-            cmtBtn.setAttribute('aria-expanded', isCommentsOpen ? 'true' : 'false');
-            cmtBtn.setAttribute('aria-label', `${entry.terminalLabel} 요청 댓글 ${cCount}개`);
-            cmtBtn.addEventListener('click', () => toggleComments(entry));
-            actions.appendChild(cmtBtn);
-
-            if (!isDone) {
-                const resolveBtn = el('button', 'tas-item-btn is-resolve', '✅ 조치 완료');
-                resolveBtn.setAttribute('type', 'button');
-                resolveBtn.setAttribute('aria-label', `${entry.terminalLabel} 요청 조치 완료로 표시`);
-                resolveBtn.addEventListener('click', () => void resolveAsRequest(entry));
-                actions.appendChild(resolveBtn);
-            } else {
-                const doneBadgeBtn = el('button', 'tas-item-btn is-resolved-done', '✅ 조치완료됨');
-                doneBadgeBtn.setAttribute('type', 'button');
-                doneBadgeBtn.disabled = true;
-                doneBadgeBtn.setAttribute('aria-label', '조치완료된 요청');
-                actions.appendChild(doneBadgeBtn);
+            if (cCount > 0) {
+                titleBtn.appendChild(el('span', 'tas-row-pill', `💬 ${cCount}`));
             }
-
-            if (canManageEntry(entry)) {
-                const manageGroup = el('div', 'tas-item-manage');
-                if (adminActive && !entry.local) {
-                    const statusSel = el('select', 'tas-admin-status');
-                    statusSel.setAttribute('aria-label', '처리 상태 변경');
-                    Object.entries(STATUS_LABEL).forEach(([key, label]) => {
-                        const opt = el('option', '', label);
-                        opt.setAttribute('value', key);
-                        statusSel.appendChild(opt);
-                    });
-                    statusSel.value = entry.status;
-                    statusSel.addEventListener('change', () => void updateAdminStatus(entry, statusSel.value));
-                    manageGroup.appendChild(statusSel);
-                }
-                const editBtn = el('button', 'tas-item-btn is-edit', '✏️ 수정');
-                editBtn.setAttribute('type', 'button');
-                editBtn.setAttribute('aria-label', `${entry.terminalLabel} 요청 수정`);
-                editBtn.addEventListener('click', () => startEditRequest(entry));
-
-                const delBtn = el('button', 'tas-item-btn is-delete', '🗑️ 삭제');
-                delBtn.setAttribute('type', 'button');
-                delBtn.setAttribute('aria-label', `${entry.terminalLabel} 요청 삭제`);
-                delBtn.addEventListener('click', () => void deleteAsRequest(entry));
-
-                manageGroup.appendChild(editBtn);
-                manageGroup.appendChild(delBtn);
-                actions.appendChild(manageGroup);
+            const postLikes = countLikes(entry.likedBy);
+            if (postLikes > 0) {
+                titleBtn.appendChild(el('span', 'tas-row-pill is-like', `❤️ ${postLikes}`));
             }
-            item.appendChild(actions);
+            titleBtn.appendChild(el('span', 'tas-row-arrow', isOpen ? '▲' : '▼'));
+            titleBtn.addEventListener('click', () => toggleRequestDetail(entry));
+            titleTd.appendChild(titleBtn);
+            row.appendChild(titleTd);
 
-            if (isCommentsOpen) {
-                item.appendChild(renderCommentsSection(entry));
+            const dateTd = el('td', '');
+            dateTd.appendChild(el('span', 'tas-row-date', formatRelativeTime(entry.timestampMs, now)));
+            row.appendChild(dateTd);
+
+            const statusTd = el('td', '');
+            const statusBadgeText = isDone ? '✅ 완료' : entry.statusLabel;
+            statusTd.appendChild(el('span', 'tas-status-badge is-' + entry.status, statusBadgeText));
+            row.appendChild(statusTd);
+
+            feed.appendChild(row);
+
+            if (isOpen) {
+                const detailRow = el('tr', 'tas-detail-row');
+                const detailCell = el('td', '');
+                detailCell.setAttribute('colspan', '4');
+                detailCell.appendChild(renderDetailCard(entry, adminActive));
+                detailRow.appendChild(detailCell);
+                feed.appendChild(detailRow);
             }
-            feed.appendChild(item);
         });
     }
 
@@ -1595,12 +1750,14 @@
 
         const terminalSelect = byId('tasTerminalSelect');
         const typeSelect = byId('tasTypeSelect');
+        const titleInput = byId('tasTitle');
         const contentInput = byId('tasContent');
         const banner = byId('tasEditBanner');
         const bannerText = byId('tasEditText');
 
         if (terminalSelect && terminalById(entry.terminalId)) terminalSelect.value = entry.terminalId;
         if (typeSelect && typeById(entry.type)) typeSelect.value = entry.type;
+        if (titleInput) titleInput.value = entry.title || '';
         if (contentInput) contentInput.value = entry.content || '';
         if (banner) banner.hidden = false;
         if (bannerText) {
@@ -1609,12 +1766,13 @@
                 : '✏️ 요청 수정 중';
         }
         setBusy(false);
+        setFormOpen(true);
         updateAuthorPreview();
         renderAll();
-        setStatus('내용이나 사진·터미널을 수정한 뒤 [수정 저장]을 눌러 주세요.', 'neutral');
+        setStatus('제목이나 내용·사진·터미널을 수정한 뒤 [수정 저장]을 눌러 주세요.', 'neutral');
         try {
             byId('tasForm')?.scrollIntoView?.({ behavior: 'smooth', block: 'center' });
-            contentInput?.focus?.();
+            (titleInput || contentInput)?.focus?.();
         } catch (_) {}
     }
 
@@ -1626,10 +1784,13 @@
         const banner = byId('tasEditBanner');
         if (banner) banner.hidden = true;
         if (clearInputs) {
+            const titleInput = byId('tasTitle');
             const contentInput = byId('tasContent');
+            if (titleInput) titleInput.value = '';
             if (contentInput) contentInput.value = '';
         }
         setBusy(false);
+        setFormOpen(false);
         updateAuthorPreview();
         renderAll();
     }
@@ -1643,6 +1804,7 @@
         if (entry.local) {
             writeLocalRequests(readLocalRequests().filter(item => item && item.id !== entry.id));
             localEntries = readLocalRequests().map(item => normalizeRequest(item.id, item));
+            openRequestIds.delete(entry.id);
             openCommentIds.delete(entry.id);
             forgetOwnedId(entry.id);
             renderAll();
@@ -1664,6 +1826,7 @@
             (entry.imageUrls || []).forEach(deleteStoragePhotoByUrl);
             stopCommentSubscription(entry.id);
             commentsByRequest.delete(entry.id);
+            openRequestIds.delete(entry.id);
             openCommentIds.delete(entry.id);
             feedEntries = feedEntries.filter(item => item.id !== entry.id);
             forgetOwnedId(entry.id);
@@ -1900,10 +2063,16 @@
 
         const terminalSelect = byId('tasTerminalSelect');
         const typeSelect = byId('tasTypeSelect');
+        const titleInput = byId('tasTitle');
         const contentInput = byId('tasContent');
         if (!terminalSelect || !typeSelect || !contentInput) return;
 
-        const check = validateRequest({
+        const check = validateRequest(titleInput ? {
+            terminalId: terminalSelect.value,
+            type: typeSelect.value,
+            title: titleInput.value,
+            content: contentInput.value
+        } : {
             terminalId: terminalSelect.value,
             type: typeSelect.value,
             content: contentInput.value
@@ -1921,13 +2090,13 @@
             const targetId = editingRequestId;
             const orig = editingOriginalEntry || allEntries().find(item => item.id === targetId) || null;
             const authorName = `${terminal.short}***`;
-            const moderation = moderateAsText(check.content, authorName);
+            const moderation = moderateAsText(`${check.title}\n${check.content}`, authorName);
             if (moderation.hidden) {
                 setStatus(`⚠️ ${moderation.reason || '금칙어/도배'} 감지로 수정할 수 없어요.`, 'error');
                 notifyBlind({
                     category: '터미널 시설·정비 A/S 요청',
                     author: authorName,
-                    text: check.content,
+                    text: `${check.title} - ${check.content}`,
                     reason: moderation.reason
                 });
                 return;
@@ -1943,6 +2112,7 @@
                     terminalId: terminal.id,
                     terminalLabel: terminal.label,
                     type: type.id,
+                    title: check.title,
                     content: check.content,
                     author: authorName,
                     imageUrls: mergedUrls,
@@ -1980,6 +2150,7 @@
                     terminalId: terminal.id,
                     terminalLabel: terminal.label,
                     type: type.id,
+                    title: check.title,
                     content: check.content,
                     author: authorName,
                     imageUrls: finalUrls,
@@ -2017,13 +2188,13 @@
 
         /* ---- 2) 신규 접수 모드 ---- */
         const identity = buildAnonymousIdentity(check.terminalId);
-        const moderation = moderateAsText(check.content, identity.author);
+        const moderation = moderateAsText(`${check.title}\n${check.content}`, identity.author);
         if (moderation.hidden) {
             setStatus(`⚠️ ${moderation.reason || '금칙어/도배'} 감지로 접수할 수 없어요.`, 'error');
             notifyBlind({
                 category: '터미널 시설·정비 A/S 요청',
                 author: identity.author,
-                text: check.content,
+                text: `${check.title} - ${check.content}`,
                 reason: moderation.reason
             });
             return;
@@ -2059,6 +2230,7 @@
                 terminalId: terminal.id,
                 terminalLabel: terminal.label,
                 type: type.id,
+                title: check.title,
                 content: check.content,
                 author: identity.author,
                 anonCode: identity.anonCode,
@@ -2093,6 +2265,7 @@
                 terminalId: terminal.id,
                 terminalLabel: terminal.label,
                 type: type.id,
+                title: check.title,
                 content: check.content,
                 author: identity.author,
                 anonCode: identity.anonCode,
@@ -2109,7 +2282,11 @@
 
         pendingPhotos = [];
         editingExistingUrls = [];
+        if (titleInput) titleInput.value = '';
         contentInput.value = '';
+        currentPage = 1;
+        openRequestIds.add(docId);
+        setFormOpen(false);
         updateAuthorPreview();
         renderAll();
     }
@@ -2122,6 +2299,7 @@
         if (!button) return;
         const id = button.getAttribute('data-terminal');
         activeTerminal = terminalById(id) ? id : FILTER_ALL;
+        currentPage = 1;
         if (activeTerminal !== FILTER_ALL && !editingRequestId) {
             const select = byId('tasTerminalSelect');
             if (select) select.value = activeTerminal;
@@ -2194,6 +2372,14 @@
 
         const terminalSelect = byId('tasTerminalSelect');
         if (terminalSelect) terminalSelect.addEventListener('change', updateAuthorPreview);
+        byId('tasToggleFormBtn')?.addEventListener('click', () => {
+            if (isFormOpen && editingRequestId) {
+                cancelEditMode({ clearInputs: true });
+                setStatus('수정을 취소했어요.', 'neutral');
+                return;
+            }
+            setFormOpen(!isFormOpen, { focusTitle: !isFormOpen });
+        });
         byId('tasForm')?.addEventListener('submit', submitAsRequest);
         byId('tasFilter')?.addEventListener('click', onFilterClick);
         byId('tasPhotoInput')?.addEventListener('change', onPhotoChange);
@@ -2202,6 +2388,7 @@
             setStatus('수정을 취소했어요. 새 요청을 작성할 수 있습니다.', 'neutral');
         });
 
+        setFormOpen(false);
         renderFilter();
         updateAuthorPreview();
         renderAll();
@@ -2222,6 +2409,8 @@
         localMineKey: MINE_KEY,
         mineCommentsKey: MINE_COMMENTS_KEY,
         filterAll: FILTER_ALL,
+        pageSize: PAGE_SIZE,
+        maxTitle: MAX_TITLE,
         maxContent: MAX_CONTENT,
         maxComment: MAX_COMMENT,
         maxPhotos: MAX_PHOTOS,
@@ -2231,6 +2420,7 @@
         typeById,
         makeAnonCode,
         buildAnonymousIdentity,
+        deriveTitleFromContent,
         isSafePhotoUrl,
         normalizeImageUrls,
         validatePhotoFile,

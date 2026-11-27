@@ -409,7 +409,7 @@ service cloud.firestore {
     function isValidAsRequest(data) {
       return data is map &&
         data.keys().hasOnly([
-          'terminalId', 'terminalLabel', 'type', 'content',
+          'terminalId', 'terminalLabel', 'type', 'title', 'content',
           'author', 'anonCode', 'authorUid', 'imageUrls',
           'status', 'resolvedAtMs', 'resolvedAt',
           'likedBy', 'commentCount',
@@ -418,6 +418,7 @@ service cloud.firestore {
         isValidAsTerminalId(data.terminalId) &&
         data.terminalLabel is string && data.terminalLabel.size() >= 1 && data.terminalLabel.size() <= 40 &&
         isValidAsType(data.type) &&
+        (!('title' in data) || (data.title is string && data.title.size() >= 1 && data.title.size() <= 80)) &&
         data.content is string && data.content.size() >= 2 && data.content.size() <= 500 &&
         data.author is string && data.author.size() >= 2 && data.author.size() <= 40 &&
         (!('anonCode' in data) || (data.anonCode is string && data.anonCode.size() <= 12)) &&
@@ -438,7 +439,7 @@ service cloud.firestore {
       return isAsAuthor() &&
         isValidAsRequest(incoming()) &&
         incoming().diff(existing()).affectedKeys().hasOnly([
-          'terminalId', 'terminalLabel', 'type', 'content',
+          'terminalId', 'terminalLabel', 'type', 'title', 'content',
           'author', 'imageUrls', 'updatedAtMs', 'updatedAt'
         ]);
     }
