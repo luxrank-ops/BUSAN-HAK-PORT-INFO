@@ -444,3 +444,41 @@ test('소프트 삭제된 선박은 목록에서 제외된다', () => {
     );
     assert.equal(t.document.getElementById('shipCardSubMeta').innerText, `등록 선박 ${totalBefore - 1}척 · 장비 도감`);
 });
+
+test('선박 상세 메모의 앞뒤·연속 빈 줄을 정리하고 요약행/화살표 상태를 함께 토글·복원한다', () => {
+    const t = setup();
+    t.docs = [{
+        id: 'trim1',
+        shipName: 'MSC TRIM TEST',
+        onboardFeat: '\n\n  첫 줄 메모\r\n\r\n\r\n\r\n둘째 줄 메모  \n\n',
+        onshoreFeat: '\n\n육상 1줄\n\n\n\n육상 2줄\n\n',
+        difficulty: 4,
+        tags: ['#오토콘'],
+        views: 3,
+        ts: t.now
+    }];
+    t.emit();
+
+    const listHtml = t.document.getElementById('shipList').innerHTML;
+    assert.match(listHtml, /<div class="board-detail-card">[\s\S]*?<div class="board-detail-body">첫 줄 메모\n\n둘째 줄 메모<\/div>/);
+    assert.match(listHtml, /<div class="board-legacy-text">육상 1줄\n\n육상 2줄<\/div>/);
+    assert.match(listHtml, /<div class="board-comments-panel">/);
+
+    t.context.toggleBoardRow('s-trim1');
+    assert.ok(t.document.getElementById('s-trim1').classList.contains('show'));
+    assert.ok(t.document.getElementById('row-s-trim1').classList.contains('is-open'));
+    assert.equal(t.document.getElementById('arrow-s-trim1').innerText, '▲');
+
+    // 다른 필드 갱신으로 다시 렌더링되어도 펼침·요약행·화살표가 유지되어야 한다.
+    t.docs[0].onboardFeat = '수정된 메모';
+    t.emit();
+    assert.ok(t.document.getElementById('s-trim1').classList.contains('show'));
+    assert.ok(t.document.getElementById('row-s-trim1').classList.contains('is-open'));
+    assert.equal(t.document.getElementById('arrow-s-trim1').innerText, '▲');
+
+    t.context.toggleBoardRow('s-trim1');
+    assert.ok(!t.document.getElementById('s-trim1').classList.contains('show'));
+    assert.ok(!t.document.getElementById('row-s-trim1').classList.contains('is-open'));
+    assert.equal(t.document.getElementById('arrow-s-trim1').innerText, '▼');
+});
+
