@@ -1,0 +1,31 @@
+rules_version = '2';
+
+// 학포트 Firebase Storage 보안 규칙 (2026-11-28 최소 안전선)
+//
+// 배경
+//   이전 운영 규칙은 읽기·쓰기·삭제를 조건 없이(if true) 허용해 버킷 전체가
+//   인증 없이 열려 있었습니다.
+//   사용자 승인("쓰기만 로그인 사용자 허용")에 따라 쓰기만 조였습니다.
+//
+// 원칙
+//   · 읽기(read): 현장 사진·공지 이미지를 누구나 볼 수 있어야 하므로 공개 유지
+//     (A/S 게시판·공지·자료실·식단 이미지가 로그인 없이 보여야 합니다).
+//   · 쓰기(write): 앱이 부팅 시 익명 로그인(signInAnonymously)을 수행하므로
+//     request.auth != null 이면 허용합니다. 인증 없이 올라오는 쓰기는 거부합니다.
+//
+// 사용 경로 (앱 코드 기준)
+//   terminal-as/<요청ID>/  ·  posts/  ·  notices/  ·  ships/  ·  archives/
+//   terminal-bus/  ·  logs/<작업자ID>/  ·  comments/  ·  hjnc-meals/  ·  terminal-meals/<터미널ID>/
+//
+// 운영 반영
+//   main 에 이 파일이 올라오면 GitHub Actions `Firestore 규칙·색인 자동 배포`
+//   워크플로가 `firebase deploy --only storage` 로 자동 배포합니다.
+//   (서비스 계정: firebase-adminsdk-fbsvc@busan-hak-port.iam.gserviceaccount.com)
+service firebase.storage {
+  match /b/{bucket}/o {
+    match /{allPaths=**} {
+      allow read: if true;
+      allow write: if request.auth != null;
+    }
+  }
+}
