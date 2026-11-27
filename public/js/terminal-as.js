@@ -10,7 +10,8 @@
  *  · **비밀번호·닉네임 입력 없음** — 앱이 자동으로 붙는 익명 인증만 사용하고,
  *    작성자는 선택한 터미널 이름 + 마스킹(한진*** · 동원*** …)으로 자동 생성됩니다.
  *    글마다 랜덤 익명 코드(접수번호)가 함께 붙어 서로 구분됩니다.
- *  · 현장 사진 업로드(최대 3장) · 본인 작성 글 수정/삭제(무비밀번호)를 지원합니다.
+ *  · 현장 사진 업로드(최대 3장) · 본인 작성 글 수정/삭제(무비밀번호) ·
+ *    누구나 '조치 완료' 버튼 · 댓글(좋아요 포함) · 게시글 좋아요를 지원합니다.
  *  · Firestore `terminal_as_requests` + Firebase Storage `terminal-as/` 에 저장되어 실시간 공유됩니다.
  *    네트워크/인증이 닿지 않으면 이 브라우저 localStorage 에 임시 접수합니다(오프라인 표기).
  *  · 블럭 색은 푸른색 중간톤(--blue-500~--blue-700 계열) + 반짝이는 효과를 사용합니다.
@@ -20,11 +21,15 @@
 
     /* ---- 운영 값 (firestore.rules 의 terminal_as_requests 규칙과 함께 바꿔야 합니다) ---- */
     const COLLECTION = 'terminal_as_requests';
+    const COMMENTS_COLLECTION = 'comments';
     const STORAGE_DIR = 'terminal-as';
     const LOCAL_KEY = 'hakportTerminalAsLocalV1';
     const MINE_KEY = 'hakportTerminalAsMineV1';
+    const MINE_COMMENTS_KEY = 'hakportTerminalAsMineCommentsV1';
     const FEED_LIMIT = 80;
+    const COMMENTS_LIMIT = 100;
     const MAX_CONTENT = 500;
+    const MAX_COMMENT = 300;
     const MAX_AUTHOR = 40;
     const MAX_LOCAL = 60;
     const MAX_OWNED_IDS = 120;
@@ -55,7 +60,7 @@
     const STATUS_LABEL = Object.freeze({
         received: '접수',
         processing: '처리 중',
-        done: '완료'
+        done: '조치완료'
     });
 
     /* ==================================================================
@@ -166,34 +171,94 @@
         return { ok: true, terminalId, type, content };
     }
 
+    function validateComment(rawText) {
+        const content = String(rawText == null ? '' : rawText)
+            .replace(/\s+/gu, ' ').trim();
+        if (!content) {
+            return { ok: false, code: 'empty', message: '댓글 내용을 적어 주세요.' };
+        }
+        if (content.length > MAX_COMMENT) {
+            return { ok: false, code: 'long', message: `댓글은 ${MAX_COMMENT}자까지 적을 수 있어요.` };
+        }
+        return { ok: true, content };
+    }
+
+    function normalizeLikedBy(raw) {
+        if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return {};
+        const out = {};
+        Object.keys(raw).forEach(key => {
+            const uid = String(key || '').trim().slice(0, 128);
+            if (uid && raw[key] === true) out[uid] = true;
+        });
+        return out;
+    }
+
+    function countLikes(likedBy) {
+        return Object.keys(normalizeLikedBy(likedBy)).length;
+    }
+
+    function isLikedByUid(likedBy, uid) {
+        const clean = String(uid || '').trim();
+        if (!clean) return false;
+        return normalizeLikedBy(likedBy)[clean] === true;
+    }
+
+    function readMillis(numVal, tsVal) {
+        let millis = Number(numVal);
+        if (!Number.isFinite(millis) || millis <= 0) {
+            try {
+                if (tsVal && typeof tsVal.toMillis === 'function') {
+                    millis = Number(tsVal.toMillis());
+                }
+            } catch (_) { /* 무시 */ }
+        }
+        return (Number.isFinite(millis) && millis > 0) ? millis : 0;
+    }
+
+    function normalizeComment(id, requestId, data) {
+        const d = data || {};
+        const millis = readMillis(d.createdAtMs, d.createdAt) || Date.now();
+        const updatedAtMs = readMillis(d.updatedAtMs, d.updatedAt);
+        const likedBy = normalizeLikedBy(d.likedBy);
+        return {
+            id: String(id || ''),
+            requestId: String(d.requestId || requestId || ''),
+            content: String(d.content || '').slice(0, MAX_COMMENT),
+            author: String(d.author || '익명***').slice(0, MAX_AUTHOR),
+            anonCode: String(d.anonCode || '').slice(0, 12),
+            authorUid: String(d.authorUid || '').slice(0, 128),
+            likedBy,
+            likeCount: Object.keys(likedBy).length,
+            timestampMs: millis,
+            updatedAtMs,
+            edited: Boolean(updatedAtMs && updatedAtMs > millis),
+            local: Boolean(d.local)
+        };
+    }
+
     function normalizeRequest(id, data) {
         const d = data || {};
         const terminal = terminalById(d.terminalId);
         const type = typeById(d.type);
         const isLocal = Boolean(d.local);
-        let millis = Number(d.createdAtMs);
-        if (!Number.isFinite(millis) || millis <= 0) {
-            try {
-                if (d.createdAt && typeof d.createdAt.toMillis === 'function') {
-                    millis = Number(d.createdAt.toMillis());
-                }
-            } catch (_) { /* 구버전 문서 호환 */ }
-        }
-        if (!Number.isFinite(millis) || millis <= 0) millis = Date.now();
-
-        let updatedAtMs = Number(d.updatedAtMs);
-        if (!Number.isFinite(updatedAtMs) || updatedAtMs <= 0) {
-            try {
-                if (d.updatedAt && typeof d.updatedAt.toMillis === 'function') {
-                    updatedAtMs = Number(d.updatedAt.toMillis());
-                }
-            } catch (_) { /* 무시 */ }
-        }
-        if (!Number.isFinite(updatedAtMs) || updatedAtMs <= 0) updatedAtMs = 0;
+        const millis = readMillis(d.createdAtMs, d.createdAt) || Date.now();
+        const updatedAtMs = readMillis(d.updatedAtMs, d.updatedAt);
+        const resolvedAtMs = readMillis(d.resolvedAtMs, d.resolvedAt);
 
         const rawImages = Array.isArray(d.imageUrls) && d.imageUrls.length
             ? d.imageUrls
             : (d.imageUrl ? [d.imageUrl] : (isLocal && Array.isArray(d.pendingPhotoDataUrls) ? d.pendingPhotoDataUrls : []));
+
+        const likedBy = normalizeLikedBy(d.likedBy);
+        const localComments = isLocal && Array.isArray(d.localComments)
+            ? d.localComments.map(item => normalizeComment(item && item.id, id, { ...item, local: true }))
+            : [];
+        const rawCommentCount = Math.floor(Number(d.commentCount) || 0);
+        const commentCount = isLocal
+            ? Math.max(localComments.length, Math.max(0, rawCommentCount))
+            : Math.max(0, Math.min(2000, rawCommentCount));
+
+        const status = STATUS_LABEL[d.status] ? d.status : 'received';
 
         return {
             id: String(id || ''),
@@ -207,8 +272,13 @@
             anonCode: String(d.anonCode || '').slice(0, 12),
             authorUid: String(d.authorUid || '').slice(0, 128),
             imageUrls: normalizeImageUrls(rawImages, isLocal),
-            status: STATUS_LABEL[d.status] ? d.status : 'received',
-            statusLabel: STATUS_LABEL[d.status] || '접수',
+            status,
+            statusLabel: STATUS_LABEL[status] || '접수',
+            resolvedAtMs,
+            likedBy,
+            likeCount: Object.keys(likedBy).length,
+            commentCount,
+            localComments,
             timestampMs: millis,
             updatedAtMs,
             edited: Boolean(updatedAtMs && updatedAtMs > millis),
@@ -294,6 +364,22 @@
         }
     }
 
+    function fieldDelete() {
+        try {
+            const fv = global.firebase && global.firebase.firestore && global.firebase.firestore.FieldValue;
+            if (fv && typeof fv.delete === 'function') return fv.delete();
+        } catch (_) {}
+        return { __deleteField: true };
+    }
+
+    function fieldIncrement(delta) {
+        try {
+            const fv = global.firebase && global.firebase.firestore && global.firebase.firestore.FieldValue;
+            if (fv && typeof fv.increment === 'function') return fv.increment(delta);
+        } catch (_) {}
+        return null;
+    }
+
     /** Firestore 문서 모양 — 로컬 임시 접수본을 그대로 다시 올릴 때도 이 모양을 씁니다. */
     function toFirestoreDoc(entry) {
         const doc = {
@@ -303,7 +389,7 @@
             content: entry.content,
             author: entry.author,
             anonCode: entry.anonCode,
-            status: entry.status,
+            status: 'received',
             createdAtMs: entry.createdAtMs
         };
         if (entry.authorUid) doc.authorUid = String(entry.authorUid);
@@ -484,9 +570,9 @@
         writeLocalRequests(list);
     }
 
-    function readOwnedIds() {
+    function readIdSet(key) {
         try {
-            const raw = global.localStorage?.getItem(MINE_KEY);
+            const raw = global.localStorage?.getItem(key);
             const parsed = JSON.parse(raw || '[]');
             return new Set(Array.isArray(parsed) ? parsed.map(String).slice(0, MAX_OWNED_IDS) : []);
         } catch (_) {
@@ -494,26 +580,45 @@
         }
     }
 
-    let ownedRequestIds = readOwnedIds();
+    function writeIdSet(key, setObj) {
+        try {
+            const list = Array.from(setObj).slice(-MAX_OWNED_IDS);
+            global.localStorage?.setItem(key, JSON.stringify(list));
+            return new Set(list);
+        } catch (_) {
+            return setObj;
+        }
+    }
+
+    let ownedRequestIds = readIdSet(MINE_KEY);
+    let ownedCommentIds = readIdSet(MINE_COMMENTS_KEY);
 
     function rememberOwnedId(id) {
         const clean = String(id || '').trim();
         if (!clean) return;
         ownedRequestIds.add(clean);
-        try {
-            const list = Array.from(ownedRequestIds).slice(-MAX_OWNED_IDS);
-            ownedRequestIds = new Set(list);
-            global.localStorage?.setItem(MINE_KEY, JSON.stringify(list));
-        } catch (_) {}
+        ownedRequestIds = writeIdSet(MINE_KEY, ownedRequestIds);
     }
 
     function forgetOwnedId(id) {
         const clean = String(id || '').trim();
         if (!clean) return;
         ownedRequestIds.delete(clean);
-        try {
-            global.localStorage?.setItem(MINE_KEY, JSON.stringify(Array.from(ownedRequestIds)));
-        } catch (_) {}
+        ownedRequestIds = writeIdSet(MINE_KEY, ownedRequestIds);
+    }
+
+    function rememberOwnedCommentId(id) {
+        const clean = String(id || '').trim();
+        if (!clean) return;
+        ownedCommentIds.add(clean);
+        ownedCommentIds = writeIdSet(MINE_COMMENTS_KEY, ownedCommentIds);
+    }
+
+    function forgetOwnedCommentId(id) {
+        const clean = String(id || '').trim();
+        if (!clean) return;
+        ownedCommentIds.delete(clean);
+        ownedCommentIds = writeIdSet(MINE_COMMENTS_KEY, ownedCommentIds);
     }
 
     function pendingLocalEntries() {
@@ -550,8 +655,43 @@
                     imageUrls,
                     local: false
                 };
-                await store.collection(COLLECTION).doc(item.id).set(toFirestoreDoc(payload));
+                const docRef = store.collection(COLLECTION).doc(item.id);
+                await docRef.set(toFirestoreDoc(payload));
                 rememberOwnedId(item.id);
+
+                if (item.status === 'done') {
+                    try {
+                        await docRef.update({
+                            status: 'done',
+                            resolvedAtMs: Number(item.resolvedAtMs || Date.now())
+                        });
+                    } catch (_) {}
+                }
+
+                const localComments = Array.isArray(item.localComments) ? item.localComments : [];
+                if (localComments.length && typeof docRef.collection === 'function') {
+                    let syncedComments = 0;
+                    for (const comment of localComments) {
+                        try {
+                            const cid = String(comment.id || `c-${Date.now()}`);
+                            await docRef.collection(COMMENTS_COLLECTION).doc(cid).set({
+                                requestId: item.id,
+                                content: String(comment.content || '').slice(0, MAX_COMMENT),
+                                author: String(comment.author || item.author || '익명***').slice(0, MAX_AUTHOR),
+                                anonCode: String(comment.anonCode || makeAnonCode()),
+                                authorUid: uid,
+                                createdAtMs: Number(comment.createdAtMs || comment.timestampMs || Date.now())
+                            });
+                            rememberOwnedCommentId(cid);
+                            syncedComments += 1;
+                        } catch (_) {}
+                    }
+                    if (syncedComments > 0) {
+                        try {
+                            await docRef.update({ commentCount: syncedComments });
+                        } catch (_) {}
+                    }
+                }
                 uploaded.add(item.id);
             } catch (_) { /* 다음 연결 때 다시 시도합니다 */ }
         }
@@ -561,13 +701,13 @@
         renderAll();
     }
 
-    function moderateAsText(content, author) {
+    function moderateAsText(content, author, categoryLabel) {
         try {
             if (typeof global.inspectCommunityContent === 'function') {
                 const result = global.inspectCommunityContent({
                     text: content,
                     author: author,
-                    category: '터미널 시설·정비 A/S 요청'
+                    category: categoryLabel || '터미널 시설·정비 A/S 요청'
                 });
                 if (result && typeof result === 'object') return result;
             }
@@ -620,6 +760,10 @@
     let editingRequestId = null;
     let editingOriginalEntry = null;
     let editingExistingUrls = [];
+    const openCommentIds = new Set();
+    const commentsByRequest = new Map();
+    const commentUnsubscribers = new Map();
+    const draftCommentText = new Map();
     let unsubscribe = null;
     let visibilityObserver = null;
     let boardVisible = false;
@@ -638,43 +782,36 @@
     }
 
     function setStatus(message, tone = 'neutral') {
-        const node = byId('tasStatus');
-        if (!node) return;
-        node.textContent = message;
-        node.classList.remove('is-error', 'is-success', 'is-neutral');
-        node.classList.add(tone === 'error' || tone === 'success' ? `is-${tone}` : 'is-neutral');
+        const box = byId('tasStatus');
+        if (!box) return;
+        box.textContent = message;
+        box.className = `tas-status is-${tone}`;
     }
 
-    function setLiveBadge(live) {
+    function setLiveBadge(isLive) {
         const badge = byId('tasLiveBadge');
         if (!badge) return;
-        badge.textContent = live ? '🟢 실시간 공유 중' : '⚪ 오프라인 접수';
-        badge.classList.toggle('is-live', Boolean(live));
+        badge.textContent = isLive ? '🟢 실시간 공유 중' : '⚪ 오프라인 접수';
+        badge.classList.toggle('is-live', Boolean(isLive));
     }
 
     function setBusy(busy, label) {
         const submit = byId('tasSubmit');
-        if (submit) {
-            submit.disabled = Boolean(busy);
-            if (busy) {
-                submit.textContent = label || (editingRequestId ? '수정 중…' : '접수 중…');
-            } else {
-                submit.textContent = editingRequestId ? '수정 저장' : '요청 접수';
-            }
+        if (!submit) return;
+        submit.disabled = Boolean(busy);
+        if (busy) {
+            submit.textContent = label || (editingRequestId ? '수정 중…' : '접수 중…');
+        } else {
+            submit.textContent = editingRequestId ? '수정 저장' : '요청 접수';
         }
     }
 
-    function currentIdentity() {
-        const select = byId('tasTerminalSelect');
-        const id = select ? String(select.value || '') : '';
-        return buildAnonymousIdentity(id);
-    }
-
     function updateAuthorPreview() {
-        const node = byId('tasAuthorPreview');
+        const preview = byId('tasAuthorPreview');
         const code = byId('tasAnonCode');
-        const identity = currentIdentity();
-        if (node) node.textContent = identity.author;
+        const select = byId('tasTerminalSelect');
+        const identity = buildAnonymousIdentity(select ? select.value : '');
+        if (preview) preview.textContent = identity.author;
         if (code) {
             const preserved = editingOriginalEntry && editingOriginalEntry.anonCode
                 ? editingOriginalEntry.anonCode
@@ -692,6 +829,21 @@
         if (!entry.authorUid && ownedRequestIds.has(entry.id)) return true;
         if (!uid && entry.authorUid && ownedRequestIds.has(entry.id)) return true;
         return false;
+    }
+
+    function canManageComment(comment) {
+        if (!comment) return false;
+        if (isAdminSession()) return true;
+        if (comment.local) return true;
+        const uid = resolveCurrentUid();
+        if (uid && comment.authorUid && comment.authorUid === uid) return true;
+        if (!uid && ownedCommentIds.has(comment.id)) return true;
+        return false;
+    }
+
+    function activeLikeUid(entryOrComment) {
+        if (entryOrComment && entryOrComment.local) return resolveCurrentUid() || 'local-self';
+        return resolveCurrentUid();
     }
 
     function renderPhotoPreview() {
@@ -760,6 +912,81 @@
         return sortRequests(Array.from(merged.values()));
     }
 
+    function renderCommentsSection(entry) {
+        const panel = el('div', 'tas-comments-panel');
+        const list = el('ul', 'tas-comment-list');
+        const comments = entry.local
+            ? (entry.localComments || [])
+            : (commentsByRequest.get(entry.id) || []);
+        const likeUid = activeLikeUid(entry);
+
+        if (!comments.length) {
+            list.appendChild(el('li', 'tas-comment-empty', '아직 댓글이 없어요. 첫 댓글을 남겨 주세요.'));
+        } else {
+            comments.forEach(comment => {
+                const row = el('li', 'tas-comment-item');
+                const head = el('div', 'tas-comment-head');
+                head.appendChild(el('span', 'tas-comment-author', comment.author));
+                if (comment.anonCode) head.appendChild(el('span', 'tas-comment-code', `#${comment.anonCode}`));
+                if (entry.authorUid && comment.authorUid && entry.authorUid === comment.authorUid) {
+                    head.appendChild(el('span', 'tas-comment-writer-badge', '글쓴이'));
+                }
+                head.appendChild(el('span', 'tas-comment-time', formatRelativeTime(comment.timestampMs, Date.now())));
+                row.appendChild(head);
+
+                row.appendChild(el('p', 'tas-comment-text', comment.content));
+
+                const foot = el('div', 'tas-comment-foot');
+                const cLiked = isLikedByUid(comment.likedBy, likeUid);
+                const cLikeCount = countLikes(comment.likedBy);
+                const cLikeBtn = el(
+                    'button',
+                    'tas-comment-like-btn' + (cLiked ? ' is-liked' : ''),
+                    cLikeCount ? `❤️ 좋아요 ${cLikeCount}` : '🤍 좋아요'
+                );
+                cLikeBtn.setAttribute('type', 'button');
+                cLikeBtn.setAttribute('aria-pressed', cLiked ? 'true' : 'false');
+                cLikeBtn.setAttribute('aria-label', `댓글 좋아요 ${cLikeCount}개`);
+                cLikeBtn.addEventListener('click', () => void toggleCommentLike(entry, comment));
+                foot.appendChild(cLikeBtn);
+
+                if (canManageComment(comment)) {
+                    const delBtn = el('button', 'tas-comment-del-btn', '🗑️ 삭제');
+                    delBtn.setAttribute('type', 'button');
+                    delBtn.setAttribute('aria-label', '댓글 삭제');
+                    delBtn.addEventListener('click', () => void deleteComment(entry, comment));
+                    foot.appendChild(delBtn);
+                }
+                row.appendChild(foot);
+                list.appendChild(row);
+            });
+        }
+        panel.appendChild(list);
+
+        const form = el('form', 'tas-comment-form');
+        form.setAttribute('autocomplete', 'off');
+        const input = el('input', 'tas-comment-input');
+        input.setAttribute('type', 'text');
+        input.setAttribute('maxlength', String(MAX_COMMENT));
+        input.setAttribute('placeholder', '댓글을 입력하세요 (비밀번호 없이 자동 작성)');
+        input.setAttribute('aria-label', `${entry.terminalLabel} 요청 댓글 입력`);
+        input.value = draftCommentText.get(entry.id) || '';
+        input.addEventListener('input', () => {
+            draftCommentText.set(entry.id, input.value);
+        });
+
+        const submitBtn = el('button', 'tas-comment-submit', '등록');
+        submitBtn.setAttribute('type', 'submit');
+        form.addEventListener('submit', e => {
+            if (e && typeof e.preventDefault === 'function') e.preventDefault();
+            void submitComment(entry, input);
+        });
+        form.appendChild(input);
+        form.appendChild(submitBtn);
+        panel.appendChild(form);
+        return panel;
+    }
+
     function renderFeed() {
         const feed = byId('tasFeed');
         if (!feed) return;
@@ -782,13 +1009,16 @@
         }
         const adminActive = isAdminSession();
         visible.slice(0, FEED_LIMIT).forEach(entry => {
+            const isDone = entry.status === 'done';
             const item = el('li', 'tas-feed-item'
                 + (entry.local ? ' is-local' : '')
+                + (isDone ? ' is-done' : '')
                 + (editingRequestId === entry.id ? ' is-editing' : ''));
             const top = el('div', 'tas-feed-top');
             const badge = el('span', 'tas-terminal-badge', entry.terminalLabel);
             const type = el('span', 'tas-type-badge', `${entry.typeIcon} ${entry.typeLabel}`);
-            const status = el('span', 'tas-status-badge is-' + entry.status, entry.statusLabel);
+            const statusText = isDone ? '✅ 조치완료' : entry.statusLabel;
+            const status = el('span', 'tas-status-badge is-' + entry.status, statusText);
             top.appendChild(badge);
             top.appendChild(type);
             top.appendChild(status);
@@ -818,12 +1048,61 @@
             bottom.appendChild(el('span', 'tas-feed-author', entry.author));
             if (entry.anonCode) bottom.appendChild(el('span', 'tas-feed-code', `#${entry.anonCode}`));
             if (entry.edited) bottom.appendChild(el('span', 'tas-feed-edited', '· 수정됨'));
+            if (isDone && entry.resolvedAtMs) {
+                bottom.appendChild(el('span', 'tas-feed-resolved', `· 완료 ${formatRelativeTime(entry.resolvedAtMs, Date.now())}`));
+            }
             if (entry.local) bottom.appendChild(el('span', 'tas-feed-local', '📴 이 기기에만 저장'));
             bottom.appendChild(el('span', 'tas-feed-time', formatRelativeTime(entry.timestampMs, Date.now())));
             item.appendChild(bottom);
 
+            /* ---- 누구나 누를 수 있는 좋아요 · 댓글 · 조치 완료 + 작성자/관리자 관리 바 ---- */
+            const actions = el('div', 'tas-item-actions');
+            const likeUid = activeLikeUid(entry);
+            const postLiked = isLikedByUid(entry.likedBy, likeUid);
+            const postLikes = countLikes(entry.likedBy);
+            const likeBtn = el(
+                'button',
+                'tas-like-btn' + (postLiked ? ' is-liked' : ''),
+                postLikes ? `❤️ 좋아요 ${postLikes}` : '🤍 좋아요'
+            );
+            likeBtn.setAttribute('type', 'button');
+            likeBtn.setAttribute('aria-pressed', postLiked ? 'true' : 'false');
+            likeBtn.setAttribute('aria-label', `${entry.terminalLabel} 요청 좋아요 ${postLikes}개`);
+            likeBtn.addEventListener('click', () => void togglePostLike(entry));
+            actions.appendChild(likeBtn);
+
+            const loadedComments = commentsByRequest.get(entry.id);
+            const cCount = entry.local
+                ? (entry.localComments || []).length
+                : (loadedComments ? loadedComments.length : entry.commentCount);
+            const isCommentsOpen = openCommentIds.has(entry.id);
+            const cmtBtn = el(
+                'button',
+                'tas-comment-toggle-btn' + (isCommentsOpen ? ' is-open' : ''),
+                cCount ? `💬 댓글 ${cCount}` : '💬 댓글'
+            );
+            cmtBtn.setAttribute('type', 'button');
+            cmtBtn.setAttribute('aria-expanded', isCommentsOpen ? 'true' : 'false');
+            cmtBtn.setAttribute('aria-label', `${entry.terminalLabel} 요청 댓글 ${cCount}개`);
+            cmtBtn.addEventListener('click', () => toggleComments(entry));
+            actions.appendChild(cmtBtn);
+
+            if (!isDone) {
+                const resolveBtn = el('button', 'tas-item-btn is-resolve', '✅ 조치 완료');
+                resolveBtn.setAttribute('type', 'button');
+                resolveBtn.setAttribute('aria-label', `${entry.terminalLabel} 요청 조치 완료로 표시`);
+                resolveBtn.addEventListener('click', () => void resolveAsRequest(entry));
+                actions.appendChild(resolveBtn);
+            } else {
+                const doneBadgeBtn = el('button', 'tas-item-btn is-resolved-done', '✅ 조치완료됨');
+                doneBadgeBtn.setAttribute('type', 'button');
+                doneBadgeBtn.disabled = true;
+                doneBadgeBtn.setAttribute('aria-label', '조치완료된 요청');
+                actions.appendChild(doneBadgeBtn);
+            }
+
             if (canManageEntry(entry)) {
-                const actions = el('div', 'tas-item-actions');
+                const manageGroup = el('div', 'tas-item-manage');
                 if (adminActive && !entry.local) {
                     const statusSel = el('select', 'tas-admin-status');
                     statusSel.setAttribute('aria-label', '처리 상태 변경');
@@ -834,7 +1113,7 @@
                     });
                     statusSel.value = entry.status;
                     statusSel.addEventListener('change', () => void updateAdminStatus(entry, statusSel.value));
-                    actions.appendChild(statusSel);
+                    manageGroup.appendChild(statusSel);
                 }
                 const editBtn = el('button', 'tas-item-btn is-edit', '✏️ 수정');
                 editBtn.setAttribute('type', 'button');
@@ -846,9 +1125,14 @@
                 delBtn.setAttribute('aria-label', `${entry.terminalLabel} 요청 삭제`);
                 delBtn.addEventListener('click', () => void deleteAsRequest(entry));
 
-                actions.appendChild(editBtn);
-                actions.appendChild(delBtn);
-                item.appendChild(actions);
+                manageGroup.appendChild(editBtn);
+                manageGroup.appendChild(delBtn);
+                actions.appendChild(manageGroup);
+            }
+            item.appendChild(actions);
+
+            if (isCommentsOpen) {
+                item.appendChild(renderCommentsSection(entry));
             }
             feed.appendChild(item);
         });
@@ -874,6 +1158,379 @@
         renderFilter();
         renderPhotoPreview();
         renderFeed();
+    }
+
+    /* ---------------- 조치 완료 · 좋아요 · 댓글 ---------------- */
+
+    async function resolveAsRequest(entry) {
+        if (!entry || entry.status === 'done') return;
+
+        if (entry.local) {
+            const resolvedAtMs = Date.now();
+            const list = readLocalRequests().map(item => (
+                item && item.id === entry.id
+                    ? { ...item, status: 'done', resolvedAtMs }
+                    : item
+            ));
+            writeLocalRequests(list);
+            localEntries = list.map(item => normalizeRequest(item.id, item));
+            renderFeed();
+            setStatus('✅ 임시 접수를 조치완료로 표시했어요.', 'success');
+            return;
+        }
+
+        const store = asFirestore();
+        if (!store) {
+            setStatus('❌ 오프라인 상태에서는 서버 요청을 조치완료 처리할 수 없어요.', 'error');
+            return;
+        }
+
+        const prevEntry = entry;
+        const resolvedAtMs = Date.now();
+        feedEntries = feedEntries.map(item => (
+            item.id === entry.id
+                ? { ...item, status: 'done', statusLabel: STATUS_LABEL.done, resolvedAtMs }
+                : item
+        ));
+        renderFeed();
+
+        try {
+            await ensureAsAuth();
+            const payload = { status: 'done', resolvedAtMs };
+            const stamp = serverTimestamp();
+            if (stamp) payload.resolvedAt = stamp;
+            await store.collection(COLLECTION).doc(entry.id).update(payload);
+            setStatus(`✅ ${entry.terminalLabel} 요청이 조치완료로 표시되었어요.`, 'success');
+        } catch (_) {
+            feedEntries = feedEntries.map(item => (item.id === entry.id ? prevEntry : item));
+            renderFeed();
+            setStatus('❌ 조치완료 처리에 실패했어요. 네트워크 연결을 확인해 주세요.', 'error');
+        }
+    }
+
+    async function togglePostLike(entry) {
+        if (!entry) return;
+        const store = asFirestore();
+        if (entry.local) {
+            const uid = activeLikeUid(entry);
+            const nextLiked = !isLikedByUid(entry.likedBy, uid);
+            const list = readLocalRequests().map(item => {
+                if (!item || item.id !== entry.id) return item;
+                const likedBy = normalizeLikedBy(item.likedBy);
+                if (nextLiked) likedBy[uid] = true;
+                else delete likedBy[uid];
+                return { ...item, likedBy };
+            });
+            writeLocalRequests(list);
+            localEntries = list.map(item => normalizeRequest(item.id, item));
+            renderFeed();
+            return;
+        }
+        if (!store) {
+            setStatus('❌ 오프라인 상태에서는 좋아요를 반영할 수 없어요.', 'error');
+            return;
+        }
+
+        const authUser = await ensureAsAuth();
+        const uid = resolveCurrentUid(authUser);
+        if (!uid) {
+            setStatus('❌ 인증을 확인하지 못해 좋아요를 반영할 수 없어요.', 'error');
+            return;
+        }
+
+        const prevLikes = normalizeLikedBy(entry.likedBy);
+        const nextLiked = !isLikedByUid(prevLikes, uid);
+        const nextMap = { ...prevLikes };
+        if (nextLiked) nextMap[uid] = true;
+        else delete nextMap[uid];
+
+        feedEntries = feedEntries.map(item => (
+            item.id === entry.id
+                ? { ...item, likedBy: nextMap, likeCount: Object.keys(nextMap).length }
+                : item
+        ));
+        renderFeed();
+
+        try {
+            const patch = nextLiked
+                ? { [`likedBy.${uid}`]: true }
+                : { [`likedBy.${uid}`]: fieldDelete() };
+            await store.collection(COLLECTION).doc(entry.id).update(patch);
+        } catch (_) {
+            feedEntries = feedEntries.map(item => (
+                item.id === entry.id
+                    ? { ...item, likedBy: prevLikes, likeCount: Object.keys(prevLikes).length }
+                    : item
+            ));
+            renderFeed();
+            setStatus('❌ 좋아요 처리에 실패했어요. 잠시 후 다시 시도해 주세요.', 'error');
+        }
+    }
+
+    function stopCommentSubscription(requestId) {
+        const unsub = commentUnsubscribers.get(requestId);
+        if (typeof unsub === 'function') {
+            try { unsub(); } catch (_) {}
+        }
+        commentUnsubscribers.delete(requestId);
+    }
+
+    function stopAllCommentSubscriptions() {
+        commentUnsubscribers.forEach(unsub => {
+            if (typeof unsub === 'function') {
+                try { unsub(); } catch (_) {}
+            }
+        });
+        commentUnsubscribers.clear();
+    }
+
+    function startCommentSubscription(requestId) {
+        if (!requestId || commentUnsubscribers.has(requestId)) return;
+        const store = asFirestore();
+        if (!store) return;
+        try {
+            const docRef = store.collection(COLLECTION).doc(requestId);
+            if (!docRef || typeof docRef.collection !== 'function') return;
+            const colRef = docRef.collection(COMMENTS_COLLECTION);
+            const query = (typeof colRef.orderBy === 'function')
+                ? colRef.orderBy('createdAtMs', 'asc').limit(COMMENTS_LIMIT)
+                : colRef;
+            const unsub = query.onSnapshot(snapshot => {
+                const list = [];
+                if (snapshot && typeof snapshot.forEach === 'function') {
+                    snapshot.forEach(docSnapshot => {
+                        const data = docSnapshot.data() || {};
+                        list.push(normalizeComment(docSnapshot.id, requestId, data));
+                    });
+                }
+                list.sort((a, b) => Number(a.timestampMs || 0) - Number(b.timestampMs || 0));
+                commentsByRequest.set(requestId, list);
+                feedEntries = feedEntries.map(item => (
+                    item.id === requestId ? { ...item, commentCount: list.length } : item
+                ));
+                renderFeed();
+            }, () => { /* 댓글 구독 실패는 요청 목록 표시를 막지 않습니다 */ });
+            if (typeof unsub === 'function') commentUnsubscribers.set(requestId, unsub);
+        } catch (_) {}
+    }
+
+    function toggleComments(entry) {
+        if (!entry || !entry.id) return;
+        if (openCommentIds.has(entry.id)) {
+            openCommentIds.delete(entry.id);
+            stopCommentSubscription(entry.id);
+        } else {
+            openCommentIds.add(entry.id);
+            if (!entry.local) startCommentSubscription(entry.id);
+        }
+        renderFeed();
+    }
+
+    async function submitComment(entry, inputEl) {
+        if (!entry) return;
+        const rawValue = inputEl && typeof inputEl === 'object' ? inputEl.value : inputEl;
+        const check = validateComment(rawValue);
+        if (!check.ok) {
+            setStatus(check.message, 'error');
+            return;
+        }
+
+        const terminalId = entry.terminalId || (byId('tasTerminalSelect')?.value) || TERMINALS[0].id;
+        const identity = buildAnonymousIdentity(terminalId);
+        const moderation = moderateAsText(check.content, identity.author, '터미널 시설·정비 A/S 댓글');
+        if (moderation.hidden) {
+            setStatus(`⚠️ ${moderation.reason || '금칙어/도배'} 감지로 댓글을 등록할 수 없어요.`, 'error');
+            notifyBlind({
+                category: '터미널 시설·정비 A/S 댓글',
+                author: identity.author,
+                text: check.content,
+                reason: moderation.reason
+            });
+            return;
+        }
+
+        if (entry.local) {
+            const comment = normalizeComment(`lc-${Date.now()}-${identity.anonCode}`, entry.id, {
+                requestId: entry.id,
+                content: check.content,
+                author: identity.author,
+                anonCode: identity.anonCode,
+                createdAtMs: Date.now(),
+                local: true
+            });
+            const list = readLocalRequests().map(item => {
+                if (!item || item.id !== entry.id) return item;
+                const nextComments = (Array.isArray(item.localComments) ? item.localComments : []).concat([comment]);
+                return { ...item, localComments: nextComments, commentCount: nextComments.length };
+            });
+            writeLocalRequests(list);
+            localEntries = list.map(item => normalizeRequest(item.id, item));
+            draftCommentText.delete(entry.id);
+            if (inputEl && typeof inputEl === 'object') inputEl.value = '';
+            renderFeed();
+            setStatus('💬 임시 요청에 댓글을 남겼어요.', 'success');
+            return;
+        }
+
+        const store = asFirestore();
+        if (!store) {
+            setStatus('❌ 오프라인 상태에서는 댓글을 등록할 수 없어요.', 'error');
+            return;
+        }
+
+        const authUser = await ensureAsAuth();
+        const uid = resolveCurrentUid(authUser);
+        if (!uid) {
+            setStatus('❌ 인증을 확인하지 못해 댓글을 등록할 수 없어요.', 'error');
+            return;
+        }
+
+        try {
+            const docRef = store.collection(COLLECTION).doc(entry.id);
+            const commentsRef = docRef.collection(COMMENTS_COLLECTION);
+            const newCommentRef = commentsRef.doc();
+            const cid = newCommentRef.id || `c-${Date.now()}-${identity.anonCode}`;
+            const createdAtMs = Date.now();
+            const commentDoc = {
+                requestId: entry.id,
+                content: check.content,
+                author: identity.author,
+                anonCode: identity.anonCode,
+                authorUid: uid,
+                createdAtMs
+            };
+            const stamp = serverTimestamp();
+            if (stamp) commentDoc.createdAt = stamp;
+            await newCommentRef.set(commentDoc);
+            rememberOwnedCommentId(cid);
+
+            const prevList = commentsByRequest.get(entry.id) || [];
+            if (!prevList.some(item => item.id === cid)) {
+                commentsByRequest.set(entry.id, prevList.concat([normalizeComment(cid, entry.id, commentDoc)]));
+            }
+            const nextCount = (commentsByRequest.get(entry.id) || []).length || (Number(entry.commentCount || 0) + 1);
+            feedEntries = feedEntries.map(item => (
+                item.id === entry.id ? { ...item, commentCount: nextCount } : item
+            ));
+
+            const inc = fieldIncrement(1);
+            void docRef.update({ commentCount: inc !== null ? inc : nextCount }).catch(() => {});
+
+            draftCommentText.delete(entry.id);
+            if (inputEl && typeof inputEl === 'object') inputEl.value = '';
+            renderFeed();
+            setStatus('💬 댓글을 등록했어요.', 'success');
+        } catch (_) {
+            setStatus('❌ 댓글을 등록하지 못했어요. 네트워크 연결을 확인해 주세요.', 'error');
+        }
+    }
+
+    async function toggleCommentLike(entry, comment) {
+        if (!entry || !comment) return;
+        if (entry.local || comment.local) {
+            const uid = activeLikeUid(comment);
+            const nextLiked = !isLikedByUid(comment.likedBy, uid);
+            const list = readLocalRequests().map(item => {
+                if (!item || item.id !== entry.id) return item;
+                const nextComments = (Array.isArray(item.localComments) ? item.localComments : []).map(c => {
+                    if (!c || c.id !== comment.id) return c;
+                    const likedBy = normalizeLikedBy(c.likedBy);
+                    if (nextLiked) likedBy[uid] = true;
+                    else delete likedBy[uid];
+                    return { ...c, likedBy };
+                });
+                return { ...item, localComments: nextComments };
+            });
+            writeLocalRequests(list);
+            localEntries = list.map(item => normalizeRequest(item.id, item));
+            renderFeed();
+            return;
+        }
+
+        const store = asFirestore();
+        if (!store) {
+            setStatus('❌ 오프라인 상태에서는 댓글 좋아요를 반영할 수 없어요.', 'error');
+            return;
+        }
+
+        const authUser = await ensureAsAuth();
+        const uid = resolveCurrentUid(authUser);
+        if (!uid) {
+            setStatus('❌ 인증을 확인하지 못해 댓글 좋아요를 반영할 수 없어요.', 'error');
+            return;
+        }
+
+        const prevLikes = normalizeLikedBy(comment.likedBy);
+        const nextLiked = !isLikedByUid(prevLikes, uid);
+        const nextMap = { ...prevLikes };
+        if (nextLiked) nextMap[uid] = true;
+        else delete nextMap[uid];
+
+        const curList = commentsByRequest.get(entry.id) || [];
+        commentsByRequest.set(entry.id, curList.map(c => (
+            c.id === comment.id ? { ...c, likedBy: nextMap, likeCount: Object.keys(nextMap).length } : c
+        )));
+        renderFeed();
+
+        try {
+            const patch = nextLiked
+                ? { [`likedBy.${uid}`]: true }
+                : { [`likedBy.${uid}`]: fieldDelete() };
+            await store.collection(COLLECTION).doc(entry.id)
+                .collection(COMMENTS_COLLECTION).doc(comment.id)
+                .update(patch);
+        } catch (_) {
+            commentsByRequest.set(entry.id, (commentsByRequest.get(entry.id) || []).map(c => (
+                c.id === comment.id ? { ...c, likedBy: prevLikes, likeCount: Object.keys(prevLikes).length } : c
+            )));
+            renderFeed();
+            setStatus('❌ 댓글 좋아요 처리에 실패했어요.', 'error');
+        }
+    }
+
+    async function deleteComment(entry, comment) {
+        if (!entry || !comment) return;
+        if (!askConfirm('이 댓글을 삭제할까요?')) return;
+
+        if (entry.local || comment.local) {
+            const list = readLocalRequests().map(item => {
+                if (!item || item.id !== entry.id) return item;
+                const nextComments = (Array.isArray(item.localComments) ? item.localComments : [])
+                    .filter(c => c && c.id !== comment.id);
+                return { ...item, localComments: nextComments, commentCount: nextComments.length };
+            });
+            writeLocalRequests(list);
+            localEntries = list.map(item => normalizeRequest(item.id, item));
+            forgetOwnedCommentId(comment.id);
+            renderFeed();
+            setStatus('🗑️ 댓글을 삭제했어요.', 'neutral');
+            return;
+        }
+
+        const store = asFirestore();
+        if (!store) {
+            setStatus('❌ 오프라인 상태에서는 댓글을 삭제할 수 없어요.', 'error');
+            return;
+        }
+
+        try {
+            await ensureAsAuth();
+            const docRef = store.collection(COLLECTION).doc(entry.id);
+            await docRef.collection(COMMENTS_COLLECTION).doc(comment.id).delete();
+            forgetOwnedCommentId(comment.id);
+            const nextComments = (commentsByRequest.get(entry.id) || []).filter(c => c.id !== comment.id);
+            commentsByRequest.set(entry.id, nextComments);
+            const nextCount = Math.max(0, nextComments.length || (Number(entry.commentCount || 1) - 1));
+            feedEntries = feedEntries.map(item => (
+                item.id === entry.id ? { ...item, commentCount: nextCount } : item
+            ));
+            const dec = fieldIncrement(-1);
+            void docRef.update({ commentCount: dec !== null ? dec : nextCount }).catch(() => {});
+            renderFeed();
+            setStatus('🗑️ 댓글을 삭제했어요.', 'neutral');
+        } catch (_) {
+            setStatus('❌ 댓글을 삭제하지 못했어요. 작성 권한이나 네트워크를 확인해 주세요.', 'error');
+        }
     }
 
     /* ---------------- 수정 / 삭제 ---------------- */
@@ -935,6 +1592,7 @@
         if (entry.local) {
             writeLocalRequests(readLocalRequests().filter(item => item && item.id !== entry.id));
             localEntries = readLocalRequests().map(item => normalizeRequest(item.id, item));
+            openCommentIds.delete(entry.id);
             forgetOwnedId(entry.id);
             renderAll();
             setStatus('🗑️ 임시 접수를 삭제했어요.', 'neutral');
@@ -953,6 +1611,9 @@
             await ensureAsAuth();
             await store.collection(COLLECTION).doc(entry.id).delete();
             (entry.imageUrls || []).forEach(deleteStoragePhotoByUrl);
+            stopCommentSubscription(entry.id);
+            commentsByRequest.delete(entry.id);
+            openCommentIds.delete(entry.id);
             feedEntries = feedEntries.filter(item => item.id !== entry.id);
             forgetOwnedId(entry.id);
             renderAll();
@@ -973,12 +1634,23 @@
             await ensureAsAuth();
             const updatedAtMs = Date.now();
             const payload = { status: nextStatus, updatedAtMs };
+            if (nextStatus === 'done') payload.resolvedAtMs = updatedAtMs;
             const stamp = serverTimestamp();
-            if (stamp) payload.updatedAt = stamp;
+            if (stamp) {
+                payload.updatedAt = stamp;
+                if (nextStatus === 'done') payload.resolvedAt = stamp;
+            }
             await store.collection(COLLECTION).doc(entry.id).update(payload);
             feedEntries = feedEntries.map(item => (
                 item.id === entry.id
-                    ? { ...item, status: nextStatus, statusLabel: STATUS_LABEL[nextStatus], updatedAtMs, edited: true }
+                    ? {
+                        ...item,
+                        status: nextStatus,
+                        statusLabel: STATUS_LABEL[nextStatus],
+                        resolvedAtMs: nextStatus === 'done' ? updatedAtMs : item.resolvedAtMs,
+                        updatedAtMs,
+                        edited: true
+                    }
                     : item
             ));
             renderAll();
@@ -1059,6 +1731,10 @@
                     }
                     feedEntries = sortRequests(entries);
                     setLiveBadge(true);
+                    openCommentIds.forEach(id => {
+                        const target = feedEntries.find(item => item.id === id);
+                        if (target && !target.local) startCommentSubscription(id);
+                    });
                     renderAll();
                     void flushLocalQueue(store);
                 }, error => {
@@ -1076,6 +1752,7 @@
     function stopSubscription() {
         if (typeof unsubscribe === 'function') unsubscribe();
         unsubscribe = null;
+        stopAllCommentSubscriptions();
         setLiveBadge(false);
     }
 
@@ -1427,13 +2104,17 @@
     global.TerminalAsCore = Object.freeze({
         terminals: TERMINALS,
         requestTypes: REQUEST_TYPES,
+        statusLabels: STATUS_LABEL,
         collection: COLLECTION,
+        commentsCollection: COMMENTS_COLLECTION,
         storageDir: STORAGE_DIR,
         localKey: LOCAL_KEY,
         mineKey: MINE_KEY,
         localMineKey: MINE_KEY,
+        mineCommentsKey: MINE_COMMENTS_KEY,
         filterAll: FILTER_ALL,
         maxContent: MAX_CONTENT,
+        maxComment: MAX_COMMENT,
         maxPhotos: MAX_PHOTOS,
         maxPhotoBytes: MAX_PHOTO_BYTES,
         terminalById,
@@ -1444,6 +2125,11 @@
         normalizeImageUrls,
         validatePhotoFile,
         validateRequest,
+        validateComment,
+        normalizeLikedBy,
+        countLikes,
+        isLikedByUid,
+        normalizeComment,
         normalizeRequest,
         filterRequests,
         sortRequests,

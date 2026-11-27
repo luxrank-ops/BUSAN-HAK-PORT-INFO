@@ -354,15 +354,15 @@ if (!EMULATOR_AVAILABLE) {
             })));
         });
 
-        test('작성자 본인은 내용·사진을 수정하고 삭제할 수 있으며, 타인은 거부되고 관리자는 상태를 바꿀 수 있다', async () => {
+        test('작성자 본인은 내용·사진을 수정하고 삭제할 수 있으며, 타인은 본문 수정/삭제는 거부되지만 조치완료·좋아요·댓글은 허용된다', async () => {
             await seedRequest();
             await ok(getDoc(requestDoc('r1')(stranger())));
             await ok(getDocs(requestList(stranger())));
-            // 타인 수정·삭제 거부
+            // 타인 본문 수정·삭제 거부
             await denied(updateDoc(requestDoc('r1')(stranger()), { content: '남의 글 수정 시도' }));
             await denied(deleteDoc(requestDoc('r1')(stranger())));
-            // 본인 상태 변경·UID 변조 거부
-            await denied(updateDoc(requestDoc('r1')(worker()), { status: 'processing' }));
+            // 타인의 상태 되돌리기·UID 변조 거부
+            await denied(updateDoc(requestDoc('r1')(stranger()), { status: 'processing' }));
             await denied(updateDoc(requestDoc('r1')(worker()), { authorUid: 'stranger-uid' }));
             // 본인 내용·사진 수정 성공
             await ok(updateDoc(requestDoc('r1')(worker()), {
@@ -370,12 +370,48 @@ if (!EMULATOR_AVAILABLE) {
                 imageUrls: ['https://firebasestorage.googleapis.com/v0/b/test/o/terminal-as%2Fp2.jpg'],
                 updatedAtMs: Date.now()
             }));
+            // 누구나 게시글 좋아요(본인 UID 키만)·조치 완료 처리 가능
+            await ok(updateDoc(requestDoc('r1')(stranger()), { 'likedBy.stranger-uid': true }));
+            await denied(updateDoc(requestDoc('r1')(stranger()), { 'likedBy.worker-a': true }));
+            await ok(updateDoc(requestDoc('r1')(stranger()), { status: 'done', resolvedAtMs: Date.now() }));
             // 관리자 상태 변경 및 삭제 성공
             await ok(updateDoc(requestDoc('r1')(admin()), { status: 'processing' }));
             await ok(deleteDoc(requestDoc('r1')(admin())));
             // 본인 삭제 성공 (새 문서 기준)
             await seedRequest('r2');
             await ok(deleteDoc(requestDoc('r2')(worker())));
+        });
+
+        test('댓글 작성·조회·댓글 좋아요·작성자 삭제 및 타인 댓글 변조 차단', async () => {
+            await seedRequest();
+            const cmtRef = (db, cid = 'c1') => doc(db, `terminal_as_requests/r1/comments/${cid}`);
+            const cmtList = (db) => collection(db, 'terminal_as_requests/r1/comments');
+            const validComment = (overrides = {}) => ({
+                requestId: 'r1',
+                content: '확인 후 교체 진행 중입니다.',
+                author: '한진***',
+                anonCode: 'M2K9',
+                authorUid: 'stranger-uid',
+                createdAtMs: Date.now(),
+                createdAt: new Date(),
+                ...overrides
+            });
+
+            // 작성자 UID 사칭 거부
+            await denied(setDoc(cmtRef(worker(), 'bad1'), validComment({ authorUid: 'stranger-uid' })));
+            // 정상 댓글 작성 & 조회
+            await ok(setDoc(cmtRef(stranger(), 'c1'), validComment()));
+            await ok(getDocs(cmtList(worker())));
+            await ok(updateDoc(requestDoc('r1')(stranger()), { commentCount: 1 }));
+            // 다른 사용자가 댓글 좋아요 가능, 타인 좋아요 키 위조 거부
+            await ok(updateDoc(cmtRef(worker(), 'c1'), { 'likedBy.worker-a': true }));
+            await denied(updateDoc(cmtRef(worker(), 'c1'), { 'likedBy.other': true }));
+            // 타인 댓글 내용 수정·삭제 거부
+            await denied(updateDoc(cmtRef(worker(), 'c1'), { content: '남의 댓글 수정' }));
+            await denied(deleteDoc(cmtRef(worker(), 'c1')));
+            // 작성자 본인 댓글 수정·삭제 성공
+            await ok(updateDoc(cmtRef(stranger(), 'c1'), { content: '교체 완료했습니다!', updatedAtMs: Date.now() }));
+            await ok(deleteDoc(cmtRef(stranger(), 'c1')));
         });
     });
 
