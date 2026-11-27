@@ -24,8 +24,12 @@
 | 검증 | 빌드가 끝나면 전역 함수 275개 보존 여부·통합 스크립트 문법을 자동 검사하고, 실패 시 배포를 중단합니다 |
 | 서빙 | `server.ts` 가 `build/public/` 을 우선 제공하고, 없으면 `public/` 으로 자동 대체합니다 (빌드 실패에도 화면 유지) |
 | 배포 | Vercel: `vercel.json` 이 `outputDirectory: build/public` 지정 (이 설정이 없으면 프리셋 기본값인 원본 `public/` 이 그대로 배포됩니다) + `api/[...path].ts` 서버리스 함수가 `/api/*` 처리 · Firebase Hosting: `firebase.json` 의 `predeploy` 훅이 자동 실행 |
+| 배포(Cloudflare) | `main` 브랜치 푸시 → Cloudflare **Workers Builds**가 `npm run build:cf` → `npx wrangler deploy` 로 `busan-hak-port-info` Worker(`workers.dev`)를 자동 배포합니다 (루트 `/`, 빌드 캐시 사용, 미리보기 빌드는 사용하지 않음) |
 
 원본 그대로 보고 싶을 때(로컬 개발)는 `npm run dev` 로 `public/` 을 그대로 사용하면 됩니다.
+
+> ☁️ **Cloudflare Workers(`busan-hak-port-info.luxrank.workers.dev`)는 `main` 푸시만으로 자동 배포됩니다.**
+> 2026-11-27 에 Workers Builds Git 연동(`luxrank-ops/BUSAN-HAK-PORT-INFO`, `main`)을 연결해, 수동 `wrangler deploy` 없이도 GitHub 머지만 하면 실서버가 갱신됩니다.
 
 > ✅ **Vercel 은 이제 Node 런타임(서버리스 함수) 구성으로 배포됩니다.**
 > `/api/*` 는 `api/[...path].ts`(Vercel Function)가 `server.ts` 의 Express 앱을 그대로 실행해 처리하고,
