@@ -247,7 +247,7 @@ test('긴급 공지용 HMAC 토큰은 유효기간·서명을 검증한다', asy
         assert.ok(match, `${name} 함수가 있어야 합니다`);
         return match[0];
     });
-    const compiled = await esbuild.transform(`const SCREEN_UNLOCK_TOKEN_TTL_MS = 12 * 60 * 60 * 1000;\nconst SCREEN_UNLOCK_TOKEN_SECRET = 'unit-test-secret';\n${functions.join('\n')}`, { loader: 'ts', format: 'cjs' });
+    const compiled = await esbuild.transform(`const SCREEN_UNLOCK_TOKEN_TTL_MS = 12 * 60 * 60 * 1000;\nconst getScreenUnlockTokenSecret = () => 'unit-test-secret';\n${functions.join('\n')}`, { loader: 'ts', format: 'cjs' });
     const sandbox = { module: { exports: {} }, exports: {}, Date, Buffer, crypto: nodeCrypto, Number, String };
     vm.createContext(sandbox);
     vm.runInContext(compiled.code, sandbox);

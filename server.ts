@@ -124,13 +124,28 @@ export const SCREEN_UNLOCK_TOKEN_TTL_MS = 12 * 60 * 60 * 1000; // 12시간
 export const WORKER_SESSION_TOKEN_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30일
 // 프로세스 단위 무작위 폴백 키: 환경변수 시크릿이 비어 있더라도 공개 기본 PIN(9445)으로
 // 토큰을 오프라인 위조할 수 없도록 절대 기본 PIN 으로 폴백하지 않습니다.
-const EPHEMERAL_RUNTIME_TOKEN_SECRET = crypto.randomBytes(32).toString('hex');
-const SCREEN_UNLOCK_TOKEN_SECRET =
-  String(process.env.UNLOCK_TOKEN_SECRET || process.env.ADMIN_SESSION_SECRET || process.env.CRON_SECRET || '').trim() ||
-  EPHEMERAL_RUNTIME_TOKEN_SECRET;
-const ADMIN_SESSION_SECRET =
-  String(process.env.ADMIN_SESSION_SECRET || process.env.UNLOCK_TOKEN_SECRET || process.env.CRON_SECRET || '').trim() ||
-  EPHEMERAL_RUNTIME_TOKEN_SECRET;
+// Cloudflare Workers 는 모듈 전역(로드 시점) 스코프에서 난수 생성을 금지합니다(오류 10021).
+// 따라서 폴백 키는 실제 토큰 발급·검증 시점에 최초 1회만 생성합니다.
+// Worker 에는 UNLOCK_TOKEN_SECRET 시크릿이 등록되어 있어 실서버에서는 이 폴백이 쓰이지 않습니다.
+let EPHEMERAL_RUNTIME_TOKEN_SECRET: string | null = null;
+function getEphemeralRuntimeTokenSecret(): string {
+  if (!EPHEMERAL_RUNTIME_TOKEN_SECRET) {
+    EPHEMERAL_RUNTIME_TOKEN_SECRET = crypto.randomBytes(32).toString('hex');
+  }
+  return EPHEMERAL_RUNTIME_TOKEN_SECRET;
+}
+function getScreenUnlockTokenSecret(): string {
+  return (
+    String(process.env.UNLOCK_TOKEN_SECRET || process.env.ADMIN_SESSION_SECRET || process.env.CRON_SECRET || '').trim() ||
+    getEphemeralRuntimeTokenSecret()
+  );
+}
+function getAdminSessionSecret(): string {
+  return (
+    String(process.env.ADMIN_SESSION_SECRET || process.env.UNLOCK_TOKEN_SECRET || process.env.CRON_SECRET || '').trim() ||
+    getEphemeralRuntimeTokenSecret()
+  );
+}
 // 무차별 대입 방지: IP 당 10분에 10회까지만 시도
 const SCREEN_UNLOCK_MAX_ATTEMPTS = 10;
 const SCREEN_UNLOCK_WINDOW_MS = 10 * 60 * 1000;
@@ -235,7 +250,7 @@ export function verifyEmergencyNoticePin(pin: string): boolean {
 export function issueEmergencyUnlockToken(): { token: string; expiresAt: number } {
   const expiresAt = Date.now() + SCREEN_UNLOCK_TOKEN_TTL_MS;
   const sig = crypto
-    .createHmac('sha256', SCREEN_UNLOCK_TOKEN_SECRET)
+    .createHmac('sha256', getScreenUnlockTokenSecret())
     .update(`emergency-unlock:${expiresAt}`)
     .digest('hex');
   return { token: `${expiresAt}.${sig}`, expiresAt };
@@ -250,7 +265,7 @@ export function verifyEmergencyUnlockToken(rawToken: string, nowMs: number = Dat
   if (!/^\d{10,16}$/.test(expiresStr) || !/^[a-fA-F0-9]{64}$/.test(sigHex)) return false;
   const expiresAt = Number(expiresStr);
   if (!Number.isFinite(expiresAt) || expiresAt <= nowMs || expiresAt > nowMs + SCREEN_UNLOCK_TOKEN_TTL_MS + 60_000) return false;
-  const expected = crypto.createHmac('sha256', SCREEN_UNLOCK_TOKEN_SECRET)
+  const expected = crypto.createHmac('sha256', getScreenUnlockTokenSecret())
     .update(`emergency-unlock:${expiresAt}`).digest();
   return crypto.timingSafeEqual(expected, Buffer.from(sigHex, 'hex'));
 }
@@ -258,7 +273,7 @@ export function verifyEmergencyUnlockToken(rawToken: string, nowMs: number = Dat
 export function issueScreenUnlockToken(): { token: string; expiresAt: number } {
   const expiresAt = Date.now() + SCREEN_UNLOCK_TOKEN_TTL_MS;
   const token = crypto
-    .createHmac('sha256', SCREEN_UNLOCK_TOKEN_SECRET)
+    .createHmac('sha256', getScreenUnlockTokenSecret())
     .update(`screen-unlock:${expiresAt}`)
     .digest('hex');
   return { token, expiresAt };
@@ -273,7 +288,7 @@ export const ADMIN_CUSTOM_TOKEN_UID = 'admin_luxrank';
 export function issueAdminSessionToken(nowMs: number = Date.now()): { token: string; expiresAt: number } {
   const expiresAt = nowMs + SCREEN_UNLOCK_TOKEN_TTL_MS;
   const sig = crypto
-    .createHmac('sha256', ADMIN_SESSION_SECRET)
+    .createHmac('sha256', getAdminSessionSecret())
     .update(`admin-session:${expiresAt}`)
     .digest('hex');
   return { token: `${expiresAt}.${sig}`, expiresAt };
@@ -291,7 +306,7 @@ export function verifyAdminSessionToken(rawToken: string, nowMs: number = Date.n
     return false;
   }
   const expected = crypto
-    .createHmac('sha256', ADMIN_SESSION_SECRET)
+    .createHmac('sha256', getAdminSessionSecret())
     .update(`admin-session:${expiresAt}`)
     .digest();
   const actual = Buffer.from(sigHex, 'hex');
@@ -309,7 +324,7 @@ export function issueWorkerSessionToken(workerId: string, nowMs: number = Date.n
   const nickB64 = base64UrlEncode(safeNick);
   const payload = `${nickB64}.${expiresAt}`;
   const sig = crypto
-    .createHmac('sha256', ADMIN_SESSION_SECRET)
+    .createHmac('sha256', getAdminSessionSecret())
     .update(`worker-session:${payload}`)
     .digest('hex');
   return { token: `${payload}.${sig}`, expiresAt };
@@ -327,7 +342,7 @@ export function verifyWorkerSessionToken(rawToken: string, nowMs: number = Date.
   }
   const payload = `${nickB64}.${expiresStr}`;
   const expected = crypto
-    .createHmac('sha256', ADMIN_SESSION_SECRET)
+    .createHmac('sha256', getAdminSessionSecret())
     .update(`worker-session:${payload}`)
     .digest();
   const actual = Buffer.from(sigHex, 'hex');
@@ -348,7 +363,7 @@ export function verifyWorkerSessionToken(rawToken: string, nowMs: number = Date.
  */
 export function deriveOpaqueWorkerUid(namespace: 'anon' | 'account', identifier: string): string {
   const digest = crypto
-    .createHmac('sha256', ADMIN_SESSION_SECRET)
+    .createHmac('sha256', getAdminSessionSecret())
     .update(`uid:${namespace}:${identifier}`)
     .digest('hex')
     .slice(0, 24);
