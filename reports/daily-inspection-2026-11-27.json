@@ -1,10 +1,10 @@
 {
   "kstDate": "2026-11-27",
-  "generatedAt": "2026-11-26T22:02:59.684Z",
-  "kstDateTime": "2026-11-27 (금) 07:02:59 KST",
+  "generatedAt": "2026-11-27T02:04:45.244Z",
+  "kstDateTime": "2026-11-27 (금) 11:04:45 KST",
   "summary": {
-    "total": 117,
-    "pass": 117,
+    "total": 119,
+    "pass": 119,
     "warn": 0,
     "fail": 0,
     "overall": "PASS"
@@ -656,9 +656,23 @@
     },
     {
       "category": "배포 설정",
-      "name": "vercel.json crons /api/cron/daily-inspection",
+      "name": "vercel.json crons 일일 점검",
       "status": "PASS",
-      "detail": "크론 등록됨",
+      "detail": "미등록 — Cloudflare 크론 단독 실행(메일 1통)",
+      "severity": "info"
+    },
+    {
+      "category": "배포 설정",
+      "name": "wrangler.jsonc crons 일일 점검",
+      "status": "PASS",
+      "detail": "0 19 * * * (04:00 KST) 등록됨",
+      "severity": "info"
+    },
+    {
+      "category": "배포 설정",
+      "name": "worker scheduled 일일 점검 매핑",
+      "status": "PASS",
+      "detail": "/api/cron/daily-inspection 매핑됨",
       "severity": "info"
     },
     {

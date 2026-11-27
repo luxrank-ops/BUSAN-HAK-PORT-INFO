@@ -1,9 +1,9 @@
 # 부산학 라이싱 작업 가이드 — 일일 기능 점검 보고서
 
-> **점검 일시**: 2026-11-27 (금) 07:02:59 KST
+> **점검 일시**: 2026-11-27 (금) 11:04:45 KST
 > **점검 기준일**: 2026-11-27 (KST)
-> **생성 시각(UTC)**: 2026-11-26T22:02:59.684Z
-> **점검 방식**: 자동 점검 (매일 04:00 KST · GitHub Actions + Vercel Cron + 로컬 node-cron)
+> **생성 시각(UTC)**: 2026-11-27T02:04:45.244Z
+> **점검 방식**: 자동 점검 (매일 04:00 KST · GitHub Actions + Cloudflare Cron Triggers)
 
 ---
 
@@ -12,8 +12,8 @@
 | 구분 | 결과 |
 | --- | --- |
 | **종합 판정** | 🟢 **정상** (PASS) |
-| 전체 점검 항목 | 117건 |
-| ✅ PASS | 117건 |
+| 전체 점검 항목 | 119건 |
+| ✅ PASS | 119건 |
 | ⚠️ WARN | 0건 |
 | ❌ FAIL | 0건 |
 | 통과율 | 100% |
@@ -118,31 +118,33 @@
 | 90 | 배포 설정 | vercel.json outputDirectory | ✅ PASS | build/public 정상 |
 | 91 | 배포 설정 | vercel.json crons /api/cron/daily-cleanup | ✅ PASS | 크론 등록됨 |
 | 92 | 배포 설정 | vercel.json crons /api/cron/weekly-backup | ✅ PASS | 크론 등록됨 |
-| 93 | 배포 설정 | vercel.json crons /api/cron/daily-inspection | ✅ PASS | 크론 등록됨 |
-| 94 | 배포 설정 | firebase.json hosting.public | ✅ PASS | build/public 정상 |
-| 95 | 배포 설정 | firebase.json predeploy | ✅ PASS | build:obfuscate 등록됨 |
-| 96 | 보안·인증 | 화면 잠금 PIN 검증 | ✅ PASS | 구현 존재 |
-| 97 | 보안·인증 | 긴급 공지 PIN 검증 | ✅ PASS | 구현 존재 |
-| 98 | 보안·인증 | 관리자 세션 토큰 검증 | ✅ PASS | 구현 존재 |
-| 99 | 보안·인증 | CRON_SECRET 인증 | ✅ PASS | 구현 존재 |
-| 100 | 보안·인증 | 속도 제한 (Rate Limit) | ✅ PASS | 구현 존재 |
-| 101 | 보안·인증 | SCREEN_LOCK_PIN 환경변수 참조 | ✅ PASS | 구현 존재 |
-| 102 | 보안·인증 | CRON_SECRET 환경변수 참조 | ✅ PASS | 구현 존재 |
-| 103 | 보안·인증 | firestore.rules isAdmin | ✅ PASS | 관리자 규칙 존재 |
-| 104 | 보안·인증 | firestore.rules 크기 | ✅ PASS | 24KB |
-| 105 | 디자인 토큰 | 토큰 정의 수 | ✅ PASS | 419개 토큰 정의 |
-| 106 | 디자인 토큰 | CSS 토큰 참조 | ✅ PASS | var(--토큰) 사용 확인 |
-| 107 | 워크플로 | 워크플로 파일 수 | ✅ PASS | 6개 파일 |
-| 108 | 워크플로 | ci.yml | ✅ PASS | 파일 존재 |
-| 109 | 워크플로 | cron-schedule-watch.yml | ✅ PASS | 파일 존재 |
-| 110 | 워크플로 | deploy-firebase.yml | ✅ PASS | 파일 존재 |
-| 111 | 워크플로 | daily-inspection.yml | ✅ PASS | 파일 존재 |
-| 112 | 워크플로 | package.json script:dev | ✅ PASS | 스크립트 존재 |
-| 113 | 워크플로 | package.json script:build | ✅ PASS | 스크립트 존재 |
-| 114 | 워크플로 | package.json script:typecheck | ✅ PASS | 스크립트 존재 |
-| 115 | 워크플로 | package.json script:validate | ✅ PASS | 스크립트 존재 |
-| 116 | 워크플로 | package.json script:test | ✅ PASS | 스크립트 존재 |
-| 117 | 워크플로 | package.json script:check | ✅ PASS | 스크립트 존재 |
+| 93 | 배포 설정 | vercel.json crons 일일 점검 | ✅ PASS | 미등록 — Cloudflare 크론 단독 실행(메일 1통) |
+| 94 | 배포 설정 | wrangler.jsonc crons 일일 점검 | ✅ PASS | 0 19 * * * (04:00 KST) 등록됨 |
+| 95 | 배포 설정 | worker scheduled 일일 점검 매핑 | ✅ PASS | /api/cron/daily-inspection 매핑됨 |
+| 96 | 배포 설정 | firebase.json hosting.public | ✅ PASS | build/public 정상 |
+| 97 | 배포 설정 | firebase.json predeploy | ✅ PASS | build:obfuscate 등록됨 |
+| 98 | 보안·인증 | 화면 잠금 PIN 검증 | ✅ PASS | 구현 존재 |
+| 99 | 보안·인증 | 긴급 공지 PIN 검증 | ✅ PASS | 구현 존재 |
+| 100 | 보안·인증 | 관리자 세션 토큰 검증 | ✅ PASS | 구현 존재 |
+| 101 | 보안·인증 | CRON_SECRET 인증 | ✅ PASS | 구현 존재 |
+| 102 | 보안·인증 | 속도 제한 (Rate Limit) | ✅ PASS | 구현 존재 |
+| 103 | 보안·인증 | SCREEN_LOCK_PIN 환경변수 참조 | ✅ PASS | 구현 존재 |
+| 104 | 보안·인증 | CRON_SECRET 환경변수 참조 | ✅ PASS | 구현 존재 |
+| 105 | 보안·인증 | firestore.rules isAdmin | ✅ PASS | 관리자 규칙 존재 |
+| 106 | 보안·인증 | firestore.rules 크기 | ✅ PASS | 24KB |
+| 107 | 디자인 토큰 | 토큰 정의 수 | ✅ PASS | 419개 토큰 정의 |
+| 108 | 디자인 토큰 | CSS 토큰 참조 | ✅ PASS | var(--토큰) 사용 확인 |
+| 109 | 워크플로 | 워크플로 파일 수 | ✅ PASS | 6개 파일 |
+| 110 | 워크플로 | ci.yml | ✅ PASS | 파일 존재 |
+| 111 | 워크플로 | cron-schedule-watch.yml | ✅ PASS | 파일 존재 |
+| 112 | 워크플로 | deploy-firebase.yml | ✅ PASS | 파일 존재 |
+| 113 | 워크플로 | daily-inspection.yml | ✅ PASS | 파일 존재 |
+| 114 | 워크플로 | package.json script:dev | ✅ PASS | 스크립트 존재 |
+| 115 | 워크플로 | package.json script:build | ✅ PASS | 스크립트 존재 |
+| 116 | 워크플로 | package.json script:typecheck | ✅ PASS | 스크립트 존재 |
+| 117 | 워크플로 | package.json script:validate | ✅ PASS | 스크립트 존재 |
+| 118 | 워크플로 | package.json script:test | ✅ PASS | 스크립트 존재 |
+| 119 | 워크플로 | package.json script:check | ✅ PASS | 스크립트 존재 |
 
 ---
 
@@ -159,7 +161,7 @@
 | 자동화 크론 | 6 | 0 | 0 | 6 | 🟢 정상 |
 | 자동화 상태 | 4 | 0 | 0 | 4 | 🟢 정상 |
 | 자동화 함수 | 4 | 0 | 0 | 4 | 🟢 정상 |
-| 배포 설정 | 6 | 0 | 0 | 6 | 🟢 정상 |
+| 배포 설정 | 8 | 0 | 0 | 8 | 🟢 정상 |
 | 보안·인증 | 9 | 0 | 0 | 9 | 🟢 정상 |
 | 디자인 토큰 | 2 | 0 | 0 | 2 | 🟢 정상 |
 | 워크플로 | 11 | 0 | 0 | 11 | 🟢 정상 |
@@ -173,7 +175,7 @@
 | 선박 스케줄 변경 감지 | 매시간 (5 * * * *) | Cloudflare Cron Triggers / GitHub Actions(보조) / node-cron | ✅ 정상 |
 | DB 자가 정리 | 매일 03:00 (0 3 * * *) | Vercel Cron / node-cron | ✅ 정상 |
 | 주간 백업 | 매주 일요일 00:00 (0 0 * * 0) | Vercel Cron / node-cron | ✅ 정상 |
-| **일일 기능 점검** | **매일 04:00 (0 4 * * *)** | **GitHub Actions + Vercel Cron + node-cron** | **✅ 정상** |
+| **일일 기능 점검** | **매일 04:00 (0 19 * * * UTC)** | **GitHub Actions + Cloudflare Cron Triggers** | **✅ 정상** |
 
 ---
 
