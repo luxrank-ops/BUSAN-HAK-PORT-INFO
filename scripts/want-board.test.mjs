@@ -228,7 +228,10 @@ test('규칙: 답글은 관리자만 작성하고, 작성자 본인 항목의 �
 test('규칙: 피드백 문서는 createdAtMs 를 정본으로, createdAt(서버 타임스탬프)는 선택으로 허용한다', () => {
     // FieldValue.serverTimestamp() 가 설정되지 못한 경우에도 저장이 거부되지
     // 않아야 하므로, createdAtMs(정수) 가 정본이고 createdAt 은 선택입니다.
-    const optionalCreatedAt = rules.match(/!\('createdAt' in data\) \|\| data\.createdAt is timestamp/g) || [];
+    // want_board 구간만 셉니다 (다른 컬렉션도 같은 패턴을 쓰면 전체 개수가 늘 수 있습니다).
+    const wantStart = rules.indexOf('function isValidWantItemDoc(data)');
+    const wantSection = wantStart >= 0 ? rules.slice(wantStart) : rules;
+    const optionalCreatedAt = wantSection.match(/!\('createdAt' in data\) \|\| data\.createdAt is timestamp/g) || [];
     assert.equal(optionalCreatedAt.length, 2, '항목 문서와 답글 문서 모두 createdAt 을 선택으로 허용해야 합니다');
     assert.match(rules, /data\.createdAtMs is int && data\.createdAtMs > 0 && data\.createdAtMs <= 4102444800000/);
 });

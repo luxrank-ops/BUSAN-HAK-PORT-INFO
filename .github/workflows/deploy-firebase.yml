@@ -179,7 +179,7 @@ jobs:
         run: node scripts/deploy-preflight.mjs seed-cache
 
       # 배포는 세 단계로 나눠 실행합니다.
-      #   1) Firestore 보안 규칙 → 화면 기능(운영자에게 바란다·꿍꿍따 릴레이)의 쓰기 권한을 먼저 살립니다.
+      #   1) Firestore 보안 규칙 → 화면 기능(운영자에게 바란다·터미널 A/S 요청)의 쓰기 권한을 먼저 살립니다.
       #   2) Firestore 색인   → 범위 조회 성능.
       #   3) Hosting         → 정적 화면.
       # 한 번에 묶어 배포하면 어느 단계에서 실패했는지 알 수 없어 규칙이 계속

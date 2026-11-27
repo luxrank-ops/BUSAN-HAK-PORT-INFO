@@ -173,7 +173,7 @@ const JS_LOAD_ORDER = [
   'js/leader-access.js',
   'js/ships-board.js',
   'js/tab-views.js',
-  'js/kkung-relay.js',
+  'js/terminal-as.js',
   'js/want-board.js',
   'js/domain-migration.js',
   'js/rain-float.js'

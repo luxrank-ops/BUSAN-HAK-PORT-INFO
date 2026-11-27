@@ -37,7 +37,7 @@ test('전역 스크립트 파일이 모두 존재하고 HTML 에 load 순서대�
         'public/js/leader-access.js',
         'public/js/ships-board.js',
         'public/js/tab-views.js',
-        'public/js/kkung-relay.js',
+        'public/js/terminal-as.js',
         'public/js/domain-migration.js',
         'public/js/rain-float.js'
     ];

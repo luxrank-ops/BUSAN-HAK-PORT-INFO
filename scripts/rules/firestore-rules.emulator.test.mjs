@@ -288,113 +288,63 @@ if (!EMULATOR_AVAILABLE) {
         });
     });
 
-    describe('kkung_chain (꿍꿍따 끝말잇기 "댓글 릴레이")', () => {
-        const stateRef = (db) => doc(db, 'kkung_chain/active');
-        const commentList = (db) => collection(db, 'kkung_chain/active/comments');
-        const roundOne = (overrides = {}) => ({
-            round: 1,
-            starterWord: '고양이',
-            lastWord: '고양이',
-            wordCount: 0,
-            usedWords: ['고양이'],
-            lastNick: '라싱반장',
-            updatedAt: new Date(),
+    describe('terminal_as_requests (터미널 시설·정비 수리 / A/S 요청)', () => {
+        const requestList = (db) => collection(db, 'terminal_as_requests');
+        const requestDoc = (id) => (db) => doc(db, `terminal_as_requests/${id}`);
+        const validRequest = (overrides = {}) => ({
+            terminalId: 'hjnc',
+            terminalLabel: '한진(HJNC)',
+            type: 'facility',
+            content: '3번 게이트 조명이 꺼졌어요',
+            author: '한진***',
+            anonCode: 'K7Q2',
+            status: 'received',
+            createdAtMs: Date.now(),
+            createdAt: new Date(),
             ...overrides
         });
-        const seedRelay = async (overrides = {}) => seed(async (db) => {
-            await setDoc(doc(db, 'kkung_chain/active'), roundOne(overrides));
+        const seedRequest = async (id = 'r1', overrides = {}) => seed(async (db) => {
+            await setDoc(doc(db, `terminal_as_requests/${id}`), validRequest(overrides));
         });
+        /** isAdmin() 을 만족하는 관리자 세션 (uid 화이트리스트) */
+        const admin = () => testEnv.authenticatedContext('admin_luxrank').firestore();
 
-        test('첫 릴레이 문서를 만들 수 있다 (라운드 1 · 이어진 단어 0개)', async () => {
+        test('로그인한 동료는 비밀번호 없이 익명 접수할 수 있다', async () => {
             await seed(async () => {});
-            await ok(setDoc(stateRef(worker()), roundOne()));
-        });
-
-        test('라운드 번호·단어 수를 조작한 첫 릴레이 개설은 거부된다', async () => {
-            await seed(async () => {});
-            await denied(setDoc(stateRef(stranger()), roundOne({ round: 5 })));
-            await denied(setDoc(stateRef(stranger()), roundOne({ wordCount: 30 })));
-        });
-
-        test('세 글자 한글이 아닌 단어로 릴레이 상태를 만들 수 없다', async () => {
-            await seed(async () => {});
-            await denied(setDoc(stateRef(stranger()), roundOne({
-                starterWord: 'ab', lastWord: 'ab', usedWords: ['ab']
+            await ok(addDoc(requestList(worker()), validRequest()));
+            await ok(addDoc(requestList(stranger()), validRequest({
+                terminalId: 'dgt', terminalLabel: '동원(DGT)', author: '동원***', anonCode: 'B4M8'
             })));
         });
 
-        test('단어를 이어 쓰면 이어진 개수와 사용 목록이 정확히 1씩 늘어난다', async () => {
-            await seedRelay();
-            await ok(updateDoc(stateRef(worker()), {
-                lastWord: '이야기',
-                wordCount: 1,
-                usedWords: ['고양이', '이야기'],
-                lastNick: '북항 포맨',
-                updatedAt: new Date()
-            }));
+        test('미인증 사용자는 접수·조회 모두 거부된다', async () => {
+            await seedRequest();
+            const anon = testEnv.unauthenticatedContext().firestore();
+            await denied(addDoc(requestList(anon), validRequest()));
+            await denied(getDoc(requestDoc('r1')(anon)));
+            await denied(getDocs(requestList(anon)));
         });
 
-        test('이어진 단어 개수를 부풀리거나 라운드를 몰래 바꾸는 갱신은 거부된다', async () => {
-            await seedRelay();
-            await denied(updateDoc(stateRef(stranger()), {
-                lastWord: '이야기', wordCount: 9,
-                usedWords: ['고양이', '이야기'], updatedAt: new Date()
-            }));
-            await denied(updateDoc(stateRef(stranger()), {
-                round: 2, lastWord: '이야기', wordCount: 1,
-                usedWords: ['고양이', '이야기'], updatedAt: new Date()
-            }));
-            await denied(deleteDoc(stateRef(stranger())));
+        test('알 수 없는 터미널·종류·너무 짧은 내용·임의 필드는 거부된다', async () => {
+            await seed(async () => {});
+            await denied(addDoc(requestList(stranger()), validRequest({ terminalId: 'nope' })));
+            await denied(addDoc(requestList(stranger()), validRequest({ type: 'nope' })));
+            await denied(addDoc(requestList(stranger()), validRequest({ content: '가' })));
+            await denied(addDoc(requestList(stranger()), validRequest({ content: '가'.repeat(501) })));
+            await denied(addDoc(requestList(stranger()), validRequest({ author: '' })));
+            await denied(addDoc(requestList(stranger()), validRequest({ status: 'done' })));
+            await denied(addDoc(requestList(stranger()), validRequest({ phone: '010-0000-0000' })));
         });
 
-        test('새 출발은 라운드가 1 늘고 0개로 초기화될 때만 허용된다', async () => {
-            // 2분 전에 마지막으로 이어진 릴레이 → 막힘/완료가 아니어도 60초 간격을 지켰으므로 새 출발 가능
-            await seedRelay({ updatedAt: new Date(Date.now() - 120000) });
-            await ok(updateDoc(stateRef(worker()), roundOne({
-                round: 2, starterWord: '부산항', lastWord: '부산항',
-                usedWords: ['부산항'], lastNick: '북항 포맨', updatedAt: new Date()
-            })));
-        });
-
-        test('방금 이어진 릴레이를 곧바로 새 출발로 덮을 수 없다 (60초 간격)', async () => {
-            await seedRelay({ updatedAt: new Date() });
-            await denied(updateDoc(stateRef(stranger()), roundOne({
-                round: 2, starterWord: '부산항', lastWord: '부산항',
-                usedWords: ['부산항'], updatedAt: new Date()
-            })));
-        });
-
-        test('릴레이 상태는 로그인한 동료만 읽을 수 있다 (목록 조회는 차단)', async () => {
-            await seedRelay();
-            await ok(getDoc(stateRef(worker())));
-            await denied(getDoc(stateRef(testEnv.unauthenticatedContext().firestore())));
-            await denied(worker().collection('kkung_chain').get());
-        });
-
-        test('세 글자 한글 단어 댓글만 등록할 수 있다', async () => {
-            await seedRelay();
-            await ok(addDoc(commentList(worker()), {
-                round: 1, name: '북항 포맨', word: '이야기', prevWord: '고양이', memo: null
-            }));
-            await denied(addDoc(commentList(stranger()), {
-                round: 1, name: '북항 포맨', word: '이야기책', prevWord: '고양이'
-            }));
-            await denied(addDoc(commentList(stranger()), {
-                round: 1, name: '', word: '이야기', prevWord: '고양이'
-            }));
-        });
-
-        test('이어 쓴 단어 댓글은 작성자도 수정·삭제할 수 없다 (릴레이 흐름 보호)', async () => {
-            await seed(async (db) => {
-                await setDoc(doc(db, 'kkung_chain/active'), roundOne());
-                await setDoc(doc(db, 'kkung_chain/active/comments/c1'), {
-                    round: 1, name: '북항 포맨', word: '이야기', prevWord: '고양이'
-                });
-            });
-            const comment = (db) => doc(db, 'kkung_chain/active/comments/c1');
-            await ok(getDoc(comment(stranger())));
-            await denied(updateDoc(comment(worker()), { word: '이층집' }));
-            await denied(deleteDoc(comment(worker())));
+        test('접수 후 수정·삭제는 작성자도 할 수 없고 관리자만 가능하다', async () => {
+            await seedRequest();
+            await ok(getDoc(requestDoc('r1')(stranger())));
+            await ok(getDocs(requestList(stranger())));
+            await denied(updateDoc(requestDoc('r1')(worker()), { status: 'processing' }));
+            await denied(updateDoc(requestDoc('r1')(worker()), { content: '수정된 내용입니다' }));
+            await denied(deleteDoc(requestDoc('r1')(worker())));
+            await ok(updateDoc(requestDoc('r1')(admin()), { status: 'processing' }));
+            await ok(deleteDoc(requestDoc('r1')(admin())));
         });
     });
 

@@ -123,23 +123,31 @@ test('규칙 파일은 기본 차단(Default Deny) 구조를 유지한다', () =
     assert.match(rules, /rules_version = '2';/);
 });
 
-test('꿍꿍따 댓글 릴레이(kkung_chain)는 "이어쓰기·새 출발" 형태만 허용하고 댓글 정리는 관리자 전용이다', () => {
-    const relay = blockBody(rules, 'match /kkung_chain/active');
-    // 대전(승부)이 아니라 릴레이이므로, 상태 문서 갱신은 "단어 1개 이어쓰기(+1)"와
-    // "새 출발(라운드 +1 · 0개 초기화 · 60초 간격)" 두 형태로 제한해 점수·라운드 조작을 막습니다.
-    assert.match(relay, /isKkungWordAppend\(incoming\(\), existing\(\)\)/);
-    assert.match(relay, /isKkungNewRound\(incoming\(\), existing\(\)\)/);
-    assert.match(relay, /allow delete: if isAdmin\(\);/);
-    assert.doesNotMatch(relay, /allow create, update, delete: if isSignedIn\(\)/);
-    assert.match(relay, /allow update, delete: if isAdmin\(\);/, '이어 쓴 단어 댓글은 작성자도 수정·삭제할 수 없어야 합니다');
-    assert.match(rules, /function isValidKkungWord\(val\) \{\s*return val is string && val\.matches\('\^\[가-힣\]\{3\}\$'\);/);
-    assert.match(rules, /request\.time\.toMillis\(\) > before\.updatedAt\.toMillis\(\) \+ 60000/);
+test('터미널 시설·정비 A/S 요청(terminal_as_requests)은 익명 접수만 허용하고 수정·삭제는 관리자 전용이다', () => {
+    const board = blockBody(rules, 'match /terminal_as_requests/{requestId}');
+    // 비밀번호·닉네임 입력 없이 자동 익명 인증(isSignedIn)만으로 접수합니다.
+    assert.match(board, /allow get, list: if isSignedIn\(\);/);
+    assert.match(board, /allow create: if isSignedIn\(\) && isValidId\(requestId\) && isValidAsRequest\(incoming\(\)\)/);
+    assert.match(board, /incoming\(\)\.status == 'received'/, '일반 접수는 접수 상태로만 만들 수 있어야 합니다');
+    assert.match(board, /allow update, delete: if isAdmin\(\);/, '접수 후 수정·삭제(처리 상태 변경·블라인드 정리)는 관리자만 가능해야 합니다');
+    assert.doesNotMatch(board, /allow create, update, delete: if isSignedIn\(\)/);
+    assert.doesNotMatch(board, /allow update: if isSignedIn\(\)/, '작성자도 접수 글을 고칠 수 없어야 합니다');
 
-    // 화면 코드도 같은 컬렉션·문서를 보고, 쓰기 전에 익명 인증(isSignedIn 규칙)을 확인합니다.
-    assert.match(appJs, /RELAY_COLLECTION = 'kkung_chain'/);
-    assert.match(appJs, /RELAY_DOC_ID = 'active'/);
-    assert.match(appJs, /ensureRelayAuth/);
-    assert.doesNotMatch(appJs, /chooseAiWord|TURN_SECONDS|isAiThinking/, '대전(AI 승부) 코드가 남아 있으면 안 됩니다');
+    // 터미널 9개·요청 종류·길이 제한이 규칙에 고정되어 임의 필드 주입을 막습니다.
+    assert.match(rules, /function isValidAsTerminalId\(val\) \{/);
+    assert.match(rules, /'hjnc', 'bnct', 'dgt', 'bct', 'pnc', 'hpnt', 'pnit', 'bptc', 'hbct'/);
+    assert.match(rules, /function isValidAsType\(val\) \{/);
+    assert.match(rules, /data\.keys\(\)\.hasOnly\(\['terminalId', 'terminalLabel', 'type', 'content', 'author', 'anonCode', 'status', 'createdAtMs', 'createdAt'\]\)/);
+    assert.match(rules, /data\.content is string && data\.content\.size\(\) >= 2 && data\.content\.size\(\) <= 500/);
+    assert.match(rules, /data\.author is string && data\.author\.size\(\) >= 2 && data\.author\.size\(\) <= 40/);
+
+    // 화면 코드도 같은 컬렉션을 보고, 쓰기 전에 익명 인증을 확인하며,
+    // 작성자는 터미널 이름 + 마스킹(한진*** · 동원***)으로 자동 생성합니다.
+    assert.match(appJs, /COLLECTION = 'terminal_as_requests'/);
+    assert.match(appJs, /buildAnonymousIdentity/);
+    assert.match(appJs, /ensureAsAuth/);
+    assert.match(appJs, /ensureAnonymousAuth/);
+    assert.doesNotMatch(appJs, /kkung_chain|KkungKkungTtaCore|isValidKkungWord/, '옛 릴레이 코드가 남아 있으면 안 됩니다');
 });
 
 test('규칙 파일에 보안 규칙 언어가 지원하지 않는 람다(=>)가 없어야 한다 (배포 거부 방지)', () => {

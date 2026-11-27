@@ -15,7 +15,7 @@ import { readFileSync } from 'node:fs';
 
 const ROOT = new URL('..', import.meta.url);
 
-/** index.html 의 전역 스크립트 로드 순서 (notifications → app → 조장 → 선박 → 탭뷰 → 꿍꿍따 → 운영자에게 바란다 → 비 예보 플로팅) */
+/** index.html 의 전역 스크립트 로드 순서 (notifications → app → 조장 → 선박 → 탭뷰 → 터미널 A/S 요청 → 운영자에게 바란다 → 비 예보 플로팅) */
 export const APP_JS_FILES = [
     'public/js/notifications.js',
     'public/js/app.js',
@@ -23,7 +23,7 @@ export const APP_JS_FILES = [
     'public/js/leader-access.js',
     'public/js/ships-board.js',
     'public/js/tab-views.js',
-    'public/js/kkung-relay.js',
+    'public/js/terminal-as.js',
     'public/js/want-board.js',
     'public/js/domain-migration.js',
     'public/js/rain-float.js'

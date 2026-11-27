@@ -79,7 +79,7 @@ const REQUIRED_FILES = [
   'public/js/leader-access.js',
   'public/js/ships-board.js',
   'public/js/tab-views.js',
-  'public/js/kkung-relay.js',
+  'public/js/terminal-as.js',
   'public/js/want-board.js',
   'public/js/domain-migration.js',
   'server.ts',
