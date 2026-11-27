@@ -190,12 +190,14 @@ test('좋아요·댓글 검증 및 정규화가 안전하게 동작한다', () =
     const req = core.normalizeRequest('r10', {
         terminalId: 'hjnc', type: 'as', content: '완료된 요청입니다',
         status: 'done', resolvedAtMs: 5000, likedBy: { 'u-1': true, 'u-2': true }, commentCount: 3,
-        createdAtMs: 1000
+        views: 17, createdAtMs: 1000
     });
     assert.equal(req.statusLabel, '조치완료');
     assert.equal(req.resolvedAtMs, 5000);
     assert.equal(req.likeCount, 2);
     assert.equal(req.commentCount, 3);
+    assert.equal(req.views, 17);
+    assert.equal(core.normalizeRequest('r11', { terminalId: 'hjnc', type: 'as', content: '기본', views: -5 }).views, 0);
 
     const cmt = core.normalizeComment('c1', 'r10', {
         content: '처리 완료했습니다', author: '한진***', anonCode: 'A2B3',
@@ -277,6 +279,8 @@ test('블럭 색은 반짝이는 푸른색 중간톤 토큰만 쓰고 옛 릴레
     assert.match(css, /\.tas-card-new-badge/);
     assert.match(css, /\.tas-board-table/);
     assert.match(css, /\.tas-board-row/);
+    assert.match(css, /\.tas-row-pill\.is-view/);
+    assert.match(css, /\.tas-feed-views/);
     assert.match(css, /\.tas-detail-row/);
     assert.match(css, /\.tas-detail-card/);
     assert.match(css, /\.tas-write-toggle-btn/);
@@ -293,7 +297,7 @@ test('Firestore 규칙: 익명 로그인 접수·사진 3장·본인 수정/삭�
     assert.match(rules, /match \/terminal_as_requests\/\{requestId\} \{/);
     assert.match(rules, /allow get, list: if isSignedIn\(\);/);
     assert.match(rules, /allow create: if isSignedIn\(\) && isValidId\(requestId\) && isValidAsRequest\(incoming\(\)\)/);
-    assert.match(rules, /allow update: if isSignedIn\(\) && isValidId\(requestId\) && \(\s*isAdmin\(\) \|\|\s*isValidAsAuthorUpdate\(\) \|\|\s*isValidAsResolveUpdate\(\) \|\|\s*isValidAsLikeToggle\(\) \|\|\s*isValidAsCommentCountChange\(\)\s*\);/);
+    assert.match(rules, /allow update: if isSignedIn\(\) && isValidId\(requestId\) && \(\s*isAdmin\(\) \|\|\s*isValidViewCountIncrement\(\) \|\|\s*isValidAsAuthorUpdate\(\) \|\|\s*isValidAsResolveUpdate\(\) \|\|\s*isValidAsLikeToggle\(\) \|\|\s*isValidAsCommentCountChange\(\)\s*\);/);
     assert.match(rules, /allow delete: if isAdmin\(\) \|\| isAsAuthor\(\);/);
     assert.match(rules, /match \/comments\/\{commentId\} \{/);
     assert.match(rules, /function isAsAuthor\(\) \{/);

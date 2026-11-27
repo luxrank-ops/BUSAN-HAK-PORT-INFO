@@ -412,7 +412,7 @@ service cloud.firestore {
           'terminalId', 'terminalLabel', 'type', 'title', 'content',
           'author', 'anonCode', 'authorUid', 'imageUrls',
           'status', 'resolvedAtMs', 'resolvedAt',
-          'likedBy', 'commentCount',
+          'likedBy', 'commentCount', 'views',
           'createdAtMs', 'createdAt', 'updatedAtMs', 'updatedAt'
         ]) &&
         isValidAsTerminalId(data.terminalId) &&
@@ -429,6 +429,7 @@ service cloud.firestore {
         (!('resolvedAt' in data) || data.resolvedAt is timestamp) &&
         (!('likedBy' in data) || (data.likedBy is map && data.likedBy.size() <= 500)) &&
         (!('commentCount' in data) || (data.commentCount is int && data.commentCount >= 0 && data.commentCount <= 2000)) &&
+        (!('views' in data) || (data.views is int && data.views >= 0 && data.views <= 100000000)) &&
         data.createdAtMs is int && data.createdAtMs > 0 && data.createdAtMs <= 4102444800000 &&
         (!('createdAt' in data) || data.createdAt is timestamp) &&
         (!('updatedAtMs' in data) || (data.updatedAtMs is int && data.updatedAtMs > 0 && data.updatedAtMs <= 4102444800000)) &&
@@ -494,10 +495,12 @@ service cloud.firestore {
         ('authorUid' in incoming()) && incoming().authorUid == request.auth.uid &&
         !('resolvedAtMs' in incoming()) && !('resolvedAt' in incoming()) &&
         (!('likedBy' in incoming()) || incoming().likedBy.size() == 0) &&
-        (!('commentCount' in incoming()) || incoming().commentCount == 0);
-      // 작성자 본인은 내용·터미널·종류·사진만 수정/삭제, 누구나 조치 완료·좋아요·댓글수 동기화, 전체 관리는 관리자 전용.
+        (!('commentCount' in incoming()) || incoming().commentCount == 0) &&
+        (!('views' in incoming()) || incoming().views == 0);
+      // 작성자 본인은 내용·터미널·종류·사진만 수정/삭제, 누구나 조회수(+1)·조치 완료·좋아요·댓글수 동기화, 전체 관리는 관리자 전용.
       allow update: if isSignedIn() && isValidId(requestId) && (
         isAdmin() ||
+        isValidViewCountIncrement() ||
         isValidAsAuthorUpdate() ||
         isValidAsResolveUpdate() ||
         isValidAsLikeToggle() ||

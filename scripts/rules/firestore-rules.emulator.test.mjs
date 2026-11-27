@@ -377,6 +377,12 @@ if (!EMULATOR_AVAILABLE) {
             // 제목이 80자 초과 또는 빈 문자열이면 거부
             await denied(updateDoc(requestDoc('r1')(worker()), { title: '' }));
             await denied(updateDoc(requestDoc('r1')(worker()), { title: '가'.repeat(81) }));
+            // 누구나 조회수 +1 증가 가능 (0->1, 1->2), +5 이상 임의 조작이나 생성 시 부풀리기 거부
+            await denied(addDoc(requestList(stranger()), validRequest({ authorUid: 'stranger-uid', views: 50 })));
+            await ok(updateDoc(requestDoc('r1')(stranger()), { views: 1 }));
+            await ok(updateDoc(requestDoc('r1')(worker()), { views: 2 }));
+            await denied(updateDoc(requestDoc('r1')(stranger()), { views: 10 }));
+            await denied(updateDoc(requestDoc('r1')(stranger()), { views: 1 }));
             // 누구나 게시글 좋아요(본인 UID 키만)·조치 완료 처리 가능
             await ok(updateDoc(requestDoc('r1')(stranger()), { 'likedBy.stranger-uid': true }));
             await denied(updateDoc(requestDoc('r1')(stranger()), { 'likedBy.worker-a': true }));

@@ -130,7 +130,7 @@ test('터미널 시설·정비 A/S 요청(terminal_as_requests)은 익명 접수
     assert.match(board, /allow get, list: if isSignedIn\(\);/);
     assert.match(board, /allow create: if isSignedIn\(\) && isValidId\(requestId\) && isValidAsRequest\(incoming\(\)\)/);
     assert.match(board, /incoming\(\)\.status == 'received'/, '일반 접수는 접수 상태로만 만들 수 있어야 합니다');
-    assert.match(board, /allow update: if isSignedIn\(\) && isValidId\(requestId\) && \(\s*isAdmin\(\) \|\|\s*isValidAsAuthorUpdate\(\) \|\|\s*isValidAsResolveUpdate\(\) \|\|\s*isValidAsLikeToggle\(\) \|\|\s*isValidAsCommentCountChange\(\)\s*\);/);
+    assert.match(board, /allow update: if isSignedIn\(\) && isValidId\(requestId\) && \(\s*isAdmin\(\) \|\|\s*isValidViewCountIncrement\(\) \|\|\s*isValidAsAuthorUpdate\(\) \|\|\s*isValidAsResolveUpdate\(\) \|\|\s*isValidAsLikeToggle\(\) \|\|\s*isValidAsCommentCountChange\(\)\s*\);/);
     assert.match(board, /allow delete: if isAdmin\(\) \|\| isAsAuthor\(\);/);
     assert.match(board, /match \/comments\/\{commentId\} \{/);
     assert.doesNotMatch(board, /allow create, update, delete: if isSignedIn\(\)/);
@@ -148,7 +148,7 @@ test('터미널 시설·정비 A/S 요청(terminal_as_requests)은 익명 접수
     assert.match(rules, /function isValidAsCommentCountChange\(\) \{/);
     assert.match(rules, /function isValidAsComment\(requestId, data\) \{/);
     assert.match(rules, /function isValidAsCommentAuthorUpdate\(requestId\) \{/);
-    assert.match(rules, /data\.keys\(\)\.hasOnly\(\[\s*'terminalId',\s*'terminalLabel',\s*'type',\s*'title',\s*'content',\s*'author',\s*'anonCode',\s*'authorUid',\s*'imageUrls',\s*'status',\s*'resolvedAtMs',\s*'resolvedAt',\s*'likedBy',\s*'commentCount',\s*'createdAtMs',\s*'createdAt',\s*'updatedAtMs',\s*'updatedAt'\s*\]\)/);
+    assert.match(rules, /data\.keys\(\)\.hasOnly\(\[\s*'terminalId',\s*'terminalLabel',\s*'type',\s*'title',\s*'content',\s*'author',\s*'anonCode',\s*'authorUid',\s*'imageUrls',\s*'status',\s*'resolvedAtMs',\s*'resolvedAt',\s*'likedBy',\s*'commentCount',\s*'views',\s*'createdAtMs',\s*'createdAt',\s*'updatedAtMs',\s*'updatedAt'\s*\]\)/);
     assert.match(rules, /\(!\('title' in data\) \|\| \(data\.title is string && data\.title\.size\(\) >= 1 && data\.title\.size\(\) <= 80\)\)/);
     assert.match(rules, /data\.content is string && data\.content\.size\(\) >= 2 && data\.content\.size\(\) <= 500/);
     assert.match(rules, /data\.author is string && data\.author\.size\(\) >= 2 && data\.author\.size\(\) <= 40/);
