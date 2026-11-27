@@ -13,7 +13,7 @@ import { readAppFile } from './app-source.mjs';
 const script = readAppFile('public/js/terminal-as.js');
 
 const TAS_IDS = [
-    'terminalAsBoard', 'tasBadge', 'tasTotal', 'tasTerminalTotal', 'tasLiveBadge', 'tasFilter',
+    'terminalAsBoard', 'tasBadge', 'tasCardSubMeta', 'tasTotal', 'tasTerminalTotal', 'tasLiveBadge', 'tasFilter',
     'tasFeedMeta', 'tasFeed', 'tasPagination', 'tasToggleFormBtn', 'tasStatus', 'tasForm',
     'tasEditBanner', 'tasEditText', 'tasCancelEdit', 'tasTerminalSelect', 'tasTypeSelect',
     'tasTitle', 'tasContent', 'tasPhotoInput', 'tasPhotoPreview', 'tasPhotoCount',
@@ -813,6 +813,7 @@ test('카드가 접혀 있어도 새 게시물(24시간 이내)이 등록되면 
     });
     collapsed.db.emit();
     assert.equal(collapsed.el('tasBadge').classList.contains('hidden'), true);
+    assert.equal(collapsed.el('tasCardSubMeta').textContent, '새 게시물 0건 · 누적 1건');
 
     // 2. 새 게시물이 등록되면 접힌 상태에서도 즉시 NEW 배지 표시
     collapsed.db.docs.set('new-1', {
@@ -829,6 +830,7 @@ test('카드가 접혀 있어도 새 게시물(24시간 이내)이 등록되면 
     collapsed.db.emit();
     assert.equal(collapsed.el('tasBadge').classList.contains('hidden'), false);
     assert.equal(collapsed.el('tasBadge').textContent, 'NEW');
+    assert.equal(collapsed.el('tasCardSubMeta').textContent, '새 게시물 1건 · 누적 2건');
 });
 
 test('요청 행을 열면 목록 배지와 상세 하단에 조회수가 표시되고 열람 시 1씩 증가한다', async () => {
@@ -849,6 +851,7 @@ test('요청 행을 열면 목록 배지와 상세 하단에 조회수가 표시
     });
     harness.db.emit();
     await harness.tick();
+    assert.equal(harness.el('tasCardSubMeta').textContent, '새 게시물 1건 · 누적 1건');
 
     // 1. 초기 목록 행에는 기존 조회수(👁️ 2) 표시
     assert.match(harness.feedText(), /👁️ 2/);
@@ -862,18 +865,77 @@ test('요청 행을 열면 목록 배지와 상세 하단에 조회수가 표시
     assert.match(harness.feedText(), /👁️ 3/);
     assert.match(harness.feedText(), /👁️ 조회수 3회/);
 
-    // 3. 다시 눌러 닫을 때는 조회수가 오르지 않음
-    titleBtn = findButtons(harness.el('tasFeed'), node => node.className === 'tas-row-title-btn')[0];
-    titleBtn.dispatchEvent({ type: 'click' });
+    // 3. 다른 사용자의 조회수만 바뀐 스냅샷은 DOM 노드를 재구성하지 않고 숫자만 갱신한다
+    const detailInputBefore = findButtons(harness.el('tasFeed'), node => node.className === 'tas-comment-input')[0];
+    assert.ok(detailInputBefore);
+    detailInputBefore.value = '댓글 작성 중';
+    const currentDoc = harness.db.docs.get('req-view-1');
+    harness.db.docs.set('req-view-1', { ...currentDoc, views: 7 });
+    harness.db.emit();
     await harness.tick();
-    assert.equal(harness.db.docs.get('req-view-1').views, 3);
+    const detailInputAfter = findButtons(harness.el('tasFeed'), node => node.className === 'tas-comment-input')[0];
+    assert.equal(detailInputAfter, detailInputBefore, '조회수만 바뀐 스냅샷에서 DOM을 다시 만들면 안 됩니다');
+    assert.equal(detailInputAfter.value, '댓글 작성 중');
+    assert.match(harness.feedText(), /👁️ 7/);
+    assert.match(harness.feedText(), /👁️ 조회수 7회/);
 
-    // 4. 다시 열면 4로 증가
+    // 4. 다시 눌러 닫을 때는 조회수가 오르지 않음
     titleBtn = findButtons(harness.el('tasFeed'), node => node.className === 'tas-row-title-btn')[0];
     titleBtn.dispatchEvent({ type: 'click' });
     await harness.tick();
-    assert.equal(harness.db.docs.get('req-view-1').views, 4);
-    assert.match(harness.feedText(), /👁️ 조회수 4회/);
+    assert.equal(harness.db.docs.get('req-view-1').views, 7);
+
+    // 5. 다시 열면 8로 증가
+    titleBtn = findButtons(harness.el('tasFeed'), node => node.className === 'tas-row-title-btn')[0];
+    titleBtn.dispatchEvent({ type: 'click' });
+    await harness.tick();
+    assert.equal(harness.db.docs.get('req-view-1').views, 8);
+    assert.match(harness.feedText(), /👁️ 조회수 8회/);
+});
+
+test('온라인 요청 조회수 서버 저장이 실패하면 낙관적 표시를 원래 숫자로 롤백한다', async () => {
+    const harness = makeHarness({ uid: 'viewer-2' });
+    await harness.tick();
+    harness.db.docs.set('req-fail-1', {
+        terminalId: 'hjnc',
+        terminalLabel: '한진(HJNC)',
+        type: 'facility',
+        title: '조명 수리 요청',
+        content: '야간 작업등 점검 필요합니다.',
+        author: '한진***',
+        anonCode: 'FAIL',
+        authorUid: 'writer-2',
+        status: 'received',
+        views: 5,
+        createdAtMs: Date.now()
+    });
+    harness.db.emit();
+    await harness.tick();
+
+    // 이후 update 만 실패하도록 doc().update 를 거절 상태로 교체
+    const origCollection = harness.db.collection.bind(harness.db);
+    harness.db.collection = (name) => {
+        const col = origCollection(name);
+        if (name !== 'terminal_as_requests') return col;
+        const origDoc = col.doc.bind(col);
+        col.doc = (id) => {
+            const d = origDoc(id);
+            return {
+                ...d,
+                async update() {
+                    throw new Error('permission-denied');
+                }
+            };
+        };
+        return col;
+    };
+
+    const titleBtn = findButtons(harness.el('tasFeed'), node => node.className === 'tas-row-title-btn')[0];
+    assert.ok(titleBtn);
+    titleBtn.dispatchEvent({ type: 'click' });
+    await harness.tick();
+    assert.match(harness.feedText(), /👁️ 5/, '저장 실패 시 조회수 배지가 원래 값(5)으로 롤백되어야 합니다');
+    assert.match(harness.feedText(), /👁️ 조회수 5회/);
 });
 
 test('오프라인 임시 접수 글도 열람 시 조회수가 증가하고 localStorage에 보존된다', async () => {

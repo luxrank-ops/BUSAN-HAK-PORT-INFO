@@ -46,16 +46,27 @@ function makeNoticeAndBoardEnv() {
         registry.set(id, el);
         return el;
     };
-    ['noticeList', 'noticePagination', 'boardList', 'pagination'].forEach(add);
+    ['noticeList', 'noticePagination', 'noticeBadge', 'noticeCardSubMeta', 'boardList', 'pagination', 'boardBadge', 'boardCardSubMeta'].forEach(add);
 
-    const document = { getElementById: id => registry.get(id) ?? null };
+    const document = {
+        getElementById: id => registry.get(id) ?? null,
+        querySelectorAll: selector => {
+            if (selector === '#noticeList .board-content-row.show' || selector === '#boardList .board-content-row.show') {
+                const prefix = selector.startsWith('#noticeList') ? 'n-' : 'p-';
+                return [...registry.values()].filter(el => el.id.startsWith(prefix) && el.classList.contains('show'));
+            }
+            return [];
+        }
+    };
     const commentSnapshots = new Map();
+    const commentSubCounts = new Map();
     const db = {
         collection: () => ({
             doc: id => ({
                 collection: () => ({
                     orderBy: () => ({
                         onSnapshot: cb => {
+                            commentSubCounts.set(id, (commentSubCounts.get(id) || 0) + 1);
                             commentSnapshots.set(id, cb);
                             return () => {};
                         }
@@ -71,6 +82,7 @@ function makeNoticeAndBoardEnv() {
         window: {},
         postsPerPage: 5,
         allPostsData: [],
+        allShipsData: [],
         commentUnsubscribes: {},
         boardCommentsById: {},
         editingBoardComment: null,
@@ -82,15 +94,22 @@ function makeNoticeAndBoardEnv() {
     });
     const code = [
         'let currentNoticePage = 1;',
+        'let noticeDirectorySnapshotLoaded = false;',
+        'let postDirectorySnapshotLoaded = false;',
         extractFunction(js, 'renderNoticePagination'),
         extractFunction(js, 'renderNoticePage'),
         'let currentBoardPage = 1;',
         extractFunction(js, 'renderBoardPage'),
         extractFunction(js, 'renderPagination'),
-        extractFunction(js, 'loadComments')
+        extractFunction(js, 'loadComments'),
+        extractFunction(js, 'getShipRowSignature'),
+        extractFunction(js, 'isShipViewCountOnlyChange'),
+        extractFunction(js, 'syncBoardViewCountBadges'),
+        extractFunction(js, 'applyNoticeDirectorySnapshot'),
+        extractFunction(js, 'applyPostDirectorySnapshot')
     ].join('\n');
     vm.runInContext(code, ctx);
-    return { ctx, document, commentSnapshots };
+    return { ctx, document, commentSnapshots, commentSubCounts };
 }
 
 test('HTML 은 4개 일반 게시판을 board-table-wrap·board-pagination·board-composer 로 통일하고 safety-card 는 건드리지 않는다', () => {
@@ -155,4 +174,50 @@ test('공지사항과 자유게시판은 본문 공백을 정리하고 카드형
     const cb = commentSnapshots.get('p1');
     cb([{ data: () => ({ name: 'A', text: '삭제됨', deletedAt: Date.now() }), id: 'c0' }]);
     assert.match(document.getElementById('cmt-list-p1').innerHTML, /class='comment-empty'>첫 댓글을 남겨보세요\./);
+});
+
+test('공지사항·자유게시판은 조회수만 바뀐 스냅샷에서 DOM과 댓글 구독을 유지하고 숫자만 갱신한다', () => {
+    const { ctx, document, commentSubCounts } = makeNoticeAndBoardEnv();
+    const tsMs = Date.now();
+    const makeTs = () => ({ toDate: () => new Date(tsMs), toMillis: () => tsMs });
+    const makeSnapshot = items => ({
+        empty: items.length === 0,
+        size: items.length,
+        forEach: fn => items.forEach(({ id, ...data }) => fn({ id, data: () => data }))
+    });
+
+    // 공지사항 초기 스냅샷 후 행 열림 상태 설정
+    ctx.applyNoticeDirectorySnapshot(makeSnapshot([
+        { id: 'n1', title: '공지1', content: '본문', views: 3, timestamp: makeTs() }
+    ]));
+    document.getElementById('n-n1').classList.add('show');
+    const noticeBadgeBefore = document.getElementById('view-badge-n-n1');
+
+    // 공지 조회수만 변경된 스냅샷 -> 동일 요소 인스턴스 유지, 텍스트만 갱신
+    ctx.applyNoticeDirectorySnapshot(makeSnapshot([
+        { id: 'n1', title: '공지1', content: '본문', views: 4, timestamp: makeTs() }
+    ]));
+    assert.equal(document.getElementById('view-badge-n-n1'), noticeBadgeBefore);
+    assert.equal(document.getElementById('view-badge-n-n1').innerText, '👁️ 4');
+    assert.equal(document.getElementById('view-detail-n-n1').innerText, '👁️ 조회수 4회');
+    assert.ok(document.getElementById('n-n1').classList.contains('show'));
+
+    // 자유게시판 초기 스냅샷 후 행 열림 + 댓글 구독 + 댓글 입력 초안 작성
+    ctx.applyPostDirectorySnapshot(makeSnapshot([
+        { id: 'p1', nick: '작업자', title: '소통글', content: '내용', views: 5, timestamp: makeTs() }
+    ]));
+    document.getElementById('p-p1').classList.add('show');
+    ctx.loadComments('p1');
+    const draftInput = document.getElementById('cmt-txt-p1');
+    draftInput.value = '입력 중이던 댓글';
+
+    // 자유게시판 조회수만 변경된 스냅샷 -> 댓글 구독 재실행 없음, 입력 초안 보존
+    ctx.applyPostDirectorySnapshot(makeSnapshot([
+        { id: 'p1', nick: '작업자', title: '소통글', content: '내용', views: 6, timestamp: makeTs() }
+    ]));
+    assert.equal(commentSubCounts.get('p1'), 1, '조회수 스냅샷마다 댓글 구독을 재시작하면 안 됩니다');
+    assert.equal(document.getElementById('cmt-txt-p1'), draftInput);
+    assert.equal(document.getElementById('cmt-txt-p1').value, '입력 중이던 댓글');
+    assert.equal(document.getElementById('view-badge-p-p1').innerText, '👁️ 6');
+    assert.equal(document.getElementById('view-detail-p-p1').innerText, '👁️ 조회수 6회');
 });

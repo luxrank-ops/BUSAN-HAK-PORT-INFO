@@ -26,8 +26,8 @@
     const LOCAL_KEY = 'hakportTerminalAsLocalV1';
     const MINE_KEY = 'hakportTerminalAsMineV1';
     const MINE_COMMENTS_KEY = 'hakportTerminalAsMineCommentsV1';
-    const FEED_LIMIT = 80;
-    const HEAD_WATCH_LIMIT = 10;
+    const FEED_LIMIT = 200;
+    const HEAD_WATCH_LIMIT = 200;
     const PAGE_SIZE = 10;
     const NEW_POST_WINDOW_MS = 24 * 60 * 60 * 1000;
     const COMMENTS_LIMIT = 100;
@@ -814,6 +814,7 @@
     const commentsByRequest = new Map();
     const commentUnsubscribers = new Map();
     const draftCommentText = new Map();
+    const viewNodesByRequestId = new Map();
     let unsubscribe = null;
     let headUnsubscribe = null;
     let visibilityObserver = null;
@@ -969,6 +970,7 @@
         const entries = allEntries();
         const now = Date.now();
         const newCount = entries.filter(entry => isRecentPost(entry.timestampMs, now)).length;
+        const totalCount = entries.length;
 
         const badge = byId('tasBadge');
         if (badge) {
@@ -976,6 +978,11 @@
             badge.textContent = 'NEW';
             if (newCount > 0) badge.setAttribute('aria-label', `새 게시물 ${newCount}건`);
             else badge.setAttribute('aria-label', '새 게시물');
+        }
+
+        const subMeta = byId('tasCardSubMeta');
+        if (subMeta) {
+            subMeta.textContent = `새 게시물 ${newCount.toLocaleString()}건 · 누적 ${totalCount.toLocaleString()}건`;
         }
     }
 
@@ -1075,9 +1082,31 @@
         return panel;
     }
 
+    function applyEntryViewCount(requestId, targetViews) {
+        const safeVal = Math.max(0, Math.floor(Number(targetViews) || 0));
+        feedEntries = feedEntries.map(item => (
+            item.id === requestId ? { ...item, views: safeVal } : item
+        ));
+        headEntries = headEntries.map(item => (
+            item.id === requestId ? { ...item, views: safeVal } : item
+        ));
+        const nodes = viewNodesByRequestId.get(requestId);
+        if (nodes) {
+            if (nodes.pill) {
+                nodes.pill.textContent = `👁️ ${safeVal.toLocaleString()}`;
+                nodes.pill.setAttribute('title', `조회수 ${safeVal.toLocaleString()}회 (중복 조회 포함)`);
+                nodes.pill.setAttribute('aria-label', `조회수 ${safeVal.toLocaleString()}회`);
+            }
+            if (nodes.detail) {
+                nodes.detail.textContent = `👁️ 조회수 ${safeVal.toLocaleString()}회`;
+            }
+        }
+    }
+
     function incrementRequestViewCount(entry) {
         if (!entry || !entry.id) return;
-        const nextViews = Math.max(0, Math.floor(Number(entry.views) || 0)) + 1;
+        const prevViews = Math.max(0, Math.floor(Number(entry.views) || 0));
+        const nextViews = prevViews + 1;
 
         if (entry.local) {
             const list = readLocalRequests().map(item => (
@@ -1090,29 +1119,33 @@
             return;
         }
 
-        feedEntries = feedEntries.map(item => (
-            item.id === entry.id ? { ...item, views: nextViews } : item
-        ));
-        headEntries = headEntries.map(item => (
-            item.id === entry.id ? { ...item, views: nextViews } : item
-        ));
-
         const store = asFirestore();
         if (!store) return;
+
+        applyEntryViewCount(entry.id, nextViews);
+
         const sendViewUpdate = () => {
             try {
                 const inc = fieldIncrement(1);
-                void store.collection(COLLECTION).doc(entry.id).update({
-                    views: inc !== null ? inc : nextViews
-                }).catch(() => {});
-            } catch (_) {}
+                Promise.resolve(
+                    store.collection(COLLECTION).doc(entry.id).update({
+                        views: inc !== null ? inc : nextViews
+                    })
+                ).catch(err => {
+                    try { console.warn('A/S 요청 조회수 업데이트 실패:', err && err.message ? err.message : err); } catch (_) {}
+                    applyEntryViewCount(entry.id, prevViews);
+                });
+            } catch (_) {
+                applyEntryViewCount(entry.id, prevViews);
+            }
         };
         if (resolveCurrentUid()) {
             sendViewUpdate();
         } else {
             void ensureAsAuth().then(user => {
                 if (user || resolveCurrentUid()) sendViewUpdate();
-            });
+                else applyEntryViewCount(entry.id, prevViews);
+            }).catch(() => applyEntryViewCount(entry.id, prevViews));
         }
     }
 
@@ -1180,7 +1213,11 @@
         }
         if (entry.local) bottom.appendChild(el('span', 'tas-feed-local', '📴 이 기기에만 저장'));
         const viewCnt = Math.max(0, Number(entry.views) || 0);
-        bottom.appendChild(el('span', 'tas-feed-views', `👁️ 조회수 ${viewCnt.toLocaleString()}회`));
+        const detailViewEl = el('span', 'tas-feed-views', `👁️ 조회수 ${viewCnt.toLocaleString()}회`);
+        bottom.appendChild(detailViewEl);
+        const trackedNodes = viewNodesByRequestId.get(entry.id) || {};
+        trackedNodes.detail = detailViewEl;
+        viewNodesByRequestId.set(entry.id, trackedNodes);
         bottom.appendChild(el('span', 'tas-feed-time', formatRelativeTime(entry.timestampMs, now)));
         card.appendChild(bottom);
 
@@ -1293,6 +1330,7 @@
         const feed = byId('tasFeed');
         if (!feed) return;
         feed.textContent = '';
+        viewNodesByRequestId.clear();
         const visible = filterRequests(allEntries(), activeTerminal);
         const total = allEntries().length;
         const totalNode = byId('tasTotal');
@@ -1367,6 +1405,7 @@
             const viewPill = el('span', 'tas-row-pill is-view', `👁️ ${rowViews.toLocaleString()}`);
             viewPill.setAttribute('title', `조회수 ${rowViews.toLocaleString()}회 (중복 조회 포함)`);
             viewPill.setAttribute('aria-label', `조회수 ${rowViews.toLocaleString()}회`);
+            viewNodesByRequestId.set(entry.id, { pill: viewPill, detail: null });
             titleBtn.appendChild(viewPill);
             titleBtn.appendChild(el('span', 'tas-row-arrow', isOpen ? '▲' : '▼'));
             titleBtn.addEventListener('click', () => toggleRequestDetail(entry));
@@ -2013,6 +2052,29 @@
         }
     }
 
+    function getAsEntrySignatureWithoutViews(entry) {
+        if (!entry || typeof entry !== 'object') return '';
+        try {
+            const { views, ...rest } = entry;
+            return JSON.stringify(rest);
+        } catch (_) {
+            return '';
+        }
+    }
+
+    function isAsFeedViewCountOnlyChange(prevList, nextList) {
+        if (!Array.isArray(prevList) || !Array.isArray(nextList)) return false;
+        if (prevList.length !== nextList.length) return false;
+        for (let i = 0; i < nextList.length; i += 1) {
+            const prev = prevList[i];
+            const next = nextList[i];
+            if (!prev || !next || prev.id !== next.id) return false;
+            const prevSig = getAsEntrySignatureWithoutViews(prev);
+            if (!prevSig || prevSig !== getAsEntrySignatureWithoutViews(next)) return false;
+        }
+        return true;
+    }
+
     function startSubscription() {
         stopHeadWatcher();
         if (unsubscribe) return;
@@ -2036,10 +2098,18 @@
                             entries.push(normalizeRequest(docSnapshot.id, data));
                         });
                     }
-                    feedEntries = sortRequests(entries);
+                    const nextFeedEntries = sortRequests(entries);
+                    const viewCountOnly = feedLoaded && isAsFeedViewCountOnlyChange(feedEntries, nextFeedEntries);
+                    feedEntries = nextFeedEntries;
                     headEntries = feedEntries.slice(0, HEAD_WATCH_LIMIT);
                     feedLoaded = true;
                     setLiveBadge(true);
+                    if (viewCountOnly) {
+                        feedEntries.forEach(item => applyEntryViewCount(item.id, item.views));
+                        updateCardNewBadge();
+                        void flushLocalQueue(store);
+                        return;
+                    }
                     openCommentIds.forEach(id => {
                         const target = feedEntries.find(item => item.id === id);
                         if (target && !target.local) startCommentSubscription(id);

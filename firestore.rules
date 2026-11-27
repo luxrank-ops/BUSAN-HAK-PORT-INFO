@@ -251,7 +251,9 @@ service cloud.firestore {
       return resource != null &&
         incoming().diff(existing()).affectedKeys().hasOnly(['views']) &&
         incoming().views is int &&
-        incoming().views == ((!('views' in existing()) || !(existing().views is int)) ? 1 : existing().views + 1);
+        incoming().views >= 1 &&
+        incoming().views <= 100000000 &&
+        incoming().views == ((!('views' in existing()) || !(existing().views is int) || existing().views < 0) ? 1 : existing().views + 1);
     }
 
     match /notices/{noticeId} {
@@ -264,6 +266,7 @@ service cloud.firestore {
     match /posts/{postId} {
       allow get, list: if isSignedIn();
       allow create: if isSignedIn() && isValidId(postId) && isValidBoardPost(incoming()) &&
+        (!('views' in incoming()) || incoming().views == 0) &&
         (!('authorUid' in incoming()) || incoming().authorUid == null || incoming().authorUid == request.auth.uid);
       // 내용 수정은 비밀번호를 바꾸지 못합니다(비밀번호 선점·잠금 공격 차단). 삭제는 소프트 삭제만.
       allow update: if isSignedIn() && isValidId(postId) && (
@@ -290,6 +293,7 @@ service cloud.firestore {
       allow create: if isSignedIn() && isValidId(shipId) &&
         incoming().shipName is string && incoming().shipName.size() <= 120 &&
         isSha256Hash(incoming().password) &&
+        (!('views' in incoming()) || incoming().views == 0) &&
         (!('authorUid' in incoming()) || incoming().authorUid == null || incoming().authorUid == request.auth.uid);
       allow update: if isSignedIn() && isValidId(shipId) && (
         isValidViewCountIncrement() ||

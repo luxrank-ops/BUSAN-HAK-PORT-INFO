@@ -206,6 +206,13 @@ if (!EMULATOR_AVAILABLE) {
             }));
         });
 
+        test('게시글 생성 시 조작된 초기 조회수(views > 0)는 거부된다', async () => {
+            await seed(async () => {});
+            await denied(addDoc(collection(worker(), 'posts'), {
+                nick: '익명', title: '제목', content: '내용', password: SHA, views: 999
+            }));
+        });
+
         test('게시글 조회수 1 증가는 누구나 할 수 있다', async () => {
             await seed(async (db) => {
                 await setDoc(doc(db, 'posts/p1'), {
@@ -224,6 +231,7 @@ if (!EMULATOR_AVAILABLE) {
             const notice = (db) => doc(db, 'notices/n1');
             await ok(updateDoc(notice(stranger()), { views: 4 }));
             await denied(updateDoc(notice(stranger()), { views: 9 }));
+            await denied(updateDoc(notice(stranger()), { views: -1 }));
         });
 
         test('댓글도 남이 삭제할 수 없고, 비밀번호는 바꿀 수 없다', async () => {

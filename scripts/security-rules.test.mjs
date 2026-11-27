@@ -43,6 +43,7 @@ test('근무일지(work_logs)는 물리 삭제가 관리자 전용이고 소유�
 test('게시판·댓글은 물리 삭제가 관리자 전용으로 바뀌었다', () => {
     const posts = blockBody(rules, 'match /posts/{postId}');
     assert.match(posts, /allow delete: if isAdmin\(\);/, '게시글 물리 삭제는 관리자 전용이어야 합니다');
+    assert.match(posts, /!\('views' in incoming\(\)\) \|\| incoming\(\)\.views == 0/, '게시글 생성 시 초기 조회수는 0 또는 생략만 허용해야 합니다');
     assert.doesNotMatch(posts, /allow delete: if isSignedIn\(\)/);
 
     const comments = blockBody(rules, 'match /comments/{commentId}');
@@ -50,6 +51,12 @@ test('게시판·댓글은 물리 삭제가 관리자 전용으로 바뀌었다'
 
     const ships = blockBody(rules, 'match /ships/{shipId}');
     assert.match(ships, /allow delete: if isAdmin\(\);/);
+    assert.match(ships, /!\('views' in incoming\(\)\) \|\| incoming\(\)\.views == 0/, '선박 생성 시 초기 조회수는 0 또는 생략만 허용해야 합니다');
+
+    const viewFn = blockBody(rules, 'function isValidViewCountIncrement()');
+    assert.match(viewFn, /incoming\(\)\.views >= 1/);
+    assert.match(viewFn, /incoming\(\)\.views <= 100000000/);
+    assert.match(viewFn, /existing\(\)\.views < 0/);
 });
 
 test('수정 시 비밀번호를 바꿀 수 없다 (글 잠금 공격 차단)', () => {

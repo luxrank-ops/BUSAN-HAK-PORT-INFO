@@ -8902,6 +8902,8 @@ let currentEditShipId = null;
 let selectedShipFormTags = [];
 let activeShipFilterTags = [];
 let shipDirectorySnapshotLoaded = false;
+let noticeDirectorySnapshotLoaded = false;
+let postDirectorySnapshotLoaded = false;
 let pendingVesselInfoLink = null;
 let pendingShipInfoRegistration = null;
 const handledVesselInfoFollowUps = new Set();
@@ -9800,6 +9802,113 @@ function applyShipDirectorySnapshot(snapshot) {
     });
     if (typeof loadAndSearchAllShips === "function") loadAndSearchAllShips(document.getElementById('shipSearch')?.value || '');
 }
+function syncBoardViewCountBadges(prefix, items) {
+    (Array.isArray(items) ? items : []).forEach(item => {
+        if (!item || !item.id) return;
+        const label = Math.max(0, Number(item.views) || 0).toLocaleString();
+        const badgeEl = document.getElementById(`view-badge-${prefix}-${item.id}`);
+        if (badgeEl) {
+            badgeEl.innerText = `👁️ ${label}`;
+            badgeEl.title = `조회수 ${label}회 (중복 조회 포함)`;
+        }
+        const detailEl = document.getElementById(`view-detail-${prefix}-${item.id}`);
+        if (detailEl) detailEl.innerText = `👁️ 조회수 ${label}회`;
+        if (prefix === "s") {
+            const fullTableBadgeEl = document.getElementById(`view-full-s-${item.id}`);
+            if (fullTableBadgeEl) fullTableBadgeEl.innerText = `👁️ ${label}`;
+        }
+    });
+}
+function applyNoticeDirectorySnapshot(s) {
+    const openIds = Array.from(document.querySelectorAll("#noticeList .board-content-row.show")).map(el => el.id);
+    const badge = document.getElementById("noticeBadge");
+    const subMeta = document.getElementById("noticeCardSubMeta");
+    if (subMeta) subMeta.innerText = s.empty ? "운영 안내 및 주요 소식" : `등록된 공지 ${s.size}건`;
+    if (s.empty) {
+        noticeDirectorySnapshotLoaded = true;
+        window.allNoticesCache = [];
+        renderNoticePage(1);
+        if (badge) badge.classList.add("hidden");
+        return;
+    }
+    let isNew = false;
+    const now = new Date();
+    const sortedNotices = [];
+    s.forEach(d => {
+        const item = { ...(d.data() || {}), id: d.id };
+        if (item.timestamp && item.timestamp.toDate) {
+            if (now.getTime() - item.timestamp.toDate().getTime() < 24 * 60 * 60 * 1000) isNew = true;
+        }
+        sortedNotices.push(item);
+    });
+    sortedNotices.sort((a, b) => {
+        const pA = a.isPriority ? 1 : 0;
+        const pB = b.isPriority ? 1 : 0;
+        if (pA !== pB) return pB - pA;
+        const tA = a.timestamp && a.timestamp.toMillis ? a.timestamp.toMillis() : 0;
+        const tB = b.timestamp && b.timestamp.toMillis ? b.timestamp.toMillis() : 0;
+        return tB - tA;
+    });
+    const viewCountOnly = noticeDirectorySnapshotLoaded && isShipViewCountOnlyChange(window.allNoticesCache, sortedNotices);
+    noticeDirectorySnapshotLoaded = true;
+    window.allNoticesCache = sortedNotices;
+    if (badge) {
+        if (isNew) badge.classList.remove("hidden");
+        else badge.classList.add("hidden");
+    }
+    if (viewCountOnly) {
+        syncBoardViewCountBadges("n", sortedNotices);
+        return;
+    }
+    const maxPage = Math.max(1, Math.ceil(sortedNotices.length / postsPerPage));
+    renderNoticePage(Math.min(currentNoticePage || 1, maxPage));
+    openIds.forEach(rid => {
+        const rowEl = document.getElementById(rid);
+        if (rowEl) {
+            rowEl.classList.add("show");
+            document.getElementById(`row-${rid}`)?.classList.add("is-open");
+            const arrowEl = document.getElementById(`arrow-${rid}`);
+            if (arrowEl) arrowEl.innerText = "▲";
+        }
+    });
+}
+function applyPostDirectorySnapshot(s) {
+    const openIds = Array.from(document.querySelectorAll("#boardList .board-content-row.show")).map(el => el.id);
+    const nextPosts = [];
+    s.forEach(d => {
+        const postData = d.data() || {};
+        if (isDeletedRecord(postData)) return;
+        nextPosts.push({ ...postData, id: d.id });
+    });
+    const viewCountOnly = postDirectorySnapshotLoaded && isShipViewCountOnlyChange(allPostsData, nextPosts);
+    postDirectorySnapshotLoaded = true;
+    allPostsData = nextPosts;
+    const subMeta = document.getElementById("boardCardSubMeta");
+    if (subMeta) subMeta.innerText = allPostsData.length > 0 ? `자유 게시글 ${allPostsData.length}건` : "현장 동료 자유 소통방";
+    const badge = document.getElementById("boardBadge");
+    if (badge) {
+        const nowMs = Date.now();
+        const hasNewPost = allPostsData.some(p => p.timestamp && p.timestamp.toDate && (nowMs - p.timestamp.toDate().getTime() < 24 * 60 * 60 * 1000));
+        if (hasNewPost) badge.classList.remove("hidden");
+        else badge.classList.add("hidden");
+    }
+    if (viewCountOnly) {
+        syncBoardViewCountBadges("p", allPostsData);
+        return;
+    }
+    const maxPage = Math.max(1, Math.ceil(allPostsData.length / postsPerPage));
+    renderBoardPage(Math.min(currentBoardPage || 1, maxPage));
+    openIds.forEach(rid => {
+        const rowEl = document.getElementById(rid);
+        if (rowEl) {
+            rowEl.classList.add("show");
+            document.getElementById(`row-${rid}`)?.classList.add("is-open");
+            const arrowEl = document.getElementById(`arrow-${rid}`);
+            if (arrowEl) arrowEl.innerText = "▲";
+            if (rid.startsWith("p-")) loadComments(rid.slice(2));
+        }
+    });
+}
 let currentEditArchiveId = null;
 let currentEditArchiveUrl = null;
 let currentEditArchivePw = null;
@@ -10108,40 +10217,73 @@ function escapeShipCommentHtml(value) {
     return String(value || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
 }
 let currentShipPage = 1;
-function incrementBoardItemViewCount(collectionName, docId, prefix) {
-    if (!collectionName || !docId || typeof db === "undefined" || !db) return;
+function incrementBoardItemViewCount(collectionName, docId, prefix, fallbackItem = null) {
+    if (!collectionName || !docId || typeof db === "undefined" || !db) return 0;
     let targetItem = null;
     if (collectionName === "ships") {
-        targetItem = (allShipsData || []).find(item => item.id === docId);
+        targetItem = (allShipsData || []).find(item => item.id === docId) || fallbackItem;
     } else if (collectionName === "posts") {
-        targetItem = (allPostsData || []).find(item => item.id === docId);
+        targetItem = (allPostsData || []).find(item => item.id === docId) || fallbackItem;
     } else if (collectionName === "notices") {
-        targetItem = (window.allNoticesCache || []).find(item => item.id === docId);
+        targetItem = (window.allNoticesCache || []).find(item => item.id === docId) || fallbackItem;
+    } else {
+        targetItem = fallbackItem;
     }
-    const nextViews = Math.max(0, Number(targetItem && targetItem.views) || 0) + 1;
-    if (targetItem) targetItem.views = nextViews;
+    const prevViews = Math.max(0, Number(targetItem && targetItem.views) || 0);
+    const nextViews = prevViews + 1;
 
-    const badgeEl = document.getElementById(`view-badge-${prefix}-${docId}`);
-    if (badgeEl) {
-        badgeEl.innerText = `👁️ ${nextViews.toLocaleString()}`;
-        badgeEl.title = `조회수 ${nextViews.toLocaleString()}회 (중복 조회 포함)`;
-    }
-    const detailEl = document.getElementById(`view-detail-${prefix}-${docId}`);
-    if (detailEl) {
-        detailEl.innerText = `👁️ 조회수 ${nextViews.toLocaleString()}회`;
-    }
-    const fullTableBadgeEl = document.getElementById(`view-full-s-${docId}`);
-    if (fullTableBadgeEl) {
-        fullTableBadgeEl.innerText = `👁️ ${nextViews.toLocaleString()}`;
-    }
+    const applyViews = (value) => {
+        const safeValue = Math.max(0, Number(value) || 0);
+        if (targetItem) targetItem.views = safeValue;
+        const badgeEl = document.getElementById(`view-badge-${prefix}-${docId}`);
+        if (badgeEl) {
+            badgeEl.innerText = `👁️ ${safeValue.toLocaleString()}`;
+            badgeEl.title = `조회수 ${safeValue.toLocaleString()}회 (중복 조회 포함)`;
+        }
+        const detailEl = document.getElementById(`view-detail-${prefix}-${docId}`);
+        if (detailEl) {
+            detailEl.innerText = `👁️ 조회수 ${safeValue.toLocaleString()}회`;
+        }
+        if (prefix === "s") {
+            const fullTableBadgeEl = document.getElementById(`view-full-s-${docId}`);
+            if (fullTableBadgeEl) {
+                fullTableBadgeEl.innerText = `👁️ ${safeValue.toLocaleString()}`;
+            }
+        }
+    };
 
-    try {
-        db.collection(collectionName).doc(docId).update({
-            views: firebase.firestore.FieldValue.increment(1)
-        }).catch(err => {
-            console.warn(`조회수 업데이트 실패 (${collectionName}/${docId}):`, err && err.message);
-        });
-    } catch (e) {}
+    applyViews(nextViews);
+
+    const sendViewUpdate = () => {
+        const inc = (typeof firebase !== "undefined" && firebase.firestore && firebase.firestore.FieldValue && typeof firebase.firestore.FieldValue.increment === "function")
+            ? firebase.firestore.FieldValue.increment(1)
+            : nextViews;
+        try {
+            Promise.resolve(
+                db.collection(collectionName).doc(docId).update({
+                    views: inc
+                })
+            ).catch(err => {
+                console.warn(`조회수 업데이트 실패 (${collectionName}/${docId}):`, err && err.message);
+                applyViews(prevViews);
+            });
+        } catch (e) {
+            applyViews(prevViews);
+        }
+    };
+
+    if (typeof auth !== "undefined" && auth && !auth.currentUser && typeof ensureAnonymousAuth === "function") {
+        void Promise.resolve(ensureAnonymousAuth()).then(user => {
+            if (user || (auth && auth.currentUser)) {
+                sendViewUpdate();
+            } else {
+                applyViews(prevViews);
+            }
+        }).catch(() => applyViews(prevViews));
+    } else {
+        sendViewUpdate();
+    }
+    return nextViews;
 }
 function toggleBoardRow(id) {
     const row = document.getElementById(id);
@@ -11619,8 +11761,8 @@ window.onload = async () => {
     try { const now = new Date(); now.setMinutes(now.getMinutes() - now.getTimezoneOffset()); const todayStr = now.toISOString().split('T')[0]; const sDate = document.getElementById('wageStartDate'); const eDate = document.getElementById('wageEndDate'); if(sDate) sDate.value = todayStr; if(eDate) eDate.value = todayStr; if (typeof syncWageHourlyYearLabel === 'function') syncWageHourlyYearLabel(todayStr); const initMonth = parseInt(todayStr.split('-')[1], 10) || (now.getMonth() + 1); highlightSeasonRow(initMonth); applySeasonDefaultHours(initMonth, true); if (typeof updateWageHoursBreakdown === 'function') updateWageHoursBreakdown(); else if (typeof syncWageHoursBlockSize === 'function') syncWageHoursBlockSize(); if (typeof loadWageScheduledShipsForDate === 'function') loadWageScheduledShipsForDate(todayStr, false); } catch(e) { console.error("날짜 초기화 오류", e); } 
     loadBanner(); 
     try { 
-        db.collection("notices").orderBy("timestamp","desc").limit(100).onSnapshot(s => { const openIds = Array.from(document.querySelectorAll("#noticeList .board-content-row.show")).map(el => el.id); window.allNoticesCache = []; const badge = document.getElementById("noticeBadge"); const subMeta = document.getElementById("noticeCardSubMeta"); if (subMeta) subMeta.innerText = s.empty ? "운영 안내 및 주요 소식" : `등록된 공지 ${s.size}건`; if (s.empty) { renderNoticePage(1); if(badge) badge.classList.add("hidden"); return; } let isNew = false; const now = new Date(); const sortedNotices = []; s.forEach(d => { const item = { ...(d.data() || {}), id: d.id }; if (item.timestamp && item.timestamp.toDate) { if (now.getTime() - item.timestamp.toDate().getTime() < 24 * 60 * 60 * 1000) isNew = true; } sortedNotices.push(item); }); sortedNotices.sort((a, b) => { const pA = a.isPriority ? 1 : 0; const pB = b.isPriority ? 1 : 0; if (pA !== pB) return pB - pA; const tA = a.timestamp && a.timestamp.toMillis ? a.timestamp.toMillis() : 0; const tB = b.timestamp && b.timestamp.toMillis ? b.timestamp.toMillis() : 0; return tB - tA; }); window.allNoticesCache = sortedNotices; const maxPage = Math.max(1, Math.ceil(sortedNotices.length / postsPerPage)); renderNoticePage(Math.min(currentNoticePage || 1, maxPage)); openIds.forEach(rid => { const rowEl = document.getElementById(rid); if (rowEl) { rowEl.classList.add("show"); document.getElementById(`row-${rid}`)?.classList.add("is-open"); const arrowEl = document.getElementById(`arrow-${rid}`); if (arrowEl) arrowEl.innerText = "▲"; } }); if(badge) { if(isNew) badge.classList.remove("hidden"); else badge.classList.add("hidden"); } }, err => { console.warn("공지사항 구독 오류:", err); }); 
-        db.collection("posts").orderBy("timestamp","desc").limit(200).onSnapshot(s => { const openIds = Array.from(document.querySelectorAll("#boardList .board-content-row.show")).map(el => el.id); allPostsData = []; s.forEach(d => { const postData = d.data() || {}; if (isDeletedRecord(postData)) return; allPostsData.push({...postData, id:d.id}) }); const subMeta = document.getElementById("boardCardSubMeta"); if (subMeta) subMeta.innerText = allPostsData.length > 0 ? `자유 게시글 ${allPostsData.length}건` : "현장 동료 자유 소통방"; const badge = document.getElementById("boardBadge"); if (badge) { const nowMs = Date.now(); const hasNewPost = allPostsData.some(p => p.timestamp && (nowMs - p.timestamp.toDate().getTime() < 24 * 60 * 60 * 1000)); if (hasNewPost) badge.classList.remove("hidden"); else badge.classList.add("hidden"); } const maxPage = Math.max(1, Math.ceil(allPostsData.length / postsPerPage)); renderBoardPage(Math.min(currentBoardPage || 1, maxPage)); openIds.forEach(rid => { const rowEl = document.getElementById(rid); if (rowEl) { rowEl.classList.add("show"); document.getElementById(`row-${rid}`)?.classList.add("is-open"); const arrowEl = document.getElementById(`arrow-${rid}`); if (arrowEl) arrowEl.innerText = "▲"; if (rid.startsWith("p-")) loadComments(rid.slice(2)); } }); }, err => { console.warn("자유게시판 구독 오류:", err); }); 
+        db.collection("notices").orderBy("timestamp","desc").limit(100).onSnapshot(s => { applyNoticeDirectorySnapshot(s); }, err => { console.warn("공지사항 구독 오류:", err); }); 
+        db.collection("posts").orderBy("timestamp","desc").limit(200).onSnapshot(s => { applyPostDirectorySnapshot(s); }, err => { console.warn("자유게시판 구독 오류:", err); }); 
         db.collection("ships").orderBy("timestamp","desc").onSnapshot(s => { applyShipDirectorySnapshot(s); }, err => { console.warn("선박도감 구독 오류:", err); });
         db.collection("archives").orderBy("timestamp","desc").limit(200).onSnapshot(s=>{window.allArchivesCache = []; const l=document.getElementById("fileList"); const archiveBadge = document.getElementById("archiveBadge"); let isArchiveNew = false; const nowMs = Date.now(); const rowsHtml=[]; s.forEach(d=>{const x=d.data()||{}; if (isDeletedRecord(x)) return; window.allArchivesCache.push({...x, id:d.id}); let isRowNew = false; if (x.timestamp) { const dt = x.timestamp.toDate(); if (nowMs - dt.getTime() < 24 * 60 * 60 * 1000) { isRowNew = true; isArchiveNew = true; } } const rowNewBadge = isRowNew ? `<span class="badge-new">NEW</span>` : ""; const safeUrl = escapeShipCommentHtml(sanitizeSafeHttpUrl(x.url || "#")); const safeTitle = escapeShipCommentHtml(x.title || "파일"); rowsHtml.push(`<tr><td class="board-title"><div class="board-row-title-line"><a href="${safeUrl}" target="_blank" rel="noopener noreferrer" class="archive-row-link">💾 ${safeTitle}</a>${rowNewBadge}</div></td><td style="text-align:center;"><div class="archive-row-actions"><button type="button" class="mini-btn is-accent" onclick="startEditArchive('${d.id}',event)">수정</button><button type="button" class="mini-btn btn-del" onclick="delArchive('${d.id}',event)">삭제</button></div></td></tr>`);}); window.allArchivesCount = window.allArchivesCache.length; l.innerHTML = rowsHtml.length > 0 ? rowsHtml.join("") : "<tr><td colspan='2' class='board-empty-cell'>등록된 자료가 없습니다.</td></tr>"; if (archiveBadge) { if (isArchiveNew) archiveBadge.classList.remove("hidden"); else archiveBadge.classList.add("hidden"); }}, err => { console.warn("자료실 구독 오류:", err); }); 
     } catch(err) { console.warn("실시간 연결 오류:", err); } 
