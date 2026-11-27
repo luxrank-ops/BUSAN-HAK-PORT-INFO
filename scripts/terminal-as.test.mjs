@@ -218,7 +218,7 @@ test('HTML 카드: 터미널 A/S 요청과 생활영어 한문장 배치가 서�
     assert.ok(weatherIdx >= 0 && englishIdx > weatherIdx && guideIdx > englishIdx, '생활영어 한문장은 날씨 다음, 용어가이드 앞에 있어야 합니다');
 
     const card = html.slice(safetyIdx, boardIdx);
-    assert.match(card, /터미널 시설·정비 A\/S 요청/);
+    assert.match(card, /<div class="tas-card-kicker">안전한 작업환경을 위한<\/div>\s*<div class="dash-title">터미널 안전 시설\/장비\/A\.S요청<\/div>/);
     assert.match(card, /id="tasBadge"/, '새 게시물 NEW 배지가 필요합니다');
     assert.doesNotMatch(card, /id="tasCardSubMeta"|사진·댓글·좋아요·조치완료 · 무비번 익명 작성/, '접힌 블럭 헤더 보조 문구는 제거되어야 합니다');
     assert.match(card, /id="terminalAsBoard"/);
@@ -273,6 +273,7 @@ test('블럭 색은 반짝이는 푸른색 중간톤 토큰만 쓰고 옛 릴레
     assert.match(css, /\.tas-item-btn\.is-resolve/);
     assert.match(css, /\.tas-like-btn\.is-liked/);
     assert.match(css, /\.tas-comments-panel/);
+    assert.match(css, /#safety-card \.tas-card-kicker \{[^}]*color:\s*var\(--red-600\);[^}]*font-size:\s*var\(--fs-2\)/);
     assert.match(css, /\.tas-card-new-badge/);
     assert.match(css, /\.tas-board-table/);
     assert.match(css, /\.tas-board-row/);
@@ -309,9 +310,9 @@ test('Firestore 규칙: 익명 로그인 접수·사진 3장·본인 수정/삭�
 });
 
 test('카드 라벨·탭 안내·README·등록 파일이 새 기능으로 모두 맞는다', () => {
-    assert.match(appJs, /\{ id: "safety-card", label: "🛠️ 터미널 시설·정비 A\/S 요청", color: "#2563eb" \}/);
-    assert.match(tabViews, /터미널 시설·정비 A\/S 요청 · 현장 실무 용어 가이드/);
-    assert.match(readme, /터미널 시설·정비 수리 \/ A\/S 요청/);
+    assert.match(appJs, /\{ id: "safety-card", label: "🛠️ 터미널 안전 시설\/장비\/A\.S요청", color: "#2563eb" \}/);
+    assert.match(tabViews, /터미널 안전 시설\/장비\/A\.S요청 · 현장 실무 용어 가이드/);
+    assert.match(readme, /터미널 안전 시설\/장비\/A\.S요청/);
     assert.match(readme, /한진\*\*\* · 동원\*\*\*/);
     assert.match(readme, /terminal_as_requests/);
     assert.doesNotMatch(readme, /꿍꿍따|kkung_chain/);

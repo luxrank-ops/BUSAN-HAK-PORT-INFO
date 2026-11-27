@@ -32,7 +32,7 @@ const PLAN_A_TAB_META = {
     },
     'guide': {
         title: '현장가이드',
-        hint: '터미널 시설·정비 A/S 요청 · 현장 실무 용어 가이드 · 생활영어 한문장',
+        hint: '터미널 안전 시설/장비/A.S요청 · 현장 실무 용어 가이드 · 생활영어 한문장',
         nav: 'nav-guide'
     }
 };

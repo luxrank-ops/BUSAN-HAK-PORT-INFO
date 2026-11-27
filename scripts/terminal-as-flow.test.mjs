@@ -476,7 +476,7 @@ test('금칙어 감지 시 접수되지 않고 관리자 블라인드 알림이 
     assert.equal(harness.db.docs.size, 0);
     assert.match(harness.el('tasStatus').textContent, /접수할 수 없어요/);
     assert.equal(harness.blinds.length, 1);
-    assert.equal(harness.blinds[0].category, '터미널 시설·정비 A/S 요청');
+    assert.equal(harness.blinds[0].category, '터미널 안전 시설/장비/A.S요청');
 });
 
 test('터미널 칩으로 해당 터미널 요청만 모아 볼 수 있다', async () => {
