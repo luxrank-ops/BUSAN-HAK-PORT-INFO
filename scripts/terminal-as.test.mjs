@@ -142,6 +142,10 @@ test('문서 정규화·터미널 필터·최신순 정렬·상대 시간이 규
     assert.equal(core.filterRequests(list, '').length, 3);
 
     const now = 1_700_000_000_000;
+    assert.equal(core.isRecentPost(now - 30_000, now), true);
+    assert.equal(core.isRecentPost(now - 23 * 3_600_000, now), true);
+    assert.equal(core.isRecentPost(now - 25 * 3_600_000, now), false);
+    assert.equal(core.isRecentPost(0, now), false);
     assert.equal(core.formatRelativeTime(now - 30_000, now), '방금');
     assert.equal(core.formatRelativeTime(now - 5 * 60_000, now), '5분 전');
     assert.equal(core.formatRelativeTime(now - 3 * 3_600_000, now), '3시간 전');
@@ -194,6 +198,8 @@ test('HTML 카드: 터미널 A/S 요청과 생활영어 한문장 배치가 서�
 
     const card = html.slice(safetyIdx, boardIdx);
     assert.match(card, /터미널 시설·정비 A\/S 요청/);
+    assert.match(card, /id="tasBadge"/, '새 게시물 NEW 배지가 필요합니다');
+    assert.match(card, /id="tasCardSubMeta"/, '새 게시물 건수 안내 문구 영역이 필요합니다');
     assert.match(card, /id="terminalAsBoard"/);
     assert.match(card, /id="tasEditBanner"/, '수정 안내 배너가 필요합니다');
     assert.match(card, /id="tasCancelEdit"/, '수정 취소 버튼이 필요합니다');
@@ -242,6 +248,7 @@ test('블럭 색은 반짝이는 푸른색 중간톤 토큰만 쓰고 옛 릴레
     assert.match(css, /\.tas-item-btn\.is-resolve/);
     assert.match(css, /\.tas-like-btn\.is-liked/);
     assert.match(css, /\.tas-comments-panel/);
+    assert.match(css, /\.tas-card-new-badge/);
     assert.match(css, /\.tas-submit-button \{[^}]*background: linear-gradient\(135deg, var\(--blue-600\), var\(--blue-800\)\)/);
     assert.match(css, /\.tas-terminal-badge \{[^}]*background: var\(--blue-600\)/);
     assert.doesNotMatch(css, /\.kkung-/, '옛 릴레이 CSS 선택자가 남아 있으면 안 됩니다');

@@ -13,7 +13,7 @@ import { readAppFile } from './app-source.mjs';
 const script = readAppFile('public/js/terminal-as.js');
 
 const TAS_IDS = [
-    'terminalAsBoard', 'tasTotal', 'tasTerminalTotal', 'tasLiveBadge', 'tasFilter',
+    'terminalAsBoard', 'tasBadge', 'tasCardSubMeta', 'tasTotal', 'tasTerminalTotal', 'tasLiveBadge', 'tasFilter',
     'tasFeedMeta', 'tasFeed', 'tasStatus', 'tasForm', 'tasEditBanner', 'tasEditText',
     'tasCancelEdit', 'tasTerminalSelect', 'tasTypeSelect', 'tasContent',
     'tasPhotoInput', 'tasPhotoPreview', 'tasPhotoCount',
@@ -289,7 +289,7 @@ function makeStorageStub({ failUploads = false } = {}) {
     };
 }
 
-function makeHarness({ failWrites = false, uid = 'anon-1', isAdmin = false, confirmResult = true } = {}) {
+function makeHarness({ failWrites = false, uid = 'anon-1', isAdmin = false, confirmResult = true, initiallyVisible = true } = {}) {
     const elements = new Map();
     TAS_IDS.forEach(id => elements.set(id, makeElement(id === 'tasFeed' ? 'ul' : 'div', id)));
     elements.get('tasTerminalSelect').tagName = 'SELECT';
@@ -297,6 +297,7 @@ function makeHarness({ failWrites = false, uid = 'anon-1', isAdmin = false, conf
     elements.get('tasContent').tagName = 'TEXTAREA';
     elements.get('tasEditBanner').hidden = true;
     elements.get('tasPhotoPreview').hidden = true;
+    elements.get('tasBadge').classList.add('hidden');
     const modal = makeElement('div', 'imageModal');
     modal.style.display = 'none';
     const modalImage = makeElement('img', 'modalImage');
@@ -318,7 +319,7 @@ function makeHarness({ failWrites = false, uid = 'anon-1', isAdmin = false, conf
 
     class IntersectionObserverStub {
         constructor(callback) { this.callback = callback; }
-        observe() { this.callback([{ isIntersecting: true }]); }
+        observe() { this.callback([{ isIntersecting: initiallyVisible }]); }
         disconnect() {}
     }
 
@@ -693,5 +694,41 @@ test('댓글 패널을 열어 댓글을 작성·좋아요·삭제할 수 있고 
     await harness.tick();
     assert.equal(subMap.has(cid), false);
     assert.equal(harness.db.docs.get('req-2').commentCount, 0);
+});
+
+test('카드가 접혀 있어도 새 게시물(24시간 이내)이 등록되면 블럭 헤더에 NEW 배지와 새 게시물 건수가 표시된다', async () => {
+    const collapsed = makeHarness({ initiallyVisible: false });
+    await collapsed.tick();
+
+    // 1. 48시간 전 글만 있으면 NEW 배지는 숨김
+    collapsed.db.docs.set('old-1', {
+        terminalId: 'hjnc',
+        terminalLabel: '한진(HJNC)',
+        type: 'facility',
+        content: '오래된 요청입니다',
+        author: '한진***',
+        authorUid: 'u1',
+        status: 'received',
+        createdAtMs: Date.now() - 48 * 60 * 60 * 1000
+    });
+    collapsed.db.emit();
+    assert.equal(collapsed.el('tasBadge').classList.contains('hidden'), true);
+    assert.match(collapsed.el('tasCardSubMeta').textContent, /등록된 요청 1건/);
+
+    // 2. 새 게시물이 등록되면 접힌 상태에서도 즉시 NEW 배지 + 새 게시물 안내 표시
+    collapsed.db.docs.set('new-1', {
+        terminalId: 'dgt',
+        terminalLabel: '동원(DGT)',
+        type: 'as',
+        content: '방금 등록된 A/S 요청입니다',
+        author: '동원***',
+        authorUid: 'u2',
+        status: 'received',
+        createdAtMs: Date.now()
+    });
+    collapsed.db.emit();
+    assert.equal(collapsed.el('tasBadge').classList.contains('hidden'), false);
+    assert.equal(collapsed.el('tasBadge').textContent, 'NEW');
+    assert.match(collapsed.el('tasCardSubMeta').textContent, /새 게시물 1건 · 전체 2건/);
 });
 

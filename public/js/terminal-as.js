@@ -27,6 +27,8 @@
     const MINE_KEY = 'hakportTerminalAsMineV1';
     const MINE_COMMENTS_KEY = 'hakportTerminalAsMineCommentsV1';
     const FEED_LIMIT = 80;
+    const HEAD_WATCH_LIMIT = 10;
+    const NEW_POST_WINDOW_MS = 24 * 60 * 60 * 1000;
     const COMMENTS_LIMIT = 100;
     const MAX_CONTENT = 500;
     const MAX_COMMENT = 300;
@@ -295,6 +297,13 @@
     function sortRequests(list) {
         return (Array.isArray(list) ? list : []).slice()
             .sort((a, b) => Number(b.timestampMs || 0) - Number(a.timestampMs || 0));
+    }
+
+    function isRecentPost(timestampMs, nowMs = Date.now()) {
+        const ts = Number(timestampMs);
+        const now = Number.isFinite(Number(nowMs)) ? Number(nowMs) : Date.now();
+        if (!Number.isFinite(ts) || ts <= 0) return false;
+        return (now - ts) < NEW_POST_WINDOW_MS;
     }
 
     function formatRelativeTime(timestampMs, nowMs) {
@@ -755,6 +764,8 @@
        ================================================================== */
 
     let feedEntries = [];       // Firestore 최근 요청
+    let headEntries = [];       // 접힌 상태에서도 새 게시물 감지용 최근 요약
+    let feedLoaded = false;
     let localEntries = [];      // 오프라인 임시 접수
     let pendingPhotos = [];     // 새로 첨부한 사진 { id, file, name, size, previewUrl }
     let editingRequestId = null;
@@ -765,6 +776,7 @@
     const commentUnsubscribers = new Map();
     const draftCommentText = new Map();
     let unsubscribe = null;
+    let headUnsubscribe = null;
     let visibilityObserver = null;
     let boardVisible = false;
     let isSubmitting = false;
@@ -908,8 +920,43 @@
         // Firestore 문서와 로컬 임시 접수를 합치고 같은 id 는 한 번만 보여줍니다.
         const merged = new Map();
         localEntries.forEach(entry => merged.set(entry.id, entry));
-        feedEntries.forEach(entry => merged.set(entry.id, entry));
+        (feedLoaded ? feedEntries : headEntries).forEach(entry => merged.set(entry.id, entry));
         return sortRequests(Array.from(merged.values()));
+    }
+
+    function updateCardNewBadge() {
+        const entries = allEntries();
+        const now = Date.now();
+        const newCount = entries.filter(entry => isRecentPost(entry.timestampMs, now)).length;
+        const totalCount = entries.length;
+        const truncated = !feedLoaded && headEntries.length >= HEAD_WATCH_LIMIT;
+
+        const badge = byId('tasBadge');
+        if (badge) {
+            badge.classList.toggle('hidden', newCount === 0);
+            badge.textContent = 'NEW';
+            if (newCount > 0) badge.setAttribute('aria-label', `새 게시물 ${newCount}건`);
+            else badge.setAttribute('aria-label', '새 게시물');
+        }
+
+        const subMeta = byId('tasCardSubMeta');
+        if (subMeta) {
+            if (newCount > 0) {
+                if (truncated) {
+                    subMeta.textContent = newCount >= HEAD_WATCH_LIMIT
+                        ? `🆕 새 게시물 ${HEAD_WATCH_LIMIT}건+`
+                        : `🆕 새 게시물 ${newCount}건`;
+                } else {
+                    subMeta.textContent = `🆕 새 게시물 ${newCount}건 · 전체 ${totalCount}건`;
+                }
+            } else if (totalCount > 0) {
+                subMeta.textContent = truncated
+                    ? `댓글·좋아요·조치완료 · 최근 ${HEAD_WATCH_LIMIT}건+`
+                    : `등록된 요청 ${totalCount}건 · 댓글·좋아요·조치완료`;
+            } else {
+                subMeta.textContent = '사진·댓글·좋아요·조치완료 · 무비번 익명 작성';
+            }
+        }
     }
 
     function renderCommentsSection(entry) {
@@ -1021,6 +1068,9 @@
             const status = el('span', 'tas-status-badge is-' + entry.status, statusText);
             top.appendChild(badge);
             top.appendChild(type);
+            if (isRecentPost(entry.timestampMs, Date.now())) {
+                top.appendChild(el('span', 'badge-new', 'NEW'));
+            }
             top.appendChild(status);
             item.appendChild(top);
 
@@ -1158,6 +1208,7 @@
         renderFilter();
         renderPhotoPreview();
         renderFeed();
+        updateCardNewBadge();
     }
 
     /* ---------------- 조치 완료 · 좋아요 · 댓글 ---------------- */
@@ -1707,7 +1758,48 @@
 
     /* ---------------- 실시간 구독 ---------------- */
 
+    function stopHeadWatcher() {
+        if (typeof headUnsubscribe === 'function') {
+            try { headUnsubscribe(); } catch (_) {}
+        }
+        headUnsubscribe = null;
+    }
+
+    function startHeadWatcher() {
+        if (headUnsubscribe || unsubscribe) return;
+        const store = asFirestore();
+        if (!store) {
+            updateCardNewBadge();
+            return;
+        }
+        try {
+            headUnsubscribe = store.collection(COLLECTION)
+                .orderBy('createdAtMs', 'desc')
+                .limit(HEAD_WATCH_LIMIT)
+                .onSnapshot(snapshot => {
+                    const entries = [];
+                    if (snapshot && typeof snapshot.forEach === 'function') {
+                        snapshot.forEach(docSnapshot => {
+                            const data = docSnapshot.data() || {};
+                            if (data.deletedAt || data.deleted || data.hidden) return;
+                            entries.push(normalizeRequest(docSnapshot.id, data));
+                        });
+                    }
+                    headEntries = sortRequests(entries);
+                    feedLoaded = false;
+                    updateCardNewBadge();
+                    void flushLocalQueue(store);
+                }, () => {
+                    stopHeadWatcher();
+                    updateCardNewBadge();
+                });
+        } catch (_) {
+            stopHeadWatcher();
+        }
+    }
+
     function startSubscription() {
+        stopHeadWatcher();
         if (unsubscribe) return;
         const store = asFirestore();
         if (!store) {
@@ -1730,6 +1822,8 @@
                         });
                     }
                     feedEntries = sortRequests(entries);
+                    headEntries = feedEntries.slice(0, HEAD_WATCH_LIMIT);
+                    feedLoaded = true;
                     setLiveBadge(true);
                     openCommentIds.forEach(id => {
                         const target = feedEntries.find(item => item.id === id);
@@ -1739,7 +1833,7 @@
                     void flushLocalQueue(store);
                 }, error => {
                     try { console.warn('터미널 A/S 요청 구독 오류:', error); } catch (_) {}
-                    setLiveBadge(false);
+                    stopSubscription();
                     setStatus('요청 목록을 불러오지 못했어요. 오프라인 접수는 계속 가능합니다.', 'error');
                     renderAll();
                 });
@@ -1757,9 +1851,18 @@
     }
 
     function syncSubscription() {
-        const shouldRun = boardVisible && (typeof document === 'undefined' || !document.hidden);
-        if (shouldRun) startSubscription();
-        else stopSubscription();
+        const pageVisible = (typeof document === 'undefined' || !document.hidden);
+        if (!pageVisible) {
+            stopSubscription();
+            stopHeadWatcher();
+            return;
+        }
+        if (boardVisible) {
+            startSubscription();
+        } else {
+            stopSubscription();
+            startHeadWatcher();
+        }
     }
 
     function observeBoardVisibility() {
@@ -2068,12 +2171,18 @@
                     const prev = currentAuthUid;
                     const next = (user && user.uid) ? String(user.uid) : '';
                     currentAuthUid = next;
-                    if (prev !== next) renderFeed();
+                    if (prev !== next) {
+                        if (next) syncSubscription();
+                        renderAll();
+                    }
                 });
             }
         } catch (_) {}
         void ensureAsAuth().then(user => {
-            if (user && user.uid) renderFeed();
+            if (user && user.uid) {
+                syncSubscription();
+                renderAll();
+            }
         });
     }
 
@@ -2117,6 +2226,7 @@
         maxComment: MAX_COMMENT,
         maxPhotos: MAX_PHOTOS,
         maxPhotoBytes: MAX_PHOTO_BYTES,
+        newPostWindowMs: NEW_POST_WINDOW_MS,
         terminalById,
         typeById,
         makeAnonCode,
@@ -2133,6 +2243,7 @@
         normalizeRequest,
         filterRequests,
         sortRequests,
+        isRecentPost,
         formatRelativeTime
     });
     global.submitTerminalAsRequest = submitAsRequest;
