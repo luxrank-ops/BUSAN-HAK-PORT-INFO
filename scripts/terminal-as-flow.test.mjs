@@ -289,7 +289,7 @@ function makeStorageStub({ failUploads = false } = {}) {
     };
 }
 
-function makeHarness({ failWrites = false, uid = 'anon-1', isAdmin = false, confirmResult = true, initiallyVisible = true } = {}) {
+function makeHarness({ failWrites = false, uid = 'anon-1', isAdmin = false, confirmResult = true, initiallyVisible = true, storage = new Map(), db: existingDb = null } = {}) {
     const elements = new Map();
     TAS_IDS.forEach(id => elements.set(id, makeElement(id === 'tasFeed' ? 'tbody' : 'div', id)));
     elements.get('tasTerminalSelect').tagName = 'SELECT';
@@ -307,9 +307,9 @@ function makeHarness({ failWrites = false, uid = 'anon-1', isAdmin = false, conf
     elements.set('imageModal', modal);
     elements.set('modalImage', modalImage);
 
-    const localStore = new Map();
+    const localStore = storage;
     const blinds = [];
-    const db = makeFirestoreStub({ failWrites, uid });
+    const db = existingDb || makeFirestoreStub({ failWrites, uid });
     const storageService = makeStorageStub();
 
     const documentStub = {
@@ -320,8 +320,12 @@ function makeHarness({ failWrites = false, uid = 'anon-1', isAdmin = false, conf
         addEventListener() {}
     };
 
+    let observerCallback = null;
     class IntersectionObserverStub {
-        constructor(callback) { this.callback = callback; }
+        constructor(callback) {
+            this.callback = callback;
+            observerCallback = callback;
+        }
         observe() { this.callback([{ isIntersecting: initiallyVisible }]); }
         disconnect() {}
     }
@@ -384,8 +388,11 @@ function makeHarness({ failWrites = false, uid = 'anon-1', isAdmin = false, conf
         await tick();
     };
     const feedText = () => el('tasFeed').children.map(collectText).join(' / ');
+    const setVisible = visible => {
+        if (observerCallback) observerCallback([{ isIntersecting: Boolean(visible) }]);
+    };
 
-    return { window: sandbox, el, db, storage: localStore, storageService, blinds, submit, tick, feedText };
+    return { window: sandbox, el, db, storage: localStore, storageService, blinds, submit, tick, feedText, setVisible };
 }
 
 test('초기화: 9개 터미널 + 4개 종류가 채워지고 글쓰기 폼은 기본적으로 닫혀 있다', () => {
@@ -795,11 +802,11 @@ test('제목 클릭 시 댓글 패널이 함께 열려 댓글을 작성·좋아�
     assert.equal(harness.db.docs.get('req-2').commentCount, 0);
 });
 
-test('카드가 접혀 있어도 새 게시물(24시간 이내)이 등록되면 블럭 헤더에 NEW 배지만 표시된다', async () => {
-    const collapsed = makeHarness({ initiallyVisible: false });
+test('새 게시물 기준은 개인 확인 여부에 따라 미확인 글 수로 표시되고 모두 확인하면 0건이 된다', async () => {
+    const collapsed = makeHarness({ initiallyVisible: false, uid: 'viewer-a' });
     await collapsed.tick();
 
-    // 1. 48시간 전 글만 있으면 NEW 배지는 숨김
+    // 1. 48시간 전 글이라도 본인이 아직 확인하지 않았으면 새 게시물 1건으로 표시된다
     collapsed.db.docs.set('old-1', {
         terminalId: 'hjnc',
         terminalLabel: '한진(HJNC)',
@@ -812,10 +819,11 @@ test('카드가 접혀 있어도 새 게시물(24시간 이내)이 등록되면 
         createdAtMs: Date.now() - 48 * 60 * 60 * 1000
     });
     collapsed.db.emit();
-    assert.equal(collapsed.el('tasBadge').classList.contains('hidden'), true);
-    assert.equal(collapsed.el('tasCardSubMeta').textContent, '새 게시물 0건 · 누적 1건');
+    assert.equal(collapsed.el('tasBadge').classList.contains('hidden'), false);
+    assert.equal(collapsed.el('tasBadge').textContent, 'NEW');
+    assert.equal(collapsed.el('tasCardSubMeta').textContent, '새 게시물 1건 · 누적 1건');
 
-    // 2. 새 게시물이 등록되면 접힌 상태에서도 즉시 NEW 배지 표시
+    // 2. 두 번째 미확인 글이 추가되면 접힌 상태에서도 미확인 수(2건)가 즉시 반영된다
     collapsed.db.docs.set('new-1', {
         terminalId: 'dgt',
         terminalLabel: '동원(DGT)',
@@ -829,8 +837,73 @@ test('카드가 접혀 있어도 새 게시물(24시간 이내)이 등록되면 
     });
     collapsed.db.emit();
     assert.equal(collapsed.el('tasBadge').classList.contains('hidden'), false);
-    assert.equal(collapsed.el('tasBadge').textContent, 'NEW');
+    assert.equal(collapsed.el('tasCardSubMeta').textContent, '새 게시물 2건 · 누적 2건');
+
+    // 3. 게시판을 펼친 뒤 첫 번째 글(new-1)을 확인하면 새 게시물 1건으로 줄고 해당 행의 NEW 배지도 사라진다
+    collapsed.setVisible(true);
+    await collapsed.tick();
+    assert.equal(findButtons(collapsed.el('tasFeed'), node => node.className === 'badge-new').length, 2);
+
+    let titleBtns = findButtons(collapsed.el('tasFeed'), node => node.className === 'tas-row-title-btn');
+    assert.equal(titleBtns.length, 2);
+    titleBtns[0].dispatchEvent({ type: 'click' });
+    await collapsed.tick();
     assert.equal(collapsed.el('tasCardSubMeta').textContent, '새 게시물 1건 · 누적 2건');
+    assert.equal(collapsed.el('tasBadge').classList.contains('hidden'), false);
+    assert.equal(findButtons(collapsed.el('tasFeed'), node => node.className === 'badge-new').length, 1);
+
+    // 열어본 글을 다시 접어도 확인 상태가 유지되어 미확인 수가 되돌아가지 않는다
+    titleBtns = findButtons(collapsed.el('tasFeed'), node => node.className === 'tas-row-title-btn');
+    titleBtns[0].dispatchEvent({ type: 'click' });
+    await collapsed.tick();
+    assert.equal(collapsed.el('tasCardSubMeta').textContent, '새 게시물 1건 · 누적 2건');
+
+    // 4. 남은 글(old-1)까지 모두 확인하면 새 게시물 0건 · NEW 배지 숨김
+    titleBtns = findButtons(collapsed.el('tasFeed'), node => node.className === 'tas-row-title-btn');
+    titleBtns[1].dispatchEvent({ type: 'click' });
+    await collapsed.tick();
+    assert.equal(collapsed.el('tasCardSubMeta').textContent, '새 게시물 0건 · 누적 2건');
+    assert.equal(collapsed.el('tasBadge').classList.contains('hidden'), true);
+    assert.equal(findButtons(collapsed.el('tasFeed'), node => node.className === 'badge-new').length, 0);
+
+    // 5. 같은 기기에서 새로고침(브라우저 재실행)해도 개인 확인 상태가 유지되고, 다른 사람 새 글만 1건으로 뜬다
+    const reloaded = makeHarness({
+        uid: 'viewer-a-reload',
+        storage: collapsed.storage,
+        db: collapsed.db
+    });
+    await reloaded.tick();
+    assert.equal(reloaded.el('tasCardSubMeta').textContent, '새 게시물 0건 · 누적 2건');
+    assert.equal(reloaded.el('tasBadge').classList.contains('hidden'), true);
+
+    // 본인이 직접 작성한 글은 자동 확인 처리되어 미확인 수에 늘지 않는다
+    reloaded.el('tasToggleFormBtn').dispatchEvent({ type: 'click' });
+    reloaded.el('tasTitle').value = '내가 쓴 요청';
+    reloaded.el('tasContent').value = '본인 작성 글은 바로 확인 처리됩니다';
+    await reloaded.submit();
+    assert.equal(reloaded.el('tasCardSubMeta').textContent, '새 게시물 0건 · 누적 3건');
+    assert.equal(reloaded.el('tasBadge').classList.contains('hidden'), true);
+
+    // 다른 사용자의 새 글이 등록되면 미확인 1건으로 다시 표기되고, 다른 개인(viewer-b)에게는 전체 4건이 미확인으로 보인다
+    reloaded.db.docs.set('new-2', {
+        terminalId: 'pnc',
+        terminalLabel: '부산신항만(PNC)',
+        type: 'repair',
+        title: '다른 사람 신규 글',
+        content: '게이트 점검 요청',
+        author: 'PNC***',
+        authorUid: 'u3',
+        status: 'received',
+        createdAtMs: Date.now() + 1000
+    });
+    reloaded.db.emit();
+    await reloaded.tick();
+    assert.equal(reloaded.el('tasCardSubMeta').textContent, '새 게시물 1건 · 누적 4건');
+    assert.equal(reloaded.el('tasBadge').classList.contains('hidden'), false);
+
+    const otherPerson = makeHarness({ uid: 'viewer-b', db: reloaded.db });
+    await otherPerson.tick();
+    assert.equal(otherPerson.el('tasCardSubMeta').textContent, '새 게시물 4건 · 누적 4건');
 });
 
 test('요청 행을 열면 목록 배지와 상세 하단에 조회수가 표시되고 열람 시 1씩 증가한다', async () => {
@@ -852,16 +925,19 @@ test('요청 행을 열면 목록 배지와 상세 하단에 조회수가 표시
     harness.db.emit();
     await harness.tick();
     assert.equal(harness.el('tasCardSubMeta').textContent, '새 게시물 1건 · 누적 1건');
+    assert.equal(harness.el('tasBadge').classList.contains('hidden'), false);
 
     // 1. 초기 목록 행에는 기존 조회수(👁️ 2) 표시
     assert.match(harness.feedText(), /👁️ 2/);
 
-    // 2. 제목 클릭으로 상세 열기 → 조회수 +1 (👁️ 3, 👁️ 조회수 3회)
+    // 2. 제목 클릭으로 상세 열기 → 조회수 +1 (👁️ 3, 👁️ 조회수 3회) 및 확인 완료(새 게시물 0건)
     let titleBtn = findButtons(harness.el('tasFeed'), node => node.className === 'tas-row-title-btn')[0];
     assert.ok(titleBtn);
     titleBtn.dispatchEvent({ type: 'click' });
     await harness.tick();
     assert.equal(harness.db.docs.get('req-view-1').views, 3);
+    assert.equal(harness.el('tasCardSubMeta').textContent, '새 게시물 0건 · 누적 1건');
+    assert.equal(harness.el('tasBadge').classList.contains('hidden'), true);
     assert.match(harness.feedText(), /👁️ 3/);
     assert.match(harness.feedText(), /👁️ 조회수 3회/);
 

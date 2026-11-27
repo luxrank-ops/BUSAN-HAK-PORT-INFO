@@ -167,6 +167,7 @@ test('문서 정규화·터미널 필터·최신순 정렬·상대 시간이 규
     assert.equal(core.isRecentPost(now - 23 * 3_600_000, now), true);
     assert.equal(core.isRecentPost(now - 25 * 3_600_000, now), false);
     assert.equal(core.isRecentPost(0, now), false);
+    assert.equal(core.seenKey, 'hakportTerminalAsSeenV1');
     assert.equal(core.formatRelativeTime(now - 30_000, now), '방금');
     assert.equal(core.formatRelativeTime(now - 5 * 60_000, now), '5분 전');
     assert.equal(core.formatRelativeTime(now - 3 * 3_600_000, now), '3시간 전');
@@ -225,6 +226,8 @@ test('HTML 카드: 터미널 A/S 요청과 생활영어 한문장 배치가 서�
     assert.match(css, /#safety-card\s+\.tas-card-heading\s+\.dash-sub-meta\s*\{[^}]*font-size:\s*var\(--fs-3\)/, '보조 메타 문구 크기는 --fs-3 이어야 합니다');
     assert.match(script, /FEED_LIMIT\s*=\s*200/);
     assert.match(script, /HEAD_WATCH_LIMIT\s*=\s*200/);
+    assert.match(script, /SEEN_KEY\s*=\s*'hakportTerminalAsSeenV1'/);
+    assert.match(script, /isUnreadRequest/);
     assert.match(card, /id="terminalAsBoard"/);
     assert.match(card, /<table class="board-table tas-board-table">[\s\S]*<th>터미널<\/th>[\s\S]*<th>제목<\/th>[\s\S]*<th>날짜<\/th>[\s\S]*<th>상태<\/th>[\s\S]*<tbody id="tasFeed"><\/tbody>/, '게시판 테이블 구조가 필요합니다');
     assert.match(card, /id="tasPagination"/, '페이지네이션 영역이 필요합니다');
