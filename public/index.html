@@ -37,9 +37,9 @@
     <link rel="icon" href="./favicon.ico">
     <link rel="stylesheet" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.8/dist/web/static/pretendard.css" />
     <link rel="manifest" href="./manifest.json">
-    <link rel="stylesheet" href="./css/app.css?v=2027.88">
+    <link rel="stylesheet" href="./css/app.css?v=2027.89">
     <link rel="apple-touch-icon" href="./icon-192.png">
-<script src="./js/notifications.js?v=2027.88"></script></head>
+<script src="./js/notifications.js?v=2027.89"></script></head>
 <body data-app-view="legacy">
 <header>
     <div class="today-visitor-badge-slot" aria-hidden="true"></div>
@@ -1020,103 +1020,60 @@
             </div>
         </div>
 
-        <div id="daily-field-english-card"
-             class="dash-card daily-field-english-card"
-             data-view-group="guide"
-             aria-labelledby="dailyFieldEnglishTitle">
-
-            <div class="dash-header tap-effect daily-field-english-header"
-                 onclick="toggleDashItem('daily-field-english-card')">
-                <span class="dash-icon-badge daily-field-english-icon"
-                      style="background:#e0f2fe; border:1px solid #7dd3fc;">🔤</span>
-                <div class="daily-field-english-header-copy">
-                    <div id="dailyFieldEnglishTitle"
-                         class="dash-title daily-field-english-title">
-                        생활영어 한문장
-                    </div>
-                    <div class="dash-sub-meta daily-field-english-subtitle">
-                        매일 09:00 업데이트
-                    </div>
-                </div>
-            </div>
-
-            <div class="dash-content">
-                <div class="daily-field-english-layout">
-                    <div class="daily-field-english-main">
-                        <div class="daily-field-english-lesson"
-                             aria-live="polite"
-                             aria-atomic="true">
-                            <div id="dailyFieldEnglishDate"
-                                 class="daily-field-english-date">오늘의 문장</div>
-                            <p id="dailyFieldEnglishSentence"
-                               class="daily-field-english-sentence">Please wait here.</p>
-                            <p class="daily-field-english-pronunciation">
-                                <span aria-hidden="true">🔡 읽는 법: </span>
-                                <span id="dailyFieldEnglishPronunciation">플리즈 웨잇 히어</span>
-                            </p>
-                            <p class="daily-field-english-meaning">
-                                <strong>뜻:</strong>
-                                <span id="dailyFieldEnglishMeaning">여기서 기다려 주세요.</span>
-                            </p>
-                            <p class="daily-field-english-vocab">
-                                <strong>오늘의 단어:</strong>
-                                <span id="dailyFieldEnglishWord">wait = 기다리다</span>
-                            </p>
-                        </div>
-
-                        <div class="daily-field-english-footer">
-                            <button type="button"
-                                    class="daily-field-english-listen"
-                                    onclick="speakDailyFieldEnglish()"
-                                    aria-label="선택한 영어 문장을 천천히 듣기">
-                                🔊 천천히 듣기
-                            </button>
-                            <p class="daily-field-english-hint">
-                                영어를 듣고, 발음과 뜻을 함께 따라 읽어 보세요.
-                            </p>
-                        </div>
-                    </div>
-
-                    <section class="daily-field-english-calendar"
-                             aria-label="날짜별 현장 영어 문장 복습">
-                        <div class="daily-field-english-calendar-header">
-                            <button type="button"
-                                    id="dailyFieldEnglishPrevMonth"
-                                    class="daily-field-english-calendar-nav"
-                                    onclick="changeDailyFieldEnglishMonth(-1)"
-                                    aria-label="이전 달">‹</button>
-
-                            <div id="dailyFieldEnglishCalendarMonth"
-                                 class="daily-field-english-calendar-month">2026년 10월</div>
-
-                            <button type="button"
-                                    class="daily-field-english-calendar-today"
-                                    onclick="showDailyFieldEnglishToday()">오늘</button>
-
-                            <button type="button"
-                                    id="dailyFieldEnglishNextMonth"
-                                    class="daily-field-english-calendar-nav"
-                                    onclick="changeDailyFieldEnglishMonth(1)"
-                                    aria-label="다음 달">›</button>
-                        </div>
-
-                        <div class="daily-field-english-weekdays" aria-hidden="true">
-                            <span>일</span><span>월</span><span>화</span><span>수</span>
-                            <span>목</span><span>금</span><span>토</span>
-                        </div>
-
-                        <div id="dailyFieldEnglishCalendarGrid"
-                             class="daily-field-english-calendar-grid"
-                             aria-label="날짜를 선택해 문장 복습"></div>
-
-                        <p id="dailyFieldEnglishCalendarHint"
-                           class="daily-field-english-calendar-hint">
-                            날짜를 누르면 해당 날짜의 문장을 확인할 수 있습니다.
-                        </p>
-                    </section>
-                </div>
-            </div>
+        <div id="safety-card" class="dash-card" data-view-group="guide">
+  <div class="dash-header tap-effect" onclick="toggleDashItem('safety-card')">
+    <span class="dash-icon-badge tas-card-icon" aria-hidden="true">🛠️</span>
+    <div class="tas-card-heading">
+      <div class="dash-title">터미널 시설·정비 A/S 요청</div>
+      <div class="dash-sub-meta">사진·댓글·좋아요·조치완료 · 무비번 익명 작성</div>
+    </div>
+  </div>
+  <div class="dash-content tas-card-content">
+    <div id="terminalAsBoard" class="tas-board">
+      <section class="tas-hero" aria-label="터미널 시설·정비 및 A/S 요청 안내">
+        <div class="tas-hero-copy">
+          <span class="tas-eyebrow">TERMINAL FACILITY · REPAIR · A/S</span>
+          <h2>터미널 시설·정비<br>수리 / A/S 요청</h2>
+          <p>현장 사진과 함께 터미널별 고장·수리·A/S를 남겨 주세요. 비밀번호 없이 접수·수정·삭제됩니다.</p>
         </div>
+        <div class="tas-hero-stamp" aria-hidden="true"><span>🛠️</span><b>무비번 접수</b></div>
+      </section>
+      <div class="tas-records" aria-label="요청 접수 현황">
+        <div class="tas-record"><span>📋 전체 접수</span><strong><span id="tasTotal">0</span><small>건</small></strong></div>
+        <div class="tas-record"><span>🏢 선택 터미널</span><strong><span id="tasTerminalTotal">0</span><small>건</small></strong></div>
+      </div>
+      <section class="tas-screen" aria-label="터미널별 요청 목록과 작성">
+        <div class="tas-section-heading">
+          <div><span class="tas-section-kicker">TERMINAL REQUESTS</span><h3>터미널별 요청함</h3></div>
+          <span id="tasLiveBadge" class="tas-live-badge">⚪ 오프라인 접수</span>
+        </div>
+        <div id="tasFilter" class="tas-filter" role="group" aria-label="터미널별 보기"></div>
+        <div class="tas-feed-heading"><span>접수된 요청</span><small id="tasFeedMeta">전체 터미널 · 최근 0건</small></div>
+        <ul id="tasFeed" class="tas-feed"></ul>
+        <p id="tasStatus" class="tas-status is-neutral" role="status" aria-live="polite">터미널을 고르고 요청 내용을 적어 주세요.</p>
+        <form id="tasForm" class="tas-composer" autocomplete="off">
+          <div id="tasEditBanner" class="tas-edit-banner" hidden><span id="tasEditText">✏️ 요청 수정 중</span><button id="tasCancelEdit" type="button" class="tas-cancel-edit-btn">수정 취소</button></div>
+          <div class="tas-composer-row">
+            <label class="tas-field"><span>🏢 터미널 선택</span><select id="tasTerminalSelect" class="tas-select" aria-label="요청할 터미널 선택"></select></label>
+            <label class="tas-field tas-field-type"><span>🔧 요청 종류</span><select id="tasTypeSelect" class="tas-select" aria-label="요청 종류 선택"></select></label>
+          </div>
+          <label class="tas-field"><span>📝 요청 내용 (시설·고장·수리·A/S)</span><textarea id="tasContent" class="tas-textarea" maxlength="500" rows="3" placeholder="예) 3번 게이트 조명이 꺼졌어요. 점검 부탁드립니다." aria-label="요청 내용"></textarea></label>
+          <div class="tas-photo-field">
+            <label for="tasPhotoInput" class="tas-photo-btn">📷 현장 사진 첨부 <small id="tasPhotoCount">(최대 3장)</small></label>
+            <input id="tasPhotoInput" type="file" accept="image/*" multiple hidden>
+            <div id="tasPhotoPreview" class="tas-photo-preview" hidden></div>
+          </div>
+          <div class="tas-composer-foot">
+            <p class="tas-author-preview">작성자 <strong id="tasAuthorPreview">한진***</strong> <span id="tasAnonCode" class="tas-anon-code">#----</span> <em>자동 생성 · 비밀번호 없음</em></p>
+            <button id="tasSubmit" type="submit" class="tas-submit-button">요청 접수</button>
+          </div>
+        </form>
+        <p class="tas-break-note">🦺 작업 중에는 사용하지 말고, 휴식 시간에만 이용해 주세요. 급한 안전 사고는 즉시 현장 관리자에게 알려 주세요.</p>
+        <p class="tas-footnote">작성자와 접수번호는 터미널 이름 기반으로 <b>임의 생성</b>되며 실명·연락처는 저장하지 않습니다.</p>
+      </section>
+    </div>
+  </div>
+</div>
 
         <div id="board-card" class="dash-card" data-view-group="community">
             <div class="dash-header tap-effect" onclick="toggleDashItem('board-card')" style="flex-direction: row !important; justify-content: flex-start !important; padding: 14px 12px; gap: 10px; min-height: auto;">
@@ -1220,60 +1177,103 @@
             </div>
         </div>
 
-<div id="safety-card" class="dash-card" data-view-group="guide">
-  <div class="dash-header tap-effect" onclick="toggleDashItem('safety-card')">
-    <span class="dash-icon-badge tas-card-icon" aria-hidden="true">🛠️</span>
-    <div class="tas-card-heading">
-      <div class="dash-title">터미널 시설·정비 A/S 요청</div>
-      <div class="dash-sub-meta">터미널별 사진 첨부·수정·삭제 · 비밀번호 없이 익명 작성</div>
-    </div>
-  </div>
-  <div class="dash-content tas-card-content">
-    <div id="terminalAsBoard" class="tas-board">
-      <section class="tas-hero" aria-label="터미널 시설·정비 및 A/S 요청 안내">
-        <div class="tas-hero-copy">
-          <span class="tas-eyebrow">TERMINAL FACILITY · REPAIR · A/S</span>
-          <h2>터미널 시설·정비<br>수리 / A/S 요청</h2>
-          <p>현장 사진과 함께 터미널별 고장·수리·A/S를 남겨 주세요. 비밀번호 없이 접수·수정·삭제됩니다.</p>
+        <div id="daily-field-english-card"
+             class="dash-card daily-field-english-card"
+             data-view-group="guide"
+             aria-labelledby="dailyFieldEnglishTitle">
+
+            <div class="dash-header tap-effect daily-field-english-header"
+                 onclick="toggleDashItem('daily-field-english-card')">
+                <span class="dash-icon-badge daily-field-english-icon"
+                      style="background:#e0f2fe; border:1px solid #7dd3fc;">🔤</span>
+                <div class="daily-field-english-header-copy">
+                    <div id="dailyFieldEnglishTitle"
+                         class="dash-title daily-field-english-title">
+                        생활영어 한문장
+                    </div>
+                    <div class="dash-sub-meta daily-field-english-subtitle">
+                        매일 09:00 업데이트
+                    </div>
+                </div>
+            </div>
+
+            <div class="dash-content">
+                <div class="daily-field-english-layout">
+                    <div class="daily-field-english-main">
+                        <div class="daily-field-english-lesson"
+                             aria-live="polite"
+                             aria-atomic="true">
+                            <div id="dailyFieldEnglishDate"
+                                 class="daily-field-english-date">오늘의 문장</div>
+                            <p id="dailyFieldEnglishSentence"
+                               class="daily-field-english-sentence">Please wait here.</p>
+                            <p class="daily-field-english-pronunciation">
+                                <span aria-hidden="true">🔡 읽는 법: </span>
+                                <span id="dailyFieldEnglishPronunciation">플리즈 웨잇 히어</span>
+                            </p>
+                            <p class="daily-field-english-meaning">
+                                <strong>뜻:</strong>
+                                <span id="dailyFieldEnglishMeaning">여기서 기다려 주세요.</span>
+                            </p>
+                            <p class="daily-field-english-vocab">
+                                <strong>오늘의 단어:</strong>
+                                <span id="dailyFieldEnglishWord">wait = 기다리다</span>
+                            </p>
+                        </div>
+
+                        <div class="daily-field-english-footer">
+                            <button type="button"
+                                    class="daily-field-english-listen"
+                                    onclick="speakDailyFieldEnglish()"
+                                    aria-label="선택한 영어 문장을 천천히 듣기">
+                                🔊 천천히 듣기
+                            </button>
+                            <p class="daily-field-english-hint">
+                                영어를 듣고, 발음과 뜻을 함께 따라 읽어 보세요.
+                            </p>
+                        </div>
+                    </div>
+
+                    <section class="daily-field-english-calendar"
+                             aria-label="날짜별 현장 영어 문장 복습">
+                        <div class="daily-field-english-calendar-header">
+                            <button type="button"
+                                    id="dailyFieldEnglishPrevMonth"
+                                    class="daily-field-english-calendar-nav"
+                                    onclick="changeDailyFieldEnglishMonth(-1)"
+                                    aria-label="이전 달">‹</button>
+
+                            <div id="dailyFieldEnglishCalendarMonth"
+                                 class="daily-field-english-calendar-month">2026년 10월</div>
+
+                            <button type="button"
+                                    class="daily-field-english-calendar-today"
+                                    onclick="showDailyFieldEnglishToday()">오늘</button>
+
+                            <button type="button"
+                                    id="dailyFieldEnglishNextMonth"
+                                    class="daily-field-english-calendar-nav"
+                                    onclick="changeDailyFieldEnglishMonth(1)"
+                                    aria-label="다음 달">›</button>
+                        </div>
+
+                        <div class="daily-field-english-weekdays" aria-hidden="true">
+                            <span>일</span><span>월</span><span>화</span><span>수</span>
+                            <span>목</span><span>금</span><span>토</span>
+                        </div>
+
+                        <div id="dailyFieldEnglishCalendarGrid"
+                             class="daily-field-english-calendar-grid"
+                             aria-label="날짜를 선택해 문장 복습"></div>
+
+                        <p id="dailyFieldEnglishCalendarHint"
+                           class="daily-field-english-calendar-hint">
+                            날짜를 누르면 해당 날짜의 문장을 확인할 수 있습니다.
+                        </p>
+                    </section>
+                </div>
+            </div>
         </div>
-        <div class="tas-hero-stamp" aria-hidden="true"><span>🛠️</span><b>무비번 접수</b></div>
-      </section>
-      <div class="tas-records" aria-label="요청 접수 현황">
-        <div class="tas-record"><span>📋 전체 접수</span><strong><span id="tasTotal">0</span><small>건</small></strong></div>
-        <div class="tas-record"><span>🏢 선택 터미널</span><strong><span id="tasTerminalTotal">0</span><small>건</small></strong></div>
-      </div>
-      <section class="tas-screen" aria-label="터미널별 요청 목록과 작성">
-        <div class="tas-section-heading">
-          <div><span class="tas-section-kicker">TERMINAL REQUESTS</span><h3>터미널별 요청함</h3></div>
-          <span id="tasLiveBadge" class="tas-live-badge">⚪ 오프라인 접수</span>
-        </div>
-        <div id="tasFilter" class="tas-filter" role="group" aria-label="터미널별 보기"></div>
-        <div class="tas-feed-heading"><span>접수된 요청</span><small id="tasFeedMeta">전체 터미널 · 최근 0건</small></div>
-        <ul id="tasFeed" class="tas-feed"></ul>
-        <p id="tasStatus" class="tas-status is-neutral" role="status" aria-live="polite">터미널을 고르고 요청 내용을 적어 주세요.</p>
-        <form id="tasForm" class="tas-composer" autocomplete="off">
-          <div id="tasEditBanner" class="tas-edit-banner" hidden><span id="tasEditText">✏️ 요청 수정 중</span><button id="tasCancelEdit" type="button" class="tas-cancel-edit-btn">수정 취소</button></div>
-          <div class="tas-composer-row">
-            <label class="tas-field"><span>🏢 터미널 선택</span><select id="tasTerminalSelect" class="tas-select" aria-label="요청할 터미널 선택"></select></label>
-            <label class="tas-field tas-field-type"><span>🔧 요청 종류</span><select id="tasTypeSelect" class="tas-select" aria-label="요청 종류 선택"></select></label>
-          </div>
-          <label class="tas-field"><span>📝 요청 내용 (시설·고장·수리·A/S)</span><textarea id="tasContent" class="tas-textarea" maxlength="500" rows="3" placeholder="예) 3번 게이트 조명이 꺼졌어요. 점검 부탁드립니다." aria-label="요청 내용"></textarea></label>
-          <div class="tas-photo-field">
-            <label for="tasPhotoInput" class="tas-photo-btn">📷 현장 사진 첨부 <small id="tasPhotoCount">(최대 3장)</small></label>
-            <input id="tasPhotoInput" type="file" accept="image/*" multiple hidden>
-            <div id="tasPhotoPreview" class="tas-photo-preview" hidden></div>
-          </div>
-          <div class="tas-composer-foot">
-            <p class="tas-author-preview">작성자 <strong id="tasAuthorPreview">한진***</strong> <span id="tasAnonCode" class="tas-anon-code">#----</span> <em>자동 생성 · 비밀번호 없음</em></p>
-            <button id="tasSubmit" type="submit" class="tas-submit-button">요청 접수</button>
-          </div>
-        </form>
-        <p class="tas-break-note">🦺 작업 중에는 사용하지 말고, 휴식 시간에만 이용해 주세요. 급한 안전 사고는 즉시 현장 관리자에게 알려 주세요.</p>
-        <p class="tas-footnote">작성자와 접수번호는 터미널 이름 기반으로 <b>임의 생성</b>되며 실명·연락처는 저장하지 않습니다.</p>
-      </section>
-    </div>
-  </div>
-</div>
 
         <div id="guide-card" class="dash-card" data-view-group="guide">
             <div class="dash-header tap-effect" onclick="toggleDashItem('guide-card')" style="flex-direction: row !important; justify-content: flex-start !important; padding: 14px 12px; gap: 10px; min-height: auto;">
@@ -1717,7 +1717,7 @@
                 <h3 id="manualGuideTitle">07 · 현장가이드 — 쉬는 시간과 현장 용어</h3>
                 <div class="manual-body">
                     <h4 class="manual-sub">🛠️ 터미널 시설·정비 수리 / A/S 요청</h4>
-                    <p class="manual-plain">한진·고려·동원 등 <b>터미널을 고른 뒤</b> 현장 사진(최대 3장)과 함께 시설·정비 수리·A/S 내용을 적고 [요청 접수]를 누르면 됩니다. <b>비밀번호·닉네임 입력 없이</b> 작성자는 <b>한진***·동원***</b>으로 자동 생성되며, 내가 쓴 글은 바로 수정·삭제할 수 있습니다.</p>
+                    <p class="manual-plain">한진·고려·동원 등 <b>터미널을 고른 뒤</b> 사진(최대 3장)과 내용을 적고 [요청 접수]를 누릅니다. <b>비밀번호 없이</b> <b>한진***·동원***</b>으로 자동 작성되며, 본인 글 수정·삭제는 물론 <b>누구나 댓글·좋아요·조치 완료</b>를 누를 수 있습니다.</p>
 
                     <h4 class="manual-sub">📖 현장 실무 용어 가이드</h4>
                     <p class="manual-plain">라싱·중장비·선박 구조·현장 실무 용어를 검색창에 넣거나 카테고리(#작업·도구 #중장비 #선박 구조 #현장 실무)로 골라 봅니다.</p>
@@ -2235,20 +2235,20 @@
     </div>
 </div>
 
-<script src="./js/app.js?v=2027.88"></script>
-<script src="./js/roster-engine.js?v=2027.88"></script>
+<script src="./js/app.js?v=2027.89"></script>
+<script src="./js/roster-engine.js?v=2027.89"></script>
   
     <!-- [여기서부터 복사] 조장 근무일 비밀번호 검증 스크립트 -->
 <!-- [추가할 보안 및 실행 스크립트] -->
-<script src="./js/leader-access.js?v=2027.88"></script>
+<script src="./js/leader-access.js?v=2027.89"></script>
   <!-- [프로덕션 수준] 파이어베이스 'ships' 컬렉션 전체 데이터 조회 및 검색 모듈 -->
-<script src="./js/ships-board.js?v=2027.88"></script>
+<script src="./js/ships-board.js?v=2027.89"></script>
 
-<script src="./js/tab-views.js?v=2027.88"></script>
-<script src="./js/terminal-as.js?v=2027.88"></script>
-<script src="./js/want-board.js?v=2027.88"></script>
-<script src="./js/domain-migration.js?v=2027.88"></script>
-<script src="./js/rain-float.js?v=2027.88"></script>
+<script src="./js/tab-views.js?v=2027.89"></script>
+<script src="./js/terminal-as.js?v=2027.89"></script>
+<script src="./js/want-board.js?v=2027.89"></script>
+<script src="./js/domain-migration.js?v=2027.89"></script>
+<script src="./js/rain-float.js?v=2027.89"></script>
 </body>
 </html>
 

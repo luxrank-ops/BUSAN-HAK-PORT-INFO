@@ -363,9 +363,9 @@ service cloud.firestore {
     // 10. terminal_as_requests (터미널 시설·정비 수리 / A/S 요청)
     //     - 기존 끝말잇기 릴레이를 대체한 익명 요청 게시판입니다.
     //     - 비밀번호·닉네임 입력 없이 자동 익명 인증(isSignedIn)만으로 접수·수정·삭제합니다.
-    //     - 작성자는 화면 코드가 터미널 이름 + 마스킹(한진*** · 동원***)으로 자동 생성하고,
-    //       글마다 랜덤 접수번호(anonCode)를 붙입니다. 실명·연락처는 저장하지 않습니다.
-    //     - terminal_as_requests/{requestId} : 한 건의 요청 (imageUrls 최대 3장 포함)
+    //     - 누구나 '조치 완료' 버튼으로 status='done' 처리, 게시글/댓글 좋아요, 댓글 작성이 가능합니다.
+    //     - terminal_as_requests/{requestId}                 : 요청 본문 (사진 최대 3장, likedBy, commentCount)
+    //     - terminal_as_requests/{requestId}/comments/{id}   : 댓글 (좋아요, 작성자 수정·삭제)
     //     - 화면 코드(public/js/terminal-as.js)의 운영값과 이 규칙은 함께 바꿔야 합니다.
     // ---------------------------------------------------------
     function isValidAsTerminalId(val) {
@@ -383,6 +383,19 @@ service cloud.firestore {
         existing().authorUid == request.auth.uid;
     }
 
+    function asLikedMap(data) {
+      return ('likedBy' in data && data.likedBy is map) ? data.likedBy : {};
+    }
+
+    function isValidAsLikeToggle() {
+      return isSignedIn() &&
+        incoming().diff(existing()).affectedKeys().hasOnly(['likedBy']) &&
+        incoming().likedBy is map &&
+        incoming().likedBy.size() <= 500 &&
+        incoming().likedBy.diff(asLikedMap(existing())).affectedKeys().hasOnly([request.auth.uid]) &&
+        (!(request.auth.uid in incoming().likedBy) || incoming().likedBy[request.auth.uid] == true);
+    }
+
     function isValidAsImageUrls(data) {
       return !('imageUrls' in data) || (
         data.imageUrls is list &&
@@ -398,7 +411,9 @@ service cloud.firestore {
         data.keys().hasOnly([
           'terminalId', 'terminalLabel', 'type', 'content',
           'author', 'anonCode', 'authorUid', 'imageUrls',
-          'status', 'createdAtMs', 'createdAt', 'updatedAtMs', 'updatedAt'
+          'status', 'resolvedAtMs', 'resolvedAt',
+          'likedBy', 'commentCount',
+          'createdAtMs', 'createdAt', 'updatedAtMs', 'updatedAt'
         ]) &&
         isValidAsTerminalId(data.terminalId) &&
         data.terminalLabel is string && data.terminalLabel.size() >= 1 && data.terminalLabel.size() <= 40 &&
@@ -409,6 +424,10 @@ service cloud.firestore {
         (!('authorUid' in data) || (data.authorUid is string && data.authorUid.size() >= 1 && data.authorUid.size() <= 128)) &&
         isValidAsImageUrls(data) &&
         (!('status' in data) || data.status in ['received', 'processing', 'done']) &&
+        (!('resolvedAtMs' in data) || (data.resolvedAtMs is int && data.resolvedAtMs > 0 && data.resolvedAtMs <= 4102444800000)) &&
+        (!('resolvedAt' in data) || data.resolvedAt is timestamp) &&
+        (!('likedBy' in data) || (data.likedBy is map && data.likedBy.size() <= 500)) &&
+        (!('commentCount' in data) || (data.commentCount is int && data.commentCount >= 0 && data.commentCount <= 2000)) &&
         data.createdAtMs is int && data.createdAtMs > 0 && data.createdAtMs <= 4102444800000 &&
         (!('createdAt' in data) || data.createdAt is timestamp) &&
         (!('updatedAtMs' in data) || (data.updatedAtMs is int && data.updatedAtMs > 0 && data.updatedAtMs <= 4102444800000)) &&
@@ -418,23 +437,86 @@ service cloud.firestore {
     function isValidAsAuthorUpdate() {
       return isAsAuthor() &&
         isValidAsRequest(incoming()) &&
-        incoming().authorUid == existing().authorUid &&
-        incoming().createdAtMs == existing().createdAtMs &&
-        (!('anonCode' in existing()) ? !('anonCode' in incoming()) : ('anonCode' in incoming() && incoming().anonCode == existing().anonCode)) &&
-        (!('status' in existing()) ? (!('status' in incoming()) || incoming().status == 'received') : ('status' in incoming() && incoming().status == existing().status));
+        incoming().diff(existing()).affectedKeys().hasOnly([
+          'terminalId', 'terminalLabel', 'type', 'content',
+          'author', 'imageUrls', 'updatedAtMs', 'updatedAt'
+        ]);
+    }
+
+    function isValidAsResolveUpdate() {
+      return isSignedIn() &&
+        isValidAsRequest(incoming()) &&
+        incoming().diff(existing()).affectedKeys().hasOnly(['status', 'resolvedAtMs', 'resolvedAt']) &&
+        incoming().status == 'done';
+    }
+
+    function isValidAsCommentCountChange() {
+      return isSignedIn() &&
+        incoming().diff(existing()).affectedKeys().hasOnly(['commentCount']) &&
+        incoming().commentCount is int &&
+        incoming().commentCount >= 0 &&
+        incoming().commentCount <= 2000 &&
+        (
+          incoming().commentCount == ((!('commentCount' in existing()) || !(existing().commentCount is int)) ? 1 : existing().commentCount + 1) ||
+          (('commentCount' in existing()) && existing().commentCount is int && existing().commentCount > 0 && incoming().commentCount == existing().commentCount - 1)
+        );
+    }
+
+    function isValidAsComment(requestId, data) {
+      return data is map &&
+        data.keys().hasOnly([
+          'requestId', 'content', 'author', 'anonCode', 'authorUid',
+          'likedBy', 'createdAtMs', 'createdAt', 'updatedAtMs', 'updatedAt'
+        ]) &&
+        data.requestId is string && data.requestId == requestId &&
+        data.content is string && data.content.size() >= 1 && data.content.size() <= 300 &&
+        data.author is string && data.author.size() >= 2 && data.author.size() <= 40 &&
+        (!('anonCode' in data) || (data.anonCode is string && data.anonCode.size() <= 12)) &&
+        data.authorUid is string && data.authorUid.size() >= 1 && data.authorUid.size() <= 128 &&
+        (!('likedBy' in data) || (data.likedBy is map && data.likedBy.size() <= 500)) &&
+        data.createdAtMs is int && data.createdAtMs > 0 && data.createdAtMs <= 4102444800000 &&
+        (!('createdAt' in data) || data.createdAt is timestamp) &&
+        (!('updatedAtMs' in data) || (data.updatedAtMs is int && data.updatedAtMs > 0 && data.updatedAtMs <= 4102444800000)) &&
+        (!('updatedAt' in data) || data.updatedAt is timestamp);
+    }
+
+    function isValidAsCommentAuthorUpdate(requestId) {
+      return isAsAuthor() &&
+        isValidAsComment(requestId, incoming()) &&
+        incoming().diff(existing()).affectedKeys().hasOnly(['content', 'updatedAtMs', 'updatedAt']);
     }
 
     match /terminal_as_requests/{requestId} {
       allow get, list: if isSignedIn();
       allow create: if isSignedIn() && isValidId(requestId) && isValidAsRequest(incoming()) &&
         (!('status' in incoming()) || incoming().status == 'received') &&
-        ('authorUid' in incoming()) && incoming().authorUid == request.auth.uid;
-      // 작성자 본인은 내용·터미널·종류·사진만 수정·삭제할 수 있고, 상태 변경·전체 관리는 관리자 전용입니다.
+        ('authorUid' in incoming()) && incoming().authorUid == request.auth.uid &&
+        !('resolvedAtMs' in incoming()) && !('resolvedAt' in incoming()) &&
+        (!('likedBy' in incoming()) || incoming().likedBy.size() == 0) &&
+        (!('commentCount' in incoming()) || incoming().commentCount == 0);
+      // 작성자 본인은 내용·터미널·종류·사진만 수정/삭제, 누구나 조치 완료·좋아요·댓글수 동기화, 전체 관리는 관리자 전용.
       allow update: if isSignedIn() && isValidId(requestId) && (
         isAdmin() ||
-        isValidAsAuthorUpdate()
+        isValidAsAuthorUpdate() ||
+        isValidAsResolveUpdate() ||
+        isValidAsLikeToggle() ||
+        isValidAsCommentCountChange()
       );
       allow delete: if isAdmin() || isAsAuthor();
+
+      match /comments/{commentId} {
+        allow get, list: if isSignedIn();
+        allow create: if isSignedIn() && isValidId(commentId) &&
+          isValidAsComment(requestId, incoming()) &&
+          incoming().authorUid == request.auth.uid &&
+          (!('likedBy' in incoming()) || incoming().likedBy.size() == 0);
+        allow update: if isSignedIn() && isValidId(commentId) && (
+          isAdmin() ||
+          isValidAsLikeToggle() ||
+          isValidAsCommentAuthorUpdate(requestId)
+        );
+        allow delete: if isAdmin() || isAsAuthor();
+      }
     }
 
     // ---------------------------------------------------------

@@ -500,7 +500,7 @@ test('[Phase 3 · P2-1/P2-6/P2-7/P2-8/P2-9/P2-10/P2-11/P2-12/P3] PWA/FCM/폴백/
   assert.doesNotMatch(readme, /0346/);
   assert.match(buildWorkerMjs, /minify:\s*true/);
   assert.match(swJs, /url\.pathname === "\/manifest\.json"/);
-  assert.equal(APP_ASSET_VERSION, '2027.88');
+  assert.equal(APP_ASSET_VERSION, '2027.89');
   assert.ok(readAppHtml().includes(`?v=${APP_ASSET_VERSION}`));
   assert.ok(swJs.includes(`busan-hak-port-v${APP_ASSET_VERSION}`));
 });

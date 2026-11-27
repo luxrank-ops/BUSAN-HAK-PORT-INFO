@@ -148,11 +148,51 @@ test('문서 정규화·터미널 필터·최신순 정렬·상대 시간이 규
     assert.equal(core.formatRelativeTime(now - 2 * 86_400_000, now), '2일 전');
 });
 
-test('HTML 카드: 터미널 선택·종류·내용·사진 첨부·수정 배너와 익명 미리보기가 있고 비밀번호 입력이 없다', () => {
-    const start = html.indexOf('<div id="safety-card"');
-    const end = html.indexOf('<div id="guide-card"', start);
-    assert.ok(start >= 0 && end > start, 'safety-card 블록을 찾지 못했습니다');
-    const card = html.slice(start, end);
+test('좋아요·댓글 검증 및 정규화가 안전하게 동작한다', () => {
+    assert.equal(core.statusLabels.done, '조치완료');
+    assert.equal(core.maxComment, 300);
+
+    assert.equal(core.validateComment('   ').code, 'empty');
+    assert.equal(core.validateComment('가'.repeat(301)).code, 'long');
+    assert.equal(core.validateComment('  확인했습니다  ').content, '확인했습니다');
+
+    const likes = core.normalizeLikedBy({ 'u-1': true, 'u-2': 'invalid', '': true });
+    assert.deepEqual({ ...likes }, { 'u-1': true });
+    assert.equal(core.countLikes(likes), 1);
+    assert.equal(core.isLikedByUid(likes, 'u-1'), true);
+    assert.equal(core.isLikedByUid(likes, 'u-2'), false);
+
+    const req = core.normalizeRequest('r10', {
+        terminalId: 'hjnc', type: 'as', content: '완료된 요청입니다',
+        status: 'done', resolvedAtMs: 5000, likedBy: { 'u-1': true, 'u-2': true }, commentCount: 3,
+        createdAtMs: 1000
+    });
+    assert.equal(req.statusLabel, '조치완료');
+    assert.equal(req.resolvedAtMs, 5000);
+    assert.equal(req.likeCount, 2);
+    assert.equal(req.commentCount, 3);
+
+    const cmt = core.normalizeComment('c1', 'r10', {
+        content: '처리 완료했습니다', author: '한진***', anonCode: 'A2B3',
+        authorUid: 'u-1', likedBy: { 'u-2': true }, createdAtMs: 2000
+    });
+    assert.equal(cmt.requestId, 'r10');
+    assert.equal(cmt.likeCount, 1);
+    assert.equal(cmt.content, '처리 완료했습니다');
+});
+
+test('HTML 카드: 터미널 A/S 요청과 생활영어 한문장 배치가 서로 바뀌었고 비밀번호 입력이 없다', () => {
+    const noticeIdx = html.indexOf('<div id="notice-card"');
+    const safetyIdx = html.indexOf('<div id="safety-card"');
+    const boardIdx = html.indexOf('<div id="board-card"');
+    const weatherIdx = html.indexOf('<div id="weather-card"');
+    const englishIdx = html.indexOf('<div id="daily-field-english-card"');
+    const guideIdx = html.indexOf('<div id="guide-card"');
+
+    assert.ok(noticeIdx >= 0 && safetyIdx > noticeIdx && boardIdx > safetyIdx, 'safety-card 는 공지사항 다음, 왁자지껄 앞에 있어야 합니다');
+    assert.ok(weatherIdx >= 0 && englishIdx > weatherIdx && guideIdx > englishIdx, '생활영어 한문장은 날씨 다음, 용어가이드 앞에 있어야 합니다');
+
+    const card = html.slice(safetyIdx, boardIdx);
     assert.match(card, /터미널 시설·정비 A\/S 요청/);
     assert.match(card, /id="terminalAsBoard"/);
     assert.match(card, /id="tasEditBanner"/, '수정 안내 배너가 필요합니다');
@@ -171,7 +211,7 @@ test('HTML 카드: 터미널 선택·종류·내용·사진 첨부·수정 배�
     assert.doesNotMatch(card, /kkung|꿍꿍|끝말잇기|릴레이/, '옛 릴레이 문구가 남아 있으면 안 됩니다');
 });
 
-test('모듈은 Firestore terminal_as_requests 와 Storage terminal-as 를 연동하고 수정·삭제를 지원한다', () => {
+test('모듈은 Firestore terminal_as_requests 와 Storage terminal-as 를 연동하고 수정·삭제·조치완료·댓글·좋아요를 지원한다', () => {
     assert.equal(core.collection, 'terminal_as_requests');
     assert.match(script, /orderBy\('createdAtMs', 'desc'\)/);
     assert.match(script, /onSnapshot/);
@@ -180,6 +220,10 @@ test('모듈은 Firestore terminal_as_requests 와 Storage terminal-as 를 연�
     assert.match(script, /\.doc\(docId\)\.set\(toFirestoreDoc\(onlineEntry\)\)/);
     assert.match(script, /\.doc\(targetId\)\.update\(/);
     assert.match(script, /\.doc\(entry\.id\)\.delete\(\)/);
+    assert.match(script, /resolveAsRequest/);
+    assert.match(script, /togglePostLike/);
+    assert.match(script, /submitComment/);
+    assert.match(script, /toggleCommentLike/);
     assert.match(script, /terminal-as\//);
     assert.match(script, /hakportTerminalAsLocalV1/);
     assert.match(script, /hakportTerminalAsMineV1/);
@@ -195,23 +239,29 @@ test('블럭 색은 반짝이는 푸른색 중간톤 토큰만 쓰고 옛 릴레
     assert.match(css, /@keyframes tasBlockShimmer/);
     assert.match(css, /@keyframes tasCardGlow/);
     assert.match(css, /@keyframes tasCardShine/);
+    assert.match(css, /\.tas-item-btn\.is-resolve/);
+    assert.match(css, /\.tas-like-btn\.is-liked/);
+    assert.match(css, /\.tas-comments-panel/);
     assert.match(css, /\.tas-submit-button \{[^}]*background: linear-gradient\(135deg, var\(--blue-600\), var\(--blue-800\)\)/);
     assert.match(css, /\.tas-terminal-badge \{[^}]*background: var\(--blue-600\)/);
     assert.doesNotMatch(css, /\.kkung-/, '옛 릴레이 CSS 선택자가 남아 있으면 안 됩니다');
     assert.doesNotMatch(css, /#safety-card \.kkung/);
 });
 
-test('Firestore 규칙: 익명 로그인 접수·사진 3장·본인/관리자 수정/삭제, 옛 릴레이 규칙이 없다', () => {
+test('Firestore 규칙: 익명 로그인 접수·사진 3장·본인 수정/삭제·누구나 조치완료·좋아요·댓글 허용, 옛 릴레이 규칙이 없다', () => {
     assert.match(rules, /match \/terminal_as_requests\/\{requestId\} \{/);
     assert.match(rules, /allow get, list: if isSignedIn\(\);/);
     assert.match(rules, /allow create: if isSignedIn\(\) && isValidId\(requestId\) && isValidAsRequest\(incoming\(\)\)/);
-    assert.match(rules, /allow update: if isSignedIn\(\) && isValidId\(requestId\) && \(\s*isAdmin\(\) \|\|\s*isValidAsAuthorUpdate\(\)\s*\);/);
+    assert.match(rules, /allow update: if isSignedIn\(\) && isValidId\(requestId\) && \(\s*isAdmin\(\) \|\|\s*isValidAsAuthorUpdate\(\) \|\|\s*isValidAsResolveUpdate\(\) \|\|\s*isValidAsLikeToggle\(\) \|\|\s*isValidAsCommentCountChange\(\)\s*\);/);
     assert.match(rules, /allow delete: if isAdmin\(\) \|\| isAsAuthor\(\);/);
+    assert.match(rules, /match \/comments\/\{commentId\} \{/);
     assert.match(rules, /function isAsAuthor\(\) \{/);
     assert.match(rules, /function isValidAsTerminalId\(val\) \{/);
     assert.match(rules, /'hjnc', 'bnct', 'dgt', 'bct', 'pnc', 'hpnt', 'pnit', 'bptc', 'hbct'/);
     assert.match(rules, /function isValidAsImageUrls\(data\) \{/);
     assert.match(rules, /function isValidAsAuthorUpdate\(\) \{/);
+    assert.match(rules, /function isValidAsResolveUpdate\(\) \{/);
+    assert.match(rules, /function isValidAsLikeToggle\(\) \{/);
     assert.match(rules, /data\.content is string && data\.content\.size\(\) >= 2 && data\.content\.size\(\) <= 500/);
     assert.match(rules, /incoming\(\)\.status == 'received'/);
     assert.doesNotMatch(rules, /match \/kkung_chain\//, '옛 릴레이 규칙이 남아 있으면 안 됩니다');

@@ -107,11 +107,46 @@ function findButtons(node, predicate, out = []) {
     return out;
 }
 
-/** 아주 작은 Firestore 스텁 (terminal_as_requests 전용) */
+function applyFirestorePatch(cur, patch) {
+    const next = { ...cur };
+    Object.entries(patch || {}).forEach(([key, val]) => {
+        if (key.includes('.')) {
+            const parts = key.split('.');
+            const head = parts[0];
+            const tail = parts.slice(1).join('.');
+            const map = { ...(next[head] && typeof next[head] === 'object' ? next[head] : {}) };
+            if (val && val.__deleteField) delete map[tail];
+            else map[tail] = val;
+            next[head] = map;
+        } else if (val && val.__deleteField) {
+            delete next[key];
+        } else if (val && typeof val.__increment === 'number') {
+            next[key] = Math.max(0, Number(next[key] || 0) + val.__increment);
+        } else {
+            next[key] = val;
+        }
+    });
+    return next;
+}
+
+/** 아주 작은 Firestore 스텁 (terminal_as_requests 및 comments 서브컬렉션 지원) */
 function makeFirestoreStub({ failWrites = false, uid = 'anon-1' } = {}) {
     const docs = new Map();
+    const subdocs = new Map(); // key: `${parentId}/${subName}` -> Map<cid, data>
     const listeners = new Set();
+    const subListeners = new Map(); // key -> Set<fn>
     let counter = 0;
+
+    const getSubMap = (parentId, subName) => {
+        const key = `${parentId}/${subName}`;
+        if (!subdocs.has(key)) subdocs.set(key, new Map());
+        return subdocs.get(key);
+    };
+    const getSubListeners = (parentId, subName) => {
+        const key = `${parentId}/${subName}`;
+        if (!subListeners.has(key)) subListeners.set(key, new Set());
+        return subListeners.get(key);
+    };
 
     const snapshot = () => ({
         forEach(callback) {
@@ -122,10 +157,59 @@ function makeFirestoreStub({ failWrites = false, uid = 'anon-1' } = {}) {
     });
     const notify = () => listeners.forEach(listener => listener(snapshot()));
 
+    const subSnapshot = (parentId, subName) => ({
+        forEach(callback) {
+            [...getSubMap(parentId, subName).entries()]
+                .sort((a, b) => Number(a[1].createdAtMs || 0) - Number(b[1].createdAtMs || 0))
+                .forEach(([id, data]) => callback({ id, data: () => data }));
+        }
+    });
+    const notifySub = (parentId, subName) => {
+        const snap = subSnapshot(parentId, subName);
+        getSubListeners(parentId, subName).forEach(listener => listener(snap));
+    };
+
+    const makeSubCollection = (parentId, subName) => {
+        const map = getSubMap(parentId, subName);
+        const subs = getSubListeners(parentId, subName);
+        return {
+            orderBy() { return this; },
+            limit() { return this; },
+            onSnapshot(onNext) {
+                subs.add(onNext);
+                onNext(subSnapshot(parentId, subName));
+                return () => subs.delete(onNext);
+            },
+            doc(cid) {
+                const docId = cid || `sub-${++counter}`;
+                return {
+                    id: docId,
+                    async set(data) {
+                        if (failWrites) throw new Error('offline');
+                        map.set(docId, { ...data });
+                        notifySub(parentId, subName);
+                    },
+                    async update(patch) {
+                        if (failWrites) throw new Error('offline');
+                        const cur = map.get(docId);
+                        if (!cur) throw new Error('not-found');
+                        map.set(docId, applyFirestorePatch(cur, patch));
+                        notifySub(parentId, subName);
+                    },
+                    async delete() {
+                        if (failWrites) throw new Error('offline');
+                        map.delete(docId);
+                        notifySub(parentId, subName);
+                    }
+                };
+            }
+        };
+    };
+
     const collection = {
         orderBy() { return this; },
         limit() { return this; },
-        onSnapshot(onNext, onError) {
+        onSnapshot(onNext) {
             listeners.add(onNext);
             onNext(snapshot());
             return () => listeners.delete(onNext);
@@ -134,6 +218,9 @@ function makeFirestoreStub({ failWrites = false, uid = 'anon-1' } = {}) {
             const docId = id || `doc-${++counter}`;
             return {
                 id: docId,
+                collection(subName) {
+                    return makeSubCollection(docId, subName);
+                },
                 async set(data) {
                     if (failWrites) throw new Error('offline');
                     docs.set(docId, { ...data });
@@ -143,7 +230,7 @@ function makeFirestoreStub({ failWrites = false, uid = 'anon-1' } = {}) {
                     if (failWrites) throw new Error('offline');
                     const cur = docs.get(docId);
                     if (!cur) throw new Error('not-found');
-                    docs.set(docId, { ...cur, ...patch });
+                    docs.set(docId, applyFirestorePatch(cur, patch));
                     notify();
                 },
                 async delete() {
@@ -164,7 +251,9 @@ function makeFirestoreStub({ failWrites = false, uid = 'anon-1' } = {}) {
 
     return {
         docs,
+        subdocs,
         emit: notify,
+        emitSub: notifySub,
         collection() { return collection; }
     };
 }
@@ -255,7 +344,15 @@ function makeHarness({ failWrites = false, uid = 'anon-1', isAdmin = false, conf
         confirm: () => confirmResult,
         db,
         storage: storageService,
-        firebase: { firestore: { FieldValue: { serverTimestamp: () => ({ __serverTimestamp: true }) } } },
+        firebase: {
+            firestore: {
+                FieldValue: {
+                    serverTimestamp: () => ({ __serverTimestamp: true }),
+                    delete: () => ({ __deleteField: true }),
+                    increment: delta => ({ __increment: delta })
+                }
+            }
+        },
         ensureAnonymousAuth: async () => ({ uid }),
         isAdminSession: () => isAdmin,
         compressImageForUpload: async file => file,
@@ -490,3 +587,111 @@ test('다른 사용자가 쓴 글에는 수정·삭제 버튼이 뜨지 않고, 
     await offlineHarness.tick();
     assert.equal(JSON.parse(offlineHarness.storage.get('hakportTerminalAsLocalV1') || '[]').length, 0);
 });
+
+test('누구나 비밀번호 없이 조치 완료 버튼을 눌러 조치완료 상태로 바꾸고 게시글 좋아요를 누를 수 있다', async () => {
+    const harness = makeHarness({ uid: 'colleague-7', isAdmin: false });
+    harness.db.docs.set('req-1', {
+        terminalId: 'hjnc',
+        terminalLabel: '한진(HJNC)',
+        type: 'as',
+        content: '게이트 차단기 센서 점검 필요',
+        author: '한진***',
+        authorUid: 'author-1',
+        anonCode: 'A2B3',
+        status: 'received',
+        likedBy: { 'author-1': true },
+        commentCount: 0,
+        imageUrls: [],
+        createdAtMs: Date.now() - 60_000
+    });
+    harness.db.emit();
+
+    // 1. 게시글 좋아요 토글 (기존 author-1 좋아요를 유지하면서 내 UID 추가 → 취소)
+    let likeBtn = findButtons(harness.el('tasFeed'), node => String(node.className).includes('tas-like-btn'))[0];
+    assert.match(collectText(likeBtn), /좋아요 1/);
+    likeBtn.dispatchEvent({ type: 'click' });
+    await harness.tick();
+    assert.deepEqual(harness.db.docs.get('req-1').likedBy, { 'author-1': true, 'colleague-7': true });
+    likeBtn = findButtons(harness.el('tasFeed'), node => String(node.className).includes('tas-like-btn'))[0];
+    assert.match(collectText(likeBtn), /좋아요 2/);
+
+    likeBtn.dispatchEvent({ type: 'click' });
+    await harness.tick();
+    assert.deepEqual(harness.db.docs.get('req-1').likedBy, { 'author-1': true });
+
+    // 2. 타인이 조치 완료 버튼 클릭 → status='done', '조치완료' 배지 표시, 버튼은 '조치완료됨' 비활성화
+    const resolveBtn = findButtons(harness.el('tasFeed'), node => node.className === 'tas-item-btn is-resolve')[0];
+    assert.ok(resolveBtn, '조치 완료 버튼이 표시되어야 합니다');
+    resolveBtn.dispatchEvent({ type: 'click' });
+    await harness.tick();
+
+    const updated = harness.db.docs.get('req-1');
+    assert.equal(updated.status, 'done');
+    assert.ok(updated.resolvedAtMs > 0);
+    assert.match(harness.feedText(), /✅ 조치완료/);
+    const doneBtn = findButtons(harness.el('tasFeed'), node => node.className === 'tas-item-btn is-resolved-done')[0];
+    assert.ok(doneBtn && doneBtn.disabled === true);
+});
+
+test('댓글 패널을 열어 댓글을 작성·좋아요·삭제할 수 있고 금칙어는 차단된다', async () => {
+    const harness = makeHarness({ uid: 'commenter-1', isAdmin: false });
+    harness.db.docs.set('req-2', {
+        terminalId: 'dgt',
+        terminalLabel: '동원(DGT)',
+        type: 'repair',
+        content: '야드 조명등 하나가 깜빡입니다',
+        author: '동원***',
+        authorUid: 'author-2',
+        anonCode: 'K9M2',
+        status: 'received',
+        likedBy: {},
+        commentCount: 0,
+        imageUrls: [],
+        createdAtMs: Date.now() - 30_000
+    });
+    harness.db.emit();
+
+    const toggleBtn = findButtons(harness.el('tasFeed'), node => String(node.className).includes('tas-comment-toggle-btn'))[0];
+    toggleBtn.dispatchEvent({ type: 'click' });
+    await harness.tick();
+
+    // 금칙어 댓글 차단
+    const cmtInput = findButtons(harness.el('tasFeed'), node => node.className === 'tas-comment-input')[0];
+    const cmtForm = findButtons(harness.el('tasFeed'), node => node.className === 'tas-comment-form')[0];
+    cmtInput.value = '금칙어 테스트 댓글';
+    cmtForm.dispatchEvent({ type: 'submit', preventDefault() {} });
+    await harness.tick();
+    assert.equal(harness.db.subdocs.get('req-2/comments')?.size || 0, 0);
+
+    // 정상 댓글 작성
+    const input2 = findButtons(harness.el('tasFeed'), node => node.className === 'tas-comment-input')[0];
+    const form2 = findButtons(harness.el('tasFeed'), node => node.className === 'tas-comment-form')[0];
+    input2.value = '전구 교체 예약했습니다';
+    form2.dispatchEvent({ type: 'submit', preventDefault() {} });
+    await harness.tick();
+    await harness.tick();
+
+    const subMap = harness.db.subdocs.get('req-2/comments');
+    assert.equal(subMap.size, 1);
+    assert.equal(harness.db.docs.get('req-2').commentCount, 1);
+    assert.match(harness.feedText(), /전구 교체 예약했습니다/);
+
+    // 댓글 좋아요 토글
+    let cmtLikeBtn = findButtons(harness.el('tasFeed'), node => String(node.className).includes('tas-comment-like-btn'))[0];
+    cmtLikeBtn.dispatchEvent({ type: 'click' });
+    await harness.tick();
+    const [[cid, cmtDoc]] = [...subMap.entries()];
+    assert.deepEqual(cmtDoc.likedBy, { 'commenter-1': true });
+    cmtLikeBtn = findButtons(harness.el('tasFeed'), node => String(node.className).includes('tas-comment-like-btn'))[0];
+    assert.match(collectText(cmtLikeBtn), /1/);
+
+    // 본인 댓글 삭제 → commentCount 감소
+    const cmtDelBtn = findButtons(harness.el('tasFeed'), node => node.className === 'tas-comment-del-btn')[0];
+    assert.ok(cmtDelBtn, '본인 댓글에는 삭제 버튼이 있어야 합니다');
+    cmtDelBtn.dispatchEvent({ type: 'click' });
+    await harness.tick();
+    await harness.tick();
+    assert.equal(subMap.has(cid), false);
+    assert.equal(harness.db.docs.get('req-2').commentCount, 0);
+});
+

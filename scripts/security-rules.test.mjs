@@ -123,25 +123,32 @@ test('규칙 파일은 기본 차단(Default Deny) 구조를 유지한다', () =
     assert.match(rules, /rules_version = '2';/);
 });
 
-test('터미널 시설·정비 A/S 요청(terminal_as_requests)은 익명 접수·사진 3장·본인 수정/삭제·관리자 상태관리를 허용한다', () => {
+test('터미널 시설·정비 A/S 요청(terminal_as_requests)은 익명 접수·사진 3장·본인 수정/삭제·누구나 조치완료·좋아요·댓글을 허용한다', () => {
     const board = blockBody(rules, 'match /terminal_as_requests/{requestId}');
-    // 비밀번호·닉네임 입력 없이 자동 익명 인증(isSignedIn)만으로 접수하고, 본인 UID(isAsAuthor) 또는 관리자만 수정·삭제합니다.
+    // 비밀번호·닉네임 입력 없이 자동 익명 인증(isSignedIn)만으로 접수하고, 본인 UID(isAsAuthor) 또는 관리자만 수정·삭제,
+    // 누구나 조치 완료(status='done') 및 게시글/댓글 좋아요·댓글 작성이 가능합니다.
     assert.match(board, /allow get, list: if isSignedIn\(\);/);
     assert.match(board, /allow create: if isSignedIn\(\) && isValidId\(requestId\) && isValidAsRequest\(incoming\(\)\)/);
     assert.match(board, /incoming\(\)\.status == 'received'/, '일반 접수는 접수 상태로만 만들 수 있어야 합니다');
-    assert.match(board, /allow update: if isSignedIn\(\) && isValidId\(requestId\) && \(\s*isAdmin\(\) \|\|\s*isValidAsAuthorUpdate\(\)\s*\);/);
+    assert.match(board, /allow update: if isSignedIn\(\) && isValidId\(requestId\) && \(\s*isAdmin\(\) \|\|\s*isValidAsAuthorUpdate\(\) \|\|\s*isValidAsResolveUpdate\(\) \|\|\s*isValidAsLikeToggle\(\) \|\|\s*isValidAsCommentCountChange\(\)\s*\);/);
     assert.match(board, /allow delete: if isAdmin\(\) \|\| isAsAuthor\(\);/);
+    assert.match(board, /match \/comments\/\{commentId\} \{/);
     assert.doesNotMatch(board, /allow create, update, delete: if isSignedIn\(\)/);
-    assert.doesNotMatch(board, /allow update: if isSignedIn\(\)\s*;/, '타인의 접수 글은 고칠 수 없어야 합니다');
+    assert.doesNotMatch(board, /allow update: if isSignedIn\(\)\s*;/, '타인의 접수 글 본문을 임의로 고칠 수 없어야 합니다');
 
-    // 터미널 9개·요청 종류·사진 3장·길이 제한·본인 수정 잠금 필드가 규칙에 고정되어 임의 필드 주입을 막습니다.
+    // 터미널 9개·요청 종류·사진 3장·길이 제한·조치완료/좋아요/댓글 규칙 검증
     assert.match(rules, /function isAsAuthor\(\) \{/);
     assert.match(rules, /function isValidAsTerminalId\(val\) \{/);
     assert.match(rules, /'hjnc', 'bnct', 'dgt', 'bct', 'pnc', 'hpnt', 'pnit', 'bptc', 'hbct'/);
     assert.match(rules, /function isValidAsType\(val\) \{/);
     assert.match(rules, /function isValidAsImageUrls\(data\) \{/);
     assert.match(rules, /function isValidAsAuthorUpdate\(\) \{/);
-    assert.match(rules, /data\.keys\(\)\.hasOnly\(\[\s*'terminalId',\s*'terminalLabel',\s*'type',\s*'content',\s*'author',\s*'anonCode',\s*'authorUid',\s*'imageUrls',\s*'status',\s*'createdAtMs',\s*'createdAt',\s*'updatedAtMs',\s*'updatedAt'\s*\]\)/);
+    assert.match(rules, /function isValidAsResolveUpdate\(\) \{/);
+    assert.match(rules, /function isValidAsLikeToggle\(\) \{/);
+    assert.match(rules, /function isValidAsCommentCountChange\(\) \{/);
+    assert.match(rules, /function isValidAsComment\(requestId, data\) \{/);
+    assert.match(rules, /function isValidAsCommentAuthorUpdate\(requestId\) \{/);
+    assert.match(rules, /data\.keys\(\)\.hasOnly\(\[\s*'terminalId',\s*'terminalLabel',\s*'type',\s*'content',\s*'author',\s*'anonCode',\s*'authorUid',\s*'imageUrls',\s*'status',\s*'resolvedAtMs',\s*'resolvedAt',\s*'likedBy',\s*'commentCount',\s*'createdAtMs',\s*'createdAt',\s*'updatedAtMs',\s*'updatedAt'\s*\]\)/);
     assert.match(rules, /data\.content is string && data\.content\.size\(\) >= 2 && data\.content\.size\(\) <= 500/);
     assert.match(rules, /data\.author is string && data\.author\.size\(\) >= 2 && data\.author\.size\(\) <= 40/);
 
