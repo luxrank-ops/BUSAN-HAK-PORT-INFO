@@ -26,6 +26,7 @@
     const LOCAL_KEY = 'hakportTerminalAsLocalV1';
     const MINE_KEY = 'hakportTerminalAsMineV1';
     const MINE_COMMENTS_KEY = 'hakportTerminalAsMineCommentsV1';
+    const SEEN_KEY = 'hakportTerminalAsSeenV1';
     const FEED_LIMIT = 200;
     const HEAD_WATCH_LIMIT = 200;
     const PAGE_SIZE = 10;
@@ -37,6 +38,7 @@
     const MAX_AUTHOR = 40;
     const MAX_LOCAL = 60;
     const MAX_OWNED_IDS = 120;
+    const MAX_SEEN_IDS = 500;
     const MAX_PHOTOS = 3;
     const MAX_PHOTO_BYTES = 10 * 1024 * 1024;
     const FILTER_ALL = 'all';
@@ -627,9 +629,9 @@
         }
     }
 
-    function writeIdSet(key, setObj) {
+    function writeIdSet(key, setObj, maxItems = MAX_OWNED_IDS) {
         try {
-            const list = Array.from(setObj).slice(-MAX_OWNED_IDS);
+            const list = Array.from(setObj).slice(-Math.max(1, Number(maxItems) || MAX_OWNED_IDS));
             global.localStorage?.setItem(key, JSON.stringify(list));
             return new Set(list);
         } catch (_) {
@@ -639,6 +641,54 @@
 
     let ownedRequestIds = readIdSet(MINE_KEY);
     let ownedCommentIds = readIdSet(MINE_COMMENTS_KEY);
+    let seenRequestIds = readIdSet(SEEN_KEY);
+
+    function writeSeenRequestIds(setObj) {
+        let nextSet = setObj;
+        if (nextSet.size > MAX_SEEN_IDS) {
+            const liveIds = new Set(
+                feedEntries.concat(headEntries, localEntries)
+                    .map(item => item && item.id)
+                    .filter(Boolean)
+            );
+            const kept = [];
+            const older = [];
+            nextSet.forEach(id => {
+                if (liveIds.has(id)) kept.push(id);
+                else older.push(id);
+            });
+            nextSet = new Set(older.concat(kept).slice(-MAX_SEEN_IDS));
+        }
+        return writeIdSet(SEEN_KEY, nextSet, MAX_SEEN_IDS);
+    }
+
+    function markRequestSeen(id) {
+        const clean = String(id || '').trim();
+        if (!clean || seenRequestIds.has(clean)) return false;
+        seenRequestIds.add(clean);
+        seenRequestIds = writeSeenRequestIds(seenRequestIds);
+        return true;
+    }
+
+    function forgetSeenId(id) {
+        const clean = String(id || '').trim();
+        if (!clean || !seenRequestIds.has(clean)) return;
+        seenRequestIds.delete(clean);
+        seenRequestIds = writeSeenRequestIds(seenRequestIds);
+    }
+
+    function isEntrySeen(entry) {
+        if (!entry || !entry.id) return true;
+        if (seenRequestIds.has(entry.id)) return true;
+        if (ownedRequestIds.has(entry.id)) return true;
+        const uid = resolveCurrentUid();
+        if (uid && entry.authorUid && entry.authorUid === uid) return true;
+        return false;
+    }
+
+    function isUnreadRequest(entry) {
+        return !isEntrySeen(entry);
+    }
 
     function rememberOwnedId(id) {
         const clean = String(id || '').trim();
@@ -968,8 +1018,7 @@
 
     function updateCardNewBadge() {
         const entries = allEntries();
-        const now = Date.now();
-        const newCount = entries.filter(entry => isRecentPost(entry.timestampMs, now)).length;
+        const newCount = entries.filter(entry => isUnreadRequest(entry)).length;
         const totalCount = entries.length;
 
         const badge = byId('tasBadge');
@@ -1158,10 +1207,12 @@
         } else {
             openRequestIds.add(entry.id);
             openCommentIds.add(entry.id);
+            markRequestSeen(entry.id);
             incrementRequestViewCount(entry);
             if (!entry.local) startCommentSubscription(entry.id);
         }
         renderFeed();
+        updateCardNewBadge();
     }
 
     function renderDetailCard(entry, adminActive) {
@@ -1174,7 +1225,7 @@
         const top = el('div', 'tas-feed-top');
         top.appendChild(el('span', 'tas-terminal-badge', entry.terminalLabel));
         top.appendChild(el('span', 'tas-type-badge', `${entry.typeIcon} ${entry.typeLabel}`));
-        if (isRecentPost(entry.timestampMs, Date.now())) {
+        if (isUnreadRequest(entry)) {
             top.appendChild(el('span', 'badge-new', 'NEW'));
         }
         const statusText = isDone ? '✅ 조치완료' : entry.statusLabel;
@@ -1387,7 +1438,7 @@
             if (Array.isArray(entry.imageUrls) && entry.imageUrls.length) {
                 titleBtn.appendChild(el('span', 'tas-row-pill', entry.imageUrls.length > 1 ? `📷+${entry.imageUrls.length}` : '📷'));
             }
-            if (isRecentPost(entry.timestampMs, now)) {
+            if (isUnreadRequest(entry)) {
                 titleBtn.appendChild(el('span', 'badge-new', 'NEW'));
             }
             const loadedComments = commentsByRequest.get(entry.id);
@@ -1898,6 +1949,7 @@
             openRequestIds.delete(entry.id);
             openCommentIds.delete(entry.id);
             forgetOwnedId(entry.id);
+            forgetSeenId(entry.id);
             renderAll();
             setStatus('🗑️ 임시 접수를 삭제했어요.', 'neutral');
             return;
@@ -1921,6 +1973,7 @@
             openCommentIds.delete(entry.id);
             feedEntries = feedEntries.filter(item => item.id !== entry.id);
             forgetOwnedId(entry.id);
+            forgetSeenId(entry.id);
             renderAll();
             setStatus('🗑️ 요청이 삭제되었습니다.', 'neutral');
         } catch (_) {
@@ -2373,6 +2426,7 @@
         }
 
         rememberOwnedId(docId);
+        markRequestSeen(docId);
         if (savedOnline && onlineEntry) {
             writeLocalRequests(readLocalRequests().filter(item => item.id !== docId));
             localEntries = readLocalRequests().map(item => normalizeRequest(item.id, item));
@@ -2530,6 +2584,7 @@
         mineKey: MINE_KEY,
         localMineKey: MINE_KEY,
         mineCommentsKey: MINE_COMMENTS_KEY,
+        seenKey: SEEN_KEY,
         filterAll: FILTER_ALL,
         pageSize: PAGE_SIZE,
         maxTitle: MAX_TITLE,
