@@ -297,8 +297,10 @@ if (!EMULATOR_AVAILABLE) {
             type: 'facility',
             content: '3번 게이트 조명이 꺼졌어요',
             author: '한진***',
+            authorUid: 'worker-a',
             anonCode: 'K7Q2',
             status: 'received',
+            imageUrls: ['https://firebasestorage.googleapis.com/v0/b/test/o/terminal-as%2Fp1.jpg'],
             createdAtMs: Date.now(),
             createdAt: new Date(),
             ...overrides
@@ -309,42 +311,71 @@ if (!EMULATOR_AVAILABLE) {
         /** isAdmin() 을 만족하는 관리자 세션 (uid 화이트리스트) */
         const admin = () => testEnv.authenticatedContext('admin_luxrank').firestore();
 
-        test('로그인한 동료는 비밀번호 없이 익명 접수할 수 있다', async () => {
+        test('로그인한 동료는 비밀번호 없이 사진 포함 익명 접수할 수 있다', async () => {
             await seed(async () => {});
             await ok(addDoc(requestList(worker()), validRequest()));
             await ok(addDoc(requestList(stranger()), validRequest({
-                terminalId: 'dgt', terminalLabel: '동원(DGT)', author: '동원***', anonCode: 'B4M8'
+                terminalId: 'dgt',
+                terminalLabel: '동원(DGT)',
+                author: '동원***',
+                authorUid: 'stranger-uid',
+                anonCode: 'B4M8',
+                imageUrls: []
             })));
         });
 
-        test('미인증 사용자는 접수·조회 모두 거부된다', async () => {
+        test('미인증 사용자는 접수·조회·수정·삭제 모두 거부된다', async () => {
             await seedRequest();
             const anon = testEnv.unauthenticatedContext().firestore();
             await denied(addDoc(requestList(anon), validRequest()));
             await denied(getDoc(requestDoc('r1')(anon)));
             await denied(getDocs(requestList(anon)));
+            await denied(updateDoc(requestDoc('r1')(anon), { content: '수정 시도' }));
+            await denied(deleteDoc(requestDoc('r1')(anon)));
         });
 
-        test('알 수 없는 터미널·종류·너무 짧은 내용·임의 필드는 거부된다', async () => {
+        test('알 수 없는 터미널·종류·타인 UID 사칭·잘못된 사진 URL·임의 필드는 거부된다', async () => {
             await seed(async () => {});
-            await denied(addDoc(requestList(stranger()), validRequest({ terminalId: 'nope' })));
-            await denied(addDoc(requestList(stranger()), validRequest({ type: 'nope' })));
-            await denied(addDoc(requestList(stranger()), validRequest({ content: '가' })));
-            await denied(addDoc(requestList(stranger()), validRequest({ content: '가'.repeat(501) })));
-            await denied(addDoc(requestList(stranger()), validRequest({ author: '' })));
-            await denied(addDoc(requestList(stranger()), validRequest({ status: 'done' })));
-            await denied(addDoc(requestList(stranger()), validRequest({ phone: '010-0000-0000' })));
+            await denied(addDoc(requestList(stranger()), validRequest({ authorUid: 'worker-a' })));
+            await denied(addDoc(requestList(stranger()), validRequest({ authorUid: 'stranger-uid', terminalId: 'nope' })));
+            await denied(addDoc(requestList(stranger()), validRequest({ authorUid: 'stranger-uid', type: 'nope' })));
+            await denied(addDoc(requestList(stranger()), validRequest({ authorUid: 'stranger-uid', content: '가' })));
+            await denied(addDoc(requestList(stranger()), validRequest({ authorUid: 'stranger-uid', content: '가'.repeat(501) })));
+            await denied(addDoc(requestList(stranger()), validRequest({ authorUid: 'stranger-uid', author: '' })));
+            await denied(addDoc(requestList(stranger()), validRequest({ authorUid: 'stranger-uid', status: 'done' })));
+            await denied(addDoc(requestList(stranger()), validRequest({ authorUid: 'stranger-uid', phone: '010-0000-0000' })));
+            await denied(addDoc(requestList(stranger()), validRequest({
+                authorUid: 'stranger-uid',
+                imageUrls: ['https://a.com/1.jpg', 'https://a.com/2.jpg', 'https://a.com/3.jpg', 'https://a.com/4.jpg']
+            })));
+            await denied(addDoc(requestList(stranger()), validRequest({
+                authorUid: 'stranger-uid',
+                imageUrls: ['javascript:alert(1)']
+            })));
         });
 
-        test('접수 후 수정·삭제는 작성자도 할 수 없고 관리자만 가능하다', async () => {
+        test('작성자 본인은 내용·사진을 수정하고 삭제할 수 있으며, 타인은 거부되고 관리자는 상태를 바꿀 수 있다', async () => {
             await seedRequest();
             await ok(getDoc(requestDoc('r1')(stranger())));
             await ok(getDocs(requestList(stranger())));
+            // 타인 수정·삭제 거부
+            await denied(updateDoc(requestDoc('r1')(stranger()), { content: '남의 글 수정 시도' }));
+            await denied(deleteDoc(requestDoc('r1')(stranger())));
+            // 본인 상태 변경·UID 변조 거부
             await denied(updateDoc(requestDoc('r1')(worker()), { status: 'processing' }));
-            await denied(updateDoc(requestDoc('r1')(worker()), { content: '수정된 내용입니다' }));
-            await denied(deleteDoc(requestDoc('r1')(worker())));
+            await denied(updateDoc(requestDoc('r1')(worker()), { authorUid: 'stranger-uid' }));
+            // 본인 내용·사진 수정 성공
+            await ok(updateDoc(requestDoc('r1')(worker()), {
+                content: '3번 게이트 LED 교체 요청으로 수정합니다',
+                imageUrls: ['https://firebasestorage.googleapis.com/v0/b/test/o/terminal-as%2Fp2.jpg'],
+                updatedAtMs: Date.now()
+            }));
+            // 관리자 상태 변경 및 삭제 성공
             await ok(updateDoc(requestDoc('r1')(admin()), { status: 'processing' }));
             await ok(deleteDoc(requestDoc('r1')(admin())));
+            // 본인 삭제 성공 (새 문서 기준)
+            await seedRequest('r2');
+            await ok(deleteDoc(requestDoc('r2')(worker())));
         });
     });
 

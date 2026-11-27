@@ -362,10 +362,10 @@ service cloud.firestore {
     // ---------------------------------------------------------
     // 10. terminal_as_requests (터미널 시설·정비 수리 / A/S 요청)
     //     - 기존 끝말잇기 릴레이를 대체한 익명 요청 게시판입니다.
-    //     - 비밀번호·닉네임 입력 없이 자동 익명 인증(isSignedIn)만으로 접수합니다.
+    //     - 비밀번호·닉네임 입력 없이 자동 익명 인증(isSignedIn)만으로 접수·수정·삭제합니다.
     //     - 작성자는 화면 코드가 터미널 이름 + 마스킹(한진*** · 동원***)으로 자동 생성하고,
     //       글마다 랜덤 접수번호(anonCode)를 붙입니다. 실명·연락처는 저장하지 않습니다.
-    //     - terminal_as_requests/{requestId} : 한 건의 요청
+    //     - terminal_as_requests/{requestId} : 한 건의 요청 (imageUrls 최대 3장 포함)
     //     - 화면 코드(public/js/terminal-as.js)의 운영값과 이 규칙은 함께 바꿔야 합니다.
     // ---------------------------------------------------------
     function isValidAsTerminalId(val) {
@@ -376,26 +376,65 @@ service cloud.firestore {
       return val is string && val in ['facility', 'repair', 'as', 'other'];
     }
 
+    function isAsAuthor() {
+      return isSignedIn() &&
+        'authorUid' in existing() &&
+        existing().authorUid is string &&
+        existing().authorUid == request.auth.uid;
+    }
+
+    function isValidAsImageUrls(data) {
+      return !('imageUrls' in data) || (
+        data.imageUrls is list &&
+        data.imageUrls.size() <= 3 &&
+        (data.imageUrls.size() < 1 || isValidHttpUrl(data.imageUrls[0])) &&
+        (data.imageUrls.size() < 2 || isValidHttpUrl(data.imageUrls[1])) &&
+        (data.imageUrls.size() < 3 || isValidHttpUrl(data.imageUrls[2]))
+      );
+    }
+
     function isValidAsRequest(data) {
       return data is map &&
-        data.keys().hasOnly(['terminalId', 'terminalLabel', 'type', 'content', 'author', 'anonCode', 'status', 'createdAtMs', 'createdAt']) &&
+        data.keys().hasOnly([
+          'terminalId', 'terminalLabel', 'type', 'content',
+          'author', 'anonCode', 'authorUid', 'imageUrls',
+          'status', 'createdAtMs', 'createdAt', 'updatedAtMs', 'updatedAt'
+        ]) &&
         isValidAsTerminalId(data.terminalId) &&
         data.terminalLabel is string && data.terminalLabel.size() >= 1 && data.terminalLabel.size() <= 40 &&
         isValidAsType(data.type) &&
         data.content is string && data.content.size() >= 2 && data.content.size() <= 500 &&
         data.author is string && data.author.size() >= 2 && data.author.size() <= 40 &&
         (!('anonCode' in data) || (data.anonCode is string && data.anonCode.size() <= 12)) &&
+        (!('authorUid' in data) || (data.authorUid is string && data.authorUid.size() >= 1 && data.authorUid.size() <= 128)) &&
+        isValidAsImageUrls(data) &&
         (!('status' in data) || data.status in ['received', 'processing', 'done']) &&
         data.createdAtMs is int && data.createdAtMs > 0 && data.createdAtMs <= 4102444800000 &&
-        (!('createdAt' in data) || data.createdAt is timestamp);
+        (!('createdAt' in data) || data.createdAt is timestamp) &&
+        (!('updatedAtMs' in data) || (data.updatedAtMs is int && data.updatedAtMs > 0 && data.updatedAtMs <= 4102444800000)) &&
+        (!('updatedAt' in data) || data.updatedAt is timestamp);
+    }
+
+    function isValidAsAuthorUpdate() {
+      return isAsAuthor() &&
+        isValidAsRequest(incoming()) &&
+        incoming().authorUid == existing().authorUid &&
+        incoming().createdAtMs == existing().createdAtMs &&
+        (!('anonCode' in existing()) ? !('anonCode' in incoming()) : ('anonCode' in incoming() && incoming().anonCode == existing().anonCode)) &&
+        (!('status' in existing()) ? (!('status' in incoming()) || incoming().status == 'received') : ('status' in incoming() && incoming().status == existing().status));
     }
 
     match /terminal_as_requests/{requestId} {
       allow get, list: if isSignedIn();
       allow create: if isSignedIn() && isValidId(requestId) && isValidAsRequest(incoming()) &&
-        (!('status' in incoming()) || incoming().status == 'received');
-      // 접수된 요청의 수정·삭제(처리 상태 변경·블라인드 정리)는 관리자만 할 수 있습니다.
-      allow update, delete: if isAdmin();
+        (!('status' in incoming()) || incoming().status == 'received') &&
+        ('authorUid' in incoming()) && incoming().authorUid == request.auth.uid;
+      // 작성자 본인은 내용·터미널·종류·사진만 수정·삭제할 수 있고, 상태 변경·전체 관리는 관리자 전용입니다.
+      allow update: if isSignedIn() && isValidId(requestId) && (
+        isAdmin() ||
+        isValidAsAuthorUpdate()
+      );
+      allow delete: if isAdmin() || isAsAuthor();
     }
 
     // ---------------------------------------------------------
