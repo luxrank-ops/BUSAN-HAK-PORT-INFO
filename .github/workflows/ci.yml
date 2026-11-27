@@ -34,7 +34,19 @@ jobs:
         run: npm ci
 
       - name: 품질 검사
-        run: npm run check
+        run: |
+          set +e
+          npm run check 2>&1 | tee /tmp/check.log
+          status=${PIPESTATUS[0]}
+          if [ $status -ne 0 ]; then
+            {
+              grep -E "^(not ok|  not ok|# (tests|pass|fail)|    error:|    actual:|    expected:|.*Error:)" /tmp/check.log | head -25
+              tail -n 15 /tmp/check.log
+            } | while IFS= read -r line; do
+              echo "::error::${line//$'\r'/}"
+            done
+          fi
+          exit $status
 
       - name: 프로덕션 빌드 및 Cloudflare Workers 번들 검증
         run: npm run build && npm run build:cf

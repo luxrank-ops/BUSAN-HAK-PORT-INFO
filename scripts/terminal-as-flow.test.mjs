@@ -13,10 +13,10 @@ import { readAppFile } from './app-source.mjs';
 const script = readAppFile('public/js/terminal-as.js');
 
 const TAS_IDS = [
-    'terminalAsBoard', 'tasBadge', 'tasCardSubMeta', 'tasTotal', 'tasTerminalTotal', 'tasLiveBadge', 'tasFilter',
-    'tasFeedMeta', 'tasFeed', 'tasStatus', 'tasForm', 'tasEditBanner', 'tasEditText',
-    'tasCancelEdit', 'tasTerminalSelect', 'tasTypeSelect', 'tasContent',
-    'tasPhotoInput', 'tasPhotoPreview', 'tasPhotoCount',
+    'terminalAsBoard', 'tasBadge', 'tasTotal', 'tasTerminalTotal', 'tasLiveBadge', 'tasFilter',
+    'tasFeedMeta', 'tasFeed', 'tasPagination', 'tasToggleFormBtn', 'tasStatus', 'tasForm',
+    'tasEditBanner', 'tasEditText', 'tasCancelEdit', 'tasTerminalSelect', 'tasTypeSelect',
+    'tasTitle', 'tasContent', 'tasPhotoInput', 'tasPhotoPreview', 'tasPhotoCount',
     'tasAuthorPreview', 'tasAnonCode', 'tasSubmit'
 ];
 
@@ -291,10 +291,13 @@ function makeStorageStub({ failUploads = false } = {}) {
 
 function makeHarness({ failWrites = false, uid = 'anon-1', isAdmin = false, confirmResult = true, initiallyVisible = true } = {}) {
     const elements = new Map();
-    TAS_IDS.forEach(id => elements.set(id, makeElement(id === 'tasFeed' ? 'ul' : 'div', id)));
+    TAS_IDS.forEach(id => elements.set(id, makeElement(id === 'tasFeed' ? 'tbody' : 'div', id)));
     elements.get('tasTerminalSelect').tagName = 'SELECT';
     elements.get('tasTypeSelect').tagName = 'SELECT';
+    elements.get('tasTitle').tagName = 'INPUT';
     elements.get('tasContent').tagName = 'TEXTAREA';
+    elements.get('tasForm').classList.add('hidden');
+    elements.get('tasPagination').hidden = true;
     elements.get('tasEditBanner').hidden = true;
     elements.get('tasPhotoPreview').hidden = true;
     elements.get('tasBadge').classList.add('hidden');
@@ -336,10 +339,10 @@ function makeHarness({ failWrites = false, uid = 'anon-1', isAdmin = false, conf
         atob,
         FileReader: class FileReaderStub {
             readAsDataURL(file) {
-                setTimeout(() => {
+                queueMicrotask(() => {
                     this.result = `data:image/jpeg;base64,${Buffer.from(file.name || 'img').toString('base64')}`;
                     if (this.onload) this.onload();
-                }, 0);
+                });
             }
         },
         confirm: () => confirmResult,
@@ -370,7 +373,10 @@ function makeHarness({ failWrites = false, uid = 'anon-1', isAdmin = false, conf
     new vm.Script(script, { filename: 'terminal-as.js' }).runInContext(context);
 
     const el = id => elements.get(id);
-    const tick = () => new Promise(resolve => setTimeout(resolve, 10));
+    const tick = async () => {
+        await new Promise(resolve => setTimeout(resolve, 5));
+        await new Promise(resolve => setTimeout(resolve, 0));
+    };
     const submit = async () => {
         el('tasForm').dispatchEvent({ type: 'submit', preventDefault() {} });
         await tick();
@@ -382,7 +388,7 @@ function makeHarness({ failWrites = false, uid = 'anon-1', isAdmin = false, conf
     return { window: sandbox, el, db, storage: localStore, storageService, blinds, submit, tick, feedText };
 }
 
-test('초기화: 9개 터미널 + 4개 종류가 채워지고 작성자는 한진*** 로 미리보기된다', () => {
+test('초기화: 9개 터미널 + 4개 종류가 채워지고 글쓰기 폼은 기본적으로 닫혀 있다', () => {
     const harness = makeHarness();
     const terminalSelect = harness.el('tasTerminalSelect');
     // placeholder 1 + 터미널 9
@@ -392,17 +398,28 @@ test('초기화: 9개 터미널 + 4개 종류가 채워지고 작성자는 한�
     assert.equal(harness.el('tasAuthorPreview').textContent, '한진***');
     assert.match(harness.el('tasAnonCode').textContent, /^#[A-Z2-9]{4}$/);
     assert.equal(harness.el('tasLiveBadge').textContent, '🟢 실시간 공유 중');
+    assert.equal(harness.el('tasForm').classList.contains('hidden'), true, '초기 글쓰기 폼은 숨겨져 있어야 합니다');
+    assert.equal(harness.el('tasToggleFormBtn').getAttribute('aria-expanded'), 'false');
     assert.match(harness.feedText(), /아직 접수된 요청이 없어요/);
+
+    // [✍️ A/S 요청 글쓰기] 버튼으로 폼 열기/닫기
+    harness.el('tasToggleFormBtn').dispatchEvent({ type: 'click' });
+    assert.equal(harness.el('tasForm').classList.contains('hidden'), false);
+    assert.equal(harness.el('tasToggleFormBtn').getAttribute('aria-expanded'), 'true');
+    harness.el('tasToggleFormBtn').dispatchEvent({ type: 'click' });
+    assert.equal(harness.el('tasForm').classList.contains('hidden'), true);
 });
 
-test('터미널을 바꾸면 작성자 미리보기가 동원*** 로 바뀌고, 접수하면 Firestore 에 익명으로 저장된다', async () => {
+test('터미널을 바꾸면 작성자 미리보기가 동원*** 로 바뀌고, 제목+내용 접수 후 폼이 닫히고 상세 행이 열린다', async () => {
     const harness = makeHarness();
+    harness.el('tasToggleFormBtn').dispatchEvent({ type: 'click' });
     const terminalSelect = harness.el('tasTerminalSelect');
     terminalSelect.value = 'dgt';
     terminalSelect.dispatchEvent({ type: 'change' });
     assert.equal(harness.el('tasAuthorPreview').textContent, '동원***');
 
     harness.el('tasTypeSelect').value = 'as';
+    harness.el('tasTitle').value = '3번 게이트 조명 고장';
     harness.el('tasContent').value = '3번 게이트 조명이 꺼졌어요';
     await harness.submit();
 
@@ -414,16 +431,32 @@ test('터미널을 바꾸면 작성자 미리보기가 동원*** 로 바뀌고, 
     assert.equal(saved.author, '동원***');
     assert.match(saved.anonCode, /^[A-Z2-9]{4}$/);
     assert.equal(saved.status, 'received');
+    assert.equal(saved.title, '3번 게이트 조명 고장');
     assert.equal(saved.content, '3번 게이트 조명이 꺼졌어요');
     assert.match(harness.el('tasStatus').textContent, /접수됐어요/);
+    assert.equal(harness.el('tasTitle').value, '', '접수 후 제목창은 비워야 합니다');
     assert.equal(harness.el('tasContent').value, '', '접수 후 입력창은 비워야 합니다');
+    assert.equal(harness.el('tasForm').classList.contains('hidden'), true, '접수 후 글쓰기 폼은 다시 접혀야 합니다');
+    assert.match(harness.feedText(), /3번 게이트 조명 고장/);
     assert.match(harness.feedText(), /3번 게이트 조명이 꺼졌어요/);
     assert.match(harness.feedText(), /동원\*\*\*/);
     assert.equal(harness.el('tasTotal').textContent, '1');
 });
 
-test('빈 내용·한 글자는 접수되지 않고 안내만 뜬다', async () => {
+test('빈 제목·빈 내용·한 글자는 접수되지 않고 안내만 뜬다', async () => {
     const harness = makeHarness();
+    harness.el('tasTitle').value = '   ';
+    harness.el('tasContent').value = '내용입니다';
+    await harness.submit();
+    assert.equal(harness.db.docs.size, 0);
+    assert.match(harness.el('tasStatus').textContent, /제목을 적어 주세요/);
+
+    harness.el('tasTitle').value = '가';
+    await harness.submit();
+    assert.equal(harness.db.docs.size, 0);
+    assert.match(harness.el('tasStatus').textContent, /제목은 두 글자 이상/);
+
+    harness.el('tasTitle').value = '정상 제목';
     harness.el('tasContent').value = '가';
     await harness.submit();
     assert.equal(harness.db.docs.size, 0);
@@ -437,6 +470,7 @@ test('빈 내용·한 글자는 접수되지 않고 안내만 뜬다', async () 
 
 test('금칙어 감지 시 접수되지 않고 관리자 블라인드 알림이 남는다', async () => {
     const harness = makeHarness();
+    harness.el('tasTitle').value = '게이트 점검 요청';
     harness.el('tasContent').value = '금칙어 포함 글입니다';
     await harness.submit();
     assert.equal(harness.db.docs.size, 0);
@@ -448,6 +482,7 @@ test('금칙어 감지 시 접수되지 않고 관리자 블라인드 알림이 
 test('터미널 칩으로 해당 터미널 요청만 모아 볼 수 있다', async () => {
     const harness = makeHarness();
     harness.el('tasTerminalSelect').value = 'dgt';
+    harness.el('tasTitle').value = '동원 크레인 점검';
     harness.el('tasContent').value = '동원 크레인 점검 요청';
     await harness.submit();
     assert.match(harness.feedText(), /동원 크레인 점검 요청/);
@@ -468,17 +503,62 @@ test('터미널 칩으로 해당 터미널 요청만 모아 볼 수 있다', asy
 test('오프라인이면 이 기기에 임시 접수하고 오프라인으로 표시한다', async () => {
     const harness = makeHarness({ failWrites: true });
     harness.el('tasTerminalSelect').value = 'hjnc';
+    harness.el('tasTitle').value = '야드 조명 수리';
     harness.el('tasContent').value = '한진 야드 조명 수리 요청';
     await harness.submit();
 
     assert.equal(harness.db.docs.size, 0, '쓰기가 실패하면 Firestore 에 없어야 합니다');
     assert.match(harness.el('tasStatus').textContent, /오프라인 접수됐어요/);
+    assert.match(harness.feedText(), /야드 조명 수리/);
     assert.match(harness.feedText(), /한진 야드 조명 수리 요청/);
     assert.match(harness.feedText(), /이 기기에만 저장/);
     const saved = JSON.parse(harness.storage.get('hakportTerminalAsLocalV1') || '[]');
     assert.equal(saved.length, 1);
+    assert.equal(saved[0].title, '야드 조명 수리');
     assert.equal(saved[0].author, '한진***');
     assert.equal(saved[0].local, true);
+});
+
+test('게시판 테이블: 기존 글은 본문 첫 줄 제목만 보이고 제목을 클릭하면 내용·사진·버튼이 펼쳐지고, 10건 단위로 페이지가 나뉜다', async () => {
+    const harness = makeHarness({ uid: 'viewer-1' });
+    const base = Date.now();
+    for (let i = 1; i <= 12; i += 1) {
+        harness.db.docs.set(`post-${i}`, {
+            terminalId: i % 2 === 0 ? 'dgt' : 'hjnc',
+            terminalLabel: i % 2 === 0 ? '동원(DGT)' : '한진(HJNC)',
+            type: 'facility',
+            ...(i === 12 ? {} : { title: `게시판 제목 ${i}` }),
+            content: i === 12 ? '첫 줄 폴백 제목입니다\n세부 본문 내용 12번' : `상세 본문 내용 ${i}번`,
+            author: i % 2 === 0 ? '동원***' : '한진***',
+            authorUid: 'other-user',
+            status: 'received',
+            createdAtMs: base + i * 1000
+        });
+    }
+    harness.db.emit();
+
+    // 1페이지: 10행만 요약 표시 (상세 본문은 접혀 있음)
+    assert.equal(harness.el('tasFeed').children.length, 10);
+    assert.equal(harness.el('tasPagination').hidden, false);
+    assert.equal(harness.el('tasPagination').children.length, 2);
+    assert.match(harness.feedText(), /첫 줄 폴백 제목입니다/);
+    assert.doesNotMatch(harness.feedText(), /세부 본문 내용 12번/);
+
+    // 첫 행 제목 클릭 시 상세 행이 펼쳐지고 다시 클릭하면 접힌다
+    const titleBtns = findButtons(harness.el('tasFeed'), node => node.className === 'tas-row-title-btn');
+    titleBtns[0].dispatchEvent({ type: 'click' });
+    await harness.tick();
+    assert.equal(harness.el('tasFeed').children.length, 11);
+    assert.match(harness.feedText(), /세부 본문 내용 12번/);
+
+    findButtons(harness.el('tasFeed'), node => node.className === 'tas-row-title-btn')[0].dispatchEvent({ type: 'click' });
+    assert.equal(harness.el('tasFeed').children.length, 10);
+    assert.doesNotMatch(harness.feedText(), /세부 본문 내용 12번/);
+
+    // 2페이지 버튼 클릭 시 나머지 2건 표시
+    harness.el('tasPagination').children[1].dispatchEvent({ type: 'click' });
+    assert.equal(harness.el('tasFeed').children.length, 2);
+    assert.match(harness.feedText(), /게시판 제목 1/);
 });
 
 test('사진 첨부(최대 3장) → 미리보기 → Storage 업로드 → 피드 썸네일/확대 모달까지 동작한다', async () => {
@@ -495,6 +575,7 @@ test('사진 첨부(최대 3장) → 미리보기 → Storage 업로드 → 피�
     assert.equal(harness.el('tasPhotoPreview').children.length, 2);
     assert.match(harness.el('tasPhotoCount').textContent, /2\/3장/);
 
+    harness.el('tasTitle').value = '3번 게이트 파손';
     harness.el('tasContent').value = '3번 게이트 파손 사진 첨부합니다';
     await harness.submit();
 
@@ -518,6 +599,7 @@ test('작성자 본인은 비밀번호 없이 수정·삭제할 수 있고, 삭�
     input.dispatchEvent({ type: 'change' });
     await harness.tick();
 
+    harness.el('tasTitle').value = '초기 제목';
     harness.el('tasContent').value = '초기 요청 내용입니다';
     await harness.submit();
 
@@ -527,17 +609,23 @@ test('작성자 본인은 비밀번호 없이 수정·삭제할 수 있고, 삭�
     const editBtns = findButtons(harness.el('tasFeed'), node => node.className === 'tas-item-btn is-edit');
     assert.equal(editBtns.length, 1);
     editBtns[0].dispatchEvent({ type: 'click' });
+    assert.equal(harness.el('tasForm').classList.contains('hidden'), false, '수정 시작 시 폼이 자동으로 열려야 합니다');
     assert.equal(harness.el('tasEditBanner').hidden, false);
     assert.equal(harness.el('tasSubmit').textContent, '수정 저장');
+    assert.equal(harness.el('tasTitle').value, '초기 제목');
     assert.equal(harness.el('tasContent').value, '초기 요청 내용입니다');
 
+    harness.el('tasTitle').value = '수정된 제목';
     harness.el('tasContent').value = '수정된 요청 내용입니다';
     await harness.submit();
 
     assert.equal(harness.el('tasEditBanner').hidden, true);
+    assert.equal(harness.el('tasForm').classList.contains('hidden'), true);
+    assert.equal(harness.db.docs.get(docId).title, '수정된 제목');
     assert.equal(harness.db.docs.get(docId).content, '수정된 요청 내용입니다');
     assert.equal(harness.db.docs.get(docId).authorUid, 'author-1');
     assert.ok(harness.db.docs.get(docId).updatedAtMs > 0);
+    assert.match(harness.feedText(), /수정된 제목/);
     assert.match(harness.feedText(), /수정된 요청 내용입니다/);
     assert.match(harness.feedText(), /· 수정됨/);
 
@@ -557,6 +645,7 @@ test('다른 사용자가 쓴 글에는 수정·삭제 버튼이 뜨지 않고, 
         terminalId: 'hjnc',
         terminalLabel: '한진(HJNC)',
         type: 'as',
+        title: '다른 동료 요청',
         content: '다른 동료가 올린 글입니다',
         author: '한진***',
         authorUid: 'author-1',
@@ -566,6 +655,7 @@ test('다른 사용자가 쓴 글에는 수정·삭제 버튼이 뜨지 않고, 
         createdAtMs: Date.now()
     });
     otherHarness.db.emit();
+    findButtons(otherHarness.el('tasFeed'), node => node.className === 'tas-row-title-btn')[0].dispatchEvent({ type: 'click' });
     assert.equal(findButtons(otherHarness.el('tasFeed'), node => node.className === 'tas-item-btn is-edit').length, 0);
     assert.equal(findButtons(otherHarness.el('tasFeed'), node => node.className === 'tas-item-btn is-delete').length, 0);
 
@@ -573,14 +663,17 @@ test('다른 사용자가 쓴 글에는 수정·삭제 버튼이 뜨지 않고, 
     offlineHarness.el('tasPhotoInput').files = [{ name: 'off.jpg', type: 'image/jpeg', size: 600 }];
     offlineHarness.el('tasPhotoInput').dispatchEvent({ type: 'change' });
     await offlineHarness.tick();
+    offlineHarness.el('tasTitle').value = '오프라인 제목';
     offlineHarness.el('tasContent').value = '오프라인 사진 포함 요청';
     await offlineHarness.submit();
 
     const editBtns = findButtons(offlineHarness.el('tasFeed'), node => node.className === 'tas-item-btn is-edit');
     assert.equal(editBtns.length, 1);
     editBtns[0].dispatchEvent({ type: 'click' });
+    offlineHarness.el('tasTitle').value = '오프라인 수정 제목';
     offlineHarness.el('tasContent').value = '오프라인 수정 요청';
     await offlineHarness.submit();
+    assert.match(offlineHarness.feedText(), /오프라인 수정 제목/);
     assert.match(offlineHarness.feedText(), /오프라인 수정 요청/);
 
     const deleteBtns = findButtons(offlineHarness.el('tasFeed'), node => node.className === 'tas-item-btn is-delete');
@@ -589,12 +682,13 @@ test('다른 사용자가 쓴 글에는 수정·삭제 버튼이 뜨지 않고, 
     assert.equal(JSON.parse(offlineHarness.storage.get('hakportTerminalAsLocalV1') || '[]').length, 0);
 });
 
-test('누구나 비밀번호 없이 조치 완료 버튼을 눌러 조치완료 상태로 바꾸고 게시글 좋아요를 누를 수 있다', async () => {
+test('누구나 비밀번호 없이 제목 클릭 후 조치 완료 버튼을 눌러 조치완료 상태로 바꾸고 게시글 좋아요를 누를 수 있다', async () => {
     const harness = makeHarness({ uid: 'colleague-7', isAdmin: false });
     harness.db.docs.set('req-1', {
         terminalId: 'hjnc',
         terminalLabel: '한진(HJNC)',
         type: 'as',
+        title: '차단기 센서 점검',
         content: '게이트 차단기 센서 점검 필요',
         author: '한진***',
         authorUid: 'author-1',
@@ -606,6 +700,10 @@ test('누구나 비밀번호 없이 조치 완료 버튼을 눌러 조치완료 
         createdAtMs: Date.now() - 60_000
     });
     harness.db.emit();
+
+    // 제목 행 클릭하여 상세 카드 펼치기
+    findButtons(harness.el('tasFeed'), node => node.className === 'tas-row-title-btn')[0].dispatchEvent({ type: 'click' });
+    await harness.tick();
 
     // 1. 게시글 좋아요 토글 (기존 author-1 좋아요를 유지하면서 내 UID 추가 → 취소)
     let likeBtn = findButtons(harness.el('tasFeed'), node => String(node.className).includes('tas-like-btn'))[0];
@@ -634,12 +732,13 @@ test('누구나 비밀번호 없이 조치 완료 버튼을 눌러 조치완료 
     assert.ok(doneBtn && doneBtn.disabled === true);
 });
 
-test('댓글 패널을 열어 댓글을 작성·좋아요·삭제할 수 있고 금칙어는 차단된다', async () => {
+test('제목 클릭 시 댓글 패널이 함께 열려 댓글을 작성·좋아요·삭제할 수 있고 금칙어는 차단된다', async () => {
     const harness = makeHarness({ uid: 'commenter-1', isAdmin: false });
     harness.db.docs.set('req-2', {
         terminalId: 'dgt',
         terminalLabel: '동원(DGT)',
         type: 'repair',
+        title: '야드 조명등 깜빡임',
         content: '야드 조명등 하나가 깜빡입니다',
         author: '동원***',
         authorUid: 'author-2',
@@ -652,8 +751,8 @@ test('댓글 패널을 열어 댓글을 작성·좋아요·삭제할 수 있고 
     });
     harness.db.emit();
 
-    const toggleBtn = findButtons(harness.el('tasFeed'), node => String(node.className).includes('tas-comment-toggle-btn'))[0];
-    toggleBtn.dispatchEvent({ type: 'click' });
+    // 제목 클릭 시 상세 카드와 댓글 영역이 바로 펼쳐짐
+    findButtons(harness.el('tasFeed'), node => node.className === 'tas-row-title-btn')[0].dispatchEvent({ type: 'click' });
     await harness.tick();
 
     // 금칙어 댓글 차단
@@ -696,7 +795,7 @@ test('댓글 패널을 열어 댓글을 작성·좋아요·삭제할 수 있고 
     assert.equal(harness.db.docs.get('req-2').commentCount, 0);
 });
 
-test('카드가 접혀 있어도 새 게시물(24시간 이내)이 등록되면 블럭 헤더에 NEW 배지와 새 게시물 건수가 표시된다', async () => {
+test('카드가 접혀 있어도 새 게시물(24시간 이내)이 등록되면 블럭 헤더에 NEW 배지만 표시된다', async () => {
     const collapsed = makeHarness({ initiallyVisible: false });
     await collapsed.tick();
 
@@ -705,6 +804,7 @@ test('카드가 접혀 있어도 새 게시물(24시간 이내)이 등록되면 
         terminalId: 'hjnc',
         terminalLabel: '한진(HJNC)',
         type: 'facility',
+        title: '오래된 요청',
         content: '오래된 요청입니다',
         author: '한진***',
         authorUid: 'u1',
@@ -713,13 +813,13 @@ test('카드가 접혀 있어도 새 게시물(24시간 이내)이 등록되면 
     });
     collapsed.db.emit();
     assert.equal(collapsed.el('tasBadge').classList.contains('hidden'), true);
-    assert.match(collapsed.el('tasCardSubMeta').textContent, /등록된 요청 1건/);
 
-    // 2. 새 게시물이 등록되면 접힌 상태에서도 즉시 NEW 배지 + 새 게시물 안내 표시
+    // 2. 새 게시물이 등록되면 접힌 상태에서도 즉시 NEW 배지 표시
     collapsed.db.docs.set('new-1', {
         terminalId: 'dgt',
         terminalLabel: '동원(DGT)',
         type: 'as',
+        title: '새 요청',
         content: '방금 등록된 A/S 요청입니다',
         author: '동원***',
         authorUid: 'u2',
@@ -729,6 +829,5 @@ test('카드가 접혀 있어도 새 게시물(24시간 이내)이 등록되면 
     collapsed.db.emit();
     assert.equal(collapsed.el('tasBadge').classList.contains('hidden'), false);
     assert.equal(collapsed.el('tasBadge').textContent, 'NEW');
-    assert.match(collapsed.el('tasCardSubMeta').textContent, /새 게시물 1건 · 전체 2건/);
 });
 
