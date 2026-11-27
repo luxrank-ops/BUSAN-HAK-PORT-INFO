@@ -752,7 +752,7 @@
                 const result = global.inspectCommunityContent({
                     text: content,
                     author: author,
-                    category: categoryLabel || '터미널 시설·정비 A/S 요청'
+                    category: categoryLabel || '터미널 안전 시설/장비/A.S요청'
                 });
                 if (result && typeof result === 'object') return result;
             }
@@ -1543,11 +1543,11 @@
 
         const terminalId = entry.terminalId || (byId('tasTerminalSelect')?.value) || TERMINALS[0].id;
         const identity = buildAnonymousIdentity(terminalId);
-        const moderation = moderateAsText(check.content, identity.author, '터미널 시설·정비 A/S 댓글');
+        const moderation = moderateAsText(check.content, identity.author, '터미널 안전 시설/장비/A.S요청 댓글');
         if (moderation.hidden) {
             setStatus(`⚠️ ${moderation.reason || '금칙어/도배'} 감지로 댓글을 등록할 수 없어요.`, 'error');
             notifyBlind({
-                category: '터미널 시설·정비 A/S 댓글',
+                category: '터미널 안전 시설/장비/A.S요청 댓글',
                 author: identity.author,
                 text: check.content,
                 reason: moderation.reason
@@ -2094,7 +2094,7 @@
             if (moderation.hidden) {
                 setStatus(`⚠️ ${moderation.reason || '금칙어/도배'} 감지로 수정할 수 없어요.`, 'error');
                 notifyBlind({
-                    category: '터미널 시설·정비 A/S 요청',
+                    category: '터미널 안전 시설/장비/A.S요청',
                     author: authorName,
                     text: `${check.title} - ${check.content}`,
                     reason: moderation.reason
@@ -2192,7 +2192,7 @@
         if (moderation.hidden) {
             setStatus(`⚠️ ${moderation.reason || '금칙어/도배'} 감지로 접수할 수 없어요.`, 'error');
             notifyBlind({
-                category: '터미널 시설·정비 A/S 요청',
+                category: '터미널 안전 시설/장비/A.S요청',
                 author: identity.author,
                 text: `${check.title} - ${check.content}`,
                 reason: moderation.reason

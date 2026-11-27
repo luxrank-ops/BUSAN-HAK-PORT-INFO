@@ -620,7 +620,7 @@ const STATS_BLOCK_META = [
     { id: "t1-content", label: "⚓ 1항업 (북항)", color: "#334155" },
     { id: "ship-card", label: "🚢 라이싱 작업선박 정보(본선/육상/기능공)", color: "#0ea5e9" },
     { id: "notice-card", label: "📢 공지사항", color: "#ef4444" },
-    { id: "safety-card", label: "🛠️ 터미널 시설·정비 A/S 요청", color: "#2563eb" },
+    { id: "safety-card", label: "🛠️ 터미널 안전 시설/장비/A.S요청", color: "#2563eb" },
     { id: "board-card", label: "💬 스트레스 해소(톡톡)", color: "#6366f1" },
     { id: "archive-card", label: "📂 자료실 (셔틀버스 시간표 등)", color: "#eab308" },
     { id: "weather-card", label: "📡 날씨 및 도선 상황", color: "#06b6d4" },
