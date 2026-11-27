@@ -220,9 +220,11 @@ test('HTML 카드: 터미널 A/S 요청과 생활영어 한문장 배치가 서�
     assert.ok(weatherIdx >= 0 && englishIdx > weatherIdx && guideIdx > englishIdx, '생활영어 한문장은 날씨 다음, 용어가이드 앞에 있어야 합니다');
 
     const card = html.slice(safetyIdx, boardIdx);
-    assert.match(card, /<div class="tas-card-kicker">안전한 작업환경을 위한<\/div>\s*<div class="dash-title">터미널 안전 시설\/장비\/A\.S요청<\/div>/);
+    assert.match(card, /<div class="tas-card-kicker">안전한 작업환경을 위한<\/div>\s*<div class="dash-title">터미널 안전 시설\/장비\/A\.S요청<\/div>\s*<div id="tasCardSubMeta" class="dash-sub-meta">새 게시물 0건 · 누적 0건<\/div>/);
     assert.match(card, /id="tasBadge"/, '새 게시물 NEW 배지가 필요합니다');
-    assert.doesNotMatch(card, /id="tasCardSubMeta"|사진·댓글·좋아요·조치완료 · 무비번 익명 작성/, '접힌 블럭 헤더 보조 문구는 제거되어야 합니다');
+    assert.match(css, /#safety-card\s+\.tas-card-heading\s+\.dash-sub-meta\s*\{[^}]*font-size:\s*var\(--fs-3\)/, '보조 메타 문구 크기는 --fs-3 이어야 합니다');
+    assert.match(script, /FEED_LIMIT\s*=\s*200/);
+    assert.match(script, /HEAD_WATCH_LIMIT\s*=\s*200/);
     assert.match(card, /id="terminalAsBoard"/);
     assert.match(card, /<table class="board-table tas-board-table">[\s\S]*<th>터미널<\/th>[\s\S]*<th>제목<\/th>[\s\S]*<th>날짜<\/th>[\s\S]*<th>상태<\/th>[\s\S]*<tbody id="tasFeed"><\/tbody>/, '게시판 테이블 구조가 필요합니다');
     assert.match(card, /id="tasPagination"/, '페이지네이션 영역이 필요합니다');

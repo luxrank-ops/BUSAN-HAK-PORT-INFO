@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import vm from 'node:vm';
-import { readAppJs, extractFunction as extractFunctionShared, extractDeclaration as extractDeclarationShared } from './app-source.mjs';
+import { readAppFile, readAppJs, extractFunction as extractFunctionShared, extractDeclaration as extractDeclarationShared } from './app-source.mjs';
 
 // 🚢 작업 선박 정보: 검색 → 목록의 선박 클릭 시 상세 내용이 사라지고 전체 선박 목록이 보이던 버그 회귀 테스트.
 // 원인: 선박을 펼치면 조회수(views)가 +1 저장되고, 즉시 도착하는 ships 실시간 스냅샷에서
@@ -480,5 +480,51 @@ test('선박 상세 메모의 앞뒤·연속 빈 줄을 정리하고 요약행/�
     assert.ok(!t.document.getElementById('s-trim1').classList.contains('show'));
     assert.ok(!t.document.getElementById('row-s-trim1').classList.contains('is-open'));
     assert.equal(t.document.getElementById('arrow-s-trim1').innerText, '▼');
+});
+
+test('incrementBoardItemViewCount 는 미로그인 시 익명 인증을 보장하고 저장 실패 시 DOM·캐시를 롤백한다', async () => {
+    const t = setup();
+    t.emit();
+    let authed = false;
+    let rejectNextWrite = true;
+    const authObj = { get currentUser() { return authed ? { uid: 'anon-1' } : null; } };
+    const ctx = vm.createContext({
+        ...t.context,
+        auth: authObj,
+        ensureAnonymousAuth: async () => {
+            authed = true;
+            return { uid: 'anon-1' };
+        },
+        db: {
+            collection: () => ({
+                doc: () => ({
+                    update: async () => {
+                        if (rejectNextWrite) throw new Error('permission-denied');
+                    }
+                })
+            })
+        }
+    });
+    vm.runInContext(extractFunction('incrementBoardItemViewCount'), ctx);
+    vm.runInContext('allShipsData = [{ id: "new1", views: 4 }];', ctx);
+
+    ctx.incrementBoardItemViewCount('ships', 'new1', 's');
+    await new Promise(resolve => setImmediate(resolve));
+    assert.equal(authed, true, '미인증 상태면 ensureAnonymousAuth 를 먼저 호출해야 합니다');
+    assert.equal(t.document.getElementById('view-badge-s-new1').innerText, '👁️ 4', '저장 실패 시 배지가 4로 롤백되어야 합니다');
+    assert.equal(vm.runInContext('allShipsData[0].views', ctx), 4);
+
+    rejectNextWrite = false;
+    ctx.incrementBoardItemViewCount('ships', 'new1', 's');
+    await new Promise(resolve => setImmediate(resolve));
+    assert.equal(t.document.getElementById('view-badge-s-new1').innerText, '👁️ 5');
+    assert.equal(vm.runInContext('allShipsData[0].views', ctx), 5);
+});
+
+test('openShipDetailView 는 캐시에 선박이 없을 때 문서 조회 후 조회수를 증가시킨다', () => {
+    const shipsBoardCode = readAppFile('public/js/ships-board.js');
+    const fetchIdx = shipsBoardCode.indexOf('docSnap = await db.collection("ships").doc(docId).get()');
+    const incIdx = shipsBoardCode.indexOf('incrementBoardItemViewCount("ships", docId, "s", data)');
+    assert.ok(fetchIdx >= 0 && incIdx > fetchIdx, 'allShipsData에 없는 선박은 먼저 문서를 조회한 뒤 incrementBoardItemViewCount(..., data)를 호출해야 합니다');
 });
 

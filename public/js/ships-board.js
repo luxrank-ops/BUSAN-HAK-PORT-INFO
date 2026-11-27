@@ -183,9 +183,6 @@ function escapeHtml(str) {
 
 async function openShipDetailView(docId) {
     try {
-        if (typeof incrementBoardItemViewCount === "function") {
-            incrementBoardItemViewCount("ships", docId, "s");
-        }
         let data = Array.isArray(allShipsData) ? allShipsData.find(s => s.id === docId) : null;
         if (!data) {
             const db = firebase.firestore();
@@ -199,6 +196,9 @@ async function openShipDetailView(docId) {
                 alert("삭제된 선박 정보입니다.");
                 return;
             }
+        }
+        if (typeof incrementBoardItemViewCount === "function") {
+            incrementBoardItemViewCount("ships", docId, "s", data);
         }
         const hasShipHelpers = typeof getShipMemoText === "function";
         const name = (hasShipHelpers ? getShipDisplayName(data) : (data.shipName || data.name)) || "선박명 없음";
