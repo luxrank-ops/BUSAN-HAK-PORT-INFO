@@ -576,7 +576,7 @@ export function generateMarkdownReport(result) {
   md += `| 구분 | URL | 상태 |\n`;
   md += `| --- | --- | --- |\n`;
   md += `| 운영 (Cloudflare Workers) | https://busan-hak-port-info.luxrank.workers.dev | main 푸시 후 수동 배포 · Cron Triggers |\n`;
-  md += `| 병행 (Vercel) | https://busan-hak-port-info.vercel.app | 2026-12-20까지 병행 |\n`;
+  md += `| 병행 (Vercel) | https://busan-hak-port-info.vercel.app | 서비스 공지상 2026-12-01 종료 (Vercel Pro는 2026-12-20 만료) |\n`;
   md += `| 보조 (Firebase Hosting) | https://busan-hak-port.web.app | 승인형 배포 |\n`;
   md += `| 데이터 저장소 | Firebase 프로젝트 \`busan-hak-port\` | Firestore · Storage · FCM |\n\n`;
 

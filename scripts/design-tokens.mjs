@@ -230,6 +230,7 @@ export const TOKEN_CSS = `
             --z-bottom-nav: 1000;
             --z-visitor-badge: 2500;
             --z-modal: 3000;
+            --z-modal-lock: 3200;
             --z-toast: 5000;
             --z-hover-menu: 9999;
         }
@@ -374,6 +375,7 @@ export const Z_INDEX_TOKENS = {
     '1000': '--z-bottom-nav',
     '2500': '--z-visitor-badge',
     '3000': '--z-modal',
+    '3200': '--z-modal-lock',
     '5000': '--z-toast',
     '9999': '--z-hover-menu'
 };
