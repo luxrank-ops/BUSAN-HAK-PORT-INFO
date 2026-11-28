@@ -495,6 +495,49 @@ async function verifyPasswordMatch(inputPw, storedPwOrHash) {
 let allPostsData=[], allShipsData=[], filteredShips=[], adminWorkLogs={};
 let currentDate = new Date(); let currentWorkerId = localStorage.getItem('myWorkerId'); 
 let commentUnsubscribes = {}; let shipCommentUnsubscribes = {}; let shipCommentsById = {}; let editingShipComment = null; let selectedCommentFiles = {}; let selectedShipCommentFiles = {}; let visitorCountPromise = null; const postsPerPage = 5; let globalTickerData = { adminMessage: "", userMessages: [] };
+// 🧭 압축 페이지 번호: 현재 페이지 기준 앞뒤 PAGE_WINDOW 개만 보여 주고 나머지는 … 로 접습니다.
+// (등록 선박 800척대 = 160여 페이지여도 페이지 버튼이 한 줄 안에 들어오게)
+const PAGE_WINDOW = 2;
+
+/**
+ * 페이지 버튼 마크업을 만듭니다.
+ * @param {number} totalPages 전체 페이지 수
+ * @param {number} curr 현재 페이지
+ * @param {string} handlerName 페이지를 그리는 전역 함수명 (예: "renderShipPage")
+ */
+function buildPaginationButtonsHtml(totalPages, curr, handlerName) {
+    const total = Math.max(0, Math.floor(Number(totalPages) || 0));
+    if (!handlerName) return "";
+    if (total <= 1) return "";
+    const current = Math.min(Math.max(1, Math.floor(Number(curr) || 1)), total);
+    const clickAttr = page => `onclick="${handlerName}(${page})"`;
+    const pageBtn = page => {
+        const isActive = page === current;
+        return `<button type="button" class="page-num${isActive ? ' active' : ''}" ${clickAttr(page)} aria-label="${page}페이지"${isActive ? ' aria-current="page"' : ''}>${page}</button>`;
+    };
+    const navBtn = (page, text, label) => page
+        ? `<button type="button" class="page-nav" ${clickAttr(page)} aria-label="${label}">${text}</button>`
+        : `<button type="button" class="page-nav is-disabled" disabled aria-disabled="true" aria-label="${label}">${text}</button>`;
+
+    // 1페이지·마지막 페이지는 항상, 그 사이는 현재 페이지 기준 앞뒤 PAGE_WINDOW 개만 남깁니다.
+    const visible = new Set([1, total]);
+    for (let page = current - PAGE_WINDOW; page <= current + PAGE_WINDOW; page++) {
+        if (page >= 1 && page <= total) visible.add(page);
+    }
+    const sortedPages = [...visible].sort((a, b) => a - b);
+
+    const parts = [navBtn(current > 1 ? current - 1 : 0, "◀", "이전 페이지")];
+    sortedPages.forEach((page, index) => {
+        const prevPage = index > 0 ? sortedPages[index - 1] : null;
+        if (prevPage !== null && page - prevPage > 1) {
+            parts.push(`<span class="page-gap" aria-hidden="true">…</span>`);
+        }
+        parts.push(pageBtn(page));
+    });
+    parts.push(navBtn(current < total ? current + 1 : 0, "▶", "다음 페이지"));
+    return parts.join("");
+}
+
 let currentEditPostId = null;
 
 async function safeGet(ref) { if (!ref) return null; try { return await ref.get(); } catch (e) { return null; } }
@@ -10204,11 +10247,7 @@ function renderShipPage(p) {
     });
     list.innerHTML = rowsHtml.join("");
     const totalPages = Math.ceil(filteredShips.length / postsPerPage);
-    const pageHtml = [];
-    for (let page = 1; page <= totalPages; page++) {
-        pageHtml.push(`<button type="button" class="page-num ${page === p ? 'active' : ''}" onclick="renderShipPage(${page})">${page}</button>`);
-    }
-    pagination.innerHTML = pageHtml.join("");
+    pagination.innerHTML = buildPaginationButtonsHtml(totalPages, p, "renderShipPage");
 };
 function renderShipCommentMarkup(shipId) {
     return `<div class="board-comments-panel"><div class="board-comments-title">💬 댓글</div><div id="ship-comment-list-${shipId}" class="comment-section"></div><div class="comment-form"><div class="comment-form-row"><input id="ship-comment-name-${shipId}" class="comment-input-sm" placeholder="닉네임" maxlength="50"><input id="ship-comment-password-${shipId}" class="comment-input-sm" type="password" placeholder="비밀번호" maxlength="30"></div><div id="ship-comment-preview-${shipId}" class="comment-preview-box" style="display:none;"></div><div class="comment-form-row"><input id="ship-comment-text-${shipId}" class="comment-input-main" placeholder="선박 댓글을 입력하세요..." onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();submitShipComment('${shipId}');}"><label for="ship-comment-file-${shipId}" id="ship-comment-file-label-${shipId}" class="comment-attach-btn" title="사진 첨부">📷</label><input type="file" id="ship-comment-file-${shipId}" accept="image/*" style="display:none;" onchange="handleShipCommentFileChange('${shipId}', this)"><button id="ship-comment-submit-${shipId}" class="comment-submit" onclick="submitShipComment('${shipId}')">등록</button><button id="ship-comment-cancel-${shipId}" type="button" class="mini-btn btn-del comment-cancel-btn" style="display:none;" onclick="cancelShipCommentEdit('${shipId}')">취소</button></div></div></div>`;
@@ -10495,11 +10534,7 @@ function renderPagination(curr) {
     const total = Math.ceil(allPostsData.length / postsPerPage);
     const el = document.getElementById('pagination');
     if (!el) return;
-    const html = [];
-    for (let i = 1; i <= total; i++) {
-        html.push(`<button type="button" class="page-num ${i === curr ? 'active' : ''}" onclick="renderBoardPage(${i})">${i}</button>`);
-    }
-    el.innerHTML = html.join("");
+    el.innerHTML = buildPaginationButtonsHtml(total, curr, "renderBoardPage");
 }
 function loadComments(pid) {
     if (commentUnsubscribes[pid]) commentUnsubscribes[pid]();
@@ -11213,11 +11248,7 @@ function renderNoticePagination(curr) {
     const el = document.getElementById("noticePagination");
     if (!el) return;
     if (total <= 1) { el.innerHTML = ""; return; }
-    const html = [];
-    for (let i = 1; i <= total; i++) {
-        html.push(`<button type="button" class="page-num ${i === curr ? 'active' : ''}" onclick="renderNoticePage(${i})">${i}</button>`);
-    }
-    el.innerHTML = html.join("");
+    el.innerHTML = buildPaginationButtonsHtml(total, curr, "renderNoticePage");
 }
 
 function renderNoticePage(p) {

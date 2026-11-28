@@ -1191,6 +1191,38 @@
     }
     .board-pagination .page-num:hover { background: var(--blue-50); border-color: var(--blue-400); }
     .board-pagination .page-num.active { border-color: var(--blue-600); background: var(--blue-600); color: var(--n-000); }
+    /* 🧭 압축 페이지 번호: 이전/다음(◀ ▶) 버튼과 생략 표시(…) */
+    .board-pagination .page-nav {
+        min-width: 34px;
+        min-height: 34px;
+        padding: var(--sp-4) var(--sp-6);
+        border: 1px solid var(--blue-200);
+        border-radius: var(--radius-sm);
+        background: var(--n-000);
+        color: var(--blue-800);
+        font-size: var(--fs-4);
+        font-weight: var(--fw-black);
+        cursor: pointer;
+        touch-action: manipulation;
+        flex: 0 0 auto;
+        transition: background var(--dur-fast) ease, border-color var(--dur-fast) ease;
+    }
+    .board-pagination .page-nav:hover { background: var(--blue-50); border-color: var(--blue-400); }
+    .board-pagination .page-nav.is-disabled {
+        opacity: 0.38;
+        cursor: default;
+        pointer-events: none;
+    }
+    .board-pagination .page-gap {
+        min-width: 18px;
+        align-self: center;
+        text-align: center;
+        color: var(--blue-800);
+        font-size: var(--fs-4);
+        font-weight: var(--fw-black);
+        letter-spacing: 1px;
+        user-select: none;
+    }
     .board-write-toggle-btn {
         margin: 0 0 var(--sp-8);
         background: linear-gradient(135deg, var(--blue-600), var(--blue-800)) !important;
@@ -1244,6 +1276,8 @@
     body.dark-mode .board-row-title-text.is-pinned, body.dark-mode .archive-row-link, body.dark-mode .board-row-attach { color: var(--blue-300); }
     body.dark-mode .board-row-pinned, body.dark-mode .board-attach-chip, body.dark-mode .board-pagination .page-num { background: var(--n-900); border-color: var(--blue-700); color: var(--blue-100); }
     body.dark-mode .board-pagination .page-num.active { background: var(--blue-600); color: var(--n-000); }
+    body.dark-mode .board-pagination .page-nav { background: var(--n-900); border-color: var(--blue-700); color: var(--blue-100); }
+    body.dark-mode .board-pagination .page-gap { color: var(--blue-200); }
     body.dark-mode .board-detail-card, body.dark-mode .board-priority-check, body.dark-mode .board-composer-panel { background: var(--n-900); border-color: var(--blue-700); color: var(--blue-100); }
     body.dark-mode .board-ship-meta, body.dark-mode .board-legacy-box { background: var(--n-800); border-color: var(--blue-700); }
     body.dark-mode .board-ship-diff { color: var(--amber-300); }

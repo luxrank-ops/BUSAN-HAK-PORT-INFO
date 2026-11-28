@@ -93,6 +93,8 @@ function makeNoticeAndBoardEnv() {
         isDeletedRecord: d => Boolean(d && d.deletedAt)
     });
     const code = [
+        'const PAGE_WINDOW = 2;',
+        extractFunction(js, 'buildPaginationButtonsHtml'),
         'let currentNoticePage = 1;',
         'let noticeDirectorySnapshotLoaded = false;',
         'let postDirectorySnapshotLoaded = false;',

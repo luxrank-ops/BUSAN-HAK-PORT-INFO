@@ -27,6 +27,7 @@ function extractDeclaration(name) {
 const SHIP_FUNCTIONS = [
     'getShipDisplayName', 'getShipMemoText', 'getShipLegacyOnshoreText', 'toShipDate', 'extractShipTags',
     'getShipSearchHaystack', 'getFilteredShipList', 'filterShips', 'escapeShipCommentHtml', 'renderShipCommentMarkup',
+    'buildPaginationButtonsHtml',
     'renderShipPage', 'incrementBoardItemViewCount', 'toggleBoardRow', 'loadShipComments',
     'getShipRowSignature', 'isShipViewCountOnlyChange', 'syncShipViewCountBadges', 'applyShipDirectorySnapshot',
     // D-2: 소프트 삭제 표시(deletedAt) 판별 헬퍼
@@ -35,7 +36,7 @@ const SHIP_FUNCTIONS = [
     'getHangulChosung', 'matchesShipQuery'
 ];
 // matchesShipQuery 가 참조하는 상수 (getFilteredShipList vm 컨텍스트에 함께 적재)
-const SHIP_DECLARATIONS = ['HANGUL_CHO_LIST', 'CHO_TO_LATIN_PATTERN'];
+const SHIP_DECLARATIONS = ['HANGUL_CHO_LIST', 'CHO_TO_LATIN_PATTERN', 'PAGE_WINDOW'];
 
 // innerHTML 로 생성된 id 요소를 추적하는 최소한의 가짜 DOM (클래스·값·텍스트만 지원)
 function createFakeDocument() {
