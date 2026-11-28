@@ -198,3 +198,22 @@ test('규칙 파일의 중괄호·괄호 짝이 맞는다 (문법 오류 조기 
         assert.equal(depth, 0, `${open}${close} 짝이 맞지 않습니다`);
     }
 });
+
+// ── Firebase Storage 규칙 (2026-11-28 최소 안전선) ─────────────────────────────
+// Storage 규칙도 저장소에서 관리합니다(storage.rules → firebase.json → CI 자동 배포).
+// 2026-11-28 이전 운영 규칙은 버킷 전체가 인증 없이 쓰기 가능한 상태였고,
+// 사용자 승인에 따라 "쓰기만 로그인 사용자" 로 조였습니다.
+const storageRules = readFileSync(new URL('../storage.rules', import.meta.url), 'utf8');
+
+test('Storage 규칙: 읽기는 공개, 쓰기는 로그인(익명 인증 포함) 사용자만 허용', () => {
+    assert.match(storageRules, /rules_version\s*=\s*'2'/, "rules_version = '2' 여야 합니다");
+    assert.match(storageRules, /allow read: if true;/, '현장 사진·공지 이미지는 로그인 없이도 보여야 합니다');
+    assert.match(storageRules, /allow write: if request\.auth != null;/, '쓰기는 인증된 사용자(익명 로그인 포함)만 허용해야 합니다');
+    assert.doesNotMatch(storageRules, /allow read, write: if true;/, '버킷 전체 개방 규칙이 되살아나면 안 됩니다');
+    assert.doesNotMatch(storageRules, /allow (write|read, write): if true;/, '쓰기 전체 개방이 되살아나면 안 됩니다');
+});
+
+test('firebase.json 이 storage.rules 를 배포 대상으로 연결한다', () => {
+    const cfg = JSON.parse(readFileSync(new URL('../firebase.json', import.meta.url), 'utf8'));
+    assert.equal(cfg.storage && cfg.storage.rules, 'storage.rules', 'firebase.json 의 storage.rules 설정이 storage.rules 파일을 가리켜야 합니다');
+});
