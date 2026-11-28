@@ -224,6 +224,7 @@
             --z-bottom-nav: 1000;
             --z-visitor-badge: 2500;
             --z-modal: 3000;
+            --z-modal-lock: 3200;
             --z-toast: 5000;
             --z-hover-menu: 9999;
         }
@@ -4896,8 +4897,8 @@ body.dark-mode .manual-beta { background: rgba(16, 185, 129, 0.14); border-color
 body.dark-mode .manual-faq details { background: rgba(255, 255, 255, 0.04); }
 
 /* ══════════════════════════════════════════════════════════════════════
-   📢 주소 이전 안내 (2026-11-22) — 상단 공지 배너 + 접속 안내 팝업
-   · 기존 주소(busan-hak-port-info.vercel.app) 접속자 : 배너 + 팝업
+   📢 주소 이전 안내 (2026-11-28 개정) — 상단 공지 배너 + 닫기 없는 고정 안내창
+   · 옛 주소(busan-hak-port-info.vercel.app) 접속자 : 배너 + 닫기 없는 고정창(12월 1일 종료)
    · 새 주소(busan-hak-port-info.luxrank.workers.dev) 접속자 : 홈 화면 추가 권장 배너만
    ══════════════════════════════════════════════════════════════════════ */
 .migration-bar { display: flex; align-items: center; gap: var(--sp-8); padding: var(--sp-8) var(--sp-10); background: linear-gradient(135deg, var(--navy-900), var(--blue-800)); color: var(--n-000); border-bottom: 1px solid var(--blue-700); }
@@ -4912,36 +4913,35 @@ body.dark-mode .manual-faq details { background: rgba(255, 255, 255, 0.04); }
 .migration-bar-action.is-hidden { display: none; }
 .migration-bar-close { flex: 0 0 auto; padding: var(--sp-4) var(--sp-6); border: none; background: transparent; color: var(--n-000); font-size: var(--fs-7); line-height: var(--lh-4); cursor: pointer; }
 
-.migration-modal { z-index: var(--z-modal); }
-.migration-card { max-width: 430px; border-radius: var(--radius-3xl); background: var(--card-bg); padding: var(--sp-18) var(--sp-16) var(--sp-14); box-shadow: var(--shadow-elev-4); }
+.migration-modal { z-index: var(--z-modal-lock); } /* 긴급 공지·날씨 카드(--z-modal·2500)보다 위 */
+.migration-locked { overflow: hidden; } /* 고정창이 떠 있는 동안 뒤 화면 스크롤을 막습니다 */
+.migration-card { display: flex; flex-direction: column; max-width: 440px; max-height: calc(100dvh - var(--sp-32)); overflow-y: auto; border-radius: var(--radius-3xl); background: var(--card-bg); padding: var(--sp-18) var(--sp-16) var(--sp-14); box-shadow: var(--shadow-elev-4); }
 .migration-card-head { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-8); }
 .migration-card-badge { display: inline-block; padding: var(--sp-3) var(--sp-9); border-radius: var(--radius-pill); background: var(--blue-50); color: var(--blue-800); font-size: var(--fs-5); font-weight: var(--fw-black); line-height: var(--lh-4); }
-.migration-card-x { border: none; background: transparent; color: var(--text-sub); font-size: var(--fs-10); line-height: var(--lh-3); cursor: pointer; padding: var(--sp-4) var(--sp-6); }
 .migration-card-title { margin: var(--sp-10) 0 var(--sp-6); font-size: var(--fs-fluid-2); font-weight: var(--fw-black); color: var(--text-main); line-height: var(--lh-6); word-break: keep-all; }
 .migration-card-lead { margin: 0; font-size: var(--fs-fluid-5); font-weight: var(--fw-semibold); color: var(--text-sub); line-height: var(--lh-8); word-break: keep-all; }
+.migration-card-lead-strong { margin-top: var(--sp-10); padding: var(--sp-10) var(--sp-12); border-left: 3px solid var(--blue-600); border-radius: var(--radius-md); background: var(--blue-50); color: var(--blue-900); font-weight: var(--fw-bold); }
 .migration-url-box { display: flex; flex-direction: column; gap: var(--sp-2); margin: var(--sp-12) 0; padding: var(--sp-10) var(--sp-12); border: 1px solid var(--blue-200); border-radius: var(--radius-lg); background: var(--blue-50); }
 .migration-url-label { font-size: var(--fs-5); font-weight: var(--fw-black); color: var(--blue-800); }
 .migration-url-text { font-size: var(--fs-fluid-5); font-weight: var(--fw-bold); color: var(--blue-900); word-break: break-all; }
 .migration-check-list { margin: 0 0 var(--sp-12); padding: 0; list-style: none; display: flex; flex-direction: column; gap: var(--sp-6); }
 .migration-check-list li { font-size: var(--fs-fluid-5); font-weight: var(--fw-semibold); color: var(--text-main); line-height: var(--lh-8); word-break: keep-all; }
 .migration-btn { display: block; width: 100%; box-sizing: border-box; padding: var(--sp-12) var(--sp-14); border-radius: var(--radius-lg); font-size: var(--fs-fluid-4); font-weight: var(--fw-black); line-height: var(--lh-6); text-align: center; text-decoration: none; cursor: pointer; }
-.migration-btn-primary { border: none; background: linear-gradient(135deg, var(--navy-900), var(--blue-800)); color: var(--n-000); box-shadow: var(--shadow-elev-2); }
+.migration-btn-primary { padding: var(--sp-16) var(--sp-14); border: none; background: linear-gradient(135deg, var(--navy-900), var(--blue-800)); color: var(--n-000); font-size: var(--fs-fluid-3); box-shadow: var(--shadow-elev-2); }
 .migration-btn-ghost { margin-top: var(--sp-8); border: 1px solid var(--border); background: var(--surface-muted); color: var(--text-main); }
 .migration-btn-ghost.is-done { border-color: var(--emerald-300); background: var(--emerald-50); color: var(--emerald-700); }
-.migration-card-foot { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-8); margin-top: var(--sp-12); padding-top: var(--sp-10); border-top: 1px dashed var(--border); }
-.migration-today-label { display: inline-flex; align-items: center; gap: var(--sp-5); font-size: var(--fs-fluid-5); font-weight: var(--fw-semibold); color: var(--text-sub); cursor: pointer; }
-.migration-today-label input { width: auto; margin: 0; accent-color: var(--primary); cursor: pointer; }
-.migration-close-btn { padding: var(--sp-8) var(--sp-14); border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--card-bg); color: var(--text-sub); font-size: var(--fs-fluid-5); font-weight: var(--fw-bold); cursor: pointer; }
+.migration-lock-note { margin: var(--sp-12) 0 0; padding-top: var(--sp-10); border-top: 1px dashed var(--border); font-size: var(--fs-fluid-5); font-weight: var(--fw-semibold); color: var(--text-sub); text-align: center; word-break: keep-all; }
 body.dark-mode .migration-card { background: var(--surface-dark); border: 1px solid var(--border-dark); }
 body.dark-mode .migration-card-title,
 body.dark-mode .migration-check-list li { color: var(--n-050); }
 body.dark-mode .migration-card-lead { color: var(--n-250); }
+body.dark-mode .migration-card-lead-strong { background: var(--blue-900); border-left-color: var(--blue-400); color: var(--blue-100); }
+body.dark-mode .migration-lock-note { color: var(--n-250); }
 body.dark-mode .migration-card-badge { background: var(--blue-900); color: var(--blue-200); }
 body.dark-mode .migration-url-box { background: var(--blue-900); border-color: var(--blue-700); }
 body.dark-mode .migration-url-label,
 body.dark-mode .migration-url-text { color: var(--blue-200); }
-body.dark-mode .migration-btn-ghost,
-body.dark-mode .migration-close-btn { background: var(--n-900); border-color: var(--border-dark); color: var(--n-150); }
+body.dark-mode .migration-btn-ghost { background: var(--n-900); border-color: var(--border-dark); color: var(--n-150); }
 @media (max-width: 480px) {
     .migration-card { padding: var(--sp-14) var(--sp-12) var(--sp-12); }
     .migration-bar { padding: var(--sp-7) var(--sp-8); }

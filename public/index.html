@@ -37,9 +37,9 @@
     <link rel="icon" href="./favicon.ico">
     <link rel="stylesheet" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.8/dist/web/static/pretendard.css" />
     <link rel="manifest" href="./manifest.json">
-    <link rel="stylesheet" href="./css/app.css?v=2027.97">
+    <link rel="stylesheet" href="./css/app.css?v=2027.98">
     <link rel="apple-touch-icon" href="./icon-192.png">
-<script src="./js/notifications.js?v=2027.97"></script></head>
+<script src="./js/notifications.js?v=2027.98"></script></head>
 <body data-app-view="legacy">
 <header>
     <div class="today-visitor-badge-slot" aria-hidden="true"></div>
@@ -71,7 +71,7 @@
     <span class="migration-bar-icon" aria-hidden="true">📢</span>
     <div class="migration-bar-body">
         <p id="migrationBarTitle" class="migration-bar-title">📢 학포트 주소가 이전했습니다</p>
-        <p id="migrationBarDesc" class="migration-bar-desc">새 주소로 접속해 주세요 · 기존 계정·기록은 그대로 · 기존 주소는 12월 20일(일)까지</p>
+        <p id="migrationBarDesc" class="migration-bar-desc">새 주소로 접속해 주세요 · 기존 계정·기록은 그대로 · 옛 주소는 12월 1일(화) 종료</p>
     </div>
     <a id="migrationBarAction" class="migration-bar-action tap-effect" href="https://busan-hak-port-info.luxrank.workers.dev/" rel="noopener">이동</a>
     <button type="button" id="migrationBarClose" class="migration-bar-close tap-effect" aria-label="주소 이전 안내 배너 닫기">✕</button>
@@ -1574,7 +1574,7 @@
                         <button type="button" class="manual-addr-copy" onclick="copyHakportAddress(this)">📋 주소 복사</button>
                         <a class="manual-addr-open" href="https://busan-hak-port-info.luxrank.workers.dev/" target="_blank" rel="noopener noreferrer">바로 열기 ↗</a>
                     </div>
-                    <p class="manual-addr-note">기존 주소 <b>busan-hak-port-info.vercel.app</b>은 <b>2026년 12월 20일(일)까지</b> 함께 열리고, 그 뒤 종료됩니다. 새 주소에서 <b>같은 닉네임·비밀번호</b>로 로그인하면 저장한 기록이 그대로 보입니다. 홈 화면 아이콘은 <b>새 HAK 아이콘</b>으로 다시 추가해 주세요.</p>
+                    <p class="manual-addr-note">옛 주소 <b>busan-hak-port-info.vercel.app</b>은 <b>2026년 12월 1일(화)</b>부터 종료됩니다. <b>새 주소로 접속한 뒤 홈 화면에 추가(앱 설치)해 새 주소로 다시 설치</b>해 주세요(기존 기록은 그대로 유지). 새 주소에서 <b>같은 닉네임·비밀번호</b>로 로그인하면 저장한 기록이 그대로 보입니다. 홈 화면 아이콘은 <b>새 HAK 아이콘</b>으로 다시 추가해 주세요.</p>
                 </div>
 
                 <ul>
@@ -1617,7 +1617,7 @@
                     <ol class="manual-steps">
                         <li><b>접속</b> — 카카오톡으로 받은 링크나 위 새 주소를 누릅니다. 첫 화면(홈)에 카드가 모여 있습니다.</li>
                         <li><b>홈 화면에 추가</b> — 안드로이드(크롬)는 오른쪽 위 <b>⋮</b> → <b>[홈 화면에 추가]</b>, 아이폰은 <b>사파리</b>로 접속해 <b>[공유 📤]</b> → <b>[홈 화면에 추가]</b>를 누릅니다. 카톡 안에서 열렸다면 먼저 [다른 브라우저로 열기]를 고르세요.</li>
-                        <li><b>아이콘 확인</b> — 바탕화면에 <b>HAK 아이콘</b>과 <b>‘부산 HAK 포트’</b> 이름으로 생깁니다. 예전 주소로 만든 아이콘이 있다면 지우고 새 주소로 다시 추가해 주세요(기존 아이콘은 12월 20일 이후 열리지 않습니다).</li>
+                        <li><b>아이콘 확인</b> — 바탕화면에 <b>HAK 아이콘</b>과 <b>‘부산 HAK 포트’</b> 이름으로 생깁니다. 예전 주소로 만든 아이콘이 있다면 지우고 12월 1일(화) 전에 새 주소로 다시 추가해 주세요(기존 아이콘은 12월 1일 이후 열리지 않습니다).</li>
                         <li><b>근무일지 로그인</b> — 하단 <b>[임금·일지]</b> → <b>[📅 근무일지 달력]</b> → 날짜 터치 → <b>[저장하기]</b>를 누르면 로그인 창이 열립니다. 닉네임과 비밀번호를 넣으면 되고, 처음 쓰는 닉네임이면 가입 확인창이 한 번 뜹니다.</li>
                     </ol>
                     <p class="manual-tip">💡 닉네임은 본인만 알아보기 쉬운 이름으로, 비밀번호는 다른 곳에서 쓰지 않는 것으로 정하세요. 로그인 상태는 그 기기에만 남아 다음부터는 자동으로 이어집니다.</p>
@@ -1778,11 +1778,11 @@
                 <div class="manual-body">
                     <details>
                         <summary>주소가 바뀌었는데 기존 기록이 사라지나요?</summary>
-                        <p>아니요. 새 주소에서 <b>전에 쓰던 닉네임과 비밀번호</b>로 로그인하면 저장한 근무일지·통계가 그대로 보입니다. 기존 주소도 12월 20일(일)까지 함께 열립니다.</p>
+                        <p>아니요. 새 주소에서 <b>전에 쓰던 닉네임과 비밀번호</b>로 로그인하면 저장한 근무일지·통계가 그대로 보입니다. 옛 주소는 12월 1일(화)부터 종료되므로 그전에 새 주소로 옮겨 주세요.</p>
                     </details>
                     <details>
                         <summary>홈 화면 아이콘을 새로 만들어야 하나요?</summary>
-                        <p>네. 새 주소에서 다시 [홈 화면에 추가]를 해 주세요. 이번에는 <b>HAK 아이콘</b>과 <b>‘부산 HAK 포트’</b> 이름으로 설치됩니다. 예전 아이콘은 12월 20일 이후 열리지 않으니 지우셔도 됩니다.</p>
+                        <p>네. 새 주소로 접속한 뒤 다시 [홈 화면에 추가]를 해 주세요. 이번에는 <b>HAK 아이콘</b>과 <b>‘부산 HAK 포트’</b> 이름으로 설치됩니다. 예전 아이콘은 12월 1일 이후 열리지 않으니 지우셔도 됩니다.</p>
                     </details>
                     <details>
                         <summary>로그인하지 않아도 쓸 수 있나요?</summary>
@@ -1930,30 +1930,29 @@
 </div>
 
 <div id="leaderCalendarModal" class="modal-overlay" style="display:none;" onclick="closeLeaderCalendar()"><div class="modal-content" onclick="event.stopPropagation()" style="background:#f3f4f6;"><h3 style="margin-top:0; text-align:center; color:var(--primary); font-weight:900;">📅 조장 근무표</h3><div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; background:white; padding:10px; border-radius:10px; box-shadow:0 2px 5px rgba(0,0,0,0.05);"><button class="mini-btn-old" style="padding:8px 15px; font-size:1rem; background:var(--primary);" onclick="changeLeaderMonth(-1)">◀</button><span id="leaderCalMonthYear" style="font-weight:900; font-size:1.15rem; color:var(--text-main);"></span><button class="mini-btn-old" style="padding:8px 15px; font-size:1rem; background:var(--primary);" onclick="changeLeaderMonth(1)">▶</button></div><div class="calendar-grid" style="font-size: 0.9rem; font-weight: 900; margin-bottom: 5px;"><div style="color:#ef4444;">일</div><div>월</div><div>화</div><div>수</div><div>목</div><div>금</div><div style="color:#3b82f6;">토</div></div><div id="leaderCalendarGrid" class="calendar-grid"></div><p style="font-size:0.8rem; color:var(--text-sub); text-align:center; margin-top:10px; font-weight:600;">※ 날짜를 터치하면 근무자를 임의로 변경할 수 있습니다. (Admin 전용)</p><button class="action-btn bg-cancel" style="margin-top:10px;" onclick="closeLeaderCalendar()">닫기</button></div></div>  
-<!-- 📢 접속 안내 팝업 (2026-11-22) — 기존 주소 접속자에게만, '오늘 하루 보지 않기'까지 -->
+<!-- 📢 옛 주소(vercel.app) 접속자 전용 — 닫기가 없는 고정 안내창 (2026-11-28)
+     ✕·배경 클릭·ESC·'오늘 하루 보지 않기'가 모두 없습니다. '새 주소로 바로 이동'으로만 빠져나갑니다.
+     새 주소(workers.dev)에서는 이 창을 절대 띄우지 않습니다(js/domain-migration.js). -->
 <div id="migrationModal" class="modal-overlay migration-modal" style="display:none;" role="dialog" aria-modal="true" aria-labelledby="migrationModalTitle" aria-hidden="true">
     <div class="modal-content migration-card">
         <div class="migration-card-head">
             <span class="migration-card-badge">📢 주소 이전 안내</span>
-            <button type="button" id="migrationModalClose" class="migration-card-x tap-effect" aria-label="안내 닫기">✕</button>
         </div>
         <h3 id="migrationModalTitle" class="migration-card-title">학포트, 새 주소로 이전했습니다</h3>
         <p class="migration-card-lead">더 안정적으로 쓰실 수 있도록 서버를 옮겼습니다. <b>기존 계정과 근무일지·임금 계산 기록은 그대로</b> 이어집니다.</p>
+        <p class="migration-card-lead migration-card-lead-strong"><b>12월 1일(화)부터 옛 주소가 종료됩니다.</b> 아래 버튼으로 이전된 새 주소에 접속한 뒤, 홈 화면에 추가(앱 설치)해 <b>새 주소로 다시 설치</b>해 주세요.</p>
         <div class="migration-url-box">
             <span class="migration-url-label">새 주소</span>
             <span class="migration-url-text">busan-hak-port-info.luxrank.workers.dev</span>
         </div>
         <ul class="migration-check-list">
             <li>✅ 기존 계정 · 근무일지 · 임금 계산 기록 <b>그대로 유지</b></li>
-            <li>🏠 홈 화면 아이콘은 <b>새 주소에서 다시 추가</b>해 주세요</li>
-            <li>⏳ 기존 주소 <b>busan-hak-port-info.vercel.app</b>은 <b>2026년 12월 20일(일)</b>까지 병행 운영 후 종료</li>
+            <li>🏠 새 주소로 접속한 뒤 <b>홈 화면에 추가(앱 설치)</b> — 크롬 <b>⋮</b> → 홈 화면에 추가</li>
+            <li>⏳ 옛 주소 <b>busan-hak-port-info.vercel.app</b>은 <b>2026년 12월 1일(화)</b>부터 종료</li>
         </ul>
         <a id="migrationGoBtn" class="migration-btn migration-btn-primary tap-effect" href="https://busan-hak-port-info.luxrank.workers.dev/">새 주소로 바로 이동 →</a>
         <button type="button" id="migrationCopyBtn" class="migration-btn migration-btn-ghost tap-effect">주소 복사</button>
-        <div class="migration-card-foot">
-            <label class="migration-today-label"><input type="checkbox" id="migrationHideToday"> 오늘 하루 보지 않기</label>
-            <button type="button" id="migrationCloseBtn" class="migration-close-btn tap-effect">닫기</button>
-        </div>
+        <p class="migration-lock-note">이 안내는 새 주소로 이동하면 사라집니다.</p>
     </div>
 </div>
 
@@ -2251,20 +2250,20 @@
     </div>
 </div>
 
-<script src="./js/app.js?v=2027.97"></script>
-<script src="./js/roster-engine.js?v=2027.97"></script>
+<script src="./js/app.js?v=2027.98"></script>
+<script src="./js/roster-engine.js?v=2027.98"></script>
   
     <!-- [여기서부터 복사] 조장 근무일 비밀번호 검증 스크립트 -->
 <!-- [추가할 보안 및 실행 스크립트] -->
-<script src="./js/leader-access.js?v=2027.97"></script>
+<script src="./js/leader-access.js?v=2027.98"></script>
   <!-- [프로덕션 수준] 파이어베이스 'ships' 컬렉션 전체 데이터 조회 및 검색 모듈 -->
-<script src="./js/ships-board.js?v=2027.97"></script>
+<script src="./js/ships-board.js?v=2027.98"></script>
 
-<script src="./js/tab-views.js?v=2027.97"></script>
-<script src="./js/terminal-as.js?v=2027.97"></script>
-<script src="./js/want-board.js?v=2027.97"></script>
-<script src="./js/domain-migration.js?v=2027.97"></script>
-<script src="./js/rain-float.js?v=2027.97"></script>
+<script src="./js/tab-views.js?v=2027.98"></script>
+<script src="./js/terminal-as.js?v=2027.98"></script>
+<script src="./js/want-board.js?v=2027.98"></script>
+<script src="./js/domain-migration.js?v=2027.98"></script>
+<script src="./js/rain-float.js?v=2027.98"></script>
 </body>
 </html>
 

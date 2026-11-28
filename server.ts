@@ -2642,7 +2642,7 @@ export function generateInspectionMarkdown(result: InspectionResult): string {
   md += `| DB 정리 | 매일 03:00 | ${autoCell(automationRuntimeStatus.autoCleanup.lastSuccessAt)} |\n`;
   md += `| 주간 백업 | 일요일 00:00 | ${autoCell(automationRuntimeStatus.weeklyBackup.lastSuccessAt)} |\n`;
   md += `| **일일 점검** | **매일 04:00** | **${overallEmoji} ${overallLabel}** |\n\n`;
-  md += `---\n\n## 4. 배포 상태\n\n| 구분 | URL | 비고 |\n| --- | --- | --- |\n| 운영 (Cloudflare Workers) | https://busan-hak-port-info.luxrank.workers.dev | 주 운영 · Cron Triggers |\n| 병행 (Vercel) | https://busan-hak-port-info.vercel.app | 2026-12-20까지 병행 |\n| 보조 (Firebase) | https://busan-hak-port.web.app | 승인형 배포 |\n| 저장소 | Firebase \`busan-hak-port\` | Firestore · FCM |\n\n`;
+  md += `---\n\n## 4. 배포 상태\n\n| 구분 | URL | 비고 |\n| --- | --- | --- |\n| 운영 (Cloudflare Workers) | https://busan-hak-port-info.luxrank.workers.dev | 주 운영 · Cron Triggers |\n| 병행 (Vercel) | https://busan-hak-port-info.vercel.app | 서비스 공지상 2026-12-01 종료 (Pro 2026-12-20 만료) |\n| 보조 (Firebase) | https://busan-hak-port.web.app | 승인형 배포 |\n| 저장소 | Firebase \`busan-hak-port\` | Firestore · FCM |\n\n`;
   if (summary.fail > 0) {
     md += `---\n\n## 5. 조치 필요\n\n`;
     for (const f of checks.filter(c => c.status === 'FAIL')) md += `- ❌ **[${f.category}] ${f.name}**: ${f.detail}\n`;
