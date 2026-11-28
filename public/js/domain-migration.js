@@ -21,11 +21,10 @@
     var BAR_HIDE_KEY = 'hakportMigrationBarHideUntil';
     var NEW_HOST_BAR_HIDE_MS = 30 * 24 * 60 * 60 * 1000; // 새 주소 안내 배너는 30일간 접어 둡니다.
     var BODY_LOCK_CLASS = 'migration-locked';
-    // 닫기 없는 고정 안내창을 띄우는 '옛 주소' 호스트. 여기 없는 호스트(dev·미리보기)는 잠그지 않습니다.
+    // 닫기 없는 고정 안내창을 띄우는 '옛 주소' 호스트.
+    // Vercel 주소(운영·프리뷰)만 잠그고, 비상용 보조 호스팅(busan-hak-port.web.app)·개발 호스트는 잠그지 않습니다.
     var LEGACY_HOST_PATTERNS = [
-        /(^|\.)vercel\.app$/i,
-        /^busan-hak-port\.web\.app$/i,
-        /^busan-hak-port\.firebaseapp\.com$/i
+        /(^|\.)vercel\.app$/i
     ];
 
     function readExpiry(key) {

@@ -205,3 +205,9 @@ test('알 수 없는 호스트(미리보기)도 화면을 잠그지 않는다', 
     assert.equal(run.elements.get('migrationModal').style.display, 'none');
     assert.ok(!run.body.classList.contains('migration-locked'));
 });
+
+test('비상용 보조 호스팅(web.app)은 잠그지 않는다 — 장애 시 대체 접속 경로 보존', () => {
+    const run = runMigrationScript('busan-hak-port.web.app');
+    assert.equal(run.elements.get('migrationModal').style.display, 'none');
+    assert.ok(!run.body.classList.contains('migration-locked'));
+});
