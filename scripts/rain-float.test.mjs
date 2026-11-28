@@ -1,12 +1,15 @@
 /**
- * ☂️ 비 예보 플로팅 카드 회귀 방지 테스트
+ * 🌦️ 비·눈·안개·강풍 예보 플로팅 카드 회귀 방지 테스트
  *
  * 출처: 이모티학 PR #117(머지 994b0f4) → PR #140(리버트 e3c9de4) 기능을 학포트로 이식.
- * 인수인계 문서 docs/hakport-weather-float.md 의 '검증 체크리스트' 8가지를 그대로 고정합니다.
+ * 인수인계 문서 docs/hakport-weather-float.md 의 '검증 체크리스트' 8가지를 그대로 고정하고,
+ * 2026-11-28 강풍 · 안개 · 눈 확장분(항만 안전 기준 10m/s 주의 / 15m/s 통제)을 추가로 고정합니다.
  *
  *  1) [61, 80%, 3.2mm] → 표시   2) [3, 65%, 0mm] → 표시   3) [2, 10%, 1.4mm] → 표시
  *  4) [2, 10%, 0mm] → 미표시   5) [95, 30%, 0.2mm] → 표시
  *  6) daily 없음/null → 미표시  7) 레거시 weathercode 파싱  8) 오늘 닫힘 키 → 미표시
+ *  9) 강풍(풍속·돌풍 10m/s↑) 표시 · 15m/s↑ 통제 문구   10) 눈(71·73·75·77·85·86) 표시
+ * 11) 안개(45·48) 표시  12) 여러 위험 동시 → 우선순위(통제급 강풍 > 눈 > 비 > 강풍 주의 > 안개)
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -59,18 +62,21 @@ function makeEl(tag) {
         dispatch(type) { if (listeners[type]) listeners[type]({ type }); },
         remove() { node.removed = true; if (node.parentNode) node.parentNode.removeChild(node); },
         querySelector() { return null; },
+        getBoundingClientRect() { return node.rect || { top: 0, bottom: 0, height: 0, left: 0, right: 0, width: 0 }; },
         scrollIntoView(options) { node.scrolled = options || {}; }
     };
     return node;
 }
 
-function daily(code, prob, sum, key) {
+function daily(code, prob, sum, key, windSpeed, gust) {
     const block = {
         time: ['2026-11-26'],
         precipitation_probability_max: [prob],
         precipitation_sum: [sum]
     };
     block[key || 'weather_code'] = [code];
+    if (typeof windSpeed === 'number') block.wind_speed_10m_max = [windSpeed];
+    if (typeof gust === 'number') block.wind_gusts_10m_max = [gust];
     return { daily: block };
 }
 
@@ -89,11 +95,15 @@ function makeEnv(options) {
         return child;
     };
     const weatherCard = makeEl('div');
+    weatherCard.rect = typeof opts.cardTop === 'number'
+        ? { top: opts.cardTop, bottom: opts.cardTop + 400, height: 400, left: 0, right: 390, width: 390 }
+        : undefined;
     const document = {
         readyState: 'loading', // 자동 마운트는 등록만 하고 테스트가 mountRainFloat() 를 직접 호출
         body,
         createElement: (tag) => makeEl(tag),
         getElementById: (id) => (id === 'weather-card' ? weatherCard : null),
+        querySelector: opts.querySelector || (() => null),
         addEventListener: () => {}
     };
     const storage = {
@@ -109,8 +119,10 @@ function makeEnv(options) {
             fetchCalls.push({ url, options: options2 });
             return (opts.fetch || (() => Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve(daily(61, 80, 3.2)) })))();
         },
-        toggleDashItem: (id) => { toggled.push(id); weatherCard.classList.add('expanded'); }
+        toggleDashItem: (id) => { toggled.push(id); weatherCard.classList.add('expanded'); },
+        pageYOffset: typeof opts.pageYOffset === 'number' ? opts.pageYOffset : 0
     };
+    if (typeof opts.scrollTo === 'function') window.scrollTo = opts.scrollTo;
 
     const context = vm.createContext({ window, document, AbortController });
     vm.runInContext(js, context);
@@ -197,11 +209,11 @@ test('비 예보 응답이면 카드가 만들어지고 내용·출처·CTA 가 
     assert.equal(card.attrs['aria-live'], 'polite');
     assert.equal(card.attrs['aria-label'], '비 예보 안내');
     const text = allText(card);
-    assert.match(text, /오늘 부산에 비 소식이 있어요/);
+    assert.match(text, /오늘 부산항에 비 소식이 있어요/);
     assert.match(text, /강수확률 최대 80%/);
     assert.match(text, /예상 강수량 3\.2mm/);
     assert.match(text, /비/);
-    assert.match(text, /Open-Meteo · 부산/);
+    assert.match(text, /Open-Meteo · 부산항/);
     assert.match(text, /CC BY 4\.0/);
     assert.match(text, /부산항 기상 전광판/);
     // 8초 타임아웃이 걸리고 응답 후 정리된다.
@@ -267,19 +279,152 @@ test('KST 날짜 키 · 스토리지 prefix · 코드 라벨이 원본 규칙을
     assert.equal(api.rainCodeLabel(2, 'ko'), null);
 });
 
+/* ────────────────── 2-1. 강풍 · 눈 · 안개 확장 (2026-11-28) ────────────────── */
+
+const jsonOf = (payload) => () => Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve(payload) });
+
+function mountWith(payload) {
+    const env = makeEnv({ fetch: jsonOf(payload) });
+    return env.api.mountRainFloat().then((card) => ({ env, card }));
+}
+
+test('강풍 판정: 최대 풍속·돌풍 10m/s↑ 주의, 15m/s↑ 고소 작업 통제(전광판 기준과 동일)', () => {
+    const { api } = makeEnv();
+    const of = (code, prob, sum, speed, gust) => api.parseDailyForecast(daily(code, prob, sum, null, speed, gust));
+    assert.equal(api.windLevel(of(3, 0, 0, 8.4, 9.9)), 0, '10m/s 미만은 알림 없음');
+    assert.equal(api.windLevel(of(3, 0, 0, 7, 9.9)), 0, '돌풍 9.9m/s 도 미만');
+    assert.equal(api.windLevel(of(3, 0, 0, 7, 10)), 1, '돌풍만 10m/s 이어도 주의');
+    assert.equal(api.windLevel(of(3, 0, 0, 11.2, 13.4)), 1);
+    assert.equal(api.windLevel(of(3, 0, 0, 12, 15)), 2, '15m/s 는 통제');
+    assert.equal(api.windLevel(of(3, 0, 0, 16.3, 17.9)), 2);
+    // 표시값과 판정값을 맞춥니다(9.96 → 10.0 표시 → 주의).
+    assert.equal(api.windPeak(of(3, 0, 0, 9.96, null)), 10);
+    assert.equal(api.windLevel(of(3, 0, 0, 9.96, null)), 1);
+    // 풍속 필드가 없으면 판정하지 않습니다.
+    assert.equal(api.windPeak(of(3, 0, 0)), null);
+    assert.equal(api.windLevel(of(3, 0, 0)), 0);
+    assert.equal(api.isWeatherAlert(of(3, 0, 0, 8.4, 9.9)), false);
+    assert.equal(api.isWeatherAlert(of(3, 0, 0, 10, 11)), true);
+});
+
+test('강풍 카드: 주의(10m/s↑)에서는 풍속·돌풍과 주의 기준을 알린다', async () => {
+    const { card } = await mountWith(daily(3, 5, 0, null, 11.2, 14.6));
+    assert.ok(card, '강풍 예보인데 카드가 없습니다');
+    const text = allText(card);
+    assert.equal(card.attrs['aria-label'], '강풍 예보 안내');
+    assert.match(text, /오늘 부산항에 바람이 강해요/);
+    assert.match(text, /최대 풍속 11\.2m\/s/);
+    assert.match(text, /돌풍 14\.6m\/s/);
+    assert.match(text, /강풍 주의 기준\(10m\/s\)/);
+    assert.doesNotMatch(text, /고소 작업 통제/);
+});
+
+test('강풍 카드: 15m/s 이상이면 고소 작업 통제 문구로 알린다', async () => {
+    const { card } = await mountWith(daily(3, 5, 0, null, 13.4, 17.2));
+    assert.ok(card);
+    const text = allText(card);
+    assert.match(text, /오늘 부산항에 강한 바람이 예보돼요/);
+    assert.match(text, /고소 작업 통제 기준\(15m\/s\)/);
+});
+
+test('눈 코드(71·73·75·77·85·86)는 눈 알림으로, 안개 코드(45·48)는 안개 알림으로 뜬다', async () => {
+    for (const code of [71, 73, 75, 77, 85, 86]) {
+        const { card } = await mountWith(daily(code, 0, 0));
+        assert.ok(card, `눈 코드 ${code} 에 카드가 없습니다`);
+        assert.equal(card.attrs['aria-label'], '눈 예보 안내');
+        assert.match(allText(card), /오늘 부산항에 눈 소식이 있어요/);
+        assert.match(allText(card), /눈/);
+    }
+    for (const code of [45, 48]) {
+        const { card } = await mountWith(daily(code, 0, 0));
+        assert.ok(card, `안개 코드 ${code} 에 카드가 없습니다`);
+        assert.equal(card.attrs['aria-label'], '안개 예보 안내');
+        assert.match(allText(card), /안개/);
+    }
+    // 구름 한 점 없는 날씨코드(0·2·3)는 그대로 미표시입니다.
+    for (const code of [0, 2, 3]) {
+        const { card } = await mountWith(daily(code, 10, 0));
+        assert.equal(card, null, `날씨코드 ${code} 는 알림 대상이 아닙니다`);
+    }
+});
+
+test('날씨코드 라벨: 눈·안개 계열도 한국어/영어 라벨을 돌려준다', () => {
+    const { api } = makeEnv();
+    assert.equal(api.weatherCodeLabel(71, 'ko'), '눈');
+    assert.equal(api.weatherCodeLabel(73, 'en'), 'Snow');
+    assert.equal(api.weatherCodeLabel(86, 'ko'), '소나기 눈');
+    assert.equal(api.weatherCodeLabel(45, 'ko'), '안개');
+    assert.equal(api.weatherCodeLabel(48, 'en'), 'Rime fog');
+    assert.equal(api.rainCodeLabel(65, 'ko'), '비');
+    assert.equal(api.isSnowCode(85), true);
+    assert.equal(api.isFogCode(48), true);
+    assert.equal(api.isRainCode(45), false);
+});
+
+test('여러 위험이 겹치면 통제급 강풍 > 눈 > 비 > 강풍 주의 > 안개 순으로 제목을 고른다', () => {
+    const { api } = makeEnv();
+    const of = (code, prob, sum, speed, gust) => api.parseDailyForecast(daily(code, prob, sum, null, speed, gust));
+    assert.equal(api.assessForecast(of(61, 90, 5, 16, 20)).kind, 'windStop');
+    assert.equal(api.assessForecast(of(71, 40, 0, 4, 6)).kind, 'snow');
+    assert.equal(api.assessForecast(of(71, 40, 0, 12, 13)).kind, 'snow', '눈이 강풍 주의보다 먼저');
+    assert.equal(api.assessForecast(of(61, 90, 5, 11, 12)).kind, 'rain', '비가 강풍 주의보다 먼저');
+    assert.equal(api.assessForecast(of(45, 10, 0, 11, 12)).kind, 'wind', '강풍 주의가 안개보다 먼저');
+    assert.equal(api.assessForecast(of(2, 10, 0, 4, 6)), null);
+    const kinds = api.assessForecast(of(63, 80, 4, 10.5, 12)).kinds;
+    assert.deepEqual(Array.from(kinds), ['rain', 'wind'], '동시 위험은 모두 기록합니다');
+});
+
+test('비 카드에도 강풍이면 풍속 줄이 함께 붙고, 바람이 약하면 붙지 않는다', async () => {
+    const calm = await mountWith(daily(61, 80, 3.2, null, 6.1, 8.2));
+    assert.ok(calm.card);
+    assert.match(allText(calm.card), /오늘 부산항에 비 소식이 있어요/);
+    assert.doesNotMatch(allText(calm.card), /최대 풍속/);
+    const stormy = await mountWith(daily(63, 90, 8.4, null, 10.4, 12.9));
+    assert.ok(stormy.card);
+    const text = allText(stormy.card);
+    assert.match(text, /오늘 부산항에 비 소식이 있어요/);
+    assert.match(text, /최대 풍속 10\.4m\/s · 돌풍 12\.9m\/s · 강풍 주의 기준\(10m\/s\)/);
+});
+
+test('CTA 착지: 고정 헤더·방문자 배지·긴급 공지 아래로 스크롤한다(배지가 제목을 덮지 않게)', async () => {
+    const scrolls = [];
+    const env = makeEnv({
+        cardTop: 900,
+        pageYOffset: 100,
+        scrollTo: (opts2) => scrolls.push(opts2),
+        querySelector: (sel) => {
+            if (sel === 'header') return { getBoundingClientRect: () => ({ height: 62, bottom: 62 }) };
+            if (sel === '.today-visitor-badge') return { getBoundingClientRect: () => ({ bottom: 46 }) };
+            if (sel === '#emergencyFloatingNotice') {
+                return { classList: { contains: () => false }, getBoundingClientRect: () => ({ bottom: 460 }) };
+            }
+            return null;
+        }
+    });
+    const card = await env.api.mountRainFloat();
+    card.children[0].children[1].children[1].dispatch('click'); // foot → cta
+    assert.equal(scrolls.length, 1, 'window.scrollTo 로 착지하지 않았습니다');
+    // 900(카드 상단) + 100(현재 스크롤) - 460(긴급 공지 하단) - 8(여백)
+    assert.equal(scrolls[0].top, 532);
+    assert.equal(scrolls[0].behavior, 'smooth');
+    assert.equal(env.weatherCard.scrolled, null, 'scrollTo 가 되면 scrollIntoView 를 쓰지 않습니다');
+});
+
 /* ───────────────────────── 3. 학포트 적응 · 배선 ───────────────────────── */
 
-test('지역은 창원이 아니라 부산(35.1796, 129.0756) 고정 좌표다', () => {
+test('지역은 부산항(북항) 고정 좌표(35.104, 129.042)이고 강풍 필드를 함께 조회한다', () => {
     const { api } = makeEnv();
-    assert.equal(api.BUSAN.latitude, 35.1796);
-    assert.equal(api.BUSAN.longitude, 129.0756);
+    assert.equal(api.PORT.latitude, 35.104);
+    assert.equal(api.PORT.longitude, 129.042);
     assert.match(api.FORECAST_URL, /^https:\/\/api\.open-meteo\.com\/v1\/forecast\?/);
-    assert.match(api.FORECAST_URL, /latitude=35\.1796/);
-    assert.match(api.FORECAST_URL, /longitude=129\.0756/);
-    assert.match(api.FORECAST_URL, /daily=weather_code,precipitation_probability_max,precipitation_sum/);
+    assert.match(api.FORECAST_URL, /latitude=35\.104/);
+    assert.match(api.FORECAST_URL, /longitude=129\.042/);
+    assert.match(api.FORECAST_URL, /daily=weather_code,precipitation_probability_max,precipitation_sum,wind_speed_10m_max,wind_gusts_10m_max/);
+    // Open-Meteo 기본 풍속 단위는 km/h — 전광판 기준(10·15m/s)과 맞추려면 ms 로 요청해야 합니다.
+    assert.match(api.FORECAST_URL, /wind_speed_unit=ms/);
     assert.match(api.FORECAST_URL, /timezone=Asia%2FSeoul/);
     assert.match(api.FORECAST_URL, /forecast_days=1/);
-    assert.match(js, /부산/);
+    assert.match(js, /부산항/);
     assert.doesNotMatch(js, /35\.227|128\.6816|CHANGWON/, '원본(창원) 좌표가 남아 있습니다');
     assert.doesNotMatch(js, /['"]emotime:/, '원본 스토리지 prefix 가 남아 있습니다');
     assert.doesNotMatch(js, /navigator\.geolocation|getCurrentPosition\s*\(/, '권한 요청 없이 동작해야 합니다');
@@ -312,10 +457,23 @@ test('카드 스타일은 디자인 토큰만 참조하고 다크모드·모션�
     const block = css.slice(css.indexOf('.rain-float {'));
     assert.ok(block.length > 0, '.rain-float CSS 가 없습니다');
     assert.doesNotMatch(block, /#[0-9a-fA-F]{3,8}\b/, '하드코딩 색상이 있습니다');
-    assert.match(block, /bottom: max\(84px, env\(safe-area-inset-bottom\) \+ 74px\)/);
+    // 2026-11-28: 내비(65px) · '운영자에게 바란다'(~125px) · 🚨 다시 보기(~130px) 위로 분리
+    assert.match(block, /bottom: max\(140px, env\(safe-area-inset-bottom\) \+ 130px\)/);
     assert.match(block, /z-index: var\(--z-visitor-badge\)/);
     assert.match(block, /body\.dark-mode \.rain-float-card/);
     assert.match(block, /@media \(prefers-reduced-motion: reduce\)/);
     assert.match(block, /animation: none/);
     assert.match(block, /min-width: 768px/);
+    // PC·태블릿 분기가 다시 bottom 을 덮어 내비를 가리지 않아야 합니다.
+    const desktopRule = block.slice(block.indexOf('@media (min-width: 768px)'), block.indexOf('(orientation: landscape) and (max-height: 560px)'));
+    assert.doesNotMatch(desktopRule, /bottom:/, '≥768px 분기가 bottom 을 덮으면 하단 내비를 가립니다');
+    // 짧은 가로 화면은 카드를 압축해 내비 바로 위에 붙입니다(상단 헤더·티커 회피).
+    const landscapeRule = block.slice(block.indexOf('(orientation: landscape) and (max-height: 560px)'));
+    assert.match(landscapeRule, /bottom: max\(calc\(52px \+ var\(--sp-8\)\)/);
+    assert.match(block, /rain-float-wind/);
+    // 안전 공지(긴급 공지 패널·다시 보기 버튼)는 예보 카드보다 위 레이어여야 합니다.
+    const reopenRule = css.slice(css.indexOf('.emergency-float-reopen {'), css.indexOf('.emergency-admin-state {'));
+    assert.match(reopenRule, /z-index: var\(--z-modal\)/);
+    const noticeRule = css.slice(css.indexOf('.emergency-float {'), css.indexOf('.emergency-float.is-hidden'));
+    assert.match(noticeRule, /z-index: var\(--z-modal\)/);
 });

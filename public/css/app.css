@@ -411,7 +411,7 @@
         width: min(560px, calc(100vw - 20px));
         max-height: 46vh;
         overflow-y: auto;
-        z-index: var(--z-visitor-badge);
+        z-index: var(--z-modal); /* 안전 공지가 날씨 예보 카드(2500)보다 위에 옵니다(2026-11-28) */
         display: flex;
         flex-direction: column;
         gap: var(--sp-6);
@@ -486,7 +486,7 @@
         background: var(--red-600);
         color: var(--n-000);
         font-size: var(--fs-13);
-        z-index: var(--z-visitor-badge);
+        z-index: var(--z-modal); /* 예보 카드가 떠 있어도 항상 눌리도록 카드(2500) 위 레이어 */
         box-shadow: 0 6px 16px rgba(220, 38, 38, 0.4);
         cursor: pointer;
         touch-action: manipulation;
@@ -4953,7 +4953,10 @@ body.dark-mode .migration-close-btn { background: var(--n-900); border-color: va
 .rain-float {
     position: fixed;
     right: var(--sp-12);
-    bottom: max(84px, env(safe-area-inset-bottom) + 74px);
+    /* 하단 고정 UI(내비 65px · '운영자에게 바란다' 82~125px · 🚨 다시 보기 84~130px) 위로 띄웁니다.
+       2026-11-28: PC·태블릿(≥768px)에서 bottom 이 24px 로 덮여 내비 탭을 41px 가리던 회귀를 막고,
+       좌하단 버튼이 출처 표기(CC BY 4.0)를 덮지 않게 모든 폭에서 같은 오프셋을 씁니다. */
+    bottom: max(140px, env(safe-area-inset-bottom) + 130px);
     width: min(330px, calc(100vw - var(--sp-24)));
     z-index: var(--z-visitor-badge);
     animation: rain-float-in var(--dur-300) ease-out;
@@ -5008,6 +5011,14 @@ body.dark-mode .migration-close-btn { background: var(--n-900); border-color: va
     font-weight: var(--fw-bold);
     line-height: var(--lh-7);
     color: var(--text-sub);
+    word-break: keep-all;
+}
+.rain-float-wind {
+    margin: var(--sp-4) 0 0;
+    font-size: var(--fs-5);
+    font-weight: var(--fw-extrabold);
+    line-height: var(--lh-7);
+    color: var(--orange-700);
     word-break: keep-all;
 }
 .rain-float-close {
@@ -5067,6 +5078,7 @@ body.dark-mode .migration-close-btn { background: var(--n-900); border-color: va
 body.dark-mode .rain-float-card { background: var(--surface-dark); border-color: var(--border-dark); }
 body.dark-mode .rain-float-title { color: var(--n-050); }
 body.dark-mode .rain-float-detail { color: var(--n-250); }
+body.dark-mode .rain-float-wind { color: var(--orange-300); }
 body.dark-mode .rain-float-eyebrow { color: var(--blue-300); }
 body.dark-mode .rain-float-foot { background: var(--n-900); border-top-color: var(--border-dark); }
 body.dark-mode .rain-float-close { background: var(--n-800); border-color: var(--border-dark); color: var(--n-250); }
@@ -5074,7 +5086,21 @@ body.dark-mode .rain-float-close:hover { background: var(--blue-900); color: var
 body.dark-mode .rain-float-cta { color: var(--blue-300); }
 body.dark-mode .rain-float-cta:hover { color: var(--blue-200); }
 @media (min-width: 768px) {
-    .rain-float { right: var(--sp-24); bottom: var(--sp-24); }
+    /* bottom 은 모바일과 같은 오프셋을 유지합니다(내비 위 · 하단 플로팅 버튼과 분리). */
+    .rain-float { right: var(--sp-24); }
+}
+/* 짧은 가로 화면(높이 560px 이하): 세로 공간이 없어 카드를 압축해 내비 바로 위에 붙입니다.
+   (bottom 140px 를 그대로 쓰면 카드가 상단 헤더·티커까지 올라가 덮습니다) */
+@media screen and (orientation: landscape) and (max-height: 560px) {
+    .rain-float {
+        bottom: max(calc(52px + var(--sp-8)), env(safe-area-inset-bottom) + var(--sp-8));
+        width: min(300px, calc(100vw - var(--sp-24)));
+    }
+    .rain-float-head { gap: var(--sp-8); padding: var(--sp-8) var(--sp-10); }
+    .rain-float-icon { width: 32px; height: 32px; font-size: var(--fs-10); }
+    .rain-float-title { margin-top: var(--sp-4); font-size: var(--fs-8); }
+    .rain-float-detail, .rain-float-wind { font-size: var(--fs-4); }
+    .rain-float-foot { padding: var(--sp-6) var(--sp-10); }
 }
 @media (max-width: 360px) {
     .rain-float-head { gap: var(--sp-8); padding: var(--sp-10); }
