@@ -264,6 +264,14 @@
                 var badgeRect = badge.getBoundingClientRect();
                 if (badgeRect && badgeRect.bottom > offset) offset = badgeRect.bottom;
             }
+            // 🚨 긴급 공지가 떠 있으면 그 아래로 내려 착지합니다(공지가 전광판 제목을 덮지 않게).
+            var notice = lookup ? lookup('#emergencyFloatingNotice') : null;
+            if (notice && typeof notice.getBoundingClientRect === 'function' && notice.classList
+                && typeof notice.classList.contains === 'function'
+                && !notice.classList.contains('is-hidden')) {
+                var noticeRect = notice.getBoundingClientRect();
+                if (noticeRect && noticeRect.bottom > offset) offset = noticeRect.bottom;
+            }
         } catch (e) { offset = 0; }
 
         try {

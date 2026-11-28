@@ -5089,6 +5089,19 @@ body.dark-mode .rain-float-cta:hover { color: var(--blue-200); }
     /* bottom 은 모바일과 같은 오프셋을 유지합니다(내비 위 · 하단 플로팅 버튼과 분리). */
     .rain-float { right: var(--sp-24); }
 }
+/* 짧은 가로 화면(높이 560px 이하): 세로 공간이 없어 카드를 압축해 내비 바로 위에 붙입니다.
+   (bottom 140px 를 그대로 쓰면 카드가 상단 헤더·티커까지 올라가 덮습니다) */
+@media screen and (orientation: landscape) and (max-height: 560px) {
+    .rain-float {
+        bottom: max(calc(52px + var(--sp-8)), env(safe-area-inset-bottom) + var(--sp-8));
+        width: min(300px, calc(100vw - var(--sp-24)));
+    }
+    .rain-float-head { gap: var(--sp-8); padding: var(--sp-8) var(--sp-10); }
+    .rain-float-icon { width: 32px; height: 32px; font-size: var(--fs-10); }
+    .rain-float-title { margin-top: var(--sp-4); font-size: var(--fs-8); }
+    .rain-float-detail, .rain-float-wind { font-size: var(--fs-4); }
+    .rain-float-foot { padding: var(--sp-6) var(--sp-10); }
+}
 @media (max-width: 360px) {
     .rain-float-head { gap: var(--sp-8); padding: var(--sp-10); }
     .rain-float-foot { padding: var(--sp-8) var(--sp-10); }

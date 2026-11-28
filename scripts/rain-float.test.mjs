@@ -62,6 +62,7 @@ function makeEl(tag) {
         dispatch(type) { if (listeners[type]) listeners[type]({ type }); },
         remove() { node.removed = true; if (node.parentNode) node.parentNode.removeChild(node); },
         querySelector() { return null; },
+        getBoundingClientRect() { return node.rect || { top: 0, bottom: 0, height: 0, left: 0, right: 0, width: 0 }; },
         scrollIntoView(options) { node.scrolled = options || {}; }
     };
     return node;
@@ -94,12 +95,15 @@ function makeEnv(options) {
         return child;
     };
     const weatherCard = makeEl('div');
+    weatherCard.rect = typeof opts.cardTop === 'number'
+        ? { top: opts.cardTop, bottom: opts.cardTop + 400, height: 400, left: 0, right: 390, width: 390 }
+        : undefined;
     const document = {
         readyState: 'loading', // 자동 마운트는 등록만 하고 테스트가 mountRainFloat() 를 직접 호출
         body,
         createElement: (tag) => makeEl(tag),
         getElementById: (id) => (id === 'weather-card' ? weatherCard : null),
-        querySelector: () => null,
+        querySelector: opts.querySelector || (() => null),
         addEventListener: () => {}
     };
     const storage = {
@@ -115,8 +119,10 @@ function makeEnv(options) {
             fetchCalls.push({ url, options: options2 });
             return (opts.fetch || (() => Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve(daily(61, 80, 3.2)) })))();
         },
-        toggleDashItem: (id) => { toggled.push(id); weatherCard.classList.add('expanded'); }
+        toggleDashItem: (id) => { toggled.push(id); weatherCard.classList.add('expanded'); },
+        pageYOffset: typeof opts.pageYOffset === 'number' ? opts.pageYOffset : 0
     };
+    if (typeof opts.scrollTo === 'function') window.scrollTo = opts.scrollTo;
 
     const context = vm.createContext({ window, document, AbortController });
     vm.runInContext(js, context);
@@ -380,6 +386,30 @@ test('비 카드에도 강풍이면 풍속 줄이 함께 붙고, 바람이 약�
     assert.match(text, /최대 풍속 10\.4m\/s · 돌풍 12\.9m\/s · 강풍 주의 기준\(10m\/s\)/);
 });
 
+test('CTA 착지: 고정 헤더·방문자 배지·긴급 공지 아래로 스크롤한다(배지가 제목을 덮지 않게)', async () => {
+    const scrolls = [];
+    const env = makeEnv({
+        cardTop: 900,
+        pageYOffset: 100,
+        scrollTo: (opts2) => scrolls.push(opts2),
+        querySelector: (sel) => {
+            if (sel === 'header') return { getBoundingClientRect: () => ({ height: 62, bottom: 62 }) };
+            if (sel === '.today-visitor-badge') return { getBoundingClientRect: () => ({ bottom: 46 }) };
+            if (sel === '#emergencyFloatingNotice') {
+                return { classList: { contains: () => false }, getBoundingClientRect: () => ({ bottom: 460 }) };
+            }
+            return null;
+        }
+    });
+    const card = await env.api.mountRainFloat();
+    card.children[0].children[1].children[1].dispatch('click'); // foot → cta
+    assert.equal(scrolls.length, 1, 'window.scrollTo 로 착지하지 않았습니다');
+    // 900(카드 상단) + 100(현재 스크롤) - 460(긴급 공지 하단) - 8(여백)
+    assert.equal(scrolls[0].top, 532);
+    assert.equal(scrolls[0].behavior, 'smooth');
+    assert.equal(env.weatherCard.scrolled, null, 'scrollTo 가 되면 scrollIntoView 를 쓰지 않습니다');
+});
+
 /* ───────────────────────── 3. 학포트 적응 · 배선 ───────────────────────── */
 
 test('지역은 부산항(북항) 고정 좌표(35.104, 129.042)이고 강풍 필드를 함께 조회한다', () => {
@@ -435,8 +465,11 @@ test('카드 스타일은 디자인 토큰만 참조하고 다크모드·모션�
     assert.match(block, /animation: none/);
     assert.match(block, /min-width: 768px/);
     // PC·태블릿 분기가 다시 bottom 을 덮어 내비를 가리지 않아야 합니다.
-    const desktopRule = block.slice(block.indexOf('@media (min-width: 768px)'), block.indexOf('@media (max-width: 360px)'));
+    const desktopRule = block.slice(block.indexOf('@media (min-width: 768px)'), block.indexOf('(orientation: landscape) and (max-height: 560px)'));
     assert.doesNotMatch(desktopRule, /bottom:/, '≥768px 분기가 bottom 을 덮으면 하단 내비를 가립니다');
+    // 짧은 가로 화면은 카드를 압축해 내비 바로 위에 붙입니다(상단 헤더·티커 회피).
+    const landscapeRule = block.slice(block.indexOf('(orientation: landscape) and (max-height: 560px)'));
+    assert.match(landscapeRule, /bottom: max\(calc\(52px \+ var\(--sp-8\)\)/);
     assert.match(block, /rain-float-wind/);
     // 안전 공지(긴급 공지 패널·다시 보기 버튼)는 예보 카드보다 위 레이어여야 합니다.
     const reopenRule = css.slice(css.indexOf('.emergency-float-reopen {'), css.indexOf('.emergency-admin-state {'));
