@@ -1,7 +1,7 @@
 {
-  "kstDate": "2026-11-27",
-  "generatedAt": "2026-11-27T02:04:45.244Z",
-  "kstDateTime": "2026-11-27 (금) 11:04:45 KST",
+  "kstDate": "2026-11-28",
+  "generatedAt": "2026-11-28T01:50:27.466Z",
+  "kstDateTime": "2026-11-28 (토) 10:50:27 KST",
   "summary": {
     "total": 119,
     "pass": 119,
@@ -152,7 +152,7 @@
     },
     {
       "category": "파일 존재",
-      "name": "public/js/kkung-relay.js",
+      "name": "public/js/terminal-as.js",
       "status": "PASS",
       "detail": "파일 존재 확인",
       "severity": "info"
@@ -749,14 +749,14 @@
       "category": "보안·인증",
       "name": "firestore.rules 크기",
       "status": "PASS",
-      "detail": "24KB",
+      "detail": "29KB",
       "severity": "info"
     },
     {
       "category": "디자인 토큰",
       "name": "토큰 정의 수",
       "status": "PASS",
-      "detail": "419개 토큰 정의",
+      "detail": "421개 토큰 정의",
       "severity": "info"
     },
     {

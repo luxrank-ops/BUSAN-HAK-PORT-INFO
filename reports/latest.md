@@ -1,8 +1,8 @@
 # 부산학 라이싱 작업 가이드 — 일일 기능 점검 보고서
 
-> **점검 일시**: 2026-11-27 (금) 11:04:45 KST
-> **점검 기준일**: 2026-11-27 (KST)
-> **생성 시각(UTC)**: 2026-11-27T02:04:45.244Z
+> **점검 일시**: 2026-11-28 (토) 10:50:27 KST
+> **점검 기준일**: 2026-11-28 (KST)
+> **생성 시각(UTC)**: 2026-11-28T01:50:27.466Z
 > **점검 방식**: 자동 점검 (매일 04:00 KST · GitHub Actions + Cloudflare Cron Triggers)
 
 ---
@@ -46,7 +46,7 @@
 | 18 | 파일 존재 | public/js/leader-access.js | ✅ PASS | 파일 존재 확인 |
 | 19 | 파일 존재 | public/js/ships-board.js | ✅ PASS | 파일 존재 확인 |
 | 20 | 파일 존재 | public/js/tab-views.js | ✅ PASS | 파일 존재 확인 |
-| 21 | 파일 존재 | public/js/kkung-relay.js | ✅ PASS | 파일 존재 확인 |
+| 21 | 파일 존재 | public/js/terminal-as.js | ✅ PASS | 파일 존재 확인 |
 | 22 | 파일 존재 | public/js/want-board.js | ✅ PASS | 파일 존재 확인 |
 | 23 | 파일 존재 | public/js/domain-migration.js | ✅ PASS | 파일 존재 확인 |
 | 24 | 파일 존재 | server.ts | ✅ PASS | 파일 존재 확인 |
@@ -131,8 +131,8 @@
 | 103 | 보안·인증 | SCREEN_LOCK_PIN 환경변수 참조 | ✅ PASS | 구현 존재 |
 | 104 | 보안·인증 | CRON_SECRET 환경변수 참조 | ✅ PASS | 구현 존재 |
 | 105 | 보안·인증 | firestore.rules isAdmin | ✅ PASS | 관리자 규칙 존재 |
-| 106 | 보안·인증 | firestore.rules 크기 | ✅ PASS | 24KB |
-| 107 | 디자인 토큰 | 토큰 정의 수 | ✅ PASS | 419개 토큰 정의 |
+| 106 | 보안·인증 | firestore.rules 크기 | ✅ PASS | 29KB |
+| 107 | 디자인 토큰 | 토큰 정의 수 | ✅ PASS | 421개 토큰 정의 |
 | 108 | 디자인 토큰 | CSS 토큰 참조 | ✅ PASS | var(--토큰) 사용 확인 |
 | 109 | 워크플로 | 워크플로 파일 수 | ✅ PASS | 6개 파일 |
 | 110 | 워크플로 | ci.yml | ✅ PASS | 파일 존재 |
@@ -184,7 +184,7 @@
 | 구분 | URL | 상태 |
 | --- | --- | --- |
 | 운영 (Cloudflare Workers) | https://busan-hak-port-info.luxrank.workers.dev | main 푸시 후 수동 배포 · Cron Triggers |
-| 병행 (Vercel) | https://busan-hak-port-info.vercel.app | 2026-12-20까지 병행 |
+| 병행 (Vercel) | https://busan-hak-port-info.vercel.app | 서비스 공지상 2026-12-01 종료 (Vercel Pro는 2026-12-20 만료) |
 | 보조 (Firebase Hosting) | https://busan-hak-port.web.app | 승인형 배포 |
 | 데이터 저장소 | Firebase 프로젝트 `busan-hak-port` | Firestore · Storage · FCM |
 
